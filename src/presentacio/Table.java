@@ -14,6 +14,7 @@ public class Table extends JPanel {
 
 		table = new JTable();
 		scrollPane.setViewportView(table);
+		//prova
 
 	}
 
