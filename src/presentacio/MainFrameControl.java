@@ -12,7 +12,7 @@ public class MainFrameControl {
 	private static ServerConect con = new ServerConect();
 	private static ControladorLlibres cLlibres;
 	private static List<Llibre> biblio;
-	private static Table table = new Table();
+	private static MostrarBibliotecaPanel table = new MostrarBibliotecaPanel();
 	private static TableController tableController;
 	private static MainFramePanel vista;
 

@@ -9,11 +9,11 @@ import domini.Llibre;
 
 public class TableController {
 
-	private Table view;
+	private MostrarBibliotecaPanel view;
 	private List<Llibre> biblio;
 	private String header[];
 
-	public TableController(Table view, List<Llibre> biblio, String header[]) {
+	public TableController(MostrarBibliotecaPanel view, List<Llibre> biblio, String header[]) {
 		this.view = view;
 		this.biblio = biblio;
 		this.header = header;
