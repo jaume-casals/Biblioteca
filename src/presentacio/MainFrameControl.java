@@ -1,9 +1,10 @@
 package presentacio;
 
-import java.util.LinkedList;
 import java.util.List;
 
 import domini.Llibre;
+import presentacio.acercade.AcercaDeDialogoControl;
+import presentacio.acercade.AcercaDeDialogo;
 import persistencia.ControladorLlibres;
 import persistencia.ServerConect;
 
@@ -25,6 +26,8 @@ public class MainFrameControl {
 //		biblio = con.getAllLlibres();
 
 //		cLlibres = new ControladorLlibres(con.getConnection(), biblio);
+		this.vista.getMntmAbout().addActionListener(
+				e -> new Thread(() -> new AcercaDeDialogoControl(new AcercaDeDialogo()).setVisible(true)).start());
 
 		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(), biblio,
 				con.getHeader());

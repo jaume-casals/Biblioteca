@@ -39,6 +39,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JButton bttnFiltrar;
 	private JButton bttnQuitarFiltros;
 
+	
+	
 	public MostrarBibliotecaPanel() {
 		setLayout(null);
 
@@ -47,7 +49,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		scrollPaneJTable.setBounds(amplada(50) - 5, altura(0) + 10, amplada(120), altura(52));
 		add(scrollPaneJTable);
-
 		jTableBilio = new JTable();
 		scrollPaneJTable.setViewportView(jTableBilio);
 

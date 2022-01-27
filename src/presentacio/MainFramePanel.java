@@ -23,8 +23,11 @@ public class MainFramePanel extends JFrame {
 	private JMenu opcions;
 	private JMenuItem addLlibre;
 
+	private JMenu mnAyuda;
+	private JMenuItem mntmAbout;
+
 	public MainFramePanel() {
-		
+
 		setTitle("Biblioteca");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setPreferredSize(new Dimension(1600, 900));
@@ -32,7 +35,7 @@ public class MainFramePanel extends JFrame {
 		setBounds(100, 100, amplada(100), altura(100));
 		setExtendedState(Frame.MAXIMIZED_BOTH);
 		setResizable(false);
-		
+
 		contentPane = new JPanel();
 
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -50,7 +53,17 @@ public class MainFramePanel extends JFrame {
 		addLlibre = new JMenuItem("Nou Llibre");
 		opcions.add(addLlibre);
 
+		mnAyuda = new JMenu("Ajuda");
+		menuBar.add(mnAyuda);
+
+		mntmAbout = new JMenuItem("Sobre l'equip");
+		mnAyuda.add(mntmAbout);
+
 		pack();
+	}
+
+	public JMenuItem getMntmAbout() {
+		return mntmAbout;
 	}
 
 	public void setVisible(Boolean bool) {

@@ -1,10 +1,15 @@
 package presentacio;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.util.List;
 
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 
 import domini.Llibre;
 
@@ -20,18 +25,8 @@ public class MostrarBibliotecaControl {
 		this.biblio = biblio;
 		this.header = header;
 
-		repaint(Color.DARK_GRAY);
-
 		this.vista.getbttnFiltrar().addActionListener(e -> filtrar());
 		this.vista.getbttnQuitarFiltros().addActionListener(e -> quitarFiltros());
-	}
-
-	public void repaint(Color c) {
-		this.vista.setBackground(c);
-		this.vista.getjTableBilio().setBackground(c);
-		this.vista.getScrollPaneJTable().setBackground(c);
-		this.vista.getScrolpaneFiltro().setBackground(c);
-		this.vista.getPanelFiltros().setBackground(c);
 	}
 
 	public void ns() {
@@ -65,5 +60,22 @@ public class MostrarBibliotecaControl {
 		System.out.println("quito");
 		this.vista.getbttnFiltrar().setSelected(false);
 		this.vista.getbttnQuitarFiltros().setSelected(false);
+	}
+
+	public class StatusColumnCellRenderer extends DefaultTableCellRenderer {
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+				int row, int col) {
+
+			// Cells are by default rendered as a JLabel.
+			JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+
+			// Get the status for the current row.
+			l.setBackground(Color.DARK_GRAY);
+
+			// Return the JLabel which renders the cell.
+			return l;
+
+		}
 	}
 }
