@@ -20,8 +20,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	private ConfiguracionPantalla configuracionPantalla = new ConfiguracionPantalla();
 
-	private JTable table;
-	private JScrollPane scrollPane;
+	private JTable jTableBilio;
+	private JScrollPane scrollPaneJTable;
 	private JScrollPane scrolpaneFiltro;
 	private JPanel panelFiltros;
 
@@ -43,13 +43,14 @@ public class MostrarBibliotecaPanel extends JPanel {
 		setLayout(null);
 
 		// Table
-		scrollPane = new JScrollPane();
+		scrollPaneJTable = new JScrollPane();
 
-		scrollPane.setBounds(amplada(50) - 5, altura(0) + 10, amplada(120), altura(52));
-		add(scrollPane);
+		scrollPaneJTable.setBounds(amplada(50) - 5, altura(0) + 10, amplada(120), altura(52));
+		add(scrollPaneJTable);
 
-		table = new JTable();
-		scrollPane.setViewportView(table);
+		jTableBilio = new JTable();
+		scrollPaneJTable.setViewportView(jTableBilio);
+
 		// Filtre
 
 		scrolpaneFiltro = new JScrollPane();
@@ -83,8 +84,20 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	}
 
-	public JTable getTable() {
-		return table;
+	public JTable getjTableBilio() {
+		return jTableBilio;
+	}
+
+	public JPanel getPanelFiltros() {
+		return panelFiltros;
+	}
+
+	public JScrollPane getScrollPaneJTable() {
+		return scrollPaneJTable;
+	}
+
+	public JScrollPane getScrolpaneFiltro() {
+		return scrolpaneFiltro;
 	}
 
 	public JCheckBox getchckbxLlegit() {

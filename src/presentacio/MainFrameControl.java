@@ -12,7 +12,7 @@ public class MainFrameControl {
 	private static ServerConect con = new ServerConect();
 	private static ControladorLlibres cLlibres;
 	private static List<Llibre> biblio;
-	private static MostrarBibliotecaControl tableController;
+	private static MostrarBibliotecaControl MostrarBibliotecaControl;
 	private static MainFramePanel vista;
 
 	public MainFrameControl(MainFramePanel vista) {
@@ -26,7 +26,8 @@ public class MainFrameControl {
 
 //		cLlibres = new ControladorLlibres(con.getConnection(), biblio);
 
-		tableController = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(), biblio, con.getHeader());
+		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(), biblio,
+				con.getHeader());
 //		cLlibres.afegirLlibre(new Llibre(1, "ala", "ala", 1231, "dsakfljhasdl�kfjhasldf", 100.01, 10.3, Boolean.TRUE));
 
 //		for (int i = 0; i < biblio.size(); i++) {
