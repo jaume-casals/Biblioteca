@@ -4,11 +4,13 @@ import java.awt.EventQueue;
 
 import javax.swing.UIManager;
 
+import domini.ControladorDomini;
 import presentacio.MainFrameControl;
 import presentacio.MainFramePanel;
 
 public class Ejecutable {
 	public static void main(String[] args) {
+		/*
 
 		EventQueue.invokeLater(new Runnable() {
 			private MainFramePanel vista;
@@ -24,5 +26,7 @@ public class Ejecutable {
 				}
 			}
 		});
+		*/
+		ControladorDomini cd = ControladorDomini.getInstance();
 	}
 }

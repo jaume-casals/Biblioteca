@@ -1,6 +1,6 @@
 package domini;
 
-public class Llibre implements Comparable<Llibre> {
+public class Llibre {
 
 	private Integer ISBN;
 	private String Nom;
@@ -91,10 +91,5 @@ public class Llibre implements Comparable<Llibre> {
 	public String toString() {
 		return this.ISBN + " " + this.Nom + " " + this.Autor + " " + this.Any + " " + this.Descripcio + " "
 				+ this.Valoracio + " " + this.Preu + " " + this.Llegit;
-	}
-
-	@Override
-	public int compareTo(Llibre llibre) {
-		return this.ISBN.compareTo(llibre.getISBN());
 	}
 }

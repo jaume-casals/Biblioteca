@@ -4,13 +4,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 import domini.Llibre;
-import persistencia.ControladorLlibres;
+import persistencia.ControladorPersistencia;
 import persistencia.ServerConect;
 
 public class MainFrameControl {
 
 	private static ServerConect con = new ServerConect();
-	private static ControladorLlibres cLlibres;
+	private static ControladorPersistencia cLlibres;
 	private static List<Llibre> biblio;
 	private static MostrarBibliotecaPanel table = new MostrarBibliotecaPanel();
 	private static TableController tableController;
@@ -25,7 +25,7 @@ public class MainFrameControl {
 
 		biblio = con.getAllLlibres();
 
-		cLlibres = new ControladorLlibres(con.getConnection(), biblio);
+		cLlibres = ControladorPersistencia.getInstance();
 
 		tableController = new TableController(table, biblio, con.getHeader());
 
