@@ -16,7 +16,7 @@ import herramienta.ConfiguracionPantalla;
 public class MainFramePanel extends JFrame {
 
 	private JPanel contentPane;
-	private MostrarBibliotecaPanel vistaMostrarBibliotecaPanel = new MostrarBibliotecaPanel();
+	private MostrarBibliotecaPanel mostrarBibliotecaPanel = new MostrarBibliotecaPanel();
 	private ConfiguracionPantalla configuracionPantalla = new ConfiguracionPantalla();
 
 	private JMenuBar menuBar;
@@ -38,7 +38,7 @@ public class MainFramePanel extends JFrame {
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
 
-		contentPane.add(vistaMostrarBibliotecaPanel);
+		contentPane.add(mostrarBibliotecaPanel);
 
 		menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
@@ -62,5 +62,9 @@ public class MainFramePanel extends JFrame {
 
 	private int amplada(int a) {
 		return ((int) configuracionPantalla.getWidth() * a) / 100;
+	}
+
+	public MostrarBibliotecaPanel getMostrarBibliotecaPanel() {
+		return mostrarBibliotecaPanel;
 	}
 }

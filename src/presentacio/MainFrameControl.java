@@ -12,23 +12,21 @@ public class MainFrameControl {
 	private static ServerConect con = new ServerConect();
 	private static ControladorLlibres cLlibres;
 	private static List<Llibre> biblio;
-	private static MostrarBibliotecaPanel table = new MostrarBibliotecaPanel();
-	private static TableController tableController;
+	private static MostrarBibliotecaControl tableController;
 	private static MainFramePanel vista;
 
 	public MainFrameControl(MainFramePanel vista) {
 		this.vista = vista;
 
-		con.startConection();
+//		con.startConection();
 
-		biblio = new LinkedList<Llibre>();
+//		biblio = new LinkedList<Llibre>();
 
-		biblio = con.getAllLlibres();
+//		biblio = con.getAllLlibres();
 
-		cLlibres = new ControladorLlibres(con.getConnection(), biblio);
+//		cLlibres = new ControladorLlibres(con.getConnection(), biblio);
 
-		tableController = new TableController(table, biblio, con.getHeader());
-
+		tableController = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(), biblio, con.getHeader());
 //		cLlibres.afegirLlibre(new Llibre(1, "ala", "ala", 1231, "dsakfljhasdl�kfjhasldf", 100.01, 10.3, Boolean.TRUE));
 
 //		for (int i = 0; i < biblio.size(); i++) {
@@ -42,8 +40,12 @@ public class MainFrameControl {
 //			System.out.println(biblio.get(i).toString());
 //		}
 
-		con.closeConection();
+//		con.closeConection();
 
+	}
+
+	public void setVisible(boolean b) {
+		this.vista.setVisible(b);
 	}
 
 }

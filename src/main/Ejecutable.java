@@ -12,13 +12,14 @@ public class Ejecutable {
 
 		EventQueue.invokeLater(new Runnable() {
 			private MainFramePanel vista;
+			private MainFrameControl mainControl;
 
 			public void run() {
 				try {
 					UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-					vista = new MainFramePanel();
-					vista.setVisible(true);
-					new MainFrameControl(vista);
+					this.vista = new MainFramePanel();
+					mainControl = new MainFrameControl(this.vista);
+					mainControl.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
