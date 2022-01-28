@@ -25,11 +25,11 @@ public class MostrarBibliotecaControl {
 		this.biblio = biblio;
 		this.header = header;
 
-		this.vista.getbttnFiltrar().addActionListener(e -> filtrar());
+		this.vista.getbtnFiltrar().addActionListener(e -> filtrar());
 		this.vista.getbttnQuitarFiltros().addActionListener(e -> quitarFiltros());
 	}
 
-	public void ns() {
+	public void setTable() {
 
 		((DefaultTableModel) this.vista.getjTableBilio().getModel()).setRowCount(0);
 		DefaultTableModel model = new DefaultTableModel(header, 0);
@@ -57,25 +57,9 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void quitarFiltros() {
-		System.out.println("quito");
-		this.vista.getbttnFiltrar().setSelected(false);
-		this.vista.getbttnQuitarFiltros().setSelected(false);
+		this.vista.getchckbxLlegit().setSelected(false);
+
+		this.vista.getchckbxNoLlegit().setSelected(false);
 	}
 
-	public class StatusColumnCellRenderer extends DefaultTableCellRenderer {
-		@Override
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-				int row, int col) {
-
-			// Cells are by default rendered as a JLabel.
-			JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-
-			// Get the status for the current row.
-			l.setBackground(Color.DARK_GRAY);
-
-			// Return the JLabel which renders the cell.
-			return l;
-
-		}
-	}
 }

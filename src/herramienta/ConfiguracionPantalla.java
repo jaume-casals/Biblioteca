@@ -5,8 +5,8 @@ import java.awt.Toolkit;
 
 public class ConfiguracionPantalla {
 	private static Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	private static double height = 1600;
-	private static double width = 900;
+	private static double width = 1600;
+	private static double height = 900;
 
 	public static double alturaS(double d) {
 		return (width * d) / 100;

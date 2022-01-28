@@ -25,14 +25,18 @@ public class MainFramePanel extends JFrame {
 
 	private JMenu mnAyuda;
 	private JMenuItem mntmAbout;
+	private JMenuItem mntOpcions;
 
 	public MainFramePanel() {
 
+		int amplada = amplada(100);
+		int altura = altura(100);
+
 		setTitle("Biblioteca");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setPreferredSize(new Dimension(1600, 900));
-		setMaximumSize(new Dimension(1600, 900));
-		setBounds(100, 100, amplada(100), altura(100));
+		setPreferredSize(new Dimension(amplada, altura));
+		setMaximumSize(new Dimension(amplada, altura));
+		setBounds(100, 100, amplada, altura);
 		setExtendedState(Frame.MAXIMIZED_BOTH);
 		setResizable(false);
 
@@ -59,11 +63,18 @@ public class MainFramePanel extends JFrame {
 		mntmAbout = new JMenuItem("Sobre l'equip");
 		mnAyuda.add(mntmAbout);
 
+		mntOpcions = new JMenuItem("Opcions");
+		mnAyuda.add(mntOpcions);
+
 		pack();
 	}
 
 	public JMenuItem getMntmAbout() {
 		return mntmAbout;
+	}
+
+	public JMenuItem getMntOpcions() {
+		return mntOpcions;
 	}
 
 	public void setVisible(Boolean bool) {
