@@ -1,10 +1,7 @@
 
 package persistencia;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.List;
+import java.util.ArrayList;
 
 import domini.Llibre;
 
@@ -18,10 +15,31 @@ public class ControladorPersistencia {
 		return ControladorPersistencia.inst;
 	}
 
-	public ControladorPersistencia() {
+	private ControladorPersistencia() {
 		sc = new ServerConect();
 		sc.createDatabase();
-		sc.closeConection();
 	}
 
+	public ArrayList<Llibre> getAllLlibres() {
+		return sc.getAllLlibres();
+	}
+
+	public void replaceAllLlibres(ArrayList<Llibre> llibres) {
+		sc.resetDatabase();
+		for (int i = 0; i < llibres.size(); ++i) {
+			sc.afegirLlibre(llibres.get(i));
+		}
+	}
+
+	public void afegirLlibre(Llibre llibre) {
+		sc.afegirLlibre(llibre);
+	}
+
+	public void eliminarLlibre(Llibre llibre) {
+		sc.deleteLlibre(llibre);
+	}
+
+	public void eliminarLlibre(int ISBN) {
+		sc.deleteLlibre(new Llibre(ISBN, "nom", "autor", 1, "descripcio", 0.0, 0.0, false, "portada"));
+	}
 }

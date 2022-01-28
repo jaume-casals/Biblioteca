@@ -19,8 +19,6 @@ public class MainFrameControl {
 	public MainFrameControl(MainFramePanel vista) {
 		this.vista = vista;
 
-		con.startConection();
-
 		biblio = new LinkedList<Llibre>();
 
 		biblio = con.getAllLlibres();

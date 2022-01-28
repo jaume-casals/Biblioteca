@@ -3,8 +3,9 @@ package domini;
 import persistencia.ControladorPersistencia;
 
 public class ControladorDomini {
-    private ControladorPersistencia cp;
     private static ControladorDomini inst;
+    private ControladorPersistencia cp;
+    private Biblioteca bib;
 
     public static ControladorDomini getInstance() {
         if (ControladorDomini.inst == null) ControladorDomini.inst = new ControladorDomini();
@@ -13,5 +14,6 @@ public class ControladorDomini {
 
     private ControladorDomini() {
         cp = ControladorPersistencia.getInstance();
+        bib = new Biblioteca(cp.getAllLlibres());
     }
 }

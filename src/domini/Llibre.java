@@ -10,9 +10,10 @@ public class Llibre {
 	private Double Valoracio;
 	private Double Preu;
 	private Boolean Llegit;
+	private String Portada;
 
 	public Llibre(Integer isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
-			Boolean llegit) {
+			Boolean llegit, String portada) {
 		this.ISBN = isbn;
 		this.Nom = nom;
 		this.Autor = autor;
@@ -21,9 +22,10 @@ public class Llibre {
 		this.Valoracio = valoracio;
 		this.Preu = preu;
 		this.Llegit = llegit;
+		this.Portada = portada;
 	}
 
-	public Integer getISBN() {
+    public Integer getISBN() {
 		return ISBN;
 	}
 
@@ -85,6 +87,14 @@ public class Llibre {
 
 	public void setLlegit(Boolean llegit) {
 		Llegit = llegit;
+	}
+
+	public String getPortada() {
+		return Portada;
+	}
+
+	public void setPortada(String portada) {
+		Portada = portada;
 	}
 
 	@Override
