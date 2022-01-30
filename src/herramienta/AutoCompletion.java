@@ -12,6 +12,7 @@ import javax.swing.text.*;
  */
 
 public class AutoCompletion extends PlainDocument {
+
 	JComboBox comboBox;
 	ComboBoxModel model;
 	JTextComponent editor;
@@ -77,7 +78,6 @@ public class AutoCompletion extends PlainDocument {
 	}
 
 	public static void enable(JComboBox comboBox) {
-		// has to be editable
 		comboBox.setEditable(true);
 		new AutoCompletion(comboBox);
 	}

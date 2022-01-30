@@ -1,5 +1,6 @@
 package presentacio;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import domini.Llibre;
@@ -12,7 +13,7 @@ public class MainFrameControl {
 
 	private static ServerConect con = new ServerConect();
 	private static ControladorLlibres cLlibres;
-	private static List<Llibre> biblio;
+	private static ArrayList<Llibre> biblio;
 	private static MostrarBibliotecaControl MostrarBibliotecaControl;
 	private static MainFramePanel vista;
 

@@ -3,7 +3,6 @@ package presentacio;
 import java.awt.CheckboxGroup;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Toolkit;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -24,7 +23,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	int alturachk = altura(2);
 	int alturachkllegit = 1;
 
-	int iniciComponent = amplada(2);
+	int iniciComponent = amplada(3);
 
 	int alturabtnfiltrar = 68;
 	int ampladabtn = amplada(16);
@@ -46,8 +45,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JComboBox<String> comboBoxISBN;
 	private JComboBox<String> comboBoxNom;
 	private JComboBox<String> comboBoxAutor;
-	// DATE
-	// no descripcio
+	// any
 	// stars?
 	// min max
 	private CheckboxGroup checkboxgroup;
@@ -63,15 +61,20 @@ public class MostrarBibliotecaPanel extends JPanel {
 		// Table
 		scrollPaneJTable = new JScrollPane();
 
-		scrollPaneJTable.setBounds(amplada(45), 10, amplada(52), altura(83));
+		scrollPaneJTable.setBounds(amplada(30), 10, amplada(67), altura(83));
+		scrollPaneJTable.setForeground(Color.black);
 		add(scrollPaneJTable);
+
 		jTableBilio = new JTable();
+		jTableBilio.setDefaultEditor(Object.class, null);
+		jTableBilio.setAutoCreateRowSorter(true);
+
 		scrollPaneJTable.setViewportView(jTableBilio);
 
 		// Filtre
 
 		scrolpaneFiltro = new JScrollPane();
-		scrolpaneFiltro.setBounds(10, 11, amplada(40), altura(83));
+		scrolpaneFiltro.setBounds(10, 11, amplada(25), altura(83));
 		add(scrolpaneFiltro);
 
 		panelFiltros = new JPanel();
@@ -119,6 +122,18 @@ public class MostrarBibliotecaPanel extends JPanel {
 		bttnQuitarFiltros.setBounds(iniciComponent, altura(alturabtnfiltrar + 7), ampladabtn, alturabtn);
 		panelFiltros.add(bttnQuitarFiltros);
 
+	}
+
+	public JComboBox<String> getComboBoxISBN() {
+		return comboBoxISBN;
+	}
+
+	public JComboBox<String> getComboBoxNom() {
+		return comboBoxNom;
+	}
+
+	public JComboBox<String> getComboBoxAutor() {
+		return comboBoxAutor;
 	}
 
 	public JTable getjTableBilio() {
