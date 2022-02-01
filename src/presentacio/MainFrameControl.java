@@ -6,13 +6,13 @@ import java.util.List;
 import domini.Llibre;
 import presentacio.acercade.AcercaDeDialogoControl;
 import presentacio.acercade.AcercaDeDialogo;
-import persistencia.ControladorLlibres;
+import persistencia.ControladorPersistencia;
 import persistencia.ServerConect;
 
 public class MainFrameControl {
 
 	private static ServerConect con = new ServerConect();
-	private static ControladorLlibres cLlibres;
+	private static ControladorPersistencia cLlibres;
 	private static ArrayList<Llibre> biblio;
 	private static MostrarBibliotecaControl MostrarBibliotecaControl;
 	private static MainFramePanel vista;
