@@ -1277,7 +1277,6 @@ public class MostrarBibliotecaControl {
 	private void anadirComboBoxLlibre(Llibre l) {
 		this.vista.getComboBoxISBN().addItem(l.getISBN() + "");
 		this.vista.getComboBoxAutor().addItem(l.getAutor());
-
 		this.vista.getComboBoxNom().addItem(l.getNom());
 	}
 
@@ -1318,9 +1317,9 @@ public class MostrarBibliotecaControl {
 
 	}
 
-	public class BotonDetallesEditor extends DefaultCellEditor {
+	private class BotonDetallesEditor extends DefaultCellEditor {
 
-		public BotonDetallesEditor(JCheckBox checkbox) {
+		private BotonDetallesEditor(JCheckBox checkbox) {
 			super(checkbox);
 		}
 
@@ -1339,7 +1338,7 @@ public class MostrarBibliotecaControl {
 		}
 	}
 
-	public class BotonDetallesRenderer extends JButton implements TableCellRenderer {
+	private class BotonDetallesRenderer extends JButton implements TableCellRenderer {
 
 		public BotonDetallesRenderer() {
 			setOpaque(true);
