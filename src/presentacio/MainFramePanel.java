@@ -73,6 +73,10 @@ public class MainFramePanel extends JFrame {
 		return mntmAbout;
 	}
 
+	public JMenuItem getaddLlibre() {
+		return addLlibre;
+	}
+
 	public JMenuItem getMntOpcions() {
 		return mntOpcions;
 	}

@@ -3,12 +3,15 @@ package presentacio;
 import java.awt.CheckboxGroup;
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Font;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
 
 import herramienta.ConfiguracionPantalla;
@@ -54,6 +57,9 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	private JButton bttnFiltrar;
 	private JButton bttnQuitarFiltros;
+	private int comboBoxAlturaPos = 12;
+	private int comboboxAltura = altura(4);
+	private int comboboxAmplada = amplada(15);
 
 	public MostrarBibliotecaPanel() {
 		setLayout(null);
@@ -84,8 +90,9 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		checkboxgroup = new CheckboxGroup();
 		chckbxLlegit = new JCheckBox("Llegit");
-
+		chckbxLlegit.setFont(new Font("Dialog", Font.PLAIN, 15));
 		chckbxNoLlegit = new JCheckBox("No llegit");
+		chckbxNoLlegit.setFont(new Font("Dialog", Font.PLAIN, 15));
 
 		chckbxLlegit.setBounds(iniciComponent, altura(alturachkllegit), ampladachk, alturachk);
 		chckbxNoLlegit.setBounds(iniciComponent, altura(alturachkllegit + 3), ampladachk, alturachk);
@@ -93,22 +100,36 @@ public class MostrarBibliotecaPanel extends JPanel {
 		panelFiltros.add(chckbxLlegit);
 		panelFiltros.add(chckbxNoLlegit);
 
-		int a = 15;
-		int b = altura(4);
-		int c = amplada(15);
+		JLabel lblISBN = new JLabel("ISBN");
+		lblISBN.setHorizontalAlignment(SwingConstants.CENTER);
+		lblISBN.setFont(new Font("Dialog", Font.PLAIN, 19));
+		lblISBN.setBounds(iniciComponent - 20, altura(comboBoxAlturaPos - 4), 87, 32);
+		panelFiltros.add(lblISBN);
 
 		comboBoxISBN = new JComboBox<String>();
 		comboBoxISBN.setToolTipText("");
-		comboBoxISBN.setBounds(iniciComponent, altura(a), c, b);
+		comboBoxISBN.setBounds(iniciComponent, altura(comboBoxAlturaPos), comboboxAmplada, comboboxAltura);
 		panelFiltros.add(comboBoxISBN);
 
+		JLabel lblNom = new JLabel("Nom");
+		lblNom.setHorizontalAlignment(SwingConstants.CENTER);
+		lblNom.setFont(new Font("Dialog", Font.PLAIN, 19));
+		lblNom.setBounds(iniciComponent - 20, altura(comboBoxAlturaPos + 6), 87, 32);
+		panelFiltros.add(lblNom);
+
 		comboBoxNom = new JComboBox<String>();
-		comboBoxNom.setBounds(iniciComponent, altura(a + 12), c, b);
+		comboBoxNom.setBounds(iniciComponent, altura(comboBoxAlturaPos + 10), comboboxAmplada, comboboxAltura);
 		comboBoxNom.setToolTipText("");
 		panelFiltros.add(comboBoxNom);
 
+		JLabel lblAutor = new JLabel("Autor");
+		lblAutor.setHorizontalAlignment(SwingConstants.CENTER);
+		lblAutor.setFont(new Font("Dialog", Font.PLAIN, 19));
+		lblAutor.setBounds(iniciComponent - 15, altura(comboBoxAlturaPos + 17), 87, 32);
+		panelFiltros.add(lblAutor);
+
 		comboBoxAutor = new JComboBox<String>();
-		comboBoxAutor.setBounds(iniciComponent, altura(a + 24), c, b);
+		comboBoxAutor.setBounds(iniciComponent, altura(comboBoxAlturaPos + 21), comboboxAmplada, comboboxAltura);
 		comboBoxAutor.setToolTipText("");
 		panelFiltros.add(comboBoxAutor);
 
