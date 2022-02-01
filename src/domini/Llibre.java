@@ -1,5 +1,6 @@
 package domini;
 
+
 public class Llibre {
 
 	private Integer ISBN;

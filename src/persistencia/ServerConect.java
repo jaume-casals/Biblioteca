@@ -54,16 +54,15 @@ public class ServerConect {
 			e.printStackTrace();
 		}
 
-		/*
 		try {
 			PreparedStatement ps = 
 			con.prepareStatement("insert into llibre values(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-			for (int i = 0; i < 1000; ++i) {
-				ps.setInt(1, i*3-(i%12));
-				ps.setString(2, "La_Mosca_y_el_lobo" + i);
-				ps.setString(3, "Juan_Martinez");
+			for (int i = 0; i < 7; ++i) {
+				ps.setInt(1, i+10000);
+				ps.setString(2, (int)(7/(7-i)) + "Titol");
+				ps.setString(3, (int)(i%2) + "Autor");
 				ps.setInt(4, i*1000);
-				ps.setString(5, "Una_basura de cuidado");
+				ps.setString(5, "a");
 				ps.setFloat(6, (float)(2.0+i/100.0));
 				ps.setFloat(7, (float)(20.0+i/100.0));
 				ps.setBoolean(8, i%2 == 0);
@@ -76,7 +75,7 @@ public class ServerConect {
 		catch (Exception e) {
 			System.out.println("Ha fallat omplir la base de dades");
 			e.printStackTrace();
-		}*/
+		}
 
 	}
 
