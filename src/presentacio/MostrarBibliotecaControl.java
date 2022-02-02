@@ -94,8 +94,6 @@ public class MostrarBibliotecaControl {
 	public void setTable(ArrayList<Llibre> llibres) {
 		this.model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 		this.model.getDataVector().removeAllElements();
-//		this.modeloOrdenado = new TableRowSorter<TableModel>(this.model);
-//		this.vista.getjTableBilio().setRowSorter(null);
 		setHeader(new String[] { "ISBN", "Nom", "Autor", "Any", "Valoracio", "Preu", "Llegit", "Detalls" });
 		if (this.biblio != null) {
 			this.vista.getComboBoxISBN().addItem("");
@@ -113,7 +111,8 @@ public class MostrarBibliotecaControl {
 				}
 			}
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(7).setMaxWidth(80);
+		this.vista.getjTableBilio().getColumnModel().getColumn(7).setMaxWidth(160);
+		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMinWidth(160);
 		this.vista.getjTableBilio().getColumnModel().getColumn(7).setCellRenderer(new BotonDetallesRenderer());
 		this.vista.getjTableBilio().getColumnModel().getColumn(7)
 				.setCellEditor(new BotonDetallesEditor(new JCheckBox()));
@@ -138,12 +137,26 @@ public class MostrarBibliotecaControl {
 			JOptionPane.showMessageDialog(vista, "Cuidado que hay diferentes columnas en la tabla de Libros", "Error",
 					0, null);
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMaxWidth(50);
-		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMinWidth(50);
-		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMaxWidth(90);
-		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMinWidth(90);
-		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMaxWidth(90);
-		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMinWidth(90);
+		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMaxWidth(110);
+		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMinWidth(110);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMaxWidth(330);
+		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMinWidth(190);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(2).setMaxWidth(330);
+		this.vista.getjTableBilio().getColumnModel().getColumn(2).setMinWidth(190);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(3).setMaxWidth(60);
+		this.vista.getjTableBilio().getColumnModel().getColumn(3).setMinWidth(60);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(4).setMaxWidth(80);
+		this.vista.getjTableBilio().getColumnModel().getColumn(4).setMinWidth(80);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMaxWidth(50);
+		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMinWidth(50);
+
+		this.vista.getjTableBilio().getColumnModel().getColumn(6).setMaxWidth(90);
+		this.vista.getjTableBilio().getColumnModel().getColumn(6).setMinWidth(90);
 	}
 
 	public JPanel view() {

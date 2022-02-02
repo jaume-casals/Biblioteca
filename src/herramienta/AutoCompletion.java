@@ -126,7 +126,7 @@ public class AutoCompletion extends PlainDocument {
 			offs = offs - str.length();
 			comboBox.getToolkit().beep(); // when available use:
 											// UIManager.getLookAndFeel().provideErrorFeedback(comboBox);
-		}	
+		}
 		setText(item.toString());
 		highlightCompletedText(offs + str.length());
 	}

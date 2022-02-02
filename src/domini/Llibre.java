@@ -1,6 +1,5 @@
 package domini;
 
-
 public class Llibre {
 
 	private Integer ISBN;
@@ -26,7 +25,7 @@ public class Llibre {
 		this.Portada = portada;
 	}
 
-    public Integer getISBN() {
+	public Integer getISBN() {
 		return ISBN;
 	}
 

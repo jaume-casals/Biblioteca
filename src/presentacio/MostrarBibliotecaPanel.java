@@ -74,6 +74,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		jTableBilio = new JTable();
 		jTableBilio.setDefaultEditor(Object.class, null);
 		jTableBilio.setAutoCreateRowSorter(true);
+		jTableBilio.getTableHeader().setReorderingAllowed(false);
 
 		scrollPaneJTable.setViewportView(jTableBilio);
 
