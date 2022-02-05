@@ -119,15 +119,15 @@ public class AutoCompletion extends PlainDocument {
 		super.insertString(offs, str, a);
 		Object item = lookupItem(getText(0, getLength()));
 
-		if (item != null) {
-			setSelectedItem(item);
-		} else {
-			item = comboBox.getSelectedItem();
-			offs = offs - str.length();
-			comboBox.getToolkit().beep(); // when available use:
-											// UIManager.getLookAndFeel().provideErrorFeedback(comboBox);
-		}
-		setText(item.toString());
+//		if (item != null) {
+//			setSelectedItem(item);
+//		} else {
+//			item = comboBox.getSelectedItem();
+//			offs = offs - str.length();
+//			comboBox.getToolkit().beep(); // when available use:
+//											// UIManager.getLookAndFeel().provideErrorFeedback(comboBox);
+//		}
+//		setText(item.toString());
 		highlightCompletedText(offs + str.length());
 	}
 

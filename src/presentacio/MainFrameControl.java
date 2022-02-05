@@ -21,27 +21,7 @@ public class MainFrameControl {
 	private MainFrameControl(MainFramePanel vista) {
 		this.vista = vista;
 
-//		con.startConection();
-
-//		biblio = new LinkedList<Llibre>();
-
-//		biblio = con.getAllLlibres();
-
 		cLlibres = ControladorDomini.getInstance();
-//		cLlibres.afegirLlibre(new Llibre(1, "ala", "ala", 1231, "dsakfljhasdl�kfjhasldf", 100.01, 10.3, Boolean.TRUE));
-
-//		for (int i = 0; i < biblio.size(); i++) {
-//			System.out.println(biblio.get(i).toString());
-//		}
-
-//		cLlibres.deleteLlibre(cLlibres.buscarLlibre(4));
-
-//		cLlibres.organitzarLlibre();
-//		for (int i = 0; i < biblio.size(); i++) {
-//			System.out.println(biblio.get(i).toString());
-//		}
-
-//		con.closeConection();
 
 		this.vista.getaddLlibre().addActionListener(e -> new Thread(() -> crearLlibreDialogo()).start());
 		this.vista.getMntmAbout().addActionListener(
@@ -56,6 +36,13 @@ public class MainFrameControl {
 			instance = new MainFrameControl(vista);
 		}
 		return instance;
+	}
+
+	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny,
+			Integer fiAny) {
+
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny);
+
 	}
 
 	private void crearLlibreDialogo() {

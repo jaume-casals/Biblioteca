@@ -11,6 +11,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
 
@@ -48,10 +49,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JComboBox<String> comboBoxISBN;
 	private JComboBox<String> comboBoxNom;
 	private JComboBox<String> comboBoxAutor;
-	// any
-	// stars?
-	// min max
-	private CheckboxGroup checkboxgroup;
+	private JTextField anyMin;
+	private JTextField anyMax;
 	private JCheckBox chckbxLlegit;
 	private JCheckBox chckbxNoLlegit;
 
@@ -89,7 +88,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 		scrolpaneFiltro.setViewportView(panelFiltros);
 		panelFiltros.setLayout(null);
 
-		checkboxgroup = new CheckboxGroup();
 		chckbxLlegit = new JCheckBox("Llegit");
 		chckbxLlegit.setFont(new Font("Dialog", Font.PLAIN, 15));
 		chckbxNoLlegit = new JCheckBox("No llegit");
@@ -180,10 +178,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	public JCheckBox getchckbxNoLlegit() {
 		return chckbxNoLlegit;
-	}
-
-	public CheckboxGroup getcheckboxgroup() {
-		return checkboxgroup;
 	}
 
 	public JButton getbtnFiltrar() {
