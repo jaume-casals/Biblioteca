@@ -11,24 +11,24 @@ import presentacio.MainFramePanel;
 public class Ejecutable {
 	public static void main(String[] args) {
 
-		EventQueue.invokeLater(new Runnable() {
-			private MainFramePanel vista;
-			private MainFrameControl mainControl;
+		// EventQueue.invokeLater(new Runnable() {
+		// 	private MainFramePanel vista;
+		// 	private MainFrameControl mainControl;
 
-			public void run() {
-				try {
-//					ControladorDomini cd = ControladorDomini.getInstance();
-//					System.out.println("resultat:");
-//					System.out.println(cd.aplicarFiltres("0", "1", 1000, 2000, 3000));
-					UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-					this.vista = new MainFramePanel();
-					mainControl = MainFrameControl.getInstance(this.vista);
-					mainControl.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
+		// 	public void run() {
+		// 		try {
+		// 			UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+		// 			this.vista = new MainFramePanel();
+		// 			mainControl = MainFrameControl.getInstance(this.vista);
+		// 			mainControl.setVisible(true);
+		// 		} catch (Exception e) {
+		// 			e.printStackTrace();
+		// 		}
+		// 	}
+		// });
+					ControladorDomini cd = ControladorDomini.getInstance();
+					System.out.println("resultat:");
+					System.out.println(cd.aplicarFiltres(null, null, null, null, null, false));
 
 	}
 }

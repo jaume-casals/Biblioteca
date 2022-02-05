@@ -31,19 +31,16 @@ public class ControladorDomini {
         Collections.sort(bib, c);
     }
 
-    public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny, Integer fiAny) {
+    public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny, Integer fiAny, Boolean llegit) {
         ArrayList<Llibre> resultat = new ArrayList<Llibre>();
 
         for (Llibre l : bib) {
-
-            int tamISBN = 1;
-            if (ISBN != null && ISBN > 9) tamISBN = ((int) (Math.log10(ISBN) + 1));
-
-            if ((nomAutor == null || l.getAutor().substring(0, nomAutor.length()).equals(nomAutor)) &&
-                (nomLlibre == null || l.getNom().substring(0, nomLlibre.length()).equals(nomLlibre)) &&
-                (ISBN == null || (int) (l.getISBN() / (int) Math.pow((int) 10, ((int) (Math.log10(l.getISBN()) + 1)) - tamISBN)) == ISBN) &&
+            if ((nomAutor == null || matchString(nomAutor, l.getAutor())) &&
+                (nomLlibre == null || matchString(nomLlibre, l.getNom())) &&
+                (ISBN == null || matchISBN(ISBN, l.getISBN())) &&
                 (iniciAny == null || l.getAny() >= iniciAny) &&
-                (fiAny == null || l.getAny() <= fiAny)) {
+                (fiAny == null || l.getAny() <= fiAny) &&
+                (llegit == null || l.getLlegit().equals(llegit))) {
                 resultat.add(l);
             }
         }
@@ -84,5 +81,24 @@ public class ControladorDomini {
         if (index < 0) throw new Exception("No existeix el llibre amb ISBN " + ISBN);
 
         return bib.get(index);
+    }
+
+    public boolean matchISBN(Integer ISBN, Integer ISBNLlibre) {
+        int tamISBN = 1;
+        if (ISBN != null && ISBN > 9) tamISBN = ((int) (Math.log10(ISBN) + 1));
+    
+        int tamLlibre = (int) (Math.log10(ISBNLlibre) + 1);
+
+        int tamRetallat = (int) Math.pow((int) 10, tamLlibre - tamISBN);
+
+        return (int) (ISBNLlibre / tamRetallat) == ISBN;
+    }
+
+    public boolean matchString(String s, String x) {
+        for (int i = 0; i < x.length()-s.length()+1; ++i) {
+            System.out.println(x.substring(i, i+s.length()));
+            if (x.substring(i, i+s.length()).equals(s)) return true;
+        }
+        return false;
     }
 }

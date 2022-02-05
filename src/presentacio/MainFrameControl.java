@@ -41,7 +41,7 @@ public class MainFrameControl {
 	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny,
 			Integer fiAny) {
 
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny);
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, null);
 
 	}
 
