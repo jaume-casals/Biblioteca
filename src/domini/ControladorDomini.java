@@ -11,6 +11,13 @@ public class ControladorDomini {
     private ControladorPersistencia cp;
     private ArrayList<Llibre> bib;
 
+    Comparator<Llibre> compararISBN = new Comparator<Llibre>() {
+        @Override
+        public int compare(Llibre arg0, Llibre arg1) {
+            return arg0.getISBN().compareTo(arg1.getISBN());
+        }
+    };
+
     public static ControladorDomini getInstance() {
         if (ControladorDomini.inst == null)
             ControladorDomini.inst = new ControladorDomini();
@@ -21,14 +28,7 @@ public class ControladorDomini {
         cp = ControladorPersistencia.getInstance();
         bib = new ArrayList<Llibre>(cp.getAllLlibres());
 
-        Comparator<Llibre> c = new Comparator<Llibre>() {
-            @Override
-            public int compare(Llibre arg0, Llibre arg1) {
-                return arg0.getISBN().compareTo(arg1.getISBN());
-            }
-        };
-
-        Collections.sort(bib, c);
+        Collections.sort(bib, compararISBN);
     }
 
     public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny, Integer fiAny, Boolean llegit) {
@@ -67,16 +67,38 @@ public class ControladorDomini {
         return bib.size();
     }
 
+    public void addLlibre(Llibre l) throws Exception {
+        cp.afegirLlibre(l);
+
+        int pos = Collections.binarySearch(bib, l, compararISBN);
+        if (pos >= 0) throw new Exception("El llibre amb ISBN: " + l.getISBN() +" ja existeix a la base de dades");
+
+        pos = -pos + 1;
+        bib.add(pos, l);
+    }
+
+    public void deleteLlibre(Llibre l) throws Exception {
+        cp.eliminarLlibre(l);
+
+        int pos = Collections.binarySearch(bib, l, compararISBN);
+        if (pos < 0) throw new Exception("El llibre amb ISBN: " + l.getISBN() +" no existeix a la base de dades");
+
+        bib.remove(pos);
+    }
+
+    public void deleteLlibre(Integer ISBN) throws Exception {
+        cp.eliminarLlibre(ISBN);
+
+        int pos = Collections.binarySearch(bib, new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), compararISBN);
+        if (pos < 0) throw new Exception("El llibre amb ISBN: " + ISBN +" no existeix a la base de dades");
+
+        bib.remove(pos);
+    }
+
     public Llibre getLlibre(int ISBN) throws Exception {
 
-        Comparator<Llibre> c = new Comparator<Llibre>() {
-            @Override
-            public int compare(Llibre arg0, Llibre arg1) {
-                return arg0.getISBN().compareTo(arg1.getISBN());
-            }
-        };
 
-        int index = Collections.binarySearch(bib, new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), c);
+        int index = Collections.binarySearch(bib, new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), compararISBN);
 
         if (index < 0) throw new Exception("No existeix el llibre amb ISBN " + ISBN);
 
