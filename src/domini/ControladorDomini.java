@@ -70,11 +70,16 @@ public class ControladorDomini {
     public void addLlibre(Llibre l) throws Exception {
         cp.afegirLlibre(l);
 
+        for (int i = 0; i < bib.size(); ++i) System.out.println(bib.get(i).getISBN());
+        
         int pos = Collections.binarySearch(bib, l, compararISBN);
+        System.out.println("BinarySearch " + pos);
         if (pos >= 0) throw new Exception("El llibre amb ISBN: " + l.getISBN() +" ja existeix a la base de dades");
 
         pos = -pos + 1;
+        System.out.println("Inserir " + pos);
         bib.add(pos, l);
+        for (int i = 0; i < bib.size(); ++i) System.out.println(bib.get(i).getISBN());
     }
 
     public void deleteLlibre(Llibre l) throws Exception {

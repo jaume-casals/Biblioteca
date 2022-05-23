@@ -30,10 +30,10 @@ public class ServerConect {
 			System.out.println("Ha fallat la connexió a la base de dades");
 			e.printStackTrace();
 		}
-
+//
 		try {
 			Statement s = con.createStatement();
-			s.executeUpdate("DROP DATABASE IF EXISTS `BIBLIOTECA`;"); // TODO: ELIMINAR AL FINAL
+//			s.executeUpdate("DROP DATABASE IF EXISTS `BIBLIOTECA`;"); // TODO: ELIMINAR AL FINAL
 			s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 			s.executeUpdate("USE BIBLIOTECA;");
 			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN INT PRIMARY KEY, "
@@ -43,7 +43,7 @@ public class ServerConect {
 			System.out.println("Ha fallat la creació de la base de dades");
 			e.printStackTrace();
 		}
-
+//
 		try {
 			PreparedStatement ps = con.prepareStatement("insert into llibre values(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			for (int i = 0; i < 7; ++i) {
