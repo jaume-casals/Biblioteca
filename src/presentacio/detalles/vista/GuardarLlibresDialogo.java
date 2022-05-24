@@ -30,8 +30,6 @@ public class GuardarLlibresDialogo extends JDialog {
 		setBounds(50, 50, 506, 558);
 		getContentPane().setLayout(null);
 
-		int a = 264;
-		int b = 34;
 		int c = 192;
 		int f = 83;
 		int g = 41;
@@ -48,7 +46,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		getContentPane().add(lblNewLabel);
 
 		textISBN = new JTextField();
-		textISBN.setBounds(a, b, c, g);
+		textISBN.setBounds(264, 34, c, g);
 		getContentPane().add(textISBN);
 		textISBN.setColumns(10);
 

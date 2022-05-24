@@ -13,7 +13,7 @@ public class DialogoDetalles extends JDialog {
 	public DialogoDetalles() {
 		setName("DialogDetalles");
 		dialogInit();
-		setBounds(100, 100, 712, 618);
+//		setBounds(100, 100, 712, 618);
 		getContentPane().setLayout(new BorderLayout());
 		setModal(true);
 		setResizable(false);
@@ -23,8 +23,8 @@ public class DialogoDetalles extends JDialog {
 	public void abrirDetalles(Object objeto) {
 		if (objeto instanceof Llibre) {
 			setTitle("Expedient del llibre " + ((Llibre) objeto).getNom());
-			setBounds(new Rectangle(0, 0, 675, 550));
-			getContentPane().add(new DetallesLlibrePanelControl().getDetallesLlibrePanel());
+			setBounds(new Rectangle(0, 0, 600, 675));
+			getContentPane().add(new DetallesLlibrePanelControl((Llibre) objeto).getDetallesLlibrePanel());
 		}
 	}
 
