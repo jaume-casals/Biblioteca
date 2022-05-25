@@ -1,9 +1,10 @@
-package presentacio.detalles.vista;
+package presentacio.detalles.control;
 
 import java.awt.Dialog;
 
 import domini.ControladorDomini;
 import domini.Llibre;
+import presentacio.detalles.vista.GuardarLlibresDialogo;
 
 public class GuardarLlibresDialogoControl {
 
@@ -18,20 +19,13 @@ public class GuardarLlibresDialogoControl {
 
 	private void crearLlibre() {
 		System.out.println(Integer.parseInt(vista.getTextISBN().getText()));
-		boolean llegit = false;
-		if (vista.getChckLlegit().isSelected()) {
-			llegit = true;
-		}
+
 		try {
-			cLlibres.addLlibre(new Llibre(
-					Integer.parseInt(vista.getTextISBN().getText()),
-					vista.getTextNom().getText(),
-					vista.getTextAutor().getText(), 
-					Integer.parseInt(vista.getTextAny().getText()),
-					vista.getTextDescripcio().getText(), 
-					Double.parseDouble(vista.getTextValoracio().getText()),
-					Double.parseDouble(vista.getTextPreu().getText()),
-					llegit, vista.getTextPortada().getText()));
+			cLlibres.addLlibre(new Llibre(Integer.parseInt(vista.getTextISBN().getText()), vista.getTextNom().getText(),
+					vista.getTextAutor().getText(), Integer.parseInt(vista.getTextAny().getText()),
+					vista.getTextDescripcio().getText(), Double.parseDouble(vista.getTextValoracio().getText()),
+					Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
+					vista.getTextPortada().getText()));
 			vista.dispose();
 		} catch (Exception e) {
 			e.printStackTrace();

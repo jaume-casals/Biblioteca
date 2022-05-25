@@ -4,8 +4,8 @@ import java.util.ArrayList;
 
 import domini.Llibre;
 import presentacio.acercade.AcercaDeDialogoControl;
+import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
-import presentacio.detalles.vista.GuardarLlibresDialogoControl;
 import presentacio.acercade.AcercaDeDialogo;
 import domini.ControladorDomini;
 

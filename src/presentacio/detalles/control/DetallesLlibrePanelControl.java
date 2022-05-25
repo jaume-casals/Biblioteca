@@ -8,22 +8,25 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 
+import domini.ControladorDomini;
 import domini.Llibre;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 
 public class DetallesLlibrePanelControl {
 
 	private DetallesLlibrePanel vista;
+	private ControladorDomini cLlibres;
 
 	public DetallesLlibrePanelControl(Llibre l) {
 		this.vista = new DetallesLlibrePanel();
-
+		cLlibres = ControladorDomini.getInstance();
 		BufferedImage img = null;
 		try {
-			img = ImageIO.read(new File("D:\\GitHub\\Biblioteca\\portades\\" + l.getNom() + ".png"));
+			img = ImageIO.read(new File(l.getPortada()));
+			System.out.println(l.getPortada());
 		} catch (IOException e) {
 			try {
-				img = ImageIO.read(new File("D:\\GitHub\\Biblioteca\\portades\\default_cover.png"));
+				img = ImageIO.read(this.vista.getClass().getResource("/portades/default_cover.png"));
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
@@ -36,7 +39,7 @@ public class DetallesLlibrePanelControl {
 
 		this.vista.getLabelIcono().setIcon(imageIcon);
 
-		this.vista.getBtnEditar().addActionListener(e -> editar());
+		this.vista.getBtnEditar().addActionListener(e -> editar(l));
 
 		this.vista.getTextAny().setText(l.getAny().toString());
 		this.vista.getTextAutor().setText(l.getAutor().toString());
@@ -50,7 +53,7 @@ public class DetallesLlibrePanelControl {
 
 	}
 
-	private void editar() {
+	private void editar(Llibre llibre) {
 		if (this.vista.getBtnEditar().getText().equals("Editar")) {
 			this.vista.getTextAny().setEnabled(true);
 			this.vista.getTextAutor().setEnabled(true);
@@ -73,6 +76,17 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextValoracio().setEnabled(false);
 			this.vista.getChckLlegit().setEnabled(false);
 			this.vista.getBtnEditar().setText("Editar");
+			try {
+				cLlibres.deleteLlibre(llibre);
+				cLlibres.addLlibre(new Llibre(Integer.parseInt(vista.getTextISBN().getText()),
+						vista.getTextNom().getText(), vista.getTextAutor().getText(),
+						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
+						Double.parseDouble(vista.getTextValoracio().getText()),
+						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
+						vista.getTextPortada().getText()));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
