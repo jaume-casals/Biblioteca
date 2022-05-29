@@ -1,18 +1,20 @@
 package presentacio.detalles.vista;
 
 import java.awt.Color;
+import java.awt.Point;
+import java.awt.Rectangle;
 
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
-import javax.swing.ImageIcon;
+
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 
-public class DetallesLlibrePanel extends JPanel {
+public class DetallesLlibrePanel extends JDialog {
 
 	private JLabel labelIcono;
 	private JTextField textISBN;
@@ -27,13 +29,24 @@ public class DetallesLlibrePanel extends JPanel {
 	private JButton btnNewButton;
 
 	public DetallesLlibrePanel() {
-		setBorder(new LineBorder(Color.GRAY));
-		setLayout(null);
+		setBounds(new Rectangle(1000, 2000, 0, 0));
+		setAlwaysOnTop(true);
+		setLocation(new Point(1000, 2000));
+		setName("Detalls Llibre"); //$NON-NLS-1$
+		setModal(true);
+		setBounds(100, 100, 741, 315);
+		getContentPane().setLayout(null);
+		setResizable(false);
 
+		JPanel panel = new JPanel();
+		panel.setBorder(new LineBorder(Color.GRAY));
+		panel.setLayout(null);
+
+		panel.setBounds(new Rectangle(0, 0, 600, 675));
 		labelIcono = new JLabel("");
 
 		labelIcono.setBounds(352, 64, 200, 200);
-		add(labelIcono);
+		panel.add(labelIcono);
 
 		int c = 192;
 		int f = 83;
@@ -41,97 +54,97 @@ public class DetallesLlibrePanel extends JPanel {
 
 		JLabel lblNewLabel = new JLabel("ISBN");
 		lblNewLabel.setBounds(31, 33, f, g);
-		add(lblNewLabel);
+		panel.add(lblNewLabel);
 
 		textISBN = new JTextField();
 		textISBN.setEnabled(false);
 		textISBN.setBounds(124, 33, c, g);
-		add(textISBN);
+		panel.add(textISBN);
 		textISBN.setColumns(10);
 
 		JLabel lblNewLabel_1 = new JLabel("NOM");
 		lblNewLabel_1.setBounds(31, 85, f, g);
-		add(lblNewLabel_1);
+		panel.add(lblNewLabel_1);
 
 		textNom = new JTextField();
 		textNom.setEnabled(false);
 		textNom.setColumns(10);
 		textNom.setBounds(124, 85, c, g);
-		add(textNom);
+		panel.add(textNom);
 
 		JLabel lblNewLabel_2 = new JLabel("AUTOR");
 		lblNewLabel_2.setBounds(31, 137, f, g);
-		add(lblNewLabel_2);
+		panel.add(lblNewLabel_2);
 
 		textAutor = new JTextField();
 		textAutor.setEnabled(false);
 		textAutor.setColumns(10);
 		textAutor.setBounds(124, 137, c, g);
-		add(textAutor);
+		panel.add(textAutor);
 
 		JLabel lblNewLabel_3 = new JLabel("ANY");
 		lblNewLabel_3.setBounds(31, 189, f, g);
-		add(lblNewLabel_3);
+		panel.add(lblNewLabel_3);
 
 		textAny = new JTextField();
 		textAny.setEnabled(false);
 		textAny.setColumns(10);
 		textAny.setBounds(124, 189, c, g);
-		add(textAny);
+		panel.add(textAny);
 
 		JLabel lblNewLabel_4 = new JLabel("DESCRIPCIO");
 		lblNewLabel_4.setBounds(31, 241, f, g);
-		add(lblNewLabel_4);
+		panel.add(lblNewLabel_4);
 
 		textDescripcio = new JTextField();
 		textDescripcio.setEnabled(false);
 		textDescripcio.setColumns(10);
 		textDescripcio.setBounds(124, 241, c, g);
-		add(textDescripcio);
+		panel.add(textDescripcio);
 
 		JLabel lblNewLabel_5 = new JLabel("VALORACIO");
 		lblNewLabel_5.setBounds(31, 293, f, g);
-		add(lblNewLabel_5);
+		panel.add(lblNewLabel_5);
 
 		textValoracio = new JTextField();
 		textValoracio.setEnabled(false);
 		textValoracio.setColumns(10);
 		textValoracio.setBounds(124, 293, c, g);
-		add(textValoracio);
+		panel.add(textValoracio);
 
 		JLabel lblNewLabel_6 = new JLabel("PREU");
 		lblNewLabel_6.setBounds(31, 345, f, g);
-		add(lblNewLabel_6);
+		panel.add(lblNewLabel_6);
 
 		textPreu = new JTextField();
 		textPreu.setEnabled(false);
 		textPreu.setColumns(10);
 		textPreu.setBounds(124, 345, c, g);
-		add(textPreu);
+		panel.add(textPreu);
 
 		JLabel lblNewLabel_7 = new JLabel("LLEGIT");
 		lblNewLabel_7.setBounds(31, 397, f, g);
-		add(lblNewLabel_7);
+		panel.add(lblNewLabel_7);
 
 		JLabel lblNewLabel_8 = new JLabel("PORTADA");
 		lblNewLabel_8.setBounds(31, 449, f, g);
-		add(lblNewLabel_8);
+		panel.add(lblNewLabel_8);
 
 		textPortada = new JTextField();
 		textPortada.setEnabled(false);
 		textPortada.setColumns(10);
 		textPortada.setBounds(124, 449, c, g);
-		add(textPortada);
+		panel.add(textPortada);
 
 		chckLlegit = new JCheckBox("");
 		chckLlegit.setEnabled(false);
 		chckLlegit.setHorizontalAlignment(SwingConstants.CENTER);
 		chckLlegit.setBounds(124, 397, 192, 41);
-		add(chckLlegit);
+		panel.add(chckLlegit);
 
 		btnNewButton = new JButton("Editar");
 		btnNewButton.setBounds(368, 449, 184, 41);
-		add(btnNewButton);
+		panel.add(btnNewButton);
 
 	}
 

@@ -3,13 +3,14 @@ package presentacio;
 import java.util.ArrayList;
 
 import domini.Llibre;
+import interficie.EnActualizarBBDD;
 import presentacio.acercade.AcercaDeDialogoControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 import presentacio.acercade.AcercaDeDialogo;
 import domini.ControladorDomini;
 
-public class MainFrameControl {
+public class MainFrameControl implements EnActualizarBBDD {
 
 	private ControladorDomini cLlibres;
 	private ArrayList<Llibre> biblio;
@@ -28,7 +29,7 @@ public class MainFrameControl {
 				e -> new Thread(() -> new AcercaDeDialogoControl(new AcercaDeDialogo()).setVisible(true)).start());
 
 		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(),
-				cLlibres.getAllLlibres());
+				cLlibres.getAllLlibres(), this);
 	}
 
 	public static MainFrameControl getInstance(MainFramePanel vista) {
@@ -63,6 +64,12 @@ public class MainFrameControl {
 
 	public void setVisible(boolean b) {
 		this.vista.setVisible(b);
+	}
+
+	@Override
+	public void actualitzarLlibre(Llibre l, boolean nuevo) {
+		this.MostrarBibliotecaControl.refreshLlibre(l, nuevo);
+
 	}
 
 }

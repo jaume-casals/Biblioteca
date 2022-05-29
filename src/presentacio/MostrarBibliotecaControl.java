@@ -20,21 +20,34 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.AutoCompletion;
 import herramienta.DialogoError;
-import presentacio.detalles.DialogoDetalles;
+import interficie.EnActualizarBBDD;
+import presentacio.detalles.control.DetallesLlibrePanelControl;
 
 public class MostrarBibliotecaControl {
+
+	private static final int COLUMNA_ISBN = 0;
+	private static final int COLUMNA_NOM = 1;
+	private static final int COLUMNA_AUTOR = 2;
+	private static final int COLUMNA_ANY = 3;
+	private static final int COLUMNA_VALORACIO = 4;
+	private static final int COLUMNA_PREU = 5;
+	private static final int COLUMNA_lLEGIT = 6;
+	private static final int COLUMNA_DETALLS = 7;
 
 	private ControladorDomini cLlibres;
 	private MostrarBibliotecaPanel vista;
 	private ArrayList<Llibre> biblio;
 	private DefaultTableModel model;
 	private JButton botonDetalles;
+	private EnActualizarBBDD enActualizarBBDD;
 
-	public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, ArrayList<Llibre> biblio) {
+	public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, ArrayList<Llibre> biblio,
+			EnActualizarBBDD enActualizarBBDD) {
 		this.vista = vista;
 		this.botonDetalles = new JButton();
 		cLlibres = ControladorDomini.getInstance();
 		this.biblio = biblio;
+		this.enActualizarBBDD = enActualizarBBDD;
 
 		AutoCompletion.enable(this.vista.getComboBoxISBN());
 		AutoCompletion.enable(this.vista.getComboBoxAutor());
@@ -82,11 +95,12 @@ public class MostrarBibliotecaControl {
 
 	private void abrirDetallesLlibres() {
 		try {
-			DialogoDetalles detalles = new DialogoDetalles();
-			detalles.abrirDetalles(MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt(
-					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))));
-			detalles.setLocationRelativeTo(this.vista);
-			detalles.setVisible(true);
+			DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(
+					MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt((String) this.vista
+							.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))),
+					enActualizarBBDD);
+			detalles.getDetallesLlibrePanel().setLocationRelativeTo(this.vista);
+			detalles.getDetallesLlibrePanel().setVisible(true);
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}
@@ -129,10 +143,11 @@ public class MostrarBibliotecaControl {
 				}
 			}
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(7).setMaxWidth(160);
-		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMinWidth(160);
-		this.vista.getjTableBilio().getColumnModel().getColumn(7).setCellRenderer(new BotonDetallesRenderer());
-		this.vista.getjTableBilio().getColumnModel().getColumn(7)
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(160);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMinWidth(160);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS)
+				.setCellRenderer(new BotonDetallesRenderer());
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS)
 				.setCellEditor(new BotonDetallesEditor(new JCheckBox()));
 	}
 
@@ -161,26 +176,26 @@ public class MostrarBibliotecaControl {
 			JOptionPane.showMessageDialog(vista, "Cuidado que hay diferentes columnas en la tabla de Libros", "Error",
 					0, null);
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMaxWidth(110);
-		this.vista.getjTableBilio().getColumnModel().getColumn(0).setMinWidth(110);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMaxWidth(110);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMinWidth(110);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMaxWidth(330);
-		this.vista.getjTableBilio().getColumnModel().getColumn(1).setMinWidth(190);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_NOM).setMaxWidth(330);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_NOM).setMinWidth(190);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(2).setMaxWidth(330);
-		this.vista.getjTableBilio().getColumnModel().getColumn(2).setMinWidth(190);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_AUTOR).setMaxWidth(330);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_AUTOR).setMinWidth(190);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(3).setMaxWidth(60);
-		this.vista.getjTableBilio().getColumnModel().getColumn(3).setMinWidth(60);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ANY).setMaxWidth(60);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ANY).setMinWidth(60);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(4).setMaxWidth(80);
-		this.vista.getjTableBilio().getColumnModel().getColumn(4).setMinWidth(80);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_VALORACIO).setMaxWidth(80);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_VALORACIO).setMinWidth(80);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMaxWidth(50);
-		this.vista.getjTableBilio().getColumnModel().getColumn(5).setMinWidth(50);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_PREU).setMaxWidth(50);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_PREU).setMinWidth(50);
 
-		this.vista.getjTableBilio().getColumnModel().getColumn(6).setMaxWidth(90);
-		this.vista.getjTableBilio().getColumnModel().getColumn(6).setMinWidth(90);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_lLEGIT).setMaxWidth(90);
+		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_lLEGIT).setMinWidth(90);
 	}
 
 	public JPanel view() {
@@ -268,6 +283,32 @@ public class MostrarBibliotecaControl {
 			setText("Detalles");
 			return this;
 		}
+	}
+
+	public void refreshLlibre(Llibre l, boolean nuevo) {
+		if (!nuevo) {
+			actualizarfila(l);
+		} else {
+			addRow(addLlibreMostrar(l));
+			anadirComboBoxLlibre(l);
+
+		}
+
+	}
+
+	private void actualizarfila(Llibre l) {
+
+		for (int x = 0; x < this.vista.getjTableBilio().getModel().getRowCount(); x++) {
+			if (this.vista.getjTableBilio().getValueAt(x, COLUMNA_ISBN).toString()
+					.contentEquals(Integer.toString(l.getISBN()))) {
+				model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
+				model.setValueAt(l.getISBN(), x, COLUMNA_ISBN);
+//				model.setValueAt(l.getIdentidad().getRazonSocial(), x, COLUMNA_RAZONSOCIAL);
+//				model.setValueAt(l.getIdentidad().getActividadEconomica(), x, COLUMNA_ACTIVIDADECONOMICA);
+				break;
+			}
+		}
+
 	}
 
 }

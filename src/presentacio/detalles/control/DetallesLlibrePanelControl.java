@@ -10,15 +10,18 @@ import javax.swing.ImageIcon;
 
 import domini.ControladorDomini;
 import domini.Llibre;
+import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 
 public class DetallesLlibrePanelControl {
 
 	private DetallesLlibrePanel vista;
 	private ControladorDomini cLlibres;
+	private EnActualizarBBDD enActualizarBBDD;
 
-	public DetallesLlibrePanelControl(Llibre l) {
+	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
 		this.vista = new DetallesLlibrePanel();
+		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = ControladorDomini.getInstance();
 		BufferedImage img = null;
 		try {
@@ -51,6 +54,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextValoracio().setText(l.getValoracio().toString());
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
 
+		this.vista.setTitle("Expedient del llibre " + l.getNom());
 	}
 
 	private void editar(Llibre llibre) {
@@ -78,12 +82,13 @@ public class DetallesLlibrePanelControl {
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				cLlibres.deleteLlibre(llibre);
-				cLlibres.addLlibre(new Llibre(Integer.parseInt(vista.getTextISBN().getText()),
-						vista.getTextNom().getText(), vista.getTextAutor().getText(),
-						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
-						Double.parseDouble(vista.getTextValoracio().getText()),
+				Llibre a = new Llibre(Integer.parseInt(vista.getTextISBN().getText()), vista.getTextNom().getText(),
+						vista.getTextAutor().getText(), Integer.parseInt(vista.getTextAny().getText()),
+						vista.getTextDescripcio().getText(), Double.parseDouble(vista.getTextValoracio().getText()),
 						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
-						vista.getTextPortada().getText()));
+						vista.getTextPortada().getText());
+				cLlibres.addLlibre(a);
+				enActualizarBBDD.actualitzarLlibre(a, false);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

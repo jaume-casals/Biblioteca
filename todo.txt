@@ -1,0 +1,4 @@
+
+-filtres
+-path photo fora src
+-refresh cada vegada que s'actualitza
