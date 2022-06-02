@@ -100,6 +100,6 @@ public class Llibre {
 	@Override
 	public String toString() {
 		return this.ISBN + " " + this.Nom + " " + this.Autor + " " + this.Any + " " + this.Descripcio + " "
-				+ this.Valoracio + " " + this.Preu + " " + this.Llegit;
+				+ this.Valoracio + " " + this.Preu + " " + this.Llegit + " " + this.Portada;
 	}
 }

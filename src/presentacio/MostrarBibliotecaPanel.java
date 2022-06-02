@@ -1,6 +1,5 @@
 package presentacio;
 
-import java.awt.CheckboxGroup;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
@@ -10,14 +9,13 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
 
 import herramienta.ConfiguracionPantalla;
-
-import javax.swing.JScrollPane;
 
 public class MostrarBibliotecaPanel extends JPanel {
 
@@ -32,14 +30,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 	int alturabtnfiltrar = 68;
 	int ampladabtn = amplada(16);
 	int alturabtn = altura(5);
-
-//	
-//	
-//	
-//	
-//	
-//	
-//	
 
 	private JTable jTableBilio;
 	private JScrollPane scrollPaneJTable;

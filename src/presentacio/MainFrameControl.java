@@ -2,13 +2,14 @@ package presentacio;
 
 import java.util.ArrayList;
 
+import domini.ControladorDomini;
 import domini.Llibre;
+import herramienta.DialogoError;
 import interficie.EnActualizarBBDD;
+import presentacio.acercade.AcercaDeDialogo;
 import presentacio.acercade.AcercaDeDialogoControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
-import presentacio.acercade.AcercaDeDialogo;
-import domini.ControladorDomini;
 
 public class MainFrameControl implements EnActualizarBBDD {
 
@@ -40,9 +41,9 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny,
-			Integer fiAny) {
+			Integer fiAny, Boolean Llegit) {
 
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, null);
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, Llegit);
 
 	}
 
@@ -57,7 +58,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		try {
 			return cLlibres.getLlibre(ISBN);
 		} catch (Exception e) {
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 		return null;
 	}

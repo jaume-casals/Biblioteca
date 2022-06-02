@@ -4,7 +4,7 @@ import java.awt.EventQueue;
 
 import javax.swing.UIManager;
 
-import domini.ControladorDomini;
+import herramienta.DialogoError;
 import presentacio.MainFrameControl;
 import presentacio.MainFramePanel;
 
@@ -22,7 +22,7 @@ public class Ejecutable {
 					mainControl = MainFrameControl.getInstance(this.vista);
 					mainControl.setVisible(true);
 				} catch (Exception e) {
-					e.printStackTrace();
+					new DialogoError(e).showErrorMessage();
 				}
 			}
 		});

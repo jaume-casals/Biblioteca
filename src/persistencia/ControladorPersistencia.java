@@ -11,7 +11,8 @@ public class ControladorPersistencia {
 	private ServerConect sc;
 
 	public static ControladorPersistencia getInstance() {
-		if (ControladorPersistencia.inst == null) ControladorPersistencia.inst = new ControladorPersistencia();
+		if (ControladorPersistencia.inst == null)
+			ControladorPersistencia.inst = new ControladorPersistencia();
 		return ControladorPersistencia.inst;
 	}
 

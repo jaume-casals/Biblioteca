@@ -95,13 +95,22 @@ public class MostrarBibliotecaControl {
 
 	private void abrirDetallesLlibres() {
 		try {
-			DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(
-					MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt((String) this.vista
-							.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))),
-					enActualizarBBDD);
+
+			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt(
+					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
+
+			DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(l, enActualizarBBDD);
+
 			detalles.getDetallesLlibrePanel().setLocationRelativeTo(this.vista);
 			detalles.getDetallesLlibrePanel().setVisible(true);
 		} catch (Exception e) {
+			System.out.println(this.vista.getjTableBilio().getSelectedRow());
+			System.out.println(Integer.parseInt(
+					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
+
+			System.out.println(MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt(
+					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))));
+			System.err.println(e);
 			new DialogoError(e).showErrorMessage();
 		}
 	}
@@ -232,7 +241,7 @@ public class MostrarBibliotecaControl {
 			llegit = false;
 		}
 
-		setTable(MainFrameControl.getInstance(null).aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny));
+		setTable(MainFrameControl.getInstance(null).aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, llegit));
 	}
 
 	private void quitarFiltros() {

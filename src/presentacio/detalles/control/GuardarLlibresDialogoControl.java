@@ -4,6 +4,7 @@ import java.awt.Dialog;
 
 import domini.ControladorDomini;
 import domini.Llibre;
+import herramienta.DialogoError;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
 public class GuardarLlibresDialogoControl {
@@ -28,7 +29,7 @@ public class GuardarLlibresDialogoControl {
 					vista.getTextPortada().getText()));
 			vista.dispose();
 		} catch (Exception e) {
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 
 	}

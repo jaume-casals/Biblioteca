@@ -1,12 +1,11 @@
 package presentacio.detalles.vista;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-
-import javax.swing.JLabel;
-import javax.swing.JCheckBox;
 import javax.swing.SwingConstants;
 
 public class GuardarLlibresDialogo extends JDialog {

@@ -4,15 +4,14 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
 
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
-import javax.swing.border.LineBorder;
-
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.LineBorder;
 
 public class DetallesLlibrePanel extends JDialog {
 
@@ -34,14 +33,14 @@ public class DetallesLlibrePanel extends JDialog {
 		setLocation(new Point(1000, 2000));
 		setName("Detalls Llibre"); //$NON-NLS-1$
 		setModal(true);
-		setBounds(100, 100, 741, 315);
+		setBounds(0, 0, 600, 675);
 		getContentPane().setLayout(null);
 		setResizable(false);
 
 		JPanel panel = new JPanel();
 		panel.setBorder(new LineBorder(Color.GRAY));
 		panel.setLayout(null);
-
+		add(panel);
 		panel.setBounds(new Rectangle(0, 0, 600, 675));
 		labelIcono = new JLabel("");
 

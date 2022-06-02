@@ -2,7 +2,7 @@ package presentacio.detalles.control;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
@@ -10,6 +10,8 @@ import javax.swing.ImageIcon;
 
 import domini.ControladorDomini;
 import domini.Llibre;
+import herramienta.DialogoError;
+import herramienta.checkLlibre;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 
@@ -21,24 +23,28 @@ public class DetallesLlibrePanelControl {
 
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
 		this.vista = new DetallesLlibrePanel();
+
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = ControladorDomini.getInstance();
 		BufferedImage img = null;
+		ImageIcon imageIcon = null;
 		try {
-			img = ImageIO.read(new File(l.getPortada()));
-			System.out.println(l.getPortada());
+			img = ImageIO.read(new FileInputStream(l.getPortada()));
+			Image dimg = img.getScaledInstance(this.vista.getLabelIcono().getWidth(),
+					this.vista.getLabelIcono().getHeight(), Image.SCALE_SMOOTH);
+
+			imageIcon = new ImageIcon(dimg);
 		} catch (IOException e) {
 			try {
-				img = ImageIO.read(this.vista.getClass().getResource("/portades/default_cover.png"));
+				img = ImageIO.read(new FileInputStream("portades/default_cover.png"));
+				Image dimg = img.getScaledInstance(this.vista.getLabelIcono().getWidth(),
+						this.vista.getLabelIcono().getHeight(), Image.SCALE_SMOOTH);
+
+				imageIcon = new ImageIcon(dimg);
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				new DialogoError(e1).showErrorMessage();
 			}
 		}
-
-		Image dimg = img.getScaledInstance(this.vista.getLabelIcono().getWidth(),
-				this.vista.getLabelIcono().getHeight(), Image.SCALE_SMOOTH);
-
-		ImageIcon imageIcon = new ImageIcon(dimg);
 
 		this.vista.getLabelIcono().setIcon(imageIcon);
 
@@ -82,15 +88,16 @@ public class DetallesLlibrePanelControl {
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				cLlibres.deleteLlibre(llibre);
-				Llibre a = new Llibre(Integer.parseInt(vista.getTextISBN().getText()), vista.getTextNom().getText(),
-						vista.getTextAutor().getText(), Integer.parseInt(vista.getTextAny().getText()),
-						vista.getTextDescripcio().getText(), Double.parseDouble(vista.getTextValoracio().getText()),
+				Llibre a = checkLlibre.cheackLlibre(Integer.parseInt(vista.getTextISBN().getText()),
+						vista.getTextNom().getText(), vista.getTextAutor().getText(),
+						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
+						Double.parseDouble(vista.getTextValoracio().getText()),
 						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
 						vista.getTextPortada().getText());
 				cLlibres.addLlibre(a);
 				enActualizarBBDD.actualitzarLlibre(a, false);
 			} catch (Exception e) {
-				e.printStackTrace();
+				new DialogoError(e).showErrorMessage();
 			}
 		}
 	}

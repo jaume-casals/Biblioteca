@@ -3,14 +3,14 @@ package domini;
 import java.util.ArrayList;
 
 public class Biblioteca extends ArrayList<Llibre> {
-    
-    Biblioteca() {
-        super();
 
-    }
+	Biblioteca() {
+		super();
 
-    Biblioteca(ArrayList<Llibre> bib) {
-        super(bib);
-    }
+	}
+
+	Biblioteca(ArrayList<Llibre> bib) {
+		super(bib);
+	}
 
 }

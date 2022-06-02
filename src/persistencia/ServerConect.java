@@ -1,8 +1,16 @@
 package persistencia;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+
 import domini.Llibre;
+import herramienta.DialogoError;
 
 public class ServerConect {
 
@@ -28,7 +36,7 @@ public class ServerConect {
 			con = DriverManager.getConnection("jdbc:mysql://localhost/?zeroDateTimeBehavior=convertToNull&user=user");
 		} catch (SQLException e) {
 			System.out.println("Ha fallat la connexió a la base de dades");
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 //
 		try {
@@ -41,7 +49,7 @@ public class ServerConect {
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
 			System.out.println("Ha fallat la creació de la base de dades");
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 //
 //		try {
@@ -62,7 +70,7 @@ public class ServerConect {
 //			ps.close();
 //		} catch (Exception e) {
 //			System.out.println("Ha fallat omplir la base de dades");
-//			e.printStackTrace();
+//			new DialogoError(e).showErrorMessage();
 //		}
 
 	}
@@ -85,7 +93,7 @@ public class ServerConect {
 						rs.getDouble(6), rs.getDouble(7), rs.getBoolean(8), rs.getString(9)));
 		} catch (SQLException e) {
 			System.out.println("Error al agafar tots els llibres");
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 
 		return biblio;
@@ -140,7 +148,7 @@ public class ServerConect {
 
 				preparedStmt.execute();
 			} catch (SQLException e) {
-				e.printStackTrace();
+				new DialogoError(e).showErrorMessage();
 			}
 		}
 	}
@@ -155,7 +163,7 @@ public class ServerConect {
 
 				preparedStmt.execute();
 			} catch (SQLException e) {
-				e.printStackTrace();
+				new DialogoError(e).showErrorMessage();
 			}
 		}
 	}
@@ -171,7 +179,7 @@ public class ServerConect {
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
 			System.out.println("Error reiniciant la base de dades");
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 	}
 
@@ -180,7 +188,7 @@ public class ServerConect {
 			con.close();
 		} catch (SQLException e) {
 			System.out.println("Fallo al tancar la connexió");
-			e.printStackTrace();
+			new DialogoError(e).showErrorMessage();
 		}
 	}
 }
