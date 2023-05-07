@@ -34,7 +34,7 @@ public class MostrarBibliotecaControl {
 	private static final int COLUMNA_lLEGIT = 6;
 	private static final int COLUMNA_DETALLS = 7;
 
-	private ControladorDomini cLlibres;
+//	private ControladorDomini cLlibres;
 	private MostrarBibliotecaPanel vista;
 	private ArrayList<Llibre> biblio;
 	private DefaultTableModel model;
@@ -45,7 +45,7 @@ public class MostrarBibliotecaControl {
 			EnActualizarBBDD enActualizarBBDD) {
 		this.vista = vista;
 		this.botonDetalles = new JButton();
-		cLlibres = ControladorDomini.getInstance();
+//		cLlibres = ControladorDomini.getInstance();
 		this.biblio = biblio;
 		this.enActualizarBBDD = enActualizarBBDD;
 
@@ -312,12 +312,13 @@ public class MostrarBibliotecaControl {
 					.contentEquals(Integer.toString(l.getISBN()))) {
 				model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 				model.setValueAt(l.getISBN(), x, COLUMNA_ISBN);
-//				model.setValueAt(l.getIdentidad().getRazonSocial(), x, COLUMNA_RAZONSOCIAL);
-//				model.setValueAt(l.getIdentidad().getActividadEconomica(), x, COLUMNA_ACTIVIDADECONOMICA);
 				break;
 			}
 		}
 
 	}
 
+	public void refresh() {
+		quitarFiltros();
+	}
 }

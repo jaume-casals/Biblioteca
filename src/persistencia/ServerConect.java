@@ -51,7 +51,7 @@ public class ServerConect {
 			System.out.println("Ha fallat la creació de la base de dades");
 			new DialogoError(e).showErrorMessage();
 		}
-//
+
 //		try {
 //			PreparedStatement ps = con.prepareStatement("insert into llibre values(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 //			for (int i = 0; i < 7; ++i) {

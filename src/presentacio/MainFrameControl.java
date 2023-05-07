@@ -1,5 +1,6 @@
 package presentacio;
 
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 
 import domini.ControladorDomini;
@@ -25,7 +26,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 
 		cLlibres = ControladorDomini.getInstance();
 
-		this.vista.getaddLlibre().addActionListener(e -> new Thread(() -> crearLlibreDialogo()).start());
+		this.vista.getaddLlibre().addActionListener(e -> new Thread(() -> crearGuardarLlibreDialogo()).start());
 		this.vista.getMntmAbout().addActionListener(
 				e -> new Thread(() -> new AcercaDeDialogoControl(new AcercaDeDialogo()).setVisible(true)).start());
 
@@ -47,10 +48,17 @@ public class MainFrameControl implements EnActualizarBBDD {
 
 	}
 
-	private void crearLlibreDialogo() {
+	private WindowEvent caca() {
+		MostrarBibliotecaControl.refresh();
+		return null;
+
+	}
+
+	private void crearGuardarLlibreDialogo() {
 		this.guardarLlibresDialogoControl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo());
 		this.guardarLlibresDialogoControl.getVista().setLocationRelativeTo(this.vista);
 		this.guardarLlibresDialogoControl.getVista().setVisible(true);
+		this.guardarLlibresDialogoControl.windowClosed(caca());
 	}
 
 	protected Llibre getLlibreIsbn(int ISBN) {
