@@ -1,4 +1,2 @@
-
 -filtres
 -path photo fora src
-Controlador Domini linea 71
