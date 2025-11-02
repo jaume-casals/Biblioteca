@@ -33,7 +33,9 @@ public class ServerConect {
 		try {
 //			Class.forName("com.mysql.cj.jdbc.Driver"); // innecessari
 			// AIXÒ NOMÉS FUNCIONA SI TENS L'USUARI USER AMB PERMISOS I SENSE CONTRASENYA
-			con = DriverManager.getConnection("jdbc:mysql://localhost/?zeroDateTimeBehavior=convertToNull&user=user");
+			con = DriverManager.getConnection("jdbc:mariadb://localhost/?user=user");
+			//con = DriverManager.getConnection("jdbc:mysql://localhost/?zeroDateTimeBehavior=convertToNull&user=user");
+
 		} catch (SQLException e) {
 			System.out.println("Ha fallat la connexió a la base de dades");
 			new DialogoError(e).showErrorMessage();

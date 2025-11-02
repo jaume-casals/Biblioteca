@@ -1,0 +1,8 @@
+{
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.referencedLibraries": [
+        "bin/mariadb-java-client-3.5.6.jar"
+    ]
+}
