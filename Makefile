@@ -16,13 +16,13 @@ compile:
 		exit 1; \
 	fi
 	@find ./src/ -name "*.java" > classes.txt
-	@$(JAVAC) -g -cp src/jar/mysql-connector-java-8.0.23.jar:. @classes.txt -d bin
+	@$(JAVAC) -g -cp jar/mariadb-java-client-3.3.3.jar:. @classes.txt -d bin
 	@rm classes.txt
 
 run:
 	make clean
 	make compile
-	java -cp bin:src/jar/mysql-connector-java-8.0.23.jar:. main.Ejecutable
+	java -cp bin:jar/mariadb-java-client-3.3.3.jar:. main.Ejecutable
 
 # Run without recompiling (if classes already exist)
 run-only:
@@ -30,7 +30,7 @@ run-only:
 		echo "ERROR: Classes not found. Please compile first: make compile"; \
 		exit 1; \
 	fi
-	java -cp bin:src/jar/mysql-connector-java-8.0.23.jar:. main.Ejecutable
+	java -cp bin:jar/mariadb-java-client-3.3.3.jar:. main.Ejecutable
 
 # ---------- CLEAN ---------- #
 

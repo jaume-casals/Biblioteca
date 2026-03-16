@@ -3,6 +3,13 @@
         "src"
     ],
     "java.project.referencedLibraries": [
-        "bin/mariadb-java-client-3.5.6.jar"
+        "Biblioteca/jar/mariadb-java-client-3.3.3.jar"
+    ],
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/usr/lib/jvm/java-21-openjdk",
+            "default": true
+        }
     ]
 }
