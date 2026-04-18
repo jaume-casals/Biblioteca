@@ -40,7 +40,7 @@ public class ControladorPersistencia {
 		sc.deleteLlibre(llibre);
 	}
 
-	public void eliminarLlibre(int ISBN) {
+	public void eliminarLlibre(long ISBN) {
 		sc.deleteLlibre(new Llibre(ISBN, "nom", "autor", 1, "descripcio", 0.0, 0.0, false, "portada"));
 	}
 }

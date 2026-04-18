@@ -7,8 +7,6 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.DialogoError;
 import interficie.EnActualizarBBDD;
-import presentacio.acercade.AcercaDeDialogo;
-import presentacio.acercade.AcercaDeDialogoControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
@@ -26,9 +24,8 @@ public class MainFrameControl implements EnActualizarBBDD {
 
 		cLlibres = ControladorDomini.getInstance();
 
-		this.vista.getaddLlibre().addActionListener(e -> new Thread(() -> crearGuardarLlibreDialogo()).start());
-		this.vista.getMntmAbout().addActionListener(
-				e -> new Thread(() -> new AcercaDeDialogoControl(new AcercaDeDialogo()).setVisible(true)).start());
+		this.vista.getMostrarBibliotecaPanel().getBtnNouLlibre()
+				.addActionListener(e -> new Thread(() -> crearGuardarLlibreDialogo()).start());
 
 		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(),
 				cLlibres.getAllLlibres(), this);
@@ -41,11 +38,12 @@ public class MainFrameControl implements EnActualizarBBDD {
 		return instance;
 	}
 
-	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny,
-			Integer fiAny, Boolean Llegit) {
-
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, Llegit);
-
+	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean Llegit) {
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, Llegit);
 	}
 
 	private WindowEvent caca() {
@@ -61,7 +59,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		this.guardarLlibresDialogoControl.windowClosed(caca());
 	}
 
-	protected Llibre getLlibreIsbn(int ISBN) {
+	protected Llibre getLlibreIsbn(long ISBN) {
 
 		try {
 			return cLlibres.getLlibre(ISBN);

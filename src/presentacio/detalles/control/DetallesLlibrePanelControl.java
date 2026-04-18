@@ -2,11 +2,14 @@ package presentacio.detalles.control;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -21,33 +24,19 @@ public class DetallesLlibrePanelControl {
 	private ControladorDomini cLlibres;
 	private EnActualizarBBDD enActualizarBBDD;
 
+	private static final int IMG_W = 200;
+	private static final int IMG_H = 200;
+	private static final String DEFAULT_IMG_DIR = "/home/j/Downloads/b/Harem_Hotel-v0.19.1-pc/game/images/";
+
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
 		this.vista = new DetallesLlibrePanel();
 
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = ControladorDomini.getInstance();
-		BufferedImage img = null;
-		ImageIcon imageIcon = null;
-		try {
-			img = ImageIO.read(new FileInputStream(l.getPortada()));
-			Image dimg = img.getScaledInstance(this.vista.getLabelIcono().getWidth(),
-					this.vista.getLabelIcono().getHeight(), Image.SCALE_SMOOTH);
 
-			imageIcon = new ImageIcon(dimg);
-		} catch (IOException e) {
-			try {
-				img = ImageIO.read(new FileInputStream("portades/default_cover.png"));
-				Image dimg = img.getScaledInstance(this.vista.getLabelIcono().getWidth(),
-						this.vista.getLabelIcono().getHeight(), Image.SCALE_SMOOTH);
+		carregarImatge(l.getPortada());
 
-				imageIcon = new ImageIcon(dimg);
-			} catch (IOException e1) {
-				new DialogoError(e1).showErrorMessage();
-			}
-		}
-
-		this.vista.getLabelIcono().setIcon(imageIcon);
-
+		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnEditar().addActionListener(e -> editar(l));
 
 		this.vista.getTextAny().setText(l.getAny().toString());
@@ -63,6 +52,27 @@ public class DetallesLlibrePanelControl {
 		this.vista.setTitle("Expedient del llibre " + l.getNom());
 	}
 
+	private void carregarImatge(String path) {
+		try {
+			BufferedImage img = ImageIO.read(new FileInputStream(path));
+			ImageIcon icon = new ImageIcon(img.getScaledInstance(IMG_W, IMG_H, Image.SCALE_SMOOTH));
+			this.vista.getLabelIcono().setIcon(icon);
+		} catch (IOException e) {
+			// no image or invalid path — leave label empty
+		}
+	}
+
+	private void seleccionarImatge() {
+		JFileChooser chooser = new JFileChooser(new File(DEFAULT_IMG_DIR).exists()
+			? DEFAULT_IMG_DIR : System.getProperty("user.home"));
+		chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
+		if (chooser.showOpenDialog(this.vista) == JFileChooser.APPROVE_OPTION) {
+			String path = chooser.getSelectedFile().getAbsolutePath();
+			this.vista.getTextPortada().setText(path);
+			carregarImatge(path);
+		}
+	}
+
 	private void editar(Llibre llibre) {
 		if (this.vista.getBtnEditar().getText().equals("Editar")) {
 			this.vista.getTextAny().setEnabled(true);
@@ -74,6 +84,7 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextPreu().setEnabled(true);
 			this.vista.getTextValoracio().setEnabled(true);
 			this.vista.getChckLlegit().setEnabled(true);
+			this.vista.getBtnSeleccionarImatge().setEnabled(true);
 			this.vista.getBtnEditar().setText("Guardar");
 		} else if (this.vista.getBtnEditar().getText().equals("Guardar")) {
 			this.vista.getTextAny().setEnabled(false);
@@ -85,10 +96,11 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextPreu().setEnabled(false);
 			this.vista.getTextValoracio().setEnabled(false);
 			this.vista.getChckLlegit().setEnabled(false);
+			this.vista.getBtnSeleccionarImatge().setEnabled(false);
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				cLlibres.deleteLlibre(llibre);
-				Llibre a = checkLlibre.cheackLlibre(Integer.parseInt(vista.getTextISBN().getText()),
+				Llibre a = checkLlibre.cheackLlibre(Long.parseLong(vista.getTextISBN().getText()),
 						vista.getTextNom().getText(), vista.getTextAutor().getText(),
 						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
 						Double.parseDouble(vista.getTextValoracio().getText()),

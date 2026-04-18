@@ -5,6 +5,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.File;
+
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -28,7 +32,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 
 			@Override
 			public void keyPressed(KeyEvent e) {
-				if (e.getID() == 401) {
+				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 					vista.dispose();
 				}
 			}
@@ -39,14 +43,26 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			}
 		});
 		this.vista.getBtnGuardar().addActionListener(e -> crearLlibre());
+		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		cLlibres = ControladorDomini.getInstance();
 	}
 
+	private static final String DEFAULT_IMG_DIR = "/home/j/Downloads/b/Harem_Hotel-v0.19.1-pc/game/images/";
+
+	private void seleccionarImatge() {
+		JFileChooser chooser = new JFileChooser(new File(DEFAULT_IMG_DIR).exists()
+			? DEFAULT_IMG_DIR : System.getProperty("user.home"));
+		chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
+		if (chooser.showOpenDialog(this.vista) == JFileChooser.APPROVE_OPTION) {
+			this.vista.getTextPortada().setText(chooser.getSelectedFile().getAbsolutePath());
+		}
+	}
+
 	private void crearLlibre() {
-		System.out.println(Integer.parseInt(vista.getTextISBN().getText()));
+		System.out.println(Long.parseLong(vista.getTextISBN().getText()));
 
 		try {
-			cLlibres.addLlibre(new Llibre(Integer.parseInt(vista.getTextISBN().getText()), vista.getTextNom().getText(),
+			cLlibres.addLlibre(new Llibre(Long.parseLong(vista.getTextISBN().getText()), vista.getTextNom().getText(),
 					vista.getTextAutor().getText(), Integer.parseInt(vista.getTextAny().getText()),
 					vista.getTextDescripcio().getText(), Double.parseDouble(vista.getTextValoracio().getText()),
 					Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),

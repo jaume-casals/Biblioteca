@@ -46,7 +46,7 @@ public class ServerConect {
 //			s.executeUpdate("DROP DATABASE IF EXISTS `BIBLIOTECA`;"); // TODO: ELIMINAR AL FINAL
 			s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 			s.executeUpdate("USE BIBLIOTECA;");
-			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN INT PRIMARY KEY, "
+			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN BIGINT PRIMARY KEY, "
 					+ "nom VARCHAR(255) NOT NULL, " + "autor VARCHAR(255), " + "any INT, " + "descripcio VARCHAR(512), "
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
@@ -91,7 +91,7 @@ public class ServerConect {
 			}
 
 			while (rs.next())
-				biblio.add(new Llibre(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getString(5),
+				biblio.add(new Llibre(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getString(5),
 						rs.getDouble(6), rs.getDouble(7), rs.getBoolean(8), rs.getString(9)));
 		} catch (SQLException e) {
 			System.out.println("Error al agafar tots els llibres");
@@ -109,7 +109,7 @@ public class ServerConect {
 			try {
 				PreparedStatement preparedStmt = con.prepareStatement(query);
 
-				preparedStmt.setInt(1, llibre.getISBN());
+				preparedStmt.setLong(1, llibre.getISBN());
 
 				preparedStmt.setString(2, llibre.getNom());
 
@@ -161,7 +161,7 @@ public class ServerConect {
 				String query = "DELETE FROM llibre WHERE (`ISBN` = ?);";
 
 				PreparedStatement preparedStmt = con.prepareStatement(query);
-				preparedStmt.setInt(1, llibre.getISBN());
+				preparedStmt.setLong(1, llibre.getISBN());
 
 				preparedStmt.execute();
 			} catch (SQLException e) {
@@ -176,7 +176,7 @@ public class ServerConect {
 			s.executeUpdate("DROP DATABASE IF EXISTS `BIBLIOTECA`;");
 			s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 			s.executeUpdate("USE BIBLIOTECA;");
-			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN INT PRIMARY KEY, "
+			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN BIGINT PRIMARY KEY, "
 					+ "nom VARCHAR(255) NOT NULL, " + "autor VARCHAR(255), " + "any INT, " + "descripcio VARCHAR(512), "
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {

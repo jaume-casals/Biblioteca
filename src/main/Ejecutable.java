@@ -1,11 +1,14 @@
 package main;
 
+import java.awt.Color;
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 
 import javax.swing.UIManager;
 
 import herramienta.DialogoError;
+import herramienta.UITheme;
 import presentacio.MainFrameControl;
 import presentacio.MainFramePanel;
 
@@ -38,7 +41,16 @@ public class Ejecutable {
 
 			public void run() {
 				try {
+					UIManager.put("nimbusBase",                new Color(0x2471A3));
+					UIManager.put("nimbusBlueGrey",            new Color(0x5D8AA8));
+					UIManager.put("control",                   UITheme.BG_MAIN);
+					UIManager.put("text",                      UITheme.TEXT_DARK);
+					UIManager.put("nimbusFocus",               UITheme.ACCENT);
+					UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
+					UIManager.put("nimbusSelectedText",        Color.WHITE);
+					UIManager.put("defaultFont",               UITheme.FONT_BASE);
 					UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+					UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
 					this.vista = new MainFramePanel();
 					mainControl = MainFrameControl.getInstance(this.vista);
 					mainControl.setVisible(true);

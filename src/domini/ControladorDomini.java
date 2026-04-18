@@ -31,15 +31,22 @@ public class ControladorDomini {
 		Collections.sort(bib, compararISBN);
 	}
 
-	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Integer ISBN, Integer iniciAny,
-			Integer fiAny, Boolean llegit) {
+	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit) {
 		ArrayList<Llibre> resultat = new ArrayList<Llibre>();
-
 		for (Llibre l : bib) {
 			if ((nomAutor == null || matchString(nomAutor, l.getAutor()))
 					&& (nomLlibre == null || matchString(nomLlibre, l.getNom()))
-					&& (ISBN == null || matchISBN(ISBN, l.getISBN())) && (iniciAny == null || l.getAny() >= iniciAny)
-					&& (fiAny == null || l.getAny() <= fiAny) && (llegit == null || l.getLlegit().equals(llegit))) {
+					&& (ISBN == null || matchISBN(ISBN, l.getISBN()))
+					&& (iniciAny == null || l.getAny() >= iniciAny)
+					&& (fiAny == null || l.getAny() <= fiAny)
+					&& (valoracioMin == null || l.getValoracio() >= valoracioMin)
+					&& (valoracioMax == null || l.getValoracio() <= valoracioMax)
+					&& (preuMin == null || l.getPreu() >= preuMin)
+					&& (preuMax == null || l.getPreu() <= preuMax)
+					&& (llegit == null || l.getLlegit().equals(llegit))) {
 				resultat.add(l);
 			}
 		}
@@ -95,7 +102,7 @@ public class ControladorDomini {
 		bib.remove(pos);
 	}
 
-	public void deleteLlibre(Integer ISBN) throws Exception {
+	public void deleteLlibre(Long ISBN) throws Exception {
 		cp.eliminarLlibre(ISBN);
 
 		int pos = Collections.binarySearch(bib,
@@ -106,7 +113,7 @@ public class ControladorDomini {
 		bib.remove(pos);
 	}
 
-	public Llibre getLlibre(int ISBN) throws Exception {
+	public Llibre getLlibre(long ISBN) throws Exception {
 
 		int index = Collections.binarySearch(bib,
 				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), compararISBN);
@@ -117,16 +124,16 @@ public class ControladorDomini {
 		return bib.get(index);
 	}
 
-	public boolean matchISBN(Integer ISBN, Integer ISBNLlibre) {
-		int tamISBN = 1;
+	public boolean matchISBN(Long ISBN, Long ISBNLlibre) {
+		long tamISBN = 1;
 		if (ISBN != null && ISBN > 9)
-			tamISBN = ((int) (Math.log10(ISBN) + 1));
+			tamISBN = ((long) (Math.log10(ISBN) + 1));
 
-		int tamLlibre = (int) (Math.log10(ISBNLlibre) + 1);
+		long tamLlibre = (long) (Math.log10(ISBNLlibre) + 1);
 
-		int tamRetallat = (int) Math.pow((int) 10, tamLlibre - tamISBN);
+		long tamRetallat = (long) Math.pow(10, tamLlibre - tamISBN);
 
-		return (int) (ISBNLlibre / tamRetallat) == ISBN;
+		return (ISBNLlibre / tamRetallat) == ISBN;
 	}
 
 	public boolean matchString(String s, String x) {

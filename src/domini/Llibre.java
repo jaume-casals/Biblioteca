@@ -2,7 +2,7 @@ package domini;
 
 public class Llibre {
 
-	private Integer ISBN;
+	private Long ISBN;
 	private String Nom;
 	private String Autor;
 	private Integer Any;
@@ -12,7 +12,7 @@ public class Llibre {
 	private Boolean Llegit;
 	private String Portada;
 
-	public Llibre(Integer isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
+	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String portada) {
 		this.ISBN = isbn;
 		this.Nom = nom;
@@ -25,11 +25,11 @@ public class Llibre {
 		this.Portada = portada;
 	}
 
-	public Integer getISBN() {
+	public Long getISBN() {
 		return ISBN;
 	}
 
-	public void setISBN(Integer iSBN) {
+	public void setISBN(Long iSBN) {
 		ISBN = iSBN;
 	}
 

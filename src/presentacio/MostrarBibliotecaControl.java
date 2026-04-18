@@ -96,7 +96,7 @@ public class MostrarBibliotecaControl {
 	private void abrirDetallesLlibres() {
 		try {
 
-			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt(
+			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(
 					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
 
 			DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(l, enActualizarBBDD);
@@ -105,10 +105,10 @@ public class MostrarBibliotecaControl {
 			detalles.getDetallesLlibrePanel().setVisible(true);
 		} catch (Exception e) {
 			System.out.println(this.vista.getjTableBilio().getSelectedRow());
-			System.out.println(Integer.parseInt(
+			System.out.println(Long.parseLong(
 					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
 
-			System.out.println(MainFrameControl.getInstance(null).getLlibreIsbn(Integer.parseInt(
+			System.out.println(MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(
 					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))));
 			System.err.println(e);
 			new DialogoError(e).showErrorMessage();
@@ -152,12 +152,26 @@ public class MostrarBibliotecaControl {
 				}
 			}
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(160);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMinWidth(160);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS)
-				.setCellRenderer(new BotonDetallesRenderer());
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_DETALLS)
-				.setCellEditor(new BotonDetallesEditor(new JCheckBox()));
+		JTable t = this.vista.getjTableBilio();
+		t.getColumnModel().getColumn(COLUMNA_ISBN).setPreferredWidth(130);
+		t.getColumnModel().getColumn(COLUMNA_ISBN).setMinWidth(80);
+		t.getColumnModel().getColumn(COLUMNA_NOM).setPreferredWidth(220);
+		t.getColumnModel().getColumn(COLUMNA_NOM).setMinWidth(80);
+		t.getColumnModel().getColumn(COLUMNA_AUTOR).setPreferredWidth(180);
+		t.getColumnModel().getColumn(COLUMNA_AUTOR).setMinWidth(80);
+		t.getColumnModel().getColumn(COLUMNA_ANY).setPreferredWidth(55);
+		t.getColumnModel().getColumn(COLUMNA_ANY).setMinWidth(40);
+		t.getColumnModel().getColumn(COLUMNA_VALORACIO).setPreferredWidth(75);
+		t.getColumnModel().getColumn(COLUMNA_VALORACIO).setMinWidth(50);
+		t.getColumnModel().getColumn(COLUMNA_PREU).setPreferredWidth(60);
+		t.getColumnModel().getColumn(COLUMNA_PREU).setMinWidth(40);
+		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setPreferredWidth(80);
+		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setMinWidth(55);
+		t.getColumnModel().getColumn(COLUMNA_DETALLS).setPreferredWidth(85);
+		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMinWidth(85);
+		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(110);
+		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellRenderer(new BotonDetallesRenderer());
+		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellEditor(new BotonDetallesEditor(new JCheckBox()));
 	}
 
 	private void removeAlldataFiltros() {
@@ -174,37 +188,15 @@ public class MostrarBibliotecaControl {
 
 	private void addRow(Object... ob) {
 		String[] string = new String[ob.length];
-
 		for (int i = 0; i < ob.length; i++) {
 			string[i] = ob[i].toString();
 		}
-		this.vista.getjTableBilio().setRowHeight(30);
 		if (this.vista.getjTableBilio().getModel().getColumnCount() == string.length) {
 			((DefaultTableModel) this.vista.getjTableBilio().getModel()).addRow(string);
 		} else {
 			JOptionPane.showMessageDialog(vista, "Cuidado que hay diferentes columnas en la tabla de Libros", "Error",
 					0, null);
 		}
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMaxWidth(110);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ISBN).setMinWidth(110);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_NOM).setMaxWidth(330);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_NOM).setMinWidth(190);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_AUTOR).setMaxWidth(330);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_AUTOR).setMinWidth(190);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ANY).setMaxWidth(60);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_ANY).setMinWidth(60);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_VALORACIO).setMaxWidth(80);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_VALORACIO).setMinWidth(80);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_PREU).setMaxWidth(50);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_PREU).setMinWidth(50);
-
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_lLEGIT).setMaxWidth(90);
-		this.vista.getjTableBilio().getColumnModel().getColumn(COLUMNA_lLEGIT).setMinWidth(90);
 	}
 
 	public JPanel view() {
@@ -214,42 +206,47 @@ public class MostrarBibliotecaControl {
 	private void filtrar() {
 		String nomAutor = null;
 		String nomLlibre = null;
-		Integer ISBN = null;
+		Long ISBN = null;
 		Integer iniciAny = null;
 		Integer fiAny = null;
+		Double valoracioMin = null;
+		Double valoracioMax = null;
+		Double preuMin = null;
+		Double preuMax = null;
 		Boolean llegit = null;
 
-		if (!this.vista.getComboBoxAutor().getSelectedItem().toString().equals("")) {
+		if (!this.vista.getComboBoxAutor().getSelectedItem().toString().equals(""))
 			nomAutor = this.vista.getComboBoxAutor().getSelectedItem().toString();
-		}
-		if (!this.vista.getComboBoxNom().getSelectedItem().toString().equals("")) {
+		if (!this.vista.getComboBoxNom().getSelectedItem().toString().equals(""))
 			nomLlibre = this.vista.getComboBoxNom().getSelectedItem().toString();
-		}
+		if (!this.vista.getComboBoxISBN().getSelectedItem().toString().equals(""))
+			ISBN = Long.parseLong(this.vista.getComboBoxISBN().getSelectedItem().toString());
 
-		if (!this.vista.getComboBoxISBN().getSelectedItem().toString().equals("")) {
-			ISBN = Integer.parseInt(this.vista.getComboBoxISBN().getSelectedItem().toString());
-		}
+		try { iniciAny = Integer.parseInt(this.vista.getAnyMin().getText().trim()); } catch (NumberFormatException e) {}
+		try { fiAny    = Integer.parseInt(this.vista.getAnyMax().getText().trim()); } catch (NumberFormatException e) {}
+		try { valoracioMin = Double.parseDouble(this.vista.getValoracioMin().getText().trim()); } catch (NumberFormatException e) {}
+		try { valoracioMax = Double.parseDouble(this.vista.getValoracioMax().getText().trim()); } catch (NumberFormatException e) {}
+		try { preuMin = Double.parseDouble(this.vista.getPreuMin().getText().trim()); } catch (NumberFormatException e) {}
+		try { preuMax = Double.parseDouble(this.vista.getPreuMax().getText().trim()); } catch (NumberFormatException e) {}
 
-		iniciAny = null;
+		if (this.vista.getchckbxLlegit().isSelected())   llegit = true;
+		if (this.vista.getchckbxNoLlegit().isSelected())  llegit = false;
 
-		fiAny = null;
-
-		if (this.vista.getchckbxLlegit().isSelected()) {
-			llegit = true;
-		}
-		if (this.vista.getchckbxNoLlegit().isSelected()) {
-			llegit = false;
-		}
-
-		setTable(MainFrameControl.getInstance(null).aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny, llegit));
+		setTable(MainFrameControl.getInstance(null).aplicarFiltres(
+			nomAutor, nomLlibre, ISBN, iniciAny, fiAny, valoracioMin, valoracioMax, preuMin, preuMax, llegit));
 	}
 
 	private void quitarFiltros() {
 		this.vista.getchckbxLlegit().setSelected(false);
 		this.vista.getchckbxNoLlegit().setSelected(false);
+		this.vista.getAnyMin().setText("");
+		this.vista.getAnyMax().setText("");
+		this.vista.getValoracioMin().setText("");
+		this.vista.getValoracioMax().setText("");
+		this.vista.getPreuMin().setText("");
+		this.vista.getPreuMax().setText("");
 		removeAlldataFiltros();
 		setTable(biblio);
-
 	}
 
 	private class BotonDetallesEditor extends DefaultCellEditor {
@@ -309,7 +306,7 @@ public class MostrarBibliotecaControl {
 
 		for (int x = 0; x < this.vista.getjTableBilio().getModel().getRowCount(); x++) {
 			if (this.vista.getjTableBilio().getValueAt(x, COLUMNA_ISBN).toString()
-					.contentEquals(Integer.toString(l.getISBN()))) {
+					.contentEquals(Long.toString(l.getISBN()))) {
 				model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 				model.setValueAt(l.getISBN(), x, COLUMNA_ISBN);
 				break;

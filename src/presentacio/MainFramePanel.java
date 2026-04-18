@@ -5,27 +5,17 @@ import java.awt.Dimension;
 import java.awt.Frame;
 
 import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import herramienta.ConfiguracionPantalla;
+import herramienta.UITheme;
 
 public class MainFramePanel extends JFrame {
 
 	private JPanel contentPane;
 	private MostrarBibliotecaPanel mostrarBibliotecaPanel = new MostrarBibliotecaPanel();
 	private ConfiguracionPantalla configuracionPantalla = new ConfiguracionPantalla();
-
-	private JMenuBar menuBar;
-	private JMenu opcions;
-	private JMenuItem addLlibre;
-
-	private JMenu mnAyuda;
-	private JMenuItem mntmAbout;
-	private JMenuItem mntOpcions;
 
 	public MainFramePanel() {
 
@@ -35,50 +25,19 @@ public class MainFramePanel extends JFrame {
 		setTitle("Biblioteca");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setPreferredSize(new Dimension(amplada, altura));
-		setMaximumSize(new Dimension(amplada, altura));
 		setBounds(100, 100, amplada, altura);
+		setMinimumSize(new Dimension(800, 500));
 		setExtendedState(Frame.MAXIMIZED_BOTH);
-		setResizable(false);
 
 		contentPane = new JPanel();
-
-		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.setBackground(UITheme.BG_MAIN);
+		contentPane.setBorder(new EmptyBorder(8, 8, 8, 8));
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
 
 		contentPane.add(mostrarBibliotecaPanel);
 
-		menuBar = new JMenuBar();
-		setJMenuBar(menuBar);
-
-		opcions = new JMenu("Opcions");
-		menuBar.add(opcions);
-
-		addLlibre = new JMenuItem("Nou Llibre");
-		opcions.add(addLlibre);
-
-		mnAyuda = new JMenu("Ajuda");
-		menuBar.add(mnAyuda);
-
-		mntmAbout = new JMenuItem("Sobre l'equip");
-		mnAyuda.add(mntmAbout);
-
-		mntOpcions = new JMenuItem("Opcions");
-		mnAyuda.add(mntOpcions);
-
 		pack();
-	}
-
-	public JMenuItem getMntmAbout() {
-		return mntmAbout;
-	}
-
-	public JMenuItem getaddLlibre() {
-		return addLlibre;
-	}
-
-	public JMenuItem getMntOpcions() {
-		return mntOpcions;
 	}
 
 	public void setVisible(Boolean bool) {
