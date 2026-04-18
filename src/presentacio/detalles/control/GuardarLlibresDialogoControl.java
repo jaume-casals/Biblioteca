@@ -59,8 +59,6 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	}
 
 	private void crearLlibre() {
-		System.out.println(Long.parseLong(vista.getTextISBN().getText()));
-
 		try {
 			cLlibres.addLlibre(new Llibre(Long.parseLong(vista.getTextISBN().getText()), vista.getTextNom().getText(),
 					vista.getTextAutor().getText(), Integer.parseInt(vista.getTextAny().getText()),
@@ -68,10 +66,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 					Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
 					vista.getTextPortada().getText()));
 			vista.dispose();
-
 		} catch (Exception e) {
-			System.out.println("guardarllibresdialogocontrol" + e);
-
 			new DialogoError(e).showErrorMessage();
 		}
 

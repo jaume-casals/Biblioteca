@@ -37,8 +37,7 @@ public class ServerConect {
 			//con = DriverManager.getConnection("jdbc:mysql://localhost/?zeroDateTimeBehavior=convertToNull&user=user");
 
 		} catch (SQLException e) {
-			System.out.println("Ha fallat la connexió a la base de dades");
-			new DialogoError(e).showErrorMessage();
+			new DialogoError("Ha fallat la connexió a la base de dades", e).showErrorMessage();
 		}
 //
 		try {
@@ -50,8 +49,7 @@ public class ServerConect {
 					+ "nom VARCHAR(255) NOT NULL, " + "autor VARCHAR(255), " + "any INT, " + "descripcio VARCHAR(512), "
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
-			System.out.println("Ha fallat la creació de la base de dades");
-			new DialogoError(e).showErrorMessage();
+			new DialogoError("Ha fallat la creació de la base de dades", e).showErrorMessage();
 		}
 
 //		try {
@@ -94,8 +92,7 @@ public class ServerConect {
 				biblio.add(new Llibre(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getString(5),
 						rs.getDouble(6), rs.getDouble(7), rs.getBoolean(8), rs.getString(9)));
 		} catch (SQLException e) {
-			System.out.println("Error al agafar tots els llibres");
-			new DialogoError(e).showErrorMessage();
+			new DialogoError("Error al agafar tots els llibres", e).showErrorMessage();
 		}
 
 		return biblio;
@@ -180,8 +177,7 @@ public class ServerConect {
 					+ "nom VARCHAR(255) NOT NULL, " + "autor VARCHAR(255), " + "any INT, " + "descripcio VARCHAR(512), "
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
-			System.out.println("Error reiniciant la base de dades");
-			new DialogoError(e).showErrorMessage();
+			new DialogoError("Error reiniciant la base de dades", e).showErrorMessage();
 		}
 	}
 
@@ -189,8 +185,7 @@ public class ServerConect {
 		try {
 			con.close();
 		} catch (SQLException e) {
-			System.out.println("Fallo al tancar la connexió");
-			new DialogoError(e).showErrorMessage();
+			new DialogoError("Fallo al tancar la connexió", e).showErrorMessage();
 		}
 	}
 }

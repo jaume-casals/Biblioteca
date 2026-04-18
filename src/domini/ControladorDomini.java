@@ -79,17 +79,11 @@ public class ControladorDomini {
 //			System.out.println(bib.get(i).getISBN());
 
 		int pos = Collections.binarySearch(bib, l, compararISBN);
-		System.out.println("BinarySearch " + pos);
 		if (pos >= 0)
 			throw new Exception("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la base de dades");
 
 		pos = -(pos + 1);
-
 		bib.add(pos, l);
-//		System.out.println("Inserir " + pos);
-
-		for (int i = 0; i < bib.size(); ++i)
-			System.out.println(bib.get(i).getISBN());
 	}
 
 	public void deleteLlibre(Llibre l) throws Exception {
@@ -138,7 +132,6 @@ public class ControladorDomini {
 
 	public boolean matchString(String s, String x) {
 		for (int i = 0; i < x.length() - s.length() + 1; ++i) {
-			System.out.println(x.substring(i, i + s.length()));
 			if (x.substring(i, i + s.length()).equals(s))
 				return true;
 		}

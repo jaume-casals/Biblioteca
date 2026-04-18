@@ -108,13 +108,6 @@ public class MostrarBibliotecaControl {
 			detalles.getDetallesLlibrePanel().setLocationRelativeTo(this.vista);
 			detalles.getDetallesLlibrePanel().setVisible(true);
 		} catch (Exception e) {
-			System.out.println(this.vista.getjTableBilio().getSelectedRow());
-			System.out.println(Long.parseLong(
-					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
-
-			System.out.println(MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(
-					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0))));
-			System.err.println(e);
 			new DialogoError(e).showErrorMessage();
 		}
 	}
