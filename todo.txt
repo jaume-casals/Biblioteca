@@ -45,19 +45,19 @@
 [ ] GuardarLlibresDialogo: image preview next to Explorar button.
 [ ] Table row double-click already opens details — add single-click
     selection highlight (currently no visual feedback on first click).
-[ ] Show book count in window title or status bar.
+[x] Show book count in window title or status bar.
 [ ] Tooltips on table column headers explaining each field.
 
 ── CODE QUALITY ─────────────────────────────────────────────
 [ ] checkLlibre class name violates Java conventions — rename to
     CheckLlibre or LlibreValidator.
 [ ] cheackLlibre method name has a typo — rename to checkLlibre.
-[ ] Unused import java.awt.event.KeyListener in GuardarLlibresDialogo.
-[ ] Unused import java.awt.event.KeyEvent in GuardarLlibresDialogo.
+[x] Unused import java.awt.event.KeyListener in GuardarLlibresDialogo.
+[x] Unused import java.awt.event.KeyEvent in GuardarLlibresDialogo.
 [ ] AcercaDeDialogo (About dialog) is mostly unused/empty — either
     fill it with app info or remove it.
 [ ] acercade package is dead code — not accessible from UI.
-[ ] ServerConect: two separate try blocks in createDatabase() mean
+[x] ServerConect: two separate try blocks in createDatabase() mean
     a failed connection still tries to create tables (NPE on con).
 [ ] ControladorPersistencia: no connection pooling — single shared
     Connection object is not thread-safe.

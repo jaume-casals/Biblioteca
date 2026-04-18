@@ -7,7 +7,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
+import javax.swing.JFrame;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -170,6 +172,16 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(110);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellRenderer(new BotonDetallesRenderer());
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellEditor(new BotonDetallesEditor(new JCheckBox()));
+
+		int shown = t.getModel().getRowCount();
+		int total = this.biblio != null ? this.biblio.size() : 0;
+		java.awt.Window w = SwingUtilities.getWindowAncestor(this.vista);
+		if (w instanceof JFrame) {
+			String title = shown == total
+				? "Biblioteca  (" + total + " llibres)"
+				: "Biblioteca  (" + shown + " / " + total + " llibres)";
+			((JFrame) w).setTitle(title);
+		}
 	}
 
 	private void removeAlldataFiltros() {
