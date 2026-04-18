@@ -127,26 +127,29 @@ public class BibliotecaTest {
 
     // ── Tests: checkLlibre.cheackLlibre ───────────────────────────────────────
     static void testCheackLlibre() {
-        section("checkLlibre — cheackLlibre (valid ISBN)");
-        // 14-digit ISBN → pass regardless of other fields
-        Llibre l = checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 5.0, 10.0, false, "portades/x.jpg");
-        notNull("14-digit ISBN returns Llibre", l);
-        eq("ISBN preserved", 97884179104580L, l == null ? null : l.getISBN());
+        section("checkLlibre — cheackLlibre (all valid)");
+        Llibre l = checkLlibre.cheackLlibre(97884179104580L, "Nom", "A", 2024, "D", 5.0, 10.0, false, "/img/x.jpg");
+        notNull("valid → returns Llibre", l);
+        eq("ISBN preserved",    97884179104580L, l == null ? null : l.getISBN());
+        eq("nom preserved",     "Nom",           l == null ? null : l.getNom());
+        eq("portada any path",  "/img/x.jpg",    l == null ? null : l.getPortada());
 
-        section("checkLlibre — cheackLlibre (valid valoracio, bad ISBN)");
-        // valoracio 0-10 → pass
-        Llibre l2 = checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 0.0, 10.0, false, "nopath");
-        notNull("valoracio=0 returns Llibre", l2);
-        Llibre l3 = checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 10.0, 10.0, false, "nopath");
-        notNull("valoracio=10 returns Llibre", l3);
+        section("checkLlibre — cheackLlibre (invalid ISBN → throws)");
+        throws_("short ISBN throws",   () -> checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 5.0, 10.0, false, ""));
+        throws_("null ISBN throws",    () -> checkLlibre.cheackLlibre(null, "N", "A", 2024, "D", 5.0, 10.0, false, ""));
 
-        section("checkLlibre — cheackLlibre (portada prefix)");
-        Llibre l4 = checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 99.0, 10.0, false, "portades/cover.png");
-        notNull("portades/ prefix returns Llibre", l4);
+        section("checkLlibre — cheackLlibre (invalid valoracio → throws)");
+        throws_("valoracio > 10 throws",  () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 11.0, 10.0, false, ""));
+        throws_("valoracio < 0 throws",   () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", -1.0, 10.0, false, ""));
+        throws_("null valoracio throws",  () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", null, 10.0, false, ""));
 
-        section("checkLlibre — cheackLlibre (all fail → null)");
-        Llibre l5 = checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 99.0, 10.0, false, "nopath");
-        isNull("bad ISBN + bad valoracio + bad portada = null", l5);
+        section("checkLlibre — cheackLlibre (edge: valoracio boundaries)");
+        notNull("valoracio=0 ok",  checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 0.0,  10.0, false, ""));
+        notNull("valoracio=10 ok", checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 10.0, 10.0, false, ""));
+
+        section("checkLlibre — cheackLlibre (null portada → empty string)");
+        Llibre l2 = checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 5.0, 10.0, false, null);
+        eq("null portada → empty string", "", l2 == null ? null : l2.getPortada());
     }
 
     // ── Tests: FiltreUtils.matchISBN ──────────────────────────────────────────

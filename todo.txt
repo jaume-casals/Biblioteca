@@ -3,10 +3,10 @@
 ═══════════════════════════════════════════════════════════
 
 ── BUGS / CORRECTNESS ──────────────────────────────────────
-[ ] checkLlibre.cheackLlibre logic is OR not AND — any one
+[x] checkLlibre.cheackLlibre logic is OR not AND — any one
     condition (14-digit ISBN, valoracio 0-10, portada prefix)
     makes it pass. Should require ALL to be valid.
-[ ] cheackLlibre: portada.startsWith("portades/") NPE if
+[x] cheackLlibre: portada.startsWith("portades/") NPE if
     portada is null (caller can pass null).
 [ ] actualizarfila() in MostrarBibliotecaControl only updates
     the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.

@@ -101,13 +101,14 @@ public class DetallesLlibrePanelControl {
 			this.vista.getBtnSeleccionarImatge().setEnabled(false);
 			this.vista.getBtnEditar().setText("Editar");
 			try {
-				cLlibres.deleteLlibre(llibre);
+				// Validate before deleting so a bad edit can't destroy the record
 				Llibre a = checkLlibre.cheackLlibre(Long.parseLong(vista.getTextISBN().getText()),
 						vista.getTextNom().getText(), vista.getTextAutor().getText(),
 						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
 						Double.parseDouble(vista.getTextValoracio().getText()),
 						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
 						vista.getTextPortada().getText());
+				cLlibres.deleteLlibre(llibre);
 				cLlibres.addLlibre(a);
 				enActualizarBBDD.actualitzarLlibre(a, false);
 			} catch (Exception e) {

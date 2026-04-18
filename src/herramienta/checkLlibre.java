@@ -6,24 +6,19 @@ public class checkLlibre {
 
 	public static Llibre cheackLlibre(Long isbn, String nom, String autor, Integer any, String descripcio,
 			Double valoracio, Double preu, Boolean llegit, String portada) {
-		Llibre l = null;
-		Boolean pass = false;
 
-		if (countDig(isbn) == 14)
-			pass = true;
+		if (isbn == null || countDig(isbn) != 14)
+			throw new IllegalArgumentException("L'ISBN ha de tenir exactament 14 dígits (era: "
+				+ (isbn == null ? "null" : countDig(isbn)) + ")");
 
-		if (valoracio <= 10 && valoracio >= 0)
-			pass = true;
+		if (valoracio == null || valoracio < 0 || valoracio > 10)
+			throw new IllegalArgumentException("La valoració ha d'estar entre 0 i 10 (era: " + valoracio + ")");
 
-		if (portada.startsWith("portades/"))
-			pass = true;
+		if (nom == null || nom.isBlank())
+			throw new IllegalArgumentException("El nom no pot estar buit");
 
-		if (pass) {
-			l = new Llibre(isbn, nom, autor, any, descripcio, valoracio, preu, llegit, portada);
-			return l;
-		}
-		return null;
-
+		return new Llibre(isbn, nom, autor, any, descripcio, valoracio, preu, llegit,
+				portada != null ? portada : "");
 	}
 
 	public static int countDig(long n) {
