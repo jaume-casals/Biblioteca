@@ -6,15 +6,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
+import java.awt.Color;
+
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
-import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+
+import herramienta.UITheme;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -45,6 +48,7 @@ public class MostrarBibliotecaControl {
 			EnActualizarBBDD enActualizarBBDD) {
 		this.vista = vista;
 		this.botonDetalles = new JButton();
+		UITheme.styleAccentButton(this.botonDetalles);
 //		cLlibres = ControladorDomini.getInstance();
 		this.biblio = biblio;
 		this.enActualizarBBDD = enActualizarBBDD;
@@ -253,18 +257,12 @@ public class MostrarBibliotecaControl {
 
 		private BotonDetallesEditor(JCheckBox checkbox) {
 			super(checkbox);
+			UITheme.styleAccentButton(botonDetalles);
 		}
 
 		@Override
 		public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row,
 				int column) {
-			if (isSelected) {
-				botonDetalles.setForeground(table.getSelectionForeground());
-				botonDetalles.setBackground(table.getSelectionBackground());
-			} else {
-				botonDetalles.setForeground(table.getForeground());
-				botonDetalles.setBackground(table.getBackground());
-			}
 			botonDetalles.setText("Detalles");
 			return botonDetalles;
 		}
@@ -273,19 +271,14 @@ public class MostrarBibliotecaControl {
 	private class BotonDetallesRenderer extends JButton implements TableCellRenderer {
 
 		public BotonDetallesRenderer() {
-			setOpaque(true);
+			UITheme.styleAccentButton(this);
 		}
 
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
 				int row, int column) {
-			if (isSelected) {
-				setForeground(table.getSelectionForeground());
-				setBackground(table.getSelectionBackground());
-			} else {
-				setForeground(table.getForeground());
-				setBackground(UIManager.getColor("Button.background"));
-			}
+			setBackground(isSelected ? UITheme.ACCENT_ALT : UITheme.ACCENT);
+			setForeground(Color.WHITE);
 			setText("Detalles");
 			return this;
 		}
