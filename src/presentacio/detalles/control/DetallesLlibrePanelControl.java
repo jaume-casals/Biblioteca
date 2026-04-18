@@ -44,7 +44,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextISBN().setText(l.getISBN().toString());
 		this.vista.getTextDescripcio().setText(l.getDescripcio().toString());
 		this.vista.getTextNom().setText(l.getNom().toString());
-		this.vista.getTextPortada().setText(l.getPortada().toString());
+		this.vista.getTextPortada().setText(l.getPortada() != null ? l.getPortada() : "");
 		this.vista.getTextPreu().setText(l.getPreu().toString());
 		this.vista.getTextValoracio().setText(l.getValoracio().toString());
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
@@ -53,12 +53,14 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void carregarImatge(String path) {
+		if (path == null || path.isBlank()) return;
 		try {
 			BufferedImage img = ImageIO.read(new FileInputStream(path));
+			if (img == null) return;
 			ImageIcon icon = new ImageIcon(img.getScaledInstance(IMG_W, IMG_H, Image.SCALE_SMOOTH));
 			this.vista.getLabelIcono().setIcon(icon);
-		} catch (IOException e) {
-			// no image or invalid path — leave label empty
+		} catch (Exception e) {
+			// invalid path or unreadable file — leave label empty
 		}
 	}
 
