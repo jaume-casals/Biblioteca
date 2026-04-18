@@ -289,16 +289,15 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void actualizarfila(Llibre l) {
-
-		for (int x = 0; x < this.vista.getjTableBilio().getModel().getRowCount(); x++) {
-			if (this.vista.getjTableBilio().getValueAt(x, COLUMNA_ISBN).toString()
-					.contentEquals(Long.toString(l.getISBN()))) {
-				model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
-				model.setValueAt(l.getISBN(), x, COLUMNA_ISBN);
+		model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
+		for (int x = 0; x < model.getRowCount(); x++) {
+			if (model.getValueAt(x, COLUMNA_ISBN).toString().contentEquals(Long.toString(l.getISBN()))) {
+				Object[] row = addLlibreMostrar(l);
+				for (int col = 0; col < row.length; col++)
+					model.setValueAt(row[col], x, col);
 				break;
 			}
 		}
-
 	}
 
 	public void refresh() {

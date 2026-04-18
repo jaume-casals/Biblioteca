@@ -8,7 +8,7 @@
     makes it pass. Should require ALL to be valid.
 [x] cheackLlibre: portada.startsWith("portades/") NPE if
     portada is null (caller can pass null).
-[ ] actualizarfila() in MostrarBibliotecaControl only updates
+[x] actualizarfila() in MostrarBibliotecaControl only updates
     the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.
 [ ] matchString() does not handle case-insensitive search —
     searching "cervantes" won't find "Cervantes".
