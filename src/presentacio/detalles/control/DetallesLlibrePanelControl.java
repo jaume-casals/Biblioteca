@@ -14,7 +14,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.DialogoError;
-import herramienta.checkLlibre;
+import herramienta.LlibreValidator;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 
@@ -26,7 +26,6 @@ public class DetallesLlibrePanelControl {
 
 	private static final int IMG_W = 200;
 	private static final int IMG_H = 200;
-	private static final String DEFAULT_IMG_DIR = "/home/j/Downloads/b/Harem_Hotel-v0.19.1-pc/game/images/";
 
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
 		this.vista = new DetallesLlibrePanel();
@@ -34,18 +33,24 @@ public class DetallesLlibrePanelControl {
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = ControladorDomini.getInstance();
 
-		carregarImatge(l.getPortada());
+		carregarImatge(l.getImatge());
 
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnEditar().addActionListener(e -> editar(l));
 		this.vista.getBtnEliminar().addActionListener(e -> eliminar(l));
+
+		this.vista.getTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+			public void insertUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
+		});
 
 		this.vista.getTextAny().setText(l.getAny().toString());
 		this.vista.getTextAutor().setText(l.getAutor().toString());
 		this.vista.getTextISBN().setText(l.getISBN().toString());
 		this.vista.getTextDescripcio().setText(l.getDescripcio().toString());
 		this.vista.getTextNom().setText(l.getNom().toString());
-		this.vista.getTextPortada().setText(l.getPortada() != null ? l.getPortada() : "");
+		this.vista.getTextPortada().setText(l.getImatge() != null ? l.getImatge() : "");
 		this.vista.getTextPreu().setText(l.getPreu().toString());
 		this.vista.getTextValoracio().setText(l.getValoracio().toString());
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
@@ -70,6 +75,15 @@ public class DetallesLlibrePanelControl {
 		}
 	}
 
+	private void previewPortada() {
+		String path = this.vista.getTextPortada().getText().trim();
+		if (path.isEmpty()) {
+			this.vista.getLabelIcono().setIcon(null);
+		} else {
+			carregarImatge(path);
+		}
+	}
+
 	private void carregarImatge(String path) {
 		if (path == null || path.isBlank()) return;
 		try {
@@ -83,8 +97,8 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void seleccionarImatge() {
-		JFileChooser chooser = new JFileChooser(new File(DEFAULT_IMG_DIR).exists()
-			? DEFAULT_IMG_DIR : System.getProperty("user.home"));
+		String imgDir = herramienta.Config.getDefaultImgDir();
+		JFileChooser chooser = new JFileChooser(new File(imgDir).exists() ? imgDir : System.getProperty("user.home"));
 		chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
 		if (chooser.showOpenDialog(this.vista) == JFileChooser.APPROVE_OPTION) {
 			String path = chooser.getSelectedFile().getAbsolutePath();
@@ -120,7 +134,7 @@ public class DetallesLlibrePanelControl {
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				// Validate before deleting so a bad edit can't destroy the record
-				Llibre a = checkLlibre.cheackLlibre(Long.parseLong(vista.getTextISBN().getText()),
+				Llibre a = LlibreValidator.checkLlibre(Long.parseLong(vista.getTextISBN().getText()),
 						vista.getTextNom().getText(), vista.getTextAutor().getText(),
 						Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
 						Double.parseDouble(vista.getTextValoracio().getText()),

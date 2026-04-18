@@ -1,5 +1,6 @@
 package presentacio.detalles.vista;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
@@ -13,8 +14,10 @@ import herramienta.UITheme;
 public class GuardarLlibresDialogo extends JDialog {
 
 	private JScrollPane pane;
+	private JLabel labelPreview;
 	private JButton btnGuardar;
 	private JButton btnSeleccionarImatge;
+	private JButton btnCercaInternet;
 	private JTextField textISBN;
 	private JTextField textNom;
 	private JTextField textAutor;
@@ -30,7 +33,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		setModal(true);
 		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		setTitle("Nou Llibre");
-		setBounds(50, 50, 506, 605);
+		setBounds(50, 50, 506, 650);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(UITheme.BG_PANEL);
 
@@ -51,6 +54,12 @@ public class GuardarLlibresDialogo extends JDialog {
 		btnCancel.setBounds(24, 79, 120, 34);
 		btnCancel.addActionListener(e -> dispose());
 		getContentPane().add(btnCancel);
+
+		labelPreview = new JLabel();
+		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
+		labelPreview.setBounds(24, 122, 120, 120);
+		getContentPane().add(labelPreview);
 
 		JLabel lblNewLabel = new JLabel("ISBN");
 		UITheme.styleLabel(lblNewLabel);
@@ -155,10 +164,19 @@ public class GuardarLlibresDialogo extends JDialog {
 		UITheme.styleSecondaryButton(btnSeleccionarImatge);
 		btnSeleccionarImatge.setBounds(264, 497, 192, 34);
 		getContentPane().add(btnSeleccionarImatge);
+
+		btnCercaInternet = new JButton("⬇  Cerca a Internet (ISBN / Títol / Autor)");
+		UITheme.styleAccentButton(btnCercaInternet);
+		btnCercaInternet.setBackground(new java.awt.Color(0x117A65));
+		btnCercaInternet.setBounds(24, 548, 458, 40);
+		btnCercaInternet.setToolTipText("Omple els camps automàticament cercant a OpenLibrary.org");
+		getContentPane().add(btnCercaInternet);
 	}
 
+	public JLabel getLabelPreview() { return labelPreview; }
 	public JButton getBtnGuardar() { return btnGuardar; }
 	public JButton getBtnSeleccionarImatge() { return btnSeleccionarImatge; }
+	public JButton getBtnCercaInternet() { return btnCercaInternet; }
 
 
 	public JTextField getTextPortada() {

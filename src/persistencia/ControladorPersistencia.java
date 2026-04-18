@@ -43,4 +43,8 @@ public class ControladorPersistencia {
 	public void eliminarLlibre(long ISBN) {
 		sc.deleteLlibre(new Llibre(ISBN, "nom", "autor", 1, "descripcio", 0.0, 0.0, false, "portada"));
 	}
+
+	public void executeSQLFile(java.io.File file) throws Exception {
+		sc.executeSQLFile(file);
+	}
 }

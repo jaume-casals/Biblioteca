@@ -37,17 +37,17 @@ public class UITheme {
     public static void setDark(boolean dark) {
         isDark = dark;
         if (dark) {
-            BG_MAIN    = new Color(0x0D1117);
-            BG_PANEL   = new Color(0x161B22);
-            ACCENT     = new Color(0x58A6FF);
-            ACCENT_ALT = new Color(0x1F6FEB);
-            TEXT_DARK  = new Color(0xE6EDF3);
-            TEXT_MID   = new Color(0x8B949E);
-            BORDER_CLR = new Color(0x30363D);
-            HEADER_BG  = new Color(0x010409);
-            HEADER_FG  = new Color(0xE6EDF3);
-            TABLE_GRID = new Color(0x21262D);
-            TABLE_ALT  = new Color(0x1C2128);
+            BG_MAIN    = new Color(0x2B2B2B);
+            BG_PANEL   = new Color(0x3C3F41);
+            ACCENT     = new Color(0x589DF6);
+            ACCENT_ALT = new Color(0x3A6DB5);
+            TEXT_DARK  = new Color(0xCCCCCC);
+            TEXT_MID   = new Color(0x999999);
+            BORDER_CLR = new Color(0x565656);
+            HEADER_BG  = new Color(0x1E1E1E);
+            HEADER_FG  = new Color(0xCCCCCC);
+            TABLE_GRID = new Color(0x4A4A4A);
+            TABLE_ALT  = new Color(0x353535);
         } else {
             BG_MAIN    = new Color(0xEEF2F7);
             BG_PANEL   = new Color(0xFFFFFF);
@@ -101,7 +101,7 @@ public class UITheme {
     public static void styleField(JTextField field) {
         field.setFont(FONT_BASE);
         field.setForeground(TEXT_DARK);
-        field.setBackground(isDark ? new Color(0x1C2128) : new Color(0xFDFEFF));
+        field.setBackground(isDark ? new Color(0x45474A) : new Color(0xFDFEFF));
         field.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_CLR),
             BorderFactory.createEmptyBorder(3, 7, 3, 7)

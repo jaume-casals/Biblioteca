@@ -101,7 +101,7 @@ public class ControladorDomini {
 		cp.eliminarLlibre(ISBN);
 
 		int pos = Collections.binarySearch(bib,
-				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), compararISBN);
+				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, ""), compararISBN);
 		if (pos < 0)
 			throw new Exception("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
 
@@ -111,7 +111,7 @@ public class ControladorDomini {
 	public Llibre getLlibre(long ISBN) throws Exception {
 
 		int index = Collections.binarySearch(bib,
-				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, "portada"), compararISBN);
+				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, ""), compararISBN);
 
 		if (index < 0)
 			throw new Exception("No existeix el llibre amb ISBN " + ISBN);
@@ -125,5 +125,36 @@ public class ControladorDomini {
 
 	public boolean matchString(String s, String x) {
 		return FiltreUtils.matchString(s, x);
+	}
+
+	public void backupToSQL(java.io.File file) throws Exception {
+		try (java.io.PrintWriter pw = new java.io.PrintWriter(
+				new java.io.FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
+			pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
+			pw.println("DELETE FROM llibre;");
+			for (Llibre l : bib) {
+				pw.printf(
+					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s');%n",
+					l.getISBN(),
+					sqlEsc(l.getNom()),
+					sqlEsc(l.getAutor() != null ? l.getAutor() : ""),
+					l.getAny() != null ? l.getAny() : 0,
+					sqlEsc(l.getDescripcio() != null ? l.getDescripcio() : ""),
+					l.getValoracio() != null ? l.getValoracio() : 0.0,
+					l.getPreu() != null ? l.getPreu() : 0.0,
+					Boolean.TRUE.equals(l.getLlegit()),
+					sqlEsc(l.getImatge() != null ? l.getImatge() : ""));
+			}
+		}
+	}
+
+	public void restoreFromSQL(java.io.File file) throws Exception {
+		cp.executeSQLFile(file);
+		bib = new ArrayList<>(cp.getAllLlibres());
+		Collections.sort(bib, compararISBN);
+	}
+
+	private static String sqlEsc(String s) {
+		return s == null ? "" : s.replace("'", "''");
 	}
 }

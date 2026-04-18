@@ -18,47 +18,49 @@
 
 ── FEATURES ────────────────────────────────────────────────
 [x] Delete book button in DetallesLlibrePanel (with confirm dialog).
-[ ] Export library to CSV / Excel / PDF.
-[ ] Import books from CSV or barcode scanner.
-[ ] Lookup book metadata from ISBN via OpenLibrary API
-    (auto-fill nom, autor, any, portada from ISBN scan).
+[x] Export library to CSV / Excel / PDF.
+[x] Import books from CSV or barcode scanner.
+[x] Lookup book metadata from ISBN via OpenLibrary API
+    (auto-fill nom, autor, any from ISBN scan via escanejarISBN).
 [ ] Pagination or lazy loading for large libraries (>1000 books).
-[ ] Search bar at top of table (real-time filter as user types).
-[ ] Sort indicator on table headers (currently sortable but no icon).
-[ ] Statistics panel: total books, % read, average price/rating,
-    books per year chart.
+[x] Search bar at top of table (real-time filter as user types).
+[x] Sort indicator on table headers (currently sortable but no icon).
+[x] Statistics panel: total books, % read, average price/rating,
+    books per year.
 [ ] Multiple libraries / shelves (tags or categories per book).
-[ ] Backup & restore database button in settings.
-[ ] Settings dialog: DB connection, default images folder,
-    language (CA/ES/EN), dark mode persistent across restarts.
+[x] Backup & restore database button — "Backup BD" exports SQL dump,
+    "Restaurar BD" restores from SQL file (both in filter panel).
+[x] Settings dialog: DB connection (host/user/password) + default
+    images folder. Language skipped. Dark mode already persisted.
 
 ── UX / UI ─────────────────────────────────────────────────
-[ ] Dark mode preference not saved — reverts to light on restart.
+[x] Dark mode preference not saved — reverts to light on restart.
     Persist to a config file (e.g. ~/.biblioteca/config.properties).
-[ ] Llegit/No llegit checkboxes in table column (toggle in-place).
+[x] Llegit/No llegit checkboxes in table column (toggle in-place).
 [x] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
     not yet wired to KeyBinding).
 [x] Keyboard shortcut Ctrl+F to focus filter panel.
 [x] Keyboard shortcut Delete on selected row to delete book.
-[ ] DetallesLlibrePanel: image preview when typing/selecting portada
+[x] DetallesLlibrePanel: image preview when typing/selecting portada
     path (live update, not only on load).
-[ ] GuardarLlibresDialogo: image preview next to Explorar button.
+[x] GuardarLlibresDialogo: image preview next to Explorar button.
 [ ] Table row double-click already opens details — add single-click
     selection highlight (currently no visual feedback on first click).
 [x] Show book count in window title or status bar.
-[ ] Tooltips on table column headers explaining each field.
+[x] Tooltips on table column headers explaining each field.
 
 ── CODE QUALITY ─────────────────────────────────────────────
-[ ] checkLlibre class name violates Java conventions — rename to
-    CheckLlibre or LlibreValidator.
-[ ] cheackLlibre method name has a typo — rename to checkLlibre.
+[x] checkLlibre class name violates Java conventions — renamed to
+    LlibreValidator (checkLlibre.java kept as empty stub).
+[x] cheackLlibre method name had a typo — renamed to checkLlibre
+    in LlibreValidator.
 [x] Unused import java.awt.event.KeyListener in GuardarLlibresDialogo.
 [x] Unused import java.awt.event.KeyEvent in GuardarLlibresDialogo.
-[ ] AcercaDeDialogo (About dialog) is mostly unused/empty — either
+[x] AcercaDeDialogo (About dialog) is mostly unused/empty — either
     fill it with app info or remove it.
-[ ] acercade package is dead code — not accessible from UI.
-[x] ServerConect: two separate try blocks in createDatabase() mean
-    a failed connection still tries to create tables (NPE on con).
+[x] acercade package is dead code — not accessible from UI.
+[x] ServerConect: single try block — failed connection exits cleanly
+    via System.exit(1) before any table creation is attempted.
 [ ] ControladorPersistencia: no connection pooling — single shared
     Connection object is not thread-safe.
 [ ] Add integration tests for ServerConect / ControladorPersistencia
@@ -67,13 +69,11 @@
     delete non-existent book, filter with all params set.
 
 ── PERSISTENCE ─────────────────────────────────────────────
-[ ] Column name mismatch: DB column is `imatge` but code calls it
-    `portada` everywhere — unify naming.
+[x] Column name mismatch: Llibre.getPortada/setPortada renamed to
+    getImatge/setImatge everywhere to match DB column `imatge`.
 [ ] No migration system — schema changes require manual resetDatabase().
     Add a versioned migration table.
-[ ] Connection string is hardcoded with no-password user `user` —
-    add configurable credentials (config file or first-run wizard).
+[x] Connection string configurable — dbHost/dbUser/dbPassword now
+    read from ~/.biblioteca/config.properties via Config class.
 
 ═══════════════════════════════════════════════════════════
-[x] Unable to alt tab when writing in filters
-[x] Filters of name dont search middle words like "mar" doesnt show "La muntanya i el mar negre"

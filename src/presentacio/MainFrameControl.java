@@ -47,7 +47,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrl), "focusFiltres");
 		am.put("focusFiltres", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				vista.getMostrarBibliotecaPanel().getComboBoxISBN().requestFocusInWindow();
+				vista.getMostrarBibliotecaPanel().getTextISBN().requestFocusInWindow();
 			}
 		});
 
@@ -61,6 +61,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 						MostrarBibliotecaControl.eliminarFilaSeleccionada();
 					}
 				});
+
 
 		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(),
 				cLlibres.getAllLlibres(), this);

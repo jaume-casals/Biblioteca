@@ -56,7 +56,7 @@ public class AutoCompletion extends PlainDocument {
 		});
 		editorKeyListener = new KeyAdapter() {
 			public void keyPressed(KeyEvent e) {
-				if (comboBox.isDisplayable())
+				if (comboBox.isDisplayable() && e.getKeyCode() != KeyEvent.VK_ALT && !e.isAltDown())
 					comboBox.setPopupVisible(true);
 				hitBackspace = false;
 				switch (e.getKeyCode()) {

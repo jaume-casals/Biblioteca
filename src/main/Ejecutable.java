@@ -41,8 +41,9 @@ public class Ejecutable {
 
 			public void run() {
 				try {
-					UIManager.put("nimbusBase",                new Color(0x2471A3));
-					UIManager.put("nimbusBlueGrey",            new Color(0x5D8AA8));
+					if (herramienta.Config.isDarkMode()) UITheme.setDark(true);
+					UIManager.put("nimbusBase",                UITheme.ACCENT);
+					UIManager.put("nimbusBlueGrey",            UITheme.isDark ? new Color(0x3D4451) : new Color(0x5D8AA8));
 					UIManager.put("control",                   UITheme.BG_MAIN);
 					UIManager.put("text",                      UITheme.TEXT_DARK);
 					UIManager.put("nimbusFocus",               UITheme.ACCENT);
