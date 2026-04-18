@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
+import herramienta.FiltreUtils;
 import persistencia.ControladorPersistencia;
 
 public class ControladorDomini {
@@ -37,9 +38,9 @@ public class ControladorDomini {
 			Double preuMin, Double preuMax, Boolean llegit) {
 		ArrayList<Llibre> resultat = new ArrayList<Llibre>();
 		for (Llibre l : bib) {
-			if ((nomAutor == null || matchString(nomAutor, l.getAutor()))
-					&& (nomLlibre == null || matchString(nomLlibre, l.getNom()))
-					&& (ISBN == null || matchISBN(ISBN, l.getISBN()))
+			if ((nomAutor == null || FiltreUtils.matchString(nomAutor, l.getAutor()))
+					&& (nomLlibre == null || FiltreUtils.matchString(nomLlibre, l.getNom()))
+					&& (ISBN == null || FiltreUtils.matchISBN(ISBN, l.getISBN()))
 					&& (iniciAny == null || l.getAny() >= iniciAny)
 					&& (fiAny == null || l.getAny() <= fiAny)
 					&& (valoracioMin == null || l.getValoracio() >= valoracioMin)
@@ -119,22 +120,10 @@ public class ControladorDomini {
 	}
 
 	public boolean matchISBN(Long ISBN, Long ISBNLlibre) {
-		long tamISBN = 1;
-		if (ISBN != null && ISBN > 9)
-			tamISBN = ((long) (Math.log10(ISBN) + 1));
-
-		long tamLlibre = (long) (Math.log10(ISBNLlibre) + 1);
-
-		long tamRetallat = (long) Math.pow(10, tamLlibre - tamISBN);
-
-		return (ISBNLlibre / tamRetallat) == ISBN;
+		return FiltreUtils.matchISBN(ISBN, ISBNLlibre);
 	}
 
 	public boolean matchString(String s, String x) {
-		for (int i = 0; i < x.length() - s.length() + 1; ++i) {
-			if (x.substring(i, i + s.length()).equals(s))
-				return true;
-		}
-		return false;
+		return FiltreUtils.matchString(s, x);
 	}
 }

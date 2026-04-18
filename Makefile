@@ -32,6 +32,12 @@ run-only:
 	fi
 	java -cp bin:jar/mariadb-java-client-3.3.3.jar:. main.Ejecutable
 
+# ---------- TEST ----------- #
+
+test: compile
+	@$(JAVAC) -g -cp bin:jar/mariadb-java-client-3.3.3.jar $(shell find ./test/ -name "*.java") -d bin
+	@java -cp bin:jar/mariadb-java-client-3.3.3.jar BibliotecaTest
+
 # ---------- CLEAN ---------- #
 
 clean:
