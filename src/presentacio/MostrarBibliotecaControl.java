@@ -300,6 +300,17 @@ public class MostrarBibliotecaControl {
 		}
 	}
 
+	public void eliminarFila(Llibre l) {
+		model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
+		for (int x = 0; x < model.getRowCount(); x++) {
+			if (model.getValueAt(x, COLUMNA_ISBN).toString().contentEquals(Long.toString(l.getISBN()))) {
+				model.removeRow(x);
+				biblio.remove(l);
+				break;
+			}
+		}
+	}
+
 	public void refresh() {
 		quitarFiltros();
 	}

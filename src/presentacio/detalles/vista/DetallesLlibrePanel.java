@@ -31,6 +31,7 @@ public class DetallesLlibrePanel extends JDialog {
 	private JCheckBox chckLlegit;
 	private JButton btnNewButton;
 	private JButton btnTancar;
+	private JButton btnEliminar;
 	private JButton btnSeleccionarImatge;
 
 	public DetallesLlibrePanel() {
@@ -175,8 +176,20 @@ public class DetallesLlibrePanel extends JDialog {
 
 		btnNewButton = new JButton("Editar");
 		UITheme.styleAccentButton(btnNewButton);
-		btnNewButton.setBounds(368, 449, 184, 38);
+		btnNewButton.setBounds(368, 395, 184, 38);
 		panel.add(btnNewButton);
+
+		btnEliminar = new JButton("Eliminar");
+		btnEliminar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+		btnEliminar.setBackground(new java.awt.Color(0xC0392B));
+		btnEliminar.setForeground(java.awt.Color.WHITE);
+		btnEliminar.setFont(herramienta.UITheme.FONT_BOLD);
+		btnEliminar.setFocusPainted(false);
+		btnEliminar.setBorderPainted(false);
+		btnEliminar.setOpaque(true);
+		btnEliminar.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+		btnEliminar.setBounds(368, 449, 184, 38);
+		panel.add(btnEliminar);
 
 		btnTancar = new JButton("Tancar");
 		UITheme.styleSecondaryButton(btnTancar);
@@ -191,6 +204,7 @@ public class DetallesLlibrePanel extends JDialog {
 	}
 
 	public JButton getBtnSeleccionarImatge() { return btnSeleccionarImatge; }
+	public JButton getBtnEliminar() { return btnEliminar; }
 
 	public JButton getBtnEditar() {
 		return btnNewButton;

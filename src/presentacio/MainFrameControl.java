@@ -76,7 +76,11 @@ public class MainFrameControl implements EnActualizarBBDD {
 	@Override
 	public void actualitzarLlibre(Llibre l, boolean nuevo) {
 		this.MostrarBibliotecaControl.refreshLlibre(l, nuevo);
+	}
 
+	@Override
+	public void eliminarLlibre(Llibre l) {
+		this.MostrarBibliotecaControl.eliminarFila(l);
 	}
 
 }

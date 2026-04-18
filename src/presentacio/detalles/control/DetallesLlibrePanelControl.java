@@ -38,6 +38,7 @@ public class DetallesLlibrePanelControl {
 
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnEditar().addActionListener(e -> editar(l));
+		this.vista.getBtnEliminar().addActionListener(e -> eliminar(l));
 
 		this.vista.getTextAny().setText(l.getAny().toString());
 		this.vista.getTextAutor().setText(l.getAutor().toString());
@@ -50,6 +51,23 @@ public class DetallesLlibrePanelControl {
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
 
 		this.vista.setTitle("Expedient del llibre " + l.getNom());
+	}
+
+	private void eliminar(Llibre llibre) {
+		int confirm = javax.swing.JOptionPane.showConfirmDialog(
+			this.vista,
+			"Eliminar \"" + llibre.getNom() + "\"?\nAquesta acció no es pot desfer.",
+			"Confirmar eliminació",
+			javax.swing.JOptionPane.YES_NO_OPTION,
+			javax.swing.JOptionPane.WARNING_MESSAGE);
+		if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
+		try {
+			cLlibres.deleteLlibre(llibre);
+			enActualizarBBDD.eliminarLlibre(llibre);
+			this.vista.dispose();
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
 	}
 
 	private void carregarImatge(String path) {

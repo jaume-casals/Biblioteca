@@ -17,7 +17,7 @@
     cleanly.
 
 ── FEATURES ────────────────────────────────────────────────
-[ ] Delete book button in DetallesLlibrePanel (with confirm dialog).
+[x] Delete book button in DetallesLlibrePanel (with confirm dialog).
 [ ] Export library to CSV / Excel / PDF.
 [ ] Import books from CSV or barcode scanner.
 [ ] Lookup book metadata from ISBN via OpenLibrary API
