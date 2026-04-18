@@ -10,7 +10,7 @@
     portada is null (caller can pass null).
 [x] actualizarfila() in MostrarBibliotecaControl only updates
     the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.
-[ ] matchString() does not handle case-insensitive search —
+[x] matchString() does not handle case-insensitive search —
     searching "cervantes" won't find "Cervantes".
 [ ] If DB is unreachable at startup, app shows error dialog
     but continues with empty/broken state instead of exiting

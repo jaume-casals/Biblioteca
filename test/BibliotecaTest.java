@@ -174,7 +174,7 @@ public class BibliotecaTest {
         check("end match",           FiltreUtils.matchString("món", "Hola món"));
         check("middle match",        FiltreUtils.matchString("la", "Hola món"));
         check("no match",           !FiltreUtils.matchString("xyz", "Hola món"));
-        check("case sensitive fail", !FiltreUtils.matchString("hola", "Hola món"));
+        check("case insensitive match", FiltreUtils.matchString("hola", "Hola món"));
         check("empty needle",        FiltreUtils.matchString("", "qualsevol"));
         check("exact equal",         FiltreUtils.matchString("Exacte", "Exacte"));
         check("needle longer",      !FiltreUtils.matchString("MoltLlarg", "curt"));

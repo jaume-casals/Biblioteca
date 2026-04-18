@@ -11,12 +11,14 @@ public class FiltreUtils {
         return (ISBNLlibre / divisor) == ISBN;
     }
 
-    // Returns true if x contains s as a substring (case-sensitive)
+    // Returns true if x contains s as a substring (case-insensitive)
     public static boolean matchString(String s, String x) {
         if (s == null || x == null) return false;
-        if (s.length() > x.length()) return false;
-        for (int i = 0; i <= x.length() - s.length(); ++i) {
-            if (x.substring(i, i + s.length()).equals(s)) return true;
+        String sl = s.toLowerCase();
+        String xl = x.toLowerCase();
+        if (sl.length() > xl.length()) return false;
+        for (int i = 0; i <= xl.length() - sl.length(); ++i) {
+            if (xl.substring(i, i + sl.length()).equals(sl)) return true;
         }
         return false;
     }
