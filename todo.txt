@@ -38,8 +38,8 @@
 [ ] Llegit/No llegit checkboxes in table column (toggle in-place).
 [x] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
     not yet wired to KeyBinding).
-[ ] Keyboard shortcut Ctrl+F to focus filter panel.
-[ ] Keyboard shortcut Delete on selected row to delete book.
+[x] Keyboard shortcut Ctrl+F to focus filter panel.
+[x] Keyboard shortcut Delete on selected row to delete book.
 [ ] DetallesLlibrePanel: image preview when typing/selecting portada
     path (live update, not only on load).
 [ ] GuardarLlibresDialogo: image preview next to Explorar button.
@@ -75,3 +75,5 @@
     add configurable credentials (config file or first-run wizard).
 
 ═══════════════════════════════════════════════════════════
+[ ] Unable to alt tab when writing in filters
+[ ] Filters of name dont search middle words like "mar" doesnt show "La muntanya i el mar negre"

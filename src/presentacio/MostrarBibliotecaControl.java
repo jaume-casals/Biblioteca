@@ -300,6 +300,26 @@ public class MostrarBibliotecaControl {
 		}
 	}
 
+	public void eliminarFilaSeleccionada() {
+		int row = this.vista.getjTableBilio().getSelectedRow();
+		if (row < 0) return;
+		try {
+			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(
+				Long.parseLong((String) this.vista.getjTableBilio().getValueAt(row, COLUMNA_ISBN)));
+			if (l == null) return;
+			int confirm = javax.swing.JOptionPane.showConfirmDialog(this.vista,
+				"Eliminar \"" + l.getNom() + "\"?\nAquesta acció no es pot desfer.",
+				"Confirmar eliminació", javax.swing.JOptionPane.YES_NO_OPTION,
+				javax.swing.JOptionPane.WARNING_MESSAGE);
+			if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
+			MainFrameControl.getInstance(null).getLlibreIsbn(l.getISBN()); // verify still exists
+			ControladorDomini.getInstance().deleteLlibre(l);
+			eliminarFila(l);
+		} catch (Exception e) {
+			new herramienta.DialogoError(e).showErrorMessage();
+		}
+	}
+
 	public void eliminarFila(Llibre l) {
 		model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 		for (int x = 0; x < model.getRowCount(); x++) {
