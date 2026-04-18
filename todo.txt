@@ -12,7 +12,7 @@
     the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.
 [x] matchString() does not handle case-insensitive search —
     searching "cervantes" won't find "Cervantes".
-[ ] If DB is unreachable at startup, app shows error dialog
+[x] If DB is unreachable at startup, app shows error dialog
     but continues with empty/broken state instead of exiting
     cleanly.
 

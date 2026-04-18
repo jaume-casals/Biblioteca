@@ -31,25 +31,18 @@ public class ServerConect {
 
 	public void createDatabase() {
 		try {
-//			Class.forName("com.mysql.cj.jdbc.Driver"); // innecessari
-			// AIXÒ NOMÉS FUNCIONA SI TENS L'USUARI USER AMB PERMISOS I SENSE CONTRASENYA
 			con = DriverManager.getConnection("jdbc:mariadb://localhost/?user=user");
-			//con = DriverManager.getConnection("jdbc:mysql://localhost/?zeroDateTimeBehavior=convertToNull&user=user");
-
-		} catch (SQLException e) {
-			new DialogoError("Ha fallat la connexió a la base de dades", e).showErrorMessage();
-		}
-//
-		try {
 			Statement s = con.createStatement();
-//			s.executeUpdate("DROP DATABASE IF EXISTS `BIBLIOTECA`;"); // TODO: ELIMINAR AL FINAL
 			s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 			s.executeUpdate("USE BIBLIOTECA;");
 			s.executeUpdate("CREATE TABLE IF NOT EXISTS llibre(" + "ISBN BIGINT PRIMARY KEY, "
 					+ "nom VARCHAR(255) NOT NULL, " + "autor VARCHAR(255), " + "any INT, " + "descripcio VARCHAR(512), "
 					+ "valoracio FLOAT, " + "preu FLOAT, " + "llegit BOOLEAN, " + "imatge VARCHAR(255)" + ");");
 		} catch (SQLException e) {
-			new DialogoError("Ha fallat la creació de la base de dades", e).showErrorMessage();
+			new DialogoError("No s'ha pogut connectar a la base de dades.\n"
+				+ "Comprova que MariaDB/MySQL estigui en execució i que l'usuari 'user' tingui permisos.", e)
+				.showErrorMessage();
+			System.exit(1);
 		}
 
 //		try {
