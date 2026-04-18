@@ -1,2 +1,77 @@
--filtres
--path photo fora src
+═══════════════════════════════════════════════════════════
+  BIBLIOTECA — TODO
+═══════════════════════════════════════════════════════════
+
+── BUGS / CORRECTNESS ──────────────────────────────────────
+[ ] checkLlibre.cheackLlibre logic is OR not AND — any one
+    condition (14-digit ISBN, valoracio 0-10, portada prefix)
+    makes it pass. Should require ALL to be valid.
+[ ] cheackLlibre: portada.startsWith("portades/") NPE if
+    portada is null (caller can pass null).
+[ ] actualizarfila() in MostrarBibliotecaControl only updates
+    the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.
+[ ] matchString() does not handle case-insensitive search —
+    searching "cervantes" won't find "Cervantes".
+[ ] If DB is unreachable at startup, app shows error dialog
+    but continues with empty/broken state instead of exiting
+    cleanly.
+
+── FEATURES ────────────────────────────────────────────────
+[ ] Delete book button in DetallesLlibrePanel (with confirm dialog).
+[ ] Export library to CSV / Excel / PDF.
+[ ] Import books from CSV or barcode scanner.
+[ ] Lookup book metadata from ISBN via OpenLibrary API
+    (auto-fill nom, autor, any, portada from ISBN scan).
+[ ] Pagination or lazy loading for large libraries (>1000 books).
+[ ] Search bar at top of table (real-time filter as user types).
+[ ] Sort indicator on table headers (currently sortable but no icon).
+[ ] Statistics panel: total books, % read, average price/rating,
+    books per year chart.
+[ ] Multiple libraries / shelves (tags or categories per book).
+[ ] Backup & restore database button in settings.
+[ ] Settings dialog: DB connection, default images folder,
+    language (CA/ES/EN), dark mode persistent across restarts.
+
+── UX / UI ─────────────────────────────────────────────────
+[ ] Dark mode preference not saved — reverts to light on restart.
+    Persist to a config file (e.g. ~/.biblioteca/config.properties).
+[ ] Llegit/No llegit checkboxes in table column (toggle in-place).
+[ ] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
+    not yet wired to KeyBinding).
+[ ] Keyboard shortcut Ctrl+F to focus filter panel.
+[ ] Keyboard shortcut Delete on selected row to delete book.
+[ ] DetallesLlibrePanel: image preview when typing/selecting portada
+    path (live update, not only on load).
+[ ] GuardarLlibresDialogo: image preview next to Explorar button.
+[ ] Table row double-click already opens details — add single-click
+    selection highlight (currently no visual feedback on first click).
+[ ] Show book count in window title or status bar.
+[ ] Tooltips on table column headers explaining each field.
+
+── CODE QUALITY ─────────────────────────────────────────────
+[ ] checkLlibre class name violates Java conventions — rename to
+    CheckLlibre or LlibreValidator.
+[ ] cheackLlibre method name has a typo — rename to checkLlibre.
+[ ] Unused import java.awt.event.KeyListener in GuardarLlibresDialogo.
+[ ] Unused import java.awt.event.KeyEvent in GuardarLlibresDialogo.
+[ ] AcercaDeDialogo (About dialog) is mostly unused/empty — either
+    fill it with app info or remove it.
+[ ] acercade package is dead code — not accessible from UI.
+[ ] ServerConect: two separate try blocks in createDatabase() mean
+    a failed connection still tries to create tables (NPE on con).
+[ ] ControladorPersistencia: no connection pooling — single shared
+    Connection object is not thread-safe.
+[ ] Add integration tests for ServerConect / ControladorPersistencia
+    (need a test DB or H2 in-memory).
+[ ] Add edge case tests: empty library, duplicate ISBN insert,
+    delete non-existent book, filter with all params set.
+
+── PERSISTENCE ─────────────────────────────────────────────
+[ ] Column name mismatch: DB column is `imatge` but code calls it
+    `portada` everywhere — unify naming.
+[ ] No migration system — schema changes require manual resetDatabase().
+    Add a versioned migration table.
+[ ] Connection string is hardcoded with no-password user `user` —
+    add configurable credentials (config file or first-run wizard).
+
+═══════════════════════════════════════════════════════════
