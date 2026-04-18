@@ -36,7 +36,7 @@
 [ ] Dark mode preference not saved — reverts to light on restart.
     Persist to a config file (e.g. ~/.biblioteca/config.properties).
 [ ] Llegit/No llegit checkboxes in table column (toggle in-place).
-[ ] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
+[x] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
     not yet wired to KeyBinding).
 [ ] Keyboard shortcut Ctrl+F to focus filter panel.
 [ ] Keyboard shortcut Delete on selected row to delete book.

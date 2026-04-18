@@ -1,7 +1,11 @@
 package presentacio;
 
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
+
+import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -26,6 +30,16 @@ public class MainFrameControl implements EnActualizarBBDD {
 
 		this.vista.getMostrarBibliotecaPanel().getBtnNouLlibre()
 				.addActionListener(e -> new Thread(() -> crearGuardarLlibreDialogo()).start());
+
+		// Ctrl+N — open new book dialog from anywhere in the main window
+		this.vista.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+				.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_DOWN_MASK), "nouLlibre");
+		this.vista.getRootPane().getActionMap().put("nouLlibre",
+				new javax.swing.AbstractAction() {
+					@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+						new Thread(() -> crearGuardarLlibreDialogo()).start();
+					}
+				});
 
 		MostrarBibliotecaControl = new MostrarBibliotecaControl(this.vista.getMostrarBibliotecaPanel(),
 				cLlibres.getAllLlibres(), this);
