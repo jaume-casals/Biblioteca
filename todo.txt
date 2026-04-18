@@ -75,5 +75,5 @@
     add configurable credentials (config file or first-run wizard).
 
 ═══════════════════════════════════════════════════════════
-[ ] Unable to alt tab when writing in filters
-[ ] Filters of name dont search middle words like "mar" doesnt show "La muntanya i el mar negre"
+[x] Unable to alt tab when writing in filters
+[x] Filters of name dont search middle words like "mar" doesnt show "La muntanya i el mar negre"

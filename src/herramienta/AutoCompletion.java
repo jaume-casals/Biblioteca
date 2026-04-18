@@ -72,15 +72,14 @@ public class AutoCompletion extends PlainDocument {
 				}
 			}
 		};
-		hidePopupOnFocusLoss = System.getProperty("java.version").startsWith("1.5");
+		hidePopupOnFocusLoss = true;
 		editorFocusListener = new FocusAdapter() {
 			public void focusGained(FocusEvent e) {
 				highlightCompletedText(0);
 			}
 
 			public void focusLost(FocusEvent e) {
-				if (hidePopupOnFocusLoss)
-					comboBox.setPopupVisible(false);
+				comboBox.setPopupVisible(false);
 			}
 		};
 		configureEditor(comboBox.getEditor());

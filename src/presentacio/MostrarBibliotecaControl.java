@@ -1,12 +1,13 @@
 package presentacio;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
-import java.awt.Color;
+import javax.swing.JTextField;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -175,6 +176,9 @@ public class MostrarBibliotecaControl {
 		this.vista.getComboBoxAutor().removeAllItems();
 		this.vista.getComboBoxISBN().removeAllItems();
 		this.vista.getComboBoxNom().removeAllItems();
+		((JTextField) this.vista.getComboBoxAutor().getEditor().getEditorComponent()).setText("");
+		((JTextField) this.vista.getComboBoxISBN().getEditor().getEditorComponent()).setText("");
+		((JTextField) this.vista.getComboBoxNom().getEditor().getEditorComponent()).setText("");
 	}
 
 	private void anadirComboBoxLlibre(Llibre l) {
@@ -212,10 +216,11 @@ public class MostrarBibliotecaControl {
 		Double preuMax = null;
 		Boolean llegit = null;
 
-		if (!this.vista.getComboBoxAutor().getSelectedItem().toString().equals(""))
-			nomAutor = this.vista.getComboBoxAutor().getSelectedItem().toString();
-		if (!this.vista.getComboBoxNom().getSelectedItem().toString().equals(""))
-			nomLlibre = this.vista.getComboBoxNom().getSelectedItem().toString();
+		String autorTyped = ((JTextField) this.vista.getComboBoxAutor().getEditor().getEditorComponent()).getText().trim();
+		if (!autorTyped.isEmpty()) nomAutor = autorTyped;
+
+		String nomTyped = ((JTextField) this.vista.getComboBoxNom().getEditor().getEditorComponent()).getText().trim();
+		if (!nomTyped.isEmpty()) nomLlibre = nomTyped;
 		if (!this.vista.getComboBoxISBN().getSelectedItem().toString().equals(""))
 			ISBN = Long.parseLong(this.vista.getComboBoxISBN().getSelectedItem().toString());
 
