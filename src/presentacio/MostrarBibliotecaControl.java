@@ -123,6 +123,11 @@ public class MostrarBibliotecaControl {
 		this.vista.getBtnGestioLlistes().addActionListener(e -> obrirGestioLlistes());
 		refreshComboLlistes();
 
+		this.vista.getBtnCarregaPreset().addActionListener(e -> carregarPreset());
+		this.vista.getBtnDesaPreset().addActionListener(e -> desarPreset());
+		this.vista.getBtnEsborraPreset().addActionListener(e -> esborrarPreset());
+		refreshComboPresets();
+
 		showPage(0);
 
 		this.vista.getjTableBilio().getTableHeader().addMouseListener(new MouseAdapter() {
@@ -316,6 +321,78 @@ public class MostrarBibliotecaControl {
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}
+	}
+
+	private void refreshComboPresets() {
+		javax.swing.JComboBox<String> combo = vista.getComboPresets();
+		combo.removeAllItems();
+		int n = herramienta.Config.getPresetCount();
+		if (n == 0) {
+			combo.addItem("(sense presets)");
+			vista.getBtnCarregaPreset().setEnabled(false);
+			vista.getBtnEsborraPreset().setEnabled(false);
+		} else {
+			for (int i = 0; i < n; i++) combo.addItem(herramienta.Config.getPresetName(i));
+			vista.getBtnCarregaPreset().setEnabled(true);
+			vista.getBtnEsborraPreset().setEnabled(true);
+		}
+	}
+
+	private java.util.Map<String, String> collectFilterState() {
+		java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+		m.put("nom",          vista.getTextNom().getText());
+		m.put("autor",        vista.getTextAutor().getText());
+		m.put("isbn",         vista.getTextISBN().getText());
+		m.put("anyMin",       vista.getAnyMin().getText());
+		m.put("anyMax",       vista.getAnyMax().getText());
+		m.put("valoracioMin", vista.getValoracioMin().getText());
+		m.put("valoracioMax", vista.getValoracioMax().getText());
+		m.put("preuMin",      vista.getPreuMin().getText());
+		m.put("preuMax",      vista.getPreuMax().getText());
+		m.put("llegit",       vista.getchckbxLlegit().isSelected() ? "true"
+		                    : vista.getchckbxNoLlegit().isSelected() ? "false" : "");
+		return m;
+	}
+
+	private void applyFilterState(java.util.Map<String, String> state) {
+		vista.getTextNom().setText(state.getOrDefault("nom", ""));
+		vista.getTextAutor().setText(state.getOrDefault("autor", ""));
+		vista.getTextISBN().setText(state.getOrDefault("isbn", ""));
+		vista.getAnyMin().setText(state.getOrDefault("anyMin", ""));
+		vista.getAnyMax().setText(state.getOrDefault("anyMax", ""));
+		vista.getValoracioMin().setText(state.getOrDefault("valoracioMin", ""));
+		vista.getValoracioMax().setText(state.getOrDefault("valoracioMax", ""));
+		vista.getPreuMin().setText(state.getOrDefault("preuMin", ""));
+		vista.getPreuMax().setText(state.getOrDefault("preuMax", ""));
+		String llegit = state.getOrDefault("llegit", "");
+		vista.getchckbxLlegit().setSelected("true".equals(llegit));
+		vista.getchckbxNoLlegit().setSelected("false".equals(llegit));
+	}
+
+	private void carregarPreset() {
+		int idx = vista.getComboPresets().getSelectedIndex();
+		if (idx < 0 || herramienta.Config.getPresetCount() == 0) return;
+		applyFilterState(herramienta.Config.loadPreset(idx));
+		filtrar();
+	}
+
+	private void desarPreset() {
+		String name = JOptionPane.showInputDialog(vista, "Nom del preset:", "Desa filtre", JOptionPane.QUESTION_MESSAGE);
+		if (name == null || name.isBlank()) return;
+		herramienta.Config.savePreset(name.trim(), collectFilterState());
+		refreshComboPresets();
+		// select the newly saved preset
+		vista.getComboPresets().setSelectedIndex(herramienta.Config.getPresetCount() - 1);
+	}
+
+	private void esborrarPreset() {
+		int idx = vista.getComboPresets().getSelectedIndex();
+		if (idx < 0 || herramienta.Config.getPresetCount() == 0) return;
+		String name = herramienta.Config.getPresetName(idx);
+		if (JOptionPane.showConfirmDialog(vista, "Eliminar preset \"" + name + "\"?",
+				"Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+		herramienta.Config.deletePreset(idx);
+		refreshComboPresets();
 	}
 
 	private void toggleColumn(int modelIndex) {

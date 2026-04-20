@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class Config {
@@ -41,6 +43,41 @@ public class Config {
 
     public static String getFontSize() { return props.getProperty("fontSize", "medium"); }
     public static void setFontSize(String size) { props.setProperty("fontSize", size); save(); }
+
+    // ── Filter presets ────────────────────────────────────────────────────────
+    private static final String[] PRESET_KEYS =
+        {"nom","autor","isbn","anyMin","anyMax","valoracioMin","valoracioMax","preuMin","preuMax","llegit"};
+
+    public static int getPresetCount() { return parseInt(props.getProperty("presetCount", "0")); }
+    public static String getPresetName(int i) { return props.getProperty("preset." + i + ".name", "Preset " + i); }
+
+    public static Map<String, String> loadPreset(int i) {
+        Map<String, String> m = new LinkedHashMap<>();
+        for (String k : PRESET_KEYS) m.put(k, props.getProperty("preset." + i + "." + k, ""));
+        return m;
+    }
+
+    public static void savePreset(String name, Map<String, String> values) {
+        int n = getPresetCount();
+        props.setProperty("preset." + n + ".name", name);
+        for (Map.Entry<String, String> e : values.entrySet())
+            props.setProperty("preset." + n + "." + e.getKey(), e.getValue());
+        props.setProperty("presetCount", String.valueOf(n + 1));
+        save();
+    }
+
+    public static void deletePreset(int i) {
+        int n = getPresetCount();
+        for (int j = i; j < n - 1; j++) {
+            props.setProperty("preset." + j + ".name", props.getProperty("preset." + (j+1) + ".name", ""));
+            for (String k : PRESET_KEYS)
+                props.setProperty("preset." + j + "." + k, props.getProperty("preset." + (j+1) + "." + k, ""));
+        }
+        for (String k : PRESET_KEYS) props.remove("preset." + (n-1) + "." + k);
+        props.remove("preset." + (n-1) + ".name");
+        props.setProperty("presetCount", String.valueOf(n - 1));
+        save();
+    }
 
     public static String getDefaultImgDir() {
         return props.getProperty("defaultImgDir", System.getProperty("user.home"));

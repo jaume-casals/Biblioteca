@@ -56,6 +56,11 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JComboBox<Object> comboLlistes;
 	private JButton btnGestioLlistes;
 
+	private JComboBox<String> comboPresets;
+	private JButton btnCarregaPreset;
+	private JButton btnDesaPreset;
+	private JButton btnEsborraPreset;
+
 	private JButton bttnFiltrar;
 	private JButton bttnQuitarFiltros;
 	private JButton btnNouLlibre;
@@ -463,6 +468,43 @@ public class MostrarBibliotecaPanel extends JPanel {
 		btnConfiguracio.setToolTipText("Configuració: BD, carpeta d'imatges...");
 		panelFiltros.add(btnConfiguracio);
 
+		// ── Preset bar: always visible above filter scroll ────────────────────
+		JPanel presetBar = new JPanel(null);
+		presetBar.setBackground(UITheme.BG_MAIN);
+		presetBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.BORDER_CLR));
+		presetBar.setPreferredSize(new Dimension(0, 66));
+
+		JLabel lblPresets = new JLabel("Presets:");
+		UITheme.styleLabel(lblPresets);
+		lblPresets.setBounds(4, 6, 54, 20);
+		presetBar.add(lblPresets);
+
+		comboPresets = new JComboBox<>();
+		comboPresets.setFont(UITheme.FONT_BASE);
+		comboPresets.setToolTipText("Selecciona un preset guardat");
+		comboPresets.setBounds(58, 4, 135, 26);
+		presetBar.add(comboPresets);
+
+		btnCarregaPreset = new JButton("Carrega");
+		UITheme.styleAccentButton(btnCarregaPreset);
+		btnCarregaPreset.setToolTipText("Aplica el preset seleccionat als filtres");
+		btnCarregaPreset.setBounds(197, 4, 83, 26);
+		presetBar.add(btnCarregaPreset);
+
+		btnDesaPreset = new JButton("Desa filtre");
+		UITheme.styleSecondaryButton(btnDesaPreset);
+		btnDesaPreset.setToolTipText("Guarda el filtre actual com a preset");
+		btnDesaPreset.setBounds(4, 36, 130, 26);
+		presetBar.add(btnDesaPreset);
+
+		btnEsborraPreset = new JButton("Esborra preset");
+		UITheme.styleSecondaryButton(btnEsborraPreset);
+		btnEsborraPreset.setToolTipText("Elimina el preset seleccionat");
+		btnEsborraPreset.setBounds(138, 36, 142, 26);
+		presetBar.add(btnEsborraPreset);
+
+		filterWrapper.add(presetBar, BorderLayout.NORTH);
+
 		// ── Sortir pinned at bottom, outside scroll ───────────────────────────
 		btnSortir = new JButton("Sortir");
 		UITheme.styleSecondaryButton(btnSortir);
@@ -538,6 +580,10 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleLabel(lblPagina);
 		paginationPanel.setBackground(UITheme.BG_MAIN);
 		UITheme.styleSecondaryButton(btnGestioLlistes);
+		UITheme.styleAccentButton(btnCarregaPreset);
+		UITheme.styleSecondaryButton(btnDesaPreset);
+		UITheme.styleSecondaryButton(btnEsborraPreset);
+		comboPresets.setFont(UITheme.FONT_BASE);
 
 		repaint();
 	}
@@ -576,4 +622,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JButton getbttnQuitarFiltros() { return bttnQuitarFiltros; }
 	public JComboBox<Object> getComboLlistes() { return comboLlistes; }
 	public JButton getBtnGestioLlistes() { return btnGestioLlistes; }
+	public JComboBox<String> getComboPresets() { return comboPresets; }
+	public JButton getBtnCarregaPreset() { return btnCarregaPreset; }
+	public JButton getBtnDesaPreset() { return btnDesaPreset; }
+	public JButton getBtnEsborraPreset() { return btnEsborraPreset; }
 }
