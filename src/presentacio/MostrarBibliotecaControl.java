@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
 import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -51,6 +50,11 @@ public class MostrarBibliotecaControl {
 	private static final int COLUMNA_PREU = 5;
 	private static final int COLUMNA_lLEGIT = 6;
 	private static final int COLUMNA_DETALLS = 7;
+
+	private static final String[] COL_NAMES = {"ISBN","Nom","Autor","Any","Valoracio","Preu","Llegit","Detalls"};
+	private static final boolean[] COL_TOGGLEABLE = {false, false, true, true, true, true, true, false};
+	// columns removed from view: modelIndex → TableColumn
+	private final java.util.TreeMap<Integer, javax.swing.table.TableColumn> hiddenCols = new java.util.TreeMap<>();
 
 	private static final int PAGE_SIZE = 100;
 
@@ -121,6 +125,24 @@ public class MostrarBibliotecaControl {
 
 		showPage(0);
 
+		this.vista.getjTableBilio().getTableHeader().addMouseListener(new MouseAdapter() {
+			@Override public void mousePressed(MouseEvent e)  { maybeShowColMenu(e); }
+			@Override public void mouseReleased(MouseEvent e) { maybeShowColMenu(e); }
+			private void maybeShowColMenu(MouseEvent e) {
+				if (!e.isPopupTrigger()) return;
+				JPopupMenu menu = new JPopupMenu("Columnes visibles");
+				for (int col = 0; col < COL_NAMES.length; col++) {
+					if (!COL_TOGGLEABLE[col]) continue;
+					final int c = col;
+					boolean visible = !hiddenCols.containsKey(c);
+					javax.swing.JCheckBoxMenuItem item = new javax.swing.JCheckBoxMenuItem(COL_NAMES[c], visible);
+					item.addActionListener(ev -> toggleColumn(c));
+					menu.add(item);
+				}
+				menu.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
+
 		javax.swing.Timer saveWidthsTimer = new javax.swing.Timer(800, e -> {
 			JTable t = this.vista.getjTableBilio();
 			int n = t.getColumnCount();
@@ -180,21 +202,32 @@ public class MostrarBibliotecaControl {
 
 				JPopupMenu menu = new JPopupMenu();
 
+				int[] selectedRows = table.getSelectedRows();
+
 				JMenuItem itemObrir = new JMenuItem("Obrir detalls");
+				itemObrir.setEnabled(selectedRows.length == 1);
 				itemObrir.addActionListener(ev -> abrirDetallesLlibres());
 				menu.add(itemObrir);
 
-				JMenuItem itemEliminar = new JMenuItem("Eliminar");
+				JMenuItem itemEliminar = new JMenuItem(
+					selectedRows.length > 1 ? "Eliminar " + selectedRows.length + " llibres" : "Eliminar");
 				itemEliminar.addActionListener(ev -> eliminarFilaSeleccionada());
 				menu.add(itemEliminar);
 
+				JMenuItem itemAfegirLlista = new JMenuItem(
+					selectedRows.length > 1 ? "Afegir " + selectedRows.length + " a llista..." : "Afegir a llista...");
+				itemAfegirLlista.addActionListener(ev -> afegirSeleccionatsALlista(selectedRows));
+				menu.add(itemAfegirLlista);
+
 				JMenuItem itemDuplicar = new JMenuItem("Duplicar...");
+				itemDuplicar.setEnabled(selectedRows.length == 1);
 				itemDuplicar.addActionListener(ev -> duplicarLlibre(isbnStr));
 				menu.add(itemDuplicar);
 
 				menu.addSeparator();
 
 				JMenuItem itemCopiarISBN = new JMenuItem("Copiar ISBN");
+				itemCopiarISBN.setEnabled(selectedRows.length == 1);
 				itemCopiarISBN.addActionListener(ev ->
 					Toolkit.getDefaultToolkit().getSystemClipboard()
 						.setContents(new StringSelection(isbnStr), null));
@@ -231,6 +264,33 @@ public class MostrarBibliotecaControl {
 		}
 	}
 
+	private void afegirSeleccionatsALlista(int[] rows) {
+		java.util.List<Llista> llistes = ControladorDomini.getInstance().getAllLlistes();
+		if (llistes.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "No hi ha cap llista. Crea'n una primer.", "Sense llistes",
+				JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		Llista sel = (Llista) JOptionPane.showInputDialog(vista,
+			"Selecciona la llista on afegir " + rows.length + " llibre(s):",
+			"Afegir a llista", JOptionPane.QUESTION_MESSAGE, null,
+			llistes.toArray(new Llista[0]), llistes.get(0));
+		if (sel == null) return;
+		int ok = 0, skip = 0;
+		JTable t = this.vista.getjTableBilio();
+		for (int row : rows) {
+			try {
+				long isbn = Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN));
+				ControladorDomini.getInstance().addLlibreToLlista(isbn, sel.getId(), 0.0, false);
+				ok++;
+			} catch (Exception ignored) { skip++; }
+		}
+		String msg = ok + " llibres afegits a \"" + sel.getNom() + "\".";
+		if (skip > 0) msg += "\n" + skip + " ja existien a la llista.";
+		JOptionPane.showMessageDialog(vista, msg, "Afegit a llista", JOptionPane.INFORMATION_MESSAGE);
+		refreshComboLlistes();
+	}
+
 	private void duplicarLlibre(String isbnStr) {
 		try {
 			Llibre src = MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(isbnStr));
@@ -255,6 +315,37 @@ public class MostrarBibliotecaControl {
 			refresh();
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private void toggleColumn(int modelIndex) {
+		JTable t = vista.getjTableBilio();
+		if (hiddenCols.containsKey(modelIndex)) {
+			// restore — insert at correct view position
+			javax.swing.table.TableColumn tc = hiddenCols.remove(modelIndex);
+			t.addColumn(tc);
+			// move to correct position: count how many cols with modelIndex < this are visible
+			int targetView = 0;
+			for (int i = 0; i < modelIndex; i++)
+				if (!hiddenCols.containsKey(i)) targetView++;
+			int currentView = t.getColumnCount() - 1;
+			if (currentView != targetView) t.moveColumn(currentView, targetView);
+			herramienta.Config.setColVisible(modelIndex, true);
+		} else {
+			// hide
+			javax.swing.table.TableColumn tc = t.getColumn(COL_NAMES[modelIndex]);
+			hiddenCols.put(modelIndex, tc);
+			t.removeColumn(tc);
+			herramienta.Config.setColVisible(modelIndex, false);
+		}
+	}
+
+	private void applyColumnVisibility() {
+		for (int col = 0; col < COL_NAMES.length; col++) {
+			if (!COL_TOGGLEABLE[col]) continue;
+			boolean shouldBeVisible = herramienta.Config.getColVisible(col);
+			boolean isVisible = !hiddenCols.containsKey(col);
+			if (isVisible != shouldBeVisible) toggleColumn(col);
 		}
 	}
 
@@ -315,6 +406,9 @@ public class MostrarBibliotecaControl {
 		// update model ref after setHeader() replaced it
 		this.model = (DefaultTableModel) t.getModel();
 
+		// re-apply column visibility from config (setHeader() reset all columns)
+		hiddenCols.clear();
+		applyColumnVisibility();
 		aplicarSearchBar();
 	}
 
@@ -535,38 +629,100 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void mostrarEstadistiques() {
-		if (biblio == null || biblio.isEmpty()) {
+		ControladorDomini cd = ControladorDomini.getInstance();
+		ArrayList<Llibre> global = cd.getAllLlibres();
+		if (global.isEmpty()) {
 			JOptionPane.showMessageDialog(vista, "La biblioteca és buida.", "Estadístiques",
 				JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
-		int total = biblio.size();
-		long llegits = biblio.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
-		double pctLlegit = 100.0 * llegits / total;
-		double avgVal = biblio.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
-		double avgPreu = biblio.stream().mapToDouble(l -> l.getPreu() != null ? l.getPreu() : 0).average().orElse(0);
 
-		String topAnys = biblio.stream()
+		// ── Global summary ─────────────────────────────────────────────────────
+		String summary = buildStatsSummary(global, "Tota la biblioteca");
+
+		javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
+		txtSummary.setEditable(false);
+		txtSummary.setFont(herramienta.UITheme.FONT_BASE);
+		txtSummary.setBackground(herramienta.UITheme.BG_PANEL);
+		txtSummary.setForeground(herramienta.UITheme.TEXT_DARK);
+		txtSummary.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+		// ── Per-shelf breakdown table ──────────────────────────────────────────
+		DefaultTableModel shelfModel = new DefaultTableModel(
+			new String[]{"Llista", "Llibres", "Llegits", "% Llegit", "Val. Mitjana"}, 0) {
+			@Override public boolean isCellEditable(int r, int c) { return false; }
+		};
+		for (Llista ll : cd.getAllLlistes()) {
+			ArrayList<Llibre> shelf = cd.getLlibresInLlista(ll.getId());
+			if (shelf.isEmpty()) { shelfModel.addRow(new Object[]{ll.getNom(), 0, 0, "0.0%", "—"}); continue; }
+			long llegits = shelf.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+			double avgVal = shelf.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
+			shelfModel.addRow(new Object[]{
+				ll.getNom(), shelf.size(), llegits,
+				String.format("%.1f%%", 100.0 * llegits / shelf.size()),
+				String.format("%.2f", avgVal)
+			});
+		}
+
+		JTable shelfTable = new JTable(shelfModel);
+		shelfTable.setFont(herramienta.UITheme.FONT_BASE);
+		shelfTable.setBackground(herramienta.UITheme.BG_PANEL);
+		shelfTable.setForeground(herramienta.UITheme.TEXT_DARK);
+		shelfTable.setRowHeight(26);
+		shelfTable.setEnabled(false);
+		shelfTable.getTableHeader().setFont(herramienta.UITheme.FONT_BOLD);
+		javax.swing.JScrollPane shelfScroll = new javax.swing.JScrollPane(shelfTable);
+		shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
+		shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder("Per llista"));
+
+		// ── Layout ────────────────────────────────────────────────────────────
+		javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+		panel.setBackground(herramienta.UITheme.BG_PANEL);
+		panel.add(txtSummary, java.awt.BorderLayout.NORTH);
+		if (shelfModel.getRowCount() > 0) panel.add(shelfScroll, java.awt.BorderLayout.CENTER);
+
+		javax.swing.JDialog dlg = new javax.swing.JDialog(SwingUtilities.getWindowAncestor(vista),
+			"Estadístiques", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+		dlg.getContentPane().setBackground(herramienta.UITheme.BG_PANEL);
+		dlg.add(panel);
+		javax.swing.JButton btnClose = new javax.swing.JButton("Tancar");
+		herramienta.UITheme.styleSecondaryButton(btnClose);
+		btnClose.addActionListener(e -> dlg.dispose());
+		dlg.getRootPane().setDefaultButton(btnClose);
+		dlg.getRootPane().registerKeyboardAction(e -> dlg.dispose(),
+			javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+			JComponent.WHEN_IN_FOCUSED_WINDOW);
+		javax.swing.JPanel btnPanel = new javax.swing.JPanel();
+		btnPanel.setBackground(herramienta.UITheme.BG_PANEL);
+		btnPanel.add(btnClose);
+		dlg.add(btnPanel, java.awt.BorderLayout.SOUTH);
+		dlg.pack();
+		dlg.setMinimumSize(new java.awt.Dimension(500, 200));
+		dlg.setLocationRelativeTo(vista);
+		dlg.setVisible(true);
+	}
+
+	private String buildStatsSummary(ArrayList<Llibre> llibres, String scope) {
+		int total = llibres.size();
+		long llegits = llibres.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+		double avgVal = llibres.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
+		double avgPreu = llibres.stream().mapToDouble(l -> l.getPreu() != null ? l.getPreu() : 0).average().orElse(0);
+		String topAnys = llibres.stream()
 			.filter(l -> l.getAny() != null && l.getAny() > 0)
-			.collect(java.util.stream.Collectors.groupingBy(Llibre::getAny, java.util.stream.Collectors.counting()))
+			.collect(Collectors.groupingBy(Llibre::getAny, Collectors.counting()))
 			.entrySet().stream()
 			.sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
-			.limit(5)
+			.limit(3)
 			.map(e -> "  " + e.getKey() + ": " + e.getValue() + " llibre" + (e.getValue() > 1 ? "s" : ""))
-			.collect(java.util.stream.Collectors.joining("\n"));
-
-		String msg = String.format(
-			"Total de llibres: %d%n" +
-			"Llegits: %d (%.1f%%)%n" +
-			"No llegits: %d (%.1f%%)%n%n" +
-			"Valoració mitjana: %.2f / 10%n" +
-			"Preu mitjà: %.2f €%n%n" +
-			"Anys amb més publicacions:%n%s",
-			total, llegits, pctLlegit, (total - llegits), (100.0 - pctLlegit),
+			.collect(Collectors.joining("\n"));
+		return String.format(
+			"%s%n" +
+			"Total: %d  ·  Llegits: %d (%.1f%%)  ·  No llegits: %d%n" +
+			"Valoració mitjana: %.2f / 10  ·  Preu mitjà: %.2f €%n" +
+			"Anys top:%n%s",
+			scope, total, llegits, 100.0 * llegits / total, total - llegits,
 			avgVal, avgPreu, topAnys.isEmpty() ? "  (cap any registrat)" : topAnys);
-
-		JOptionPane.showMessageDialog(vista, msg, "Estadístiques de la Biblioteca",
-			JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	private void mostrarLlibreAleatori() {
@@ -811,20 +967,26 @@ public class MostrarBibliotecaControl {
 	}
 
 	public void eliminarFilaSeleccionada() {
-		int row = this.vista.getjTableBilio().getSelectedRow();
-		if (row < 0) return;
-		try {
-			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(
-				Long.parseLong((String) this.vista.getjTableBilio().getValueAt(row, COLUMNA_ISBN)));
-			if (l == null) return;
-			int confirm = JOptionPane.showConfirmDialog(this.vista,
-				"Eliminar \"" + l.getNom() + "\"?\nAquesta acció no es pot desfer.",
-				"Confirmar eliminació", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-			if (confirm != JOptionPane.YES_OPTION) return;
-			ControladorDomini.getInstance().deleteLlibre(l);
-			eliminarFila(l);
-		} catch (Exception e) {
-			new DialogoError(e).showErrorMessage();
+		JTable t = this.vista.getjTableBilio();
+		int[] rows = t.getSelectedRows();
+		if (rows.length == 0) return;
+		String msg = rows.length == 1
+			? "Eliminar \"" + t.getValueAt(rows[0], COLUMNA_NOM) + "\"?\nAquesta acció no es pot desfer."
+			: "Eliminar " + rows.length + " llibres seleccionats?\nAquesta acció no es pot desfer.";
+		if (JOptionPane.showConfirmDialog(vista, msg, "Confirmar eliminació",
+				JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+		// collect ISBNs before rows shift during deletion
+		java.util.List<Long> isbns = new java.util.ArrayList<>();
+		for (int row : rows) isbns.add(Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN)));
+		for (long isbn : isbns) {
+			try {
+				Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(isbn);
+				if (l == null) continue;
+				ControladorDomini.getInstance().deleteLlibre(l);
+				eliminarFila(l);
+			} catch (Exception e) {
+				new DialogoError(e).showErrorMessage();
+			}
 		}
 	}
 
@@ -905,7 +1067,10 @@ public class MostrarBibliotecaControl {
 
 	private void obrirConfiguracio() {
 		java.awt.Window w = SwingUtilities.getWindowAncestor(vista);
-		new ConfiguracioDialog(w instanceof java.awt.Frame ? (java.awt.Frame) w : null).setVisible(true);
+		new ConfiguracioDialog(
+			w instanceof java.awt.Frame ? (java.awt.Frame) w : null,
+			() -> vista.applyTheme()
+		).setVisible(true);
 	}
 
 	private void backupBD() {

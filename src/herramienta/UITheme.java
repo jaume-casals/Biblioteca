@@ -78,12 +78,12 @@ public class UITheme {
     private static final Color D_FIELD_BG       = new Color(0x45474A);
     private static final Color D_NIMBUS_BG      = new Color(0x3D4451);
 
-    // ── Fonts ─────────────────────────────────────────────────────────────────
-    public static final Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
-    public static final Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
-    public static final Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
-    public static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
-    public static final Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+    // ── Fonts (rebuilt by rebuildFonts) ──────────────────────────────────────
+    public static Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
+    public static Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
+    public static Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
+    public static Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
+    public static Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
 
     static { setDark(false); }
 
@@ -105,6 +105,16 @@ public class UITheme {
         FIELD_BG         = dark ? D_FIELD_BG      : L_FIELD_BG;
         NIMBUS_BLUE_GREY = dark ? D_NIMBUS_BG     : L_NIMBUS_BG;
         applyUIManager();
+    }
+
+    public static void rebuildFonts(String size) {
+        int sz = "small".equals(size) ? 11 : "large".equals(size) ? 16 : 13;
+        FONT_BASE  = new Font("SansSerif", Font.PLAIN, sz);
+        FONT_BOLD  = new Font("SansSerif", Font.BOLD,  sz);
+        FONT_LABEL = new Font("SansSerif", Font.BOLD,  Math.max(9, sz - 1));
+        FONT_TITLE = new Font("SansSerif", Font.BOLD,  sz + 5);
+        FONT_SMALL = new Font("SansSerif", Font.PLAIN, Math.max(9, sz - 2));
+        UIManager.put("defaultFont", FONT_BASE);
     }
 
     public static void applyUIManager() {

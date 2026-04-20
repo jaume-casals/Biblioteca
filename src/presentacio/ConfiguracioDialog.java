@@ -19,10 +19,12 @@ import herramienta.UITheme;
 
 public class ConfiguracioDialog extends JDialog {
 
-	public ConfiguracioDialog(Frame parent) {
+	public ConfiguracioDialog(Frame parent) { this(parent, null); }
+
+	public ConfiguracioDialog(Frame parent, Runnable onReapply) {
 		super(parent, "Configuració", true);
 		setResizable(false);
-		setBounds(0, 0, 490, 500);
+		setBounds(0, 0, 490, 530);
 		setLocationRelativeTo(parent);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(UITheme.BG_PANEL);
@@ -124,10 +126,32 @@ public class ConfiguracioDialog extends JDialog {
 		});
 		getContentPane().add(btnExplorar);
 
+		// ── Aparença ─────────────────────────────────────────────────────────
+		JLabel lblSeccioFont = new JLabel("Aparença");
+		lblSeccioFont.setFont(UITheme.FONT_BOLD);
+		lblSeccioFont.setForeground(UITheme.ACCENT);
+		lblSeccioFont.setBounds(lx, 334, 300, lh);
+		getContentPane().add(lblSeccioFont);
+
+		JLabel lblFont = new JLabel("Mida de lletra");
+		UITheme.styleLabel(lblFont);
+		lblFont.setBounds(lx, 366, 155, lh);
+		getContentPane().add(lblFont);
+
+		String[] fontSizeLabels = {"Petita", "Mitjana", "Gran"};
+		String[] fontSizeKeys   = {"small",  "medium",  "large"};
+		JComboBox<String> cmbFont = new JComboBox<>(fontSizeLabels);
+		String curSize = Config.getFontSize();
+		for (int i = 0; i < fontSizeKeys.length; i++)
+			if (fontSizeKeys[i].equals(curSize)) { cmbFont.setSelectedIndex(i); break; }
+		cmbFont.setFont(UITheme.FONT_BASE);
+		cmbFont.setBounds(fx, 366, 140, fh);
+		getContentPane().add(cmbFont);
+
 		// ── Buttons ──────────────────────────────────────────────────────────
 		JButton btnGuardar = new JButton("Guardar");
 		UITheme.styleAccentButton(btnGuardar);
-		btnGuardar.setBounds(lx, 390, 215, 42);
+		btnGuardar.setBounds(lx, 418, 215, 42);
 		btnGuardar.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			if (external) {
@@ -146,6 +170,8 @@ public class ConfiguracioDialog extends JDialog {
 			Config.setDbType(external ? "mariadb" : "h2");
 			String imgDir = txtImgDir.getText().trim();
 			if (!imgDir.isEmpty()) Config.setDefaultImgDir(imgDir);
+			Config.setFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
+			if (onReapply != null) onReapply.run();
 			JOptionPane.showMessageDialog(this,
 				"Configuració guardada.\nReinicia l'app per aplicar canvis de BD.",
 				"Guardat", JOptionPane.INFORMATION_MESSAGE);
@@ -155,7 +181,7 @@ public class ConfiguracioDialog extends JDialog {
 
 		JButton btnCancel = new JButton("Cancel·lar");
 		UITheme.styleSecondaryButton(btnCancel);
-		btnCancel.setBounds(255, 390, 215, 42);
+		btnCancel.setBounds(255, 418, 215, 42);
 		btnCancel.addActionListener(e -> dispose());
 		getContentPane().add(btnCancel);
 

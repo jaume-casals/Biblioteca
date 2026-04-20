@@ -474,6 +474,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	}
 
 	public void applyTheme() {
+		UITheme.rebuildFonts(herramienta.Config.getFontSize());
 		herramienta.Config.setDarkMode(UITheme.isDark);
 		setBackground(UITheme.BG_MAIN);
 		filterWrapper.setBackground(UITheme.BG_MAIN);
@@ -508,6 +509,12 @@ public class MostrarBibliotecaPanel extends JPanel {
 			((JFrame) w).getContentPane().setBackground(UITheme.BG_MAIN);
 		}
 
+		// Reinstall Nimbus so it re-derives colors from updated UIManager keys.
+		// Without this, Nimbus uses its internally cached palette from startup.
+		try {
+			UIManager.setLookAndFeel(new javax.swing.plaf.nimbus.NimbusLookAndFeel());
+			UITheme.applyUIManager(); // re-apply our keys on top of fresh L&F defaults
+		} catch (Exception ignored) {}
 		if (w != null) SwingUtilities.updateComponentTreeUI(w);
 
 		UITheme.styleAccentButton(bttnFiltrar);

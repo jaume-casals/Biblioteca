@@ -39,6 +39,9 @@ public class Config {
     public static String getDbPassword() { return props.getProperty("dbPassword", ""); }
     public static void setDbPassword(String pw) { props.setProperty("dbPassword", pw); save(); }
 
+    public static String getFontSize() { return props.getProperty("fontSize", "medium"); }
+    public static void setFontSize(String size) { props.setProperty("fontSize", size); save(); }
+
     public static String getDefaultImgDir() {
         return props.getProperty("defaultImgDir", System.getProperty("user.home"));
     }
@@ -76,6 +79,15 @@ public class Config {
     public static void setColWidths(int[] widths) {
         for (int i = 0; i < widths.length; i++)
             props.setProperty("colWidth_" + i, String.valueOf(widths[i]));
+        save();
+    }
+
+    public static boolean getColVisible(int col) {
+        return Boolean.parseBoolean(props.getProperty("colVisible_" + col, "true"));
+    }
+
+    public static void setColVisible(int col, boolean visible) {
+        props.setProperty("colVisible_" + col, String.valueOf(visible));
         save();
     }
 

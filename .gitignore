@@ -24,3 +24,17 @@ hs_err_pid*
 /bin/
 .project
 .classpath
+
+# Project-local files not for version control
+CLAUDE.md
+Makefile
+todo.txt
+install.exe
+install.sh
+
+# IDE / editor configs
+.idea/
+.vscode/
+
+# Test sources
+test/
