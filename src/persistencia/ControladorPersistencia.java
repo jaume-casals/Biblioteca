@@ -65,4 +65,10 @@ public class ControladorPersistencia {
 	public void removeLlibreFromLlista(long isbn, int llistaId) throws SQLException { sc.removeLlibreFromLlista(isbn, llistaId); }
 	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { sc.updateLlibreInLlista(isbn, llistaId, valoracio, llegit); }
 	public ArrayList<Llista> getLlistesForLlibre(long isbn) { return sc.getLlistesForLlibre(isbn); }
+	public void updateLlistaOrdre(int id, int ordre) throws java.sql.SQLException { sc.updateLlistaOrdre(id, ordre); }
+	public void updateLlistaColor(int id, String color) throws java.sql.SQLException { sc.updateLlistaColor(id, color); }
+	public ArrayList<Llibre> getRecentlyAdded(int n) { return sc.getRecentlyAdded(n); }
+	public void addPrestec(long isbn, String nom) throws java.sql.SQLException { sc.addPrestec(isbn, nom); }
+	public void returnPrestec(long isbn) throws java.sql.SQLException { sc.returnPrestec(isbn); }
+	public java.util.Set<Long> getLoanedISBNs() { return sc.getLoanedISBNs(); }
 }

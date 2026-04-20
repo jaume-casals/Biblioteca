@@ -18,7 +18,7 @@ import herramienta.UITheme;
 public class DetallesLlibrePanel extends JDialog {
 
 	private static final int DIALOG_W  = 600;
-	private static final int DIALOG_H  = 660;
+	private static final int DIALOG_H  = 720;
 	private static final int LBL_X     = 31;
 	private static final int LBL_W     = 83;
 	private static final int FIELD_X   = 124;
@@ -37,6 +37,8 @@ public class DetallesLlibrePanel extends JDialog {
 	private JTextField textValoracio;
 	private JTextField textPreu;
 	private JTextField textPortada;
+	private JTextField textPagines;
+	private JTextField textPaginesLlegides;
 	private JCheckBox  chckLlegit;
 	private JTextArea  textNotes;
 	private JButton    btnEditar;
@@ -86,6 +88,8 @@ public class DetallesLlibrePanel extends JDialog {
 		row++;
 
 		textPortada = addRow(panel, "PORTADA", row++);
+		textPagines = addRow(panel, "PAGINES", row++);
+		textPaginesLlegides = addRow(panel, "PG. LLEGIDES", row++);
 
 		// Notes (multi-line)
 		JLabel lblNotes = new JLabel("NOTES");
@@ -177,6 +181,8 @@ public class DetallesLlibrePanel extends JDialog {
 	public JTextField getTextValoracio()        { return textValoracio; }
 	public JTextField getTextPreu()             { return textPreu; }
 	public JTextField getTextPortada()          { return textPortada; }
+	public JTextField getTextPagines()          { return textPagines; }
+	public JTextField getTextPaginesLlegides()  { return textPaginesLlegides; }
 	public JCheckBox  getChckLlegit()           { return chckLlegit; }
 	public JTextArea  getTextNotes()            { return textNotes; }
 	public JButton    getBtnGestioLlistes()     { return btnGestioLlistes; }

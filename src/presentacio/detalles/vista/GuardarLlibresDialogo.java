@@ -33,7 +33,7 @@ public class GuardarLlibresDialogo extends JDialog {
 	public GuardarLlibresDialogo() {
 		setResizable(false);
 		setModal(true);
-		setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		setTitle("Nou Llibre");
 		setBounds(50, 50, 506, 650);
 		getContentPane().setLayout(null);

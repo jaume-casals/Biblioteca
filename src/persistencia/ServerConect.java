@@ -45,6 +45,18 @@ public class ServerConect {
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
 			"FOREIGN KEY (llista_id) REFERENCES llista(id) ON DELETE CASCADE)"},
 		{"4", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS notes VARCHAR(2048) DEFAULT ''"},
+		{"5", "ALTER TABLE llista ADD COLUMN IF NOT EXISTS ordre INT DEFAULT 0"},
+		{"6", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_afegit TIMESTAMP DEFAULT CURRENT_TIMESTAMP"},
+		{"7", "ALTER TABLE llista ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT NULL"},
+		{"8", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines INT DEFAULT 0"},
+		{"9", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines_llegides INT DEFAULT 0"},
+		{"10", "CREATE TABLE IF NOT EXISTS prestec (" +
+			"id INT AUTO_INCREMENT PRIMARY KEY, " +
+			"isbn BIGINT NOT NULL, " +
+			"nom_persona VARCHAR(255) NOT NULL, " +
+			"data_prestec DATE NOT NULL, " +
+			"retornat BOOLEAN DEFAULT FALSE, " +
+			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"},
 	};
 
 	private Connection con;
@@ -211,7 +223,7 @@ public class ServerConect {
 		ArrayList<Llibre> biblio = new ArrayList<>();
 		try {
 			Statement stmt = con.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT ISBN, nom, autor, `any`, descripcio, valoracio, preu, llegit, imatge, imatge_blob, notes FROM llibre");
+			ResultSet rs = stmt.executeQuery("SELECT ISBN, nom, autor, `any`, descripcio, valoracio, preu, llegit, imatge, imatge_blob, notes, pagines, pagines_llegides FROM llibre");
 			ResultSetMetaData md = rs.getMetaData();
 			int cols = md.getColumnCount();
 			header = new String[cols];
@@ -223,6 +235,8 @@ public class ServerConect {
 					rs.getDouble(7), rs.getBoolean(8), rs.getString(9));
 				l.setImatgeBlob(rs.getBytes(10));
 				l.setNotes(rs.getString(11));
+				l.setPagines(rs.getInt(12));
+				l.setPaginesLlegides(rs.getInt(13));
 				biblio.add(l);
 			}
 		} catch (SQLException e) {
@@ -234,7 +248,7 @@ public class ServerConect {
 	public synchronized void afegirLlibre(Llibre llibre) throws SQLException {
 		if (llibre == null) return;
 		PreparedStatement ps = con.prepareStatement(
-			"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`imatge_blob`,`notes`) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+			"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`imatge_blob`,`notes`,`pagines`,`pagines_llegides`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
 		ps.setLong(1, llibre.getISBN());
 		ps.setString(2, llibre.getNom());
 		ps.setString(3, llibre.getAutor() != null ? llibre.getAutor() : "");
@@ -246,6 +260,8 @@ public class ServerConect {
 		ps.setString(9, llibre.getImatge() != null ? llibre.getImatge() : "");
 		ps.setBytes(10, llibre.getImatgeBlob());
 		ps.setString(11, llibre.getNotes());
+		ps.setInt(12, llibre.getPagines());
+		ps.setInt(13, llibre.getPaginesLlegides());
 		ps.execute();
 	}
 
@@ -302,12 +318,48 @@ public class ServerConect {
 	public synchronized ArrayList<Llista> getAllLlistes() {
 		ArrayList<Llista> llistes = new ArrayList<>();
 		try {
-			ResultSet rs = con.createStatement().executeQuery("SELECT id, nom FROM llista ORDER BY nom");
-			while (rs.next()) llistes.add(new Llista(rs.getInt(1), rs.getString(2)));
+			ResultSet rs = con.createStatement().executeQuery("SELECT id, nom, ordre, color FROM llista ORDER BY ordre, nom");
+			while (rs.next()) {
+				Llista l = new Llista(rs.getInt(1), rs.getString(2));
+				l.setOrdre(rs.getInt(3));
+				l.setColor(rs.getString(4));
+				llistes.add(l);
+			}
 		} catch (SQLException e) {
 			new DialogoError("Error carregant les llistes", e).showErrorMessage();
 		}
 		return llistes;
+	}
+
+	public synchronized void updateLlistaOrdre(int id, int ordre) throws SQLException {
+		PreparedStatement ps = con.prepareStatement("UPDATE llista SET ordre = ? WHERE id = ?");
+		ps.setInt(1, ordre);
+		ps.setInt(2, id);
+		ps.execute();
+	}
+
+	public synchronized ArrayList<Llibre> getRecentlyAdded(int n) {
+		ArrayList<Llibre> llibres = new ArrayList<>();
+		try {
+			PreparedStatement ps = con.prepareStatement(
+				"SELECT ISBN, nom, autor, `any`, descripcio, valoracio, preu, llegit, imatge, imatge_blob, notes, pagines, pagines_llegides " +
+				"FROM llibre ORDER BY data_afegit DESC LIMIT ?");
+			ps.setInt(1, n);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				Llibre l = new Llibre(rs.getLong(1), rs.getString(2), rs.getString(3),
+					rs.getInt(4), rs.getString(5), rs.getDouble(6),
+					rs.getDouble(7), rs.getBoolean(8), rs.getString(9));
+				l.setImatgeBlob(rs.getBytes(10));
+				l.setNotes(rs.getString(11));
+				l.setPagines(rs.getInt(12));
+				l.setPaginesLlegides(rs.getInt(13));
+				llibres.add(l);
+			}
+		} catch (SQLException e) {
+			new DialogoError("Error carregant els llibres recents", e).showErrorMessage();
+		}
+		return llibres;
 	}
 
 	public synchronized java.util.List<Object[]> getAllLlibreLlista() {
@@ -355,7 +407,7 @@ public class ServerConect {
 		ArrayList<Llibre> llibres = new ArrayList<>();
 		try {
 			PreparedStatement ps = con.prepareStatement(
-				"SELECT l.ISBN, l.nom, l.autor, l.`any`, l.descripcio, ll.valoracio, l.preu, ll.llegit, l.imatge, l.imatge_blob, l.notes " +
+				"SELECT l.ISBN, l.nom, l.autor, l.`any`, l.descripcio, ll.valoracio, l.preu, ll.llegit, l.imatge, l.imatge_blob, l.notes, l.pagines, l.pagines_llegides " +
 				"FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ?");
 			ps.setInt(1, llistaId);
 			ResultSet rs = ps.executeQuery();
@@ -365,6 +417,8 @@ public class ServerConect {
 					rs.getBoolean(8), rs.getString(9));
 				lib.setImatgeBlob(rs.getBytes(10));
 				lib.setNotes(rs.getString(11));
+				lib.setPagines(rs.getInt(12));
+				lib.setPaginesLlegides(rs.getInt(13));
 				llibres.add(lib);
 			}
 		} catch (SQLException e) {
@@ -419,6 +473,40 @@ public class ServerConect {
 			new DialogoError("Error carregant les llistes del llibre", e).showErrorMessage();
 		}
 		return llistes;
+	}
+
+	public synchronized void updateLlistaColor(int id, String color) throws SQLException {
+		PreparedStatement ps = con.prepareStatement("UPDATE llista SET color = ? WHERE id = ?");
+		if (color == null) ps.setNull(1, java.sql.Types.VARCHAR); else ps.setString(1, color);
+		ps.setInt(2, id);
+		ps.execute();
+	}
+
+	public synchronized void addPrestec(long isbn, String nom) throws SQLException {
+		PreparedStatement ps = con.prepareStatement(
+			"INSERT INTO prestec (isbn, nom_persona, data_prestec, retornat) VALUES (?, ?, CURRENT_DATE, FALSE)");
+		ps.setLong(1, isbn);
+		ps.setString(2, nom);
+		ps.execute();
+	}
+
+	public synchronized void returnPrestec(long isbn) throws SQLException {
+		PreparedStatement ps = con.prepareStatement(
+			"UPDATE prestec SET retornat = TRUE WHERE isbn = ? AND retornat = FALSE");
+		ps.setLong(1, isbn);
+		ps.execute();
+	}
+
+	public synchronized java.util.Set<Long> getLoanedISBNs() {
+		java.util.Set<Long> set = new java.util.HashSet<>();
+		try {
+			ResultSet rs = con.createStatement().executeQuery(
+				"SELECT DISTINCT isbn FROM prestec WHERE retornat = FALSE");
+			while (rs.next()) set.add(rs.getLong(1));
+		} catch (SQLException e) {
+			new DialogoError("Error carregant els préstecs", e).showErrorMessage();
+		}
+		return set;
 	}
 
 	public void closeConection() {

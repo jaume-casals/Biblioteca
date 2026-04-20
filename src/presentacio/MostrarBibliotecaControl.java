@@ -49,10 +49,11 @@ public class MostrarBibliotecaControl {
 	private static final int COLUMNA_VALORACIO = 4;
 	private static final int COLUMNA_PREU = 5;
 	private static final int COLUMNA_lLEGIT = 6;
-	private static final int COLUMNA_DETALLS = 7;
+	private static final int COLUMNA_PROGRES = 7;
+	private static final int COLUMNA_DETALLS = 8;
 
-	private static final String[] COL_NAMES = {"ISBN","Nom","Autor","Any","Valoracio","Preu","Llegit","Detalls"};
-	private static final boolean[] COL_TOGGLEABLE = {false, false, true, true, true, true, true, false};
+	private static final String[] COL_NAMES = {"ISBN","Nom","Autor","Any","Valoracio","Preu","Llegit","Progres","Detalls"};
+	private static final boolean[] COL_TOGGLEABLE = {false, false, true, true, true, true, true, true, false};
 	// columns removed from view: modelIndex → TableColumn
 	private final java.util.TreeMap<Integer, javax.swing.table.TableColumn> hiddenCols = new java.util.TreeMap<>();
 
@@ -66,6 +67,7 @@ public class MostrarBibliotecaControl {
 	private int currentPage = 0;
 	private boolean paginatedMode = false;
 	private Integer currentLlistaId = null;
+	private java.util.Set<Long> loanedISBNs = new java.util.HashSet<>();
 
 	public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, ArrayList<Llibre> biblio,
 			EnActualizarBBDD enActualizarBBDD) {
@@ -121,7 +123,10 @@ public class MostrarBibliotecaControl {
 
 		this.vista.getComboLlistes().addActionListener(e -> onLlistaSelected());
 		this.vista.getBtnGestioLlistes().addActionListener(e -> obrirGestioLlistes());
+		this.vista.getBtnAfegitsRecentment().addActionListener(e -> mostrarAfegitsRecentment());
+		this.vista.getBtnLlegitsRecentment().addActionListener(e -> mostrarLlegitsRecentment());
 		refreshComboLlistes();
+		loanedISBNs = ControladorDomini.getInstance().getLoanedISBNs();
 
 		this.vista.getBtnCarregaPreset().addActionListener(e -> carregarPreset());
 		this.vista.getBtnDesaPreset().addActionListener(e -> desarPreset());
@@ -202,7 +207,7 @@ public class MostrarBibliotecaControl {
 				JTable table = vista.getjTableBilio();
 				int row = table.rowAtPoint(e.getPoint());
 				if (row < 0) return;
-				table.setRowSelectionInterval(row, row);
+				if (!table.isRowSelected(row)) table.setRowSelectionInterval(row, row);
 				String isbnStr = (String) table.getValueAt(row, COLUMNA_ISBN);
 
 				JPopupMenu menu = new JPopupMenu();
@@ -228,6 +233,26 @@ public class MostrarBibliotecaControl {
 				itemDuplicar.setEnabled(selectedRows.length == 1);
 				itemDuplicar.addActionListener(ev -> duplicarLlibre(isbnStr));
 				menu.add(itemDuplicar);
+
+				menu.addSeparator();
+
+				long isbnLong = Long.parseLong(isbnStr);
+				boolean loaned = loanedISBNs.contains(isbnLong);
+				if (selectedRows.length == 1 && loaned) {
+					JMenuItem itemRetornar = new JMenuItem("Marcar retornat");
+					itemRetornar.addActionListener(ev -> {
+						try {
+							ControladorDomini.getInstance().retornarLlibre(isbnLong);
+							loanedISBNs = ControladorDomini.getInstance().getLoanedISBNs();
+							vista.getjTableBilio().repaint();
+						} catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+					});
+					menu.add(itemRetornar);
+				} else if (selectedRows.length == 1) {
+					JMenuItem itemPrestar = new JMenuItem("Prestar...");
+					itemPrestar.addActionListener(ev -> prestarLlibre(isbnLong));
+					menu.add(itemPrestar);
+				}
 
 				menu.addSeparator();
 
@@ -433,14 +458,14 @@ public class MostrarBibliotecaControl {
 	private Object[] addLlibreMostrar(Llibre l) {
 		String estat = Boolean.TRUE.equals(l.getLlegit()) ? "Llegit" : "No llegit";
 		return new Object[] { l.getISBN() + "", l.getNom(), l.getAutor(), l.getAny(), l.getValoracio(), l.getPreu(),
-				estat, "" };
+				estat, l.getPagines() + "/" + l.getPaginesLlegides(), "" };
 	}
 
 	private void setTable(ArrayList<Llibre> llibres) {
 		this.model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 		this.model.getDataVector().removeAllElements();
 		removeAlldataFiltros();
-		setHeader(new String[] { "ISBN", "Nom", "Autor", "Any", "Valoracio", "Preu", "Llegit", "Detalls" });
+		setHeader(new String[] { "ISBN", "Nom", "Autor", "Any", "Valoracio", "Preu", "Llegit", "Progres", "Detalls" });
 		if (llibres != null) {
 			for (Llibre l : llibres) {
 				addRow(addLlibreMostrar(l));
@@ -461,6 +486,8 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_PREU).setMinWidth(40);
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setPreferredWidth(80);
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setMinWidth(55);
+		t.getColumnModel().getColumn(COLUMNA_PROGRES).setPreferredWidth(90);
+		t.getColumnModel().getColumn(COLUMNA_PROGRES).setMinWidth(50);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setPreferredWidth(85);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMinWidth(85);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(110);
@@ -468,13 +495,14 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellEditor(new BotonDetallesEditor(new JCheckBox()));
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellEditor(new LlegitCheckBoxEditor());
+		t.getColumnModel().getColumn(COLUMNA_PROGRES).setCellRenderer(new ProgressBarRenderer());
 		SearchHighlightRenderer highlightRenderer = new SearchHighlightRenderer();
 		for (int i = 0; i < t.getColumnCount(); i++) {
-			if (i != COLUMNA_lLEGIT && i != COLUMNA_DETALLS)
+			if (i != COLUMNA_lLEGIT && i != COLUMNA_DETALLS && i != COLUMNA_PROGRES)
 				t.getColumnModel().getColumn(i).setCellRenderer(highlightRenderer);
 		}
 
-		int[] defaults = { 130, 220, 180, 55, 75, 60, 80, 85 };
+		int[] defaults = { 130, 220, 180, 55, 75, 60, 80, 90, 85 };
 		for (int i = 0; i < defaults.length; i++) {
 			int saved = herramienta.Config.getColWidth(i, -1);
 			if (saved > 0) t.getColumnModel().getColumn(i).setPreferredWidth(saved);
@@ -752,11 +780,54 @@ public class MostrarBibliotecaControl {
 		shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
 		shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder("Per llista"));
 
+		// ── Reading goal ──────────────────────────────────────────────────────
+		int totalLlegits = (int) global.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+		int savedGoal = herramienta.Config.getReadingGoal();
+		javax.swing.JPanel goalPanel = new javax.swing.JPanel(new java.awt.BorderLayout(6, 4));
+		goalPanel.setBackground(herramienta.UITheme.BG_PANEL);
+		goalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
+			javax.swing.BorderFactory.createLineBorder(herramienta.UITheme.BORDER_CLR),
+			"Objectiu de lectura", javax.swing.border.TitledBorder.LEFT,
+			javax.swing.border.TitledBorder.TOP, herramienta.UITheme.FONT_BOLD, herramienta.UITheme.TEXT_MID));
+
+		javax.swing.JProgressBar goalBar = new javax.swing.JProgressBar(0, Math.max(savedGoal, 1));
+		goalBar.setValue(Math.min(totalLlegits, Math.max(savedGoal, 1)));
+		goalBar.setStringPainted(true);
+		goalBar.setFont(herramienta.UITheme.FONT_BASE);
+
+		javax.swing.JSpinner goalSpinner = new javax.swing.JSpinner(
+			new javax.swing.SpinnerNumberModel(Math.max(savedGoal, 1), 1, 9999, 1));
+		goalSpinner.setFont(herramienta.UITheme.FONT_BASE);
+		goalSpinner.setPreferredSize(new java.awt.Dimension(70, 28));
+		goalSpinner.addChangeListener(ev -> {
+			int goal = (int) goalSpinner.getValue();
+			herramienta.Config.setReadingGoal(goal);
+			goalBar.setMaximum(goal);
+			goalBar.setValue(Math.min(totalLlegits, goal));
+			goalBar.setString(totalLlegits + " / " + goal);
+		});
+		goalBar.setMaximum(Math.max(savedGoal, 1));
+		goalBar.setString(totalLlegits + " / " + Math.max(savedGoal, 1));
+
+		javax.swing.JLabel lblGoal = new javax.swing.JLabel("Objectiu:");
+		herramienta.UITheme.styleLabel(lblGoal);
+		javax.swing.JPanel goalControls = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
+		goalControls.setBackground(herramienta.UITheme.BG_PANEL);
+		goalControls.add(lblGoal);
+		goalControls.add(goalSpinner);
+		goalControls.add(new javax.swing.JLabel("llegits: " + totalLlegits));
+		goalPanel.add(goalControls, java.awt.BorderLayout.NORTH);
+		goalPanel.add(goalBar, java.awt.BorderLayout.CENTER);
+
 		// ── Layout ────────────────────────────────────────────────────────────
 		javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
 		panel.setBackground(herramienta.UITheme.BG_PANEL);
-		panel.add(txtSummary, java.awt.BorderLayout.NORTH);
-		if (shelfModel.getRowCount() > 0) panel.add(shelfScroll, java.awt.BorderLayout.CENTER);
+		panel.add(goalPanel, java.awt.BorderLayout.NORTH);
+		javax.swing.JPanel statsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+		statsPanel.setBackground(herramienta.UITheme.BG_PANEL);
+		statsPanel.add(txtSummary, java.awt.BorderLayout.NORTH);
+		if (shelfModel.getRowCount() > 0) statsPanel.add(shelfScroll, java.awt.BorderLayout.CENTER);
+		panel.add(statsPanel, java.awt.BorderLayout.CENTER);
 
 		javax.swing.JDialog dlg = new javax.swing.JDialog(SwingUtilities.getWindowAncestor(vista),
 			"Estadístiques", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
@@ -828,6 +899,46 @@ public class MostrarBibliotecaControl {
 		DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(aleatori, enActualizarBBDD);
 		detalles.getDetallesLlibrePanel().setLocationRelativeTo(vista);
 		detalles.getDetallesLlibrePanel().setVisible(true);
+	}
+
+	private void prestarLlibre(long isbn) {
+		String nom = JOptionPane.showInputDialog(vista,
+			"Nom de la persona que s'enduu el llibre:", "Prestar", JOptionPane.QUESTION_MESSAGE);
+		if (nom == null || nom.isBlank()) return;
+		try {
+			ControladorDomini.getInstance().prestarLlibre(isbn, nom.trim());
+			loanedISBNs = ControladorDomini.getInstance().getLoanedISBNs();
+			vista.getjTableBilio().repaint();
+			JOptionPane.showMessageDialog(vista, "Llibre prestat a \"" + nom.trim() + "\".",
+				"Préstec registrat", JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+	}
+
+	private void mostrarAfegitsRecentment() {
+		ArrayList<Llibre> recents = ControladorDomini.getInstance().getRecentlyAdded();
+		if (recents.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "No hi ha llibres.", "Afegits recentment", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		biblio = recents;
+		currentLlistaId = null;
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void mostrarLlegitsRecentment() {
+		ArrayList<Llibre> llegits = new ArrayList<>(
+			ControladorDomini.getInstance().getAllLlibres().stream()
+				.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+				.collect(java.util.stream.Collectors.toList()));
+		if (llegits.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "Cap llibre marcat com a llegit.", "Llegits", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		biblio = llegits;
+		currentLlistaId = null;
+		currentPage = 0;
+		showPage(0);
 	}
 
 	private void filtrar() {
@@ -909,6 +1020,15 @@ public class MostrarBibliotecaControl {
 		public Component getTableCellRendererComponent(JTable t, Object value,
 				boolean selected, boolean focus, int row, int col) {
 			super.getTableCellRendererComponent(t, value, selected, focus, row, col);
+			// Loan indicator: tint row orange if book is loaned out
+			if (!selected) {
+				try {
+					long isbn = Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN));
+					if (loanedISBNs.contains(isbn)) {
+						setBackground(UITheme.isDark ? new java.awt.Color(0x5C3A00) : new java.awt.Color(0xFFF3CD));
+					}
+				} catch (Exception ignored) {}
+			}
 			String query = vista.getSearchBar().getText().trim();
 			String text = value != null ? value.toString() : "";
 			if (!query.isEmpty() && !selected) {
@@ -921,6 +1041,34 @@ public class MostrarBibliotecaControl {
 				if (!highlighted.equals(escaped))
 					setText("<html>" + highlighted + "</html>");
 			}
+			return this;
+		}
+	}
+
+	private class ProgressBarRenderer extends javax.swing.JProgressBar implements javax.swing.table.TableCellRenderer {
+		ProgressBarRenderer() {
+			setMinimum(0);
+			setStringPainted(true);
+		}
+
+		@Override
+		public Component getTableCellRendererComponent(JTable t, Object value,
+				boolean selected, boolean focus, int row, int col) {
+			try {
+				long isbn = Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN));
+				Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(isbn);
+				if (l != null && l.getPagines() > 0) {
+					setMaximum(l.getPagines());
+					setValue(l.getPaginesLlegides());
+					setString(l.getPaginesLlegides() + " / " + l.getPagines());
+				} else {
+					setMaximum(1); setValue(0); setString("—");
+				}
+			} catch (Exception ignored) {
+				setMaximum(1); setValue(0); setString("—");
+			}
+			setBackground(selected ? UITheme.ACCENT : UITheme.BG_PANEL);
+			setForeground(selected ? java.awt.Color.WHITE : UITheme.TEXT_DARK);
 			return this;
 		}
 	}
@@ -1109,11 +1257,29 @@ public class MostrarBibliotecaControl {
 			public java.awt.Component getListCellRendererComponent(
 					javax.swing.JList<?> list, Object value, int index,
 					boolean isSelected, boolean cellHasFocus) {
+				javax.swing.Icon icon = null;
 				if (value instanceof Llista) {
 					Llista ll = (Llista) value;
+					if (ll.getColor() != null) {
+						try {
+							java.awt.Color c = java.awt.Color.decode(ll.getColor());
+							icon = new javax.swing.Icon() {
+								public int getIconWidth()  { return 12; }
+								public int getIconHeight() { return 12; }
+								public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
+									g.setColor(c);
+									g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
+									g.setColor(c.darker());
+									g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
+								}
+							};
+						} catch (Exception ignored) {}
+					}
 					value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
 				}
-				return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+				super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+				setIcon(icon);
+				return this;
 			}
 		});
 		combo.setSelectedIndex(0);

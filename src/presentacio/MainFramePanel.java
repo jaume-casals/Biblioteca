@@ -21,7 +21,7 @@ public class MainFramePanel extends JFrame {
 
 	public MainFramePanel() {
 		setTitle("Biblioteca");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBounds(Config.getWindowX(), Config.getWindowY(),
 				Config.getWindowWidth(), Config.getWindowHeight());
 		setMinimumSize(new Dimension(800, 500));

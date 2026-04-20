@@ -52,6 +52,8 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextValoracio().setText(l.getValoracio().toString());
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
 		this.vista.getTextNotes().setText(l.getNotes());
+		this.vista.getTextPagines().setText(l.getPagines() > 0 ? String.valueOf(l.getPagines()) : "");
+		this.vista.getTextPaginesLlegides().setText(l.getPaginesLlegides() > 0 ? String.valueOf(l.getPaginesLlegides()) : "");
 
 		this.vista.setTitle("Expedient del llibre " + l.getNom());
 	}
@@ -120,6 +122,8 @@ public class DetallesLlibrePanelControl {
 			this.vista.getChckLlegit().setEnabled(true);
 			this.vista.getBtnSeleccionarImatge().setEnabled(true);
 			this.vista.getTextNotes().setEnabled(true);
+			this.vista.getTextPagines().setEnabled(true);
+			this.vista.getTextPaginesLlegides().setEnabled(true);
 			this.vista.getBtnEditar().setText("Guardar");
 		} else if (this.vista.getBtnEditar().getText().equals("Guardar")) {
 			this.vista.getTextAny().setEnabled(false);
@@ -133,6 +137,8 @@ public class DetallesLlibrePanelControl {
 			this.vista.getChckLlegit().setEnabled(false);
 			this.vista.getBtnSeleccionarImatge().setEnabled(false);
 			this.vista.getTextNotes().setEnabled(false);
+			this.vista.getTextPagines().setEnabled(false);
+			this.vista.getTextPaginesLlegides().setEnabled(false);
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				// Validate before deleting so a bad edit can't destroy the record
@@ -143,6 +149,8 @@ public class DetallesLlibrePanelControl {
 						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
 						vista.getTextPortada().getText());
 				a.setNotes(vista.getTextNotes().getText());
+				try { a.setPagines(Integer.parseInt(vista.getTextPagines().getText().trim())); } catch (NumberFormatException ignored) {}
+				try { a.setPaginesLlegides(Integer.parseInt(vista.getTextPaginesLlegides().getText().trim())); } catch (NumberFormatException ignored) {}
 				a.setImatgeBlob(pendingBlob);
 				cLlibres.deleteLlibre(llibre);
 				cLlibres.addLlibre(a);

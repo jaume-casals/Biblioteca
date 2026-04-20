@@ -218,4 +218,57 @@ public class ControladorDomini {
 	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws Exception {
 		cp.updateLlibreInLlista(isbn, llistaId, valoracio, llegit);
 	}
+
+	public void moveLlistaUp(int id) throws Exception {
+		int idx = indexOfLlista(id);
+		if (idx > 0) swapLlistesOrdre(idx, idx - 1);
+	}
+
+	public void moveLlistaDown(int id) throws Exception {
+		int idx = indexOfLlista(id);
+		if (idx >= 0 && idx < llistes.size() - 1) swapLlistesOrdre(idx, idx + 1);
+	}
+
+	private int indexOfLlista(int id) {
+		for (int i = 0; i < llistes.size(); i++)
+			if (llistes.get(i).getId() == id) return i;
+		return -1;
+	}
+
+	private void swapLlistesOrdre(int i, int j) throws Exception {
+		for (int k = 0; k < llistes.size(); k++) {
+			llistes.get(k).setOrdre(k);
+			cp.updateLlistaOrdre(llistes.get(k).getId(), k);
+		}
+		Llista a = llistes.get(i);
+		Llista b = llistes.get(j);
+		a.setOrdre(j);
+		b.setOrdre(i);
+		cp.updateLlistaOrdre(a.getId(), j);
+		cp.updateLlistaOrdre(b.getId(), i);
+		Collections.swap(llistes, i, j);
+	}
+
+	public ArrayList<Llibre> getRecentlyAdded() {
+		return cp.getRecentlyAdded(20);
+	}
+
+	public void setLlistaColor(int id, String color) throws Exception {
+		cp.updateLlistaColor(id, color);
+		for (Llista l : llistes) {
+			if (l.getId() == id) { l.setColor(color); break; }
+		}
+	}
+
+	public void prestarLlibre(long isbn, String nom) throws Exception {
+		cp.addPrestec(isbn, nom);
+	}
+
+	public void retornarLlibre(long isbn) throws Exception {
+		cp.returnPrestec(isbn);
+	}
+
+	public java.util.Set<Long> getLoanedISBNs() {
+		return cp.getLoanedISBNs();
+	}
 }

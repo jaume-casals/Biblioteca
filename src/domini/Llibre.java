@@ -13,6 +13,8 @@ public class Llibre {
 	private String Imatge;
 	private byte[] ImatgeBlob;
 	private String Notes = "";
+	private int Pagines = 0;
+	private int PaginesLlegides = 0;
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
@@ -104,6 +106,10 @@ public class Llibre {
 
 	public String getNotes() { return Notes != null ? Notes : ""; }
 	public void setNotes(String notes) { Notes = notes != null ? notes : ""; }
+	public int getPagines() { return Pagines; }
+	public void setPagines(int p) { Pagines = Math.max(0, p); }
+	public int getPaginesLlegides() { return PaginesLlegides; }
+	public void setPaginesLlegides(int p) { PaginesLlegides = Math.max(0, p); }
 
 	@Override
 	public String toString() {

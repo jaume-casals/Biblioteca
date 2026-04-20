@@ -17,6 +17,7 @@ import domini.Llibre;
 import herramienta.DialogoError;
 import herramienta.OpenLibraryClient;
 import herramienta.UITheme;
+import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
 public class GuardarLlibresDialogoControl implements WindowListener {
@@ -24,8 +25,14 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	private GuardarLlibresDialogo vista;
 	private ControladorDomini cLlibres;
 	private byte[] selectedBlob;
+	private EnActualizarBBDD callback;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
+		this(vista, null);
+	}
+
+	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista, EnActualizarBBDD callback) {
+		this.callback = callback;
 		this.vista = vista;
 		this.vista.setFocusable(true);
 		this.vista.addKeyListener(new KeyListener() {
@@ -140,6 +147,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			l.setImatgeBlob(selectedBlob);
 			cLlibres.addLlibre(l);
 			vista.dispose();
+			if (callback != null) callback.actualitzarLlibre(l, true);
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}

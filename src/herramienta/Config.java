@@ -128,6 +128,9 @@ public class Config {
         save();
     }
 
+    public static int getReadingGoal() { return parseInt(props.getProperty("readingGoal", "0")); }
+    public static void setReadingGoal(int goal) { props.setProperty("readingGoal", String.valueOf(goal)); save(); }
+
     private static int parseInt(String s) {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
     }

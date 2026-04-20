@@ -3,11 +3,18 @@ package domini;
 public class Llista {
     private int id;
     private String nom;
+    private int ordre;
+    private String color;
     // Set only when fetched in the context of a specific book
     private Double valoracioLlibre;
     private Boolean llegitLlibre;
 
     public Llista(int id, String nom) { this.id = id; this.nom = nom; }
+
+    public int getOrdre() { return ordre; }
+    public void setOrdre(int ordre) { this.ordre = ordre; }
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
 
     public int getId() { return id; }
     public String getNom() { return nom; }

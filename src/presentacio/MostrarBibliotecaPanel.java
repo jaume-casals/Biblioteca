@@ -64,6 +64,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JButton bttnFiltrar;
 	private JButton bttnQuitarFiltros;
 	private JButton btnNouLlibre;
+	private JButton btnAfegitsRecentment;
+	private JButton btnLlegitsRecentment;
 	private JButton btnExportCSV;
 	private JButton btnImportarCSV;
 	private JButton btnEscanejarISBN;
@@ -107,7 +109,20 @@ public class MostrarBibliotecaPanel extends JPanel {
 		btnGestioLlistes = new JButton("Gestionar llistes");
 		UITheme.styleSecondaryButton(btnGestioLlistes);
 		shelfRow.add(btnGestioLlistes, BorderLayout.EAST);
-		northPanel.add(shelfRow, BorderLayout.SOUTH);
+		northPanel.add(shelfRow, BorderLayout.CENTER);
+
+		// Row 3: quick-filter buttons
+		JPanel quickRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		quickRow.setBackground(UITheme.BG_MAIN);
+		btnAfegitsRecentment = new JButton("Afegits recentment");
+		UITheme.styleSecondaryButton(btnAfegitsRecentment);
+		btnAfegitsRecentment.setToolTipText("Mostra els 20 últims llibres afegits");
+		quickRow.add(btnAfegitsRecentment);
+		btnLlegitsRecentment = new JButton("Llegits");
+		UITheme.styleSecondaryButton(btnLlegitsRecentment);
+		btnLlegitsRecentment.setToolTipText("Mostra tots els llibres marcats com a llegits");
+		quickRow.add(btnLlegitsRecentment);
+		northPanel.add(quickRow, BorderLayout.SOUTH);
 
 		add(northPanel, BorderLayout.NORTH);
 
@@ -511,7 +526,12 @@ public class MostrarBibliotecaPanel extends JPanel {
 		btnSortir.setBackground(new Color(0xC0392B));
 		btnSortir.setPreferredSize(new Dimension(0, 44));
 		btnSortir.setToolTipText("Tancar l'aplicació");
-		btnSortir.addActionListener(e -> System.exit(0));
+		btnSortir.addActionListener(e -> {
+			if (javax.swing.JOptionPane.showConfirmDialog(this,
+					"Sortir de l'aplicació?", "Confirmar sortida",
+					javax.swing.JOptionPane.YES_NO_OPTION) == javax.swing.JOptionPane.YES_OPTION)
+				System.exit(0);
+		});
 		filterWrapper.add(btnSortir, BorderLayout.SOUTH);
 	}
 
@@ -580,6 +600,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleLabel(lblPagina);
 		paginationPanel.setBackground(UITheme.BG_MAIN);
 		UITheme.styleSecondaryButton(btnGestioLlistes);
+		UITheme.styleSecondaryButton(btnAfegitsRecentment);
+		UITheme.styleSecondaryButton(btnLlegitsRecentment);
 		UITheme.styleAccentButton(btnCarregaPreset);
 		UITheme.styleSecondaryButton(btnDesaPreset);
 		UITheme.styleSecondaryButton(btnEsborraPreset);
@@ -622,6 +644,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JButton getbttnQuitarFiltros() { return bttnQuitarFiltros; }
 	public JComboBox<Object> getComboLlistes() { return comboLlistes; }
 	public JButton getBtnGestioLlistes() { return btnGestioLlistes; }
+	public JButton getBtnAfegitsRecentment() { return btnAfegitsRecentment; }
+	public JButton getBtnLlegitsRecentment() { return btnLlegitsRecentment; }
 	public JComboBox<String> getComboPresets() { return comboPresets; }
 	public JButton getBtnCarregaPreset() { return btnCarregaPreset; }
 	public JButton getBtnDesaPreset() { return btnDesaPreset; }

@@ -97,10 +97,14 @@ public class MainFrameControl implements EnActualizarBBDD {
 		});
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
+				if (javax.swing.JOptionPane.showConfirmDialog(vista,
+						"Sortir de l'aplicació?", "Confirmar sortida",
+						javax.swing.JOptionPane.YES_NO_OPTION) != javax.swing.JOptionPane.YES_OPTION) return;
 				boolean max = (vista.getExtendedState() & java.awt.Frame.MAXIMIZED_BOTH) != 0;
 				Config.setWindowMaximized(max);
 				java.awt.Rectangle r = normalBounds[0];
 				Config.setWindowBounds(r.x, r.y, r.width, r.height);
+				System.exit(0);
 			}
 		});
 	}
@@ -111,10 +115,9 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	private void obrirNouLlibreDialeg() {
-		GuardarLlibresDialogoControl ctrl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo());
+		GuardarLlibresDialogoControl ctrl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo(), this);
 		ctrl.getVista().setLocationRelativeTo(this.vista);
 		ctrl.getVista().setVisible(true);
-		mostrarControl.refresh();
 	}
 
 	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,

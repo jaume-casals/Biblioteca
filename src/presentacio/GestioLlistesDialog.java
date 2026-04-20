@@ -83,12 +83,67 @@ public class GestioLlistesDialog extends JDialog {
             }
         });
 
+        JButton btnColor = new JButton("Color");
+        UITheme.styleSecondaryButton(btnColor);
+        btnColor.setToolTipText("Canviar color de la llista seleccionada");
+        btnColor.addActionListener(e -> {
+            Llista sel = jList.getSelectedValue();
+            if (sel == null) return;
+            java.awt.Color initial = sel.getColor() != null
+                ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode("#3498DB");
+            java.awt.Color chosen = javax.swing.JColorChooser.showDialog(this, "Escull color", initial);
+            if (chosen == null) return;
+            String hex = String.format("#%02X%02X%02X", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
+            try {
+                ControladorDomini.getInstance().setLlistaColor(sel.getId(), hex);
+                reload();
+                mainControl.refreshComboLlistes();
+            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+        });
+
+        JButton btnUp = new JButton("▲");
+        UITheme.styleSecondaryButton(btnUp);
+        btnUp.setToolTipText("Pujar llista");
+        btnUp.addActionListener(e -> {
+            Llista sel = jList.getSelectedValue();
+            if (sel == null) return;
+            try {
+                ControladorDomini.getInstance().moveLlistaUp(sel.getId());
+                reload();
+                mainControl.refreshComboLlistes();
+                for (int i = 0; i < listModel.size(); i++)
+                    if (listModel.get(i).getId() == sel.getId()) { jList.setSelectedIndex(i); break; }
+            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+        });
+
+        JButton btnDown = new JButton("▼");
+        UITheme.styleSecondaryButton(btnDown);
+        btnDown.setToolTipText("Baixar llista");
+        btnDown.addActionListener(e -> {
+            Llista sel = jList.getSelectedValue();
+            if (sel == null) return;
+            try {
+                ControladorDomini.getInstance().moveLlistaDown(sel.getId());
+                reload();
+                mainControl.refreshComboLlistes();
+                for (int i = 0; i < listModel.size(); i++)
+                    if (listModel.get(i).getId() == sel.getId()) { jList.setSelectedIndex(i); break; }
+            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+        });
+
+        JPanel reorderRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
+        reorderRow.setBackground(UITheme.BG_PANEL);
+        reorderRow.add(btnUp);
+        reorderRow.add(btnDown);
+        reorderRow.add(btnColor);
+
         JPanel inputRow = new JPanel(new BorderLayout(4, 0));
         inputRow.setBackground(UITheme.BG_PANEL);
         inputRow.add(txtNom, BorderLayout.CENTER);
         inputRow.add(btnAfegir, BorderLayout.EAST);
 
-        bottom.add(inputRow, BorderLayout.NORTH);
+        bottom.add(reorderRow, BorderLayout.NORTH);
+        bottom.add(inputRow, BorderLayout.CENTER);
         bottom.add(btnEliminar, BorderLayout.SOUTH);
         panel.add(bottom, BorderLayout.SOUTH);
 
@@ -98,5 +153,36 @@ public class GestioLlistesDialog extends JDialog {
     private void reload() {
         listModel.clear();
         for (Llista l : ControladorDomini.getInstance().getAllLlistes()) listModel.addElement(l);
+        jList.setCellRenderer(new javax.swing.DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(
+                    javax.swing.JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                javax.swing.JLabel lbl = (javax.swing.JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Llista) {
+                    Llista ll = (Llista) value;
+                    String col = ll.getColor();
+                    if (col != null) {
+                        lbl.setIcon(colorSwatch(java.awt.Color.decode(col)));
+                    } else {
+                        lbl.setIcon(null);
+                    }
+                }
+                return lbl;
+            }
+        });
+    }
+
+    private javax.swing.Icon colorSwatch(java.awt.Color c) {
+        return new javax.swing.Icon() {
+            public int getIconWidth()  { return 14; }
+            public int getIconHeight() { return 14; }
+            public void paintIcon(java.awt.Component comp, java.awt.Graphics g, int x, int y) {
+                g.setColor(c);
+                g.fillRoundRect(x, y + 1, 12, 12, 4, 4);
+                g.setColor(c.darker());
+                g.drawRoundRect(x, y + 1, 12, 12, 4, 4);
+            }
+        };
     }
 }

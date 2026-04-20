@@ -108,7 +108,7 @@ public class UITheme {
     }
 
     public static void rebuildFonts(String size) {
-        int sz = "small".equals(size) ? 11 : "large".equals(size) ? 16 : 13;
+        int sz = "small".equals(size) ? 13 : "large".equals(size) ? 20 : 16;
         FONT_BASE  = new Font("SansSerif", Font.PLAIN, sz);
         FONT_BOLD  = new Font("SansSerif", Font.BOLD,  sz);
         FONT_LABEL = new Font("SansSerif", Font.BOLD,  Math.max(9, sz - 1));
