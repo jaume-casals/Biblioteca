@@ -47,7 +47,7 @@ public class DialogoError {
     }
 
     public void showErrorMessage() {
-        if (GraphicsEnvironment.isHeadless()) {
+        if (GraphicsEnvironment.isHeadless() || Boolean.getBoolean("biblioteca.test")) {
             System.err.println("[" + titol + "] " + missatge);
             if (!detalls.isBlank()) System.err.println(detalls);
             return;

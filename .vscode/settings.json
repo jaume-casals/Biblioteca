@@ -3,7 +3,8 @@
         "src"
     ],
     "java.project.referencedLibraries": [
-        "Biblioteca/jar/mariadb-java-client-3.3.3.jar"
+        "lib/h2-2.3.232.jar",
+        "lib/mariadb-java-client-3.3.3.jar"
     ],
     "java.configuration.runtimes": [
         {

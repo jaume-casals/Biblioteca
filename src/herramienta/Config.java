@@ -48,6 +48,41 @@ public class Config {
     public static String getDbType() { return props.getProperty("dbType", "h2"); }
     public static void setDbType(String type) { props.setProperty("dbType", type); save(); }
 
+    public static int getWindowX()      { return parseInt(props.getProperty("windowX",      "100"));  }
+    public static int getWindowY()      { return parseInt(props.getProperty("windowY",      "100"));  }
+    public static int getWindowWidth()  { return parseInt(props.getProperty("windowWidth",  "1280")); }
+    public static int getWindowHeight() { return parseInt(props.getProperty("windowHeight", "800"));  }
+    public static boolean isWindowMaximized() {
+        return Boolean.parseBoolean(props.getProperty("windowMaximized", "true"));
+    }
+
+    public static void setWindowBounds(int x, int y, int w, int h) {
+        props.setProperty("windowX",      String.valueOf(x));
+        props.setProperty("windowY",      String.valueOf(y));
+        props.setProperty("windowWidth",  String.valueOf(w));
+        props.setProperty("windowHeight", String.valueOf(h));
+        save();
+    }
+
+    public static void setWindowMaximized(boolean m) {
+        props.setProperty("windowMaximized", String.valueOf(m));
+        save();
+    }
+
+    public static int getColWidth(int col, int defaultWidth) {
+        return parseInt(props.getProperty("colWidth_" + col, String.valueOf(defaultWidth)));
+    }
+
+    public static void setColWidths(int[] widths) {
+        for (int i = 0; i < widths.length; i++)
+            props.setProperty("colWidth_" + i, String.valueOf(widths[i]));
+        save();
+    }
+
+    private static int parseInt(String s) {
+        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
+    }
+
     private static void save() {
         try {
             FILE.getParentFile().mkdirs();

@@ -1,79 +1,114 @@
-═══════════════════════════════════════════════════════════
-  BIBLIOTECA — TODO
-═══════════════════════════════════════════════════════════
+[x] Multiple libraries / shelves (per-book valoracio + llegit per shelf).
 
-── BUGS / CORRECTNESS ──────────────────────────────────────
-[x] checkLlibre.cheackLlibre logic is OR not AND — any one
-    condition (14-digit ISBN, valoracio 0-10, portada prefix)
-    makes it pass. Should require ALL to be valid.
-[x] cheackLlibre: portada.startsWith("portades/") NPE if
-    portada is null (caller can pass null).
-[x] actualizarfila() in MostrarBibliotecaControl only updates
-    the ISBN cell, does not refresh Nom/Autor/Any/etc. after edit.
-[x] matchString() does not handle case-insensitive search —
-    searching "cervantes" won't find "Cervantes".
-[x] If DB is unreachable at startup, app shows error dialog
-    but continues with empty/broken state instead of exiting
-    cleanly.
+── DATA MODEL ────────────────────────────────────────────────────────────────
+[ ] `backupToSQL` / `restoreFromSQL` don't include llista/llibre_llista tables
+[ ] Tags/genres per book: new `tag` table + `llibre_tag` join (many-to-many)
+[ ] `editorial` (publisher) field on llibre
+[ ] `serie` (series/collection) + `volum` (volume number) fields on llibre
+[ ] `pagines` (page count) + `pagines_llegides` (reading progress) fields
+[ ] `data_compra` (purchase date) + `data_lectura` (finish date) fields
+[ ] `idioma` (language) field on llibre
+[ ] `format` field: hardcover / paperback / ebook / audiobook
+[x] `notes` (personal review text) field on llibre — VARCHAR(2048)
+[ ] Wishlist flag (`desitjat BOOLEAN`) — want-to-buy, not owned yet
+[ ] Loan tracking: `prestec` table (isbn, nom_persona, data_prestec, retornat BOOLEAN)
+[ ] Multiple authors: `autor` table + `llibre_autor` join (currently single string field)
+[ ] `pais_origen` (country of origin) field on llibre
 
-── FEATURES ────────────────────────────────────────────────
-[x] Delete book button in DetallesLlibrePanel (with confirm dialog).
-[x] Export library to CSV / Excel / PDF.
-[x] Import books from CSV or barcode scanner.
-[x] Lookup book metadata from ISBN via OpenLibrary API
-    (auto-fill nom, autor, any from ISBN scan via escanejarISBN).
-[ ] Pagination or lazy loading for large libraries (>1000 books).
-[x] Search bar at top of table (real-time filter as user types).
-[x] Sort indicator on table headers (currently sortable but no icon).
-[x] Statistics panel: total books, % read, average price/rating,
-    books per year.
-[ ] Multiple libraries / shelves (tags or categories per book).
-[x] Backup & restore database button — "Backup BD" exports SQL dump,
-    "Restaurar BD" restores from SQL file (both in filter panel).
-[x] Settings dialog: DB connection (host/user/password) + default
-    images folder. Language skipped. Dark mode already persisted.
+── PERSISTENCE / IMPORT-EXPORT ───────────────────────────────────────────────
+[ ] `backupToSQL` / `restoreFromSQL` don't include llista/llibre_llista tables
+[ ] CSV import: map Goodreads export columns to Llibre fields
+[ ] CSV export: include llista memberships + per-shelf valoracio/llegit
+[ ] JSON export/import (full library dump including llistes + tags)
+[x] Auto-backup on startup (rolling, keep last 5 in ~/.biblioteca/backups/)
+[x] `importarCSV` silently skips duplicate ISBNs instead of counting as errors
+[ ] Export filtered/current-shelf view only (not always full library)
+[ ] Export to HTML: static reading list page with covers
+[ ] PDF report export (book list, statistics)
 
-── UX / UI ─────────────────────────────────────────────────
-[x] Dark mode preference not saved — reverts to light on restart.
-    Persist to a config file (e.g. ~/.biblioteca/config.properties).
-[x] Llegit/No llegit checkboxes in table column (toggle in-place).
-[x] Keyboard shortcut Ctrl+N for Nou Llibre (already has tooltip,
-    not yet wired to KeyBinding).
-[x] Keyboard shortcut Ctrl+F to focus filter panel.
-[x] Keyboard shortcut Delete on selected row to delete book.
-[x] DetallesLlibrePanel: image preview when typing/selecting portada
-    path (live update, not only on load).
-[x] GuardarLlibresDialogo: image preview next to Explorar button.
-[ ] Table row double-click already opens details — add single-click
-    selection highlight (currently no visual feedback on first click).
-[x] Show book count in window title or status bar.
-[x] Tooltips on table column headers explaining each field.
+── UI / UX ───────────────────────────────────────────────────────────────────
+[ ] Cover gallery view: grid of book cover thumbnails as alternative to table
+[x] Right-click context menu on table row (Open, Edit, Delete, Copy ISBN)
+[ ] Bulk select (Ctrl+click / Shift+click) + bulk delete / bulk add-to-shelf
+[ ] Column visibility toggle (show/hide Preu, Valoracio, etc.) saved to config
+[x] Persistent window size + position (save to config on close)
+[x] Persistent column widths (save to config)
+[x] Ctrl+E shortcut = open edit mode for selected book
+[x] Enter key on selected table row = open details dialog
+[x] Ctrl+A = select all visible rows
+[x] Status bar at window bottom: book count + shelf name (cleaner than title bar)
+[ ] Confirm dialog on app exit if unsaved changes pending
+[x] Loading spinner / progress bar during OpenLibrary fetch
+[x] Highlight search query text in matching table cells
+[x] Tooltip showing full text on truncated table cell hover
+[ ] Statistics per shelf (avg valoració, % llegit, per-shelf counts)
+[ ] Reading goal: set target N books/year, show progress bar in stats
+[ ] Recently added / recently read quick-filter buttons above table
+[x] `LlistesDelLlibreDialog` shelf combo stale when GestioLlistesDialog creates new shelves
+[x] "Duplicate book" action: prefill new-book dialog from selected row
+[x] "Random book" picker: pick random unread book from current view
+[ ] Saved filter presets: name + save current filter state, recall later
+[x] Shelf book count shown in dropdown label e.g. "Favorits (12)"
+[ ] Shelf reorder: drag or up/down buttons in GestioLlistesDialog
+[ ] Llista `color` field: color-coded shelf labels in combo + dialogs
+[ ] Filter panel: add tag, editorial, serie, format, idioma filter fields
+[x] Full-text search in `descripcio` + `notes` fields via search bar
+[ ] Autocomplete for `autor`, `editorial`, `serie`, `idioma` fields (suggest from DB)
+[ ] "Loan" quick-action button on table row (mark book as loaned out)
+[ ] Active loan indicator in table row (different row color or icon)
+[ ] Reading progress bar column in table (pagines_llegides / pagines)
+[ ] When installed, dark and light mode don't change fully until I reopen the application
 
-── CODE QUALITY ─────────────────────────────────────────────
-[x] checkLlibre class name violates Java conventions — renamed to
-    LlibreValidator (checkLlibre.java kept as empty stub).
-[x] cheackLlibre method name had a typo — renamed to checkLlibre
-    in LlibreValidator.
-[x] Unused import java.awt.event.KeyListener in GuardarLlibresDialogo.
-[x] Unused import java.awt.event.KeyEvent in GuardarLlibresDialogo.
-[x] AcercaDeDialogo (About dialog) is mostly unused/empty — either
-    fill it with app info or remove it.
-[x] acercade package is dead code — not accessible from UI.
-[x] ServerConect: single try block — failed connection exits cleanly
-    via System.exit(1) before any table creation is attempted.
-[ ] ControladorPersistencia: no connection pooling — single shared
-    Connection object is not thread-safe.
-[ ] Add integration tests for ServerConect / ControladorPersistencia
-    (need a test DB or H2 in-memory).
-[ ] Add edge case tests: empty library, duplicate ISBN insert,
-    delete non-existent book, filter with all params set.
+── OPENLIB / COVER ───────────────────────────────────────────────────────────
+[ ] Auto-fetch cover image from OpenLibrary when adding book (save to imatge_blob)
+[ ] Retry failed OpenLibrary lookups with exponential backoff
+[ ] Show cover thumbnail in table (small icon column, ~40px height)
+[ ] Google Books API as fallback when OpenLibrary has no result
+[ ] Fetch `pagines`, `editorial`, `idioma` from OpenLibrary / Google Books metadata
+[ ] Batch cover fetch: "fetch missing covers" action for all books without blob
 
-── PERSISTENCE ─────────────────────────────────────────────
-[x] Column name mismatch: Llibre.getPortada/setPortada renamed to
-    getImatge/setImatge everywhere to match DB column `imatge`.
-[ ] No migration system — schema changes require manual resetDatabase().
-    Add a versioned migration table.
-[x] Connection string configurable — dbHost/dbUser/dbPassword now
-    read from ~/.biblioteca/config.properties via Config class.
+── VALIDATION / BUGS ─────────────────────────────────────────────────────────
+[ ] `LlibreValidator`: preu should reject negative values
+[ ] Detail dialog: editing ISBN to a duplicate silently corrupts data (delete+add fails mid-way)
+[ ] `DetallesLlibrePanelControl.editar`: fields stay enabled if validation throws
+[ ] `MostrarBibliotecaControl.refresh()` doesn't restore shelf combo selection after restore
+[ ] Shelf view: `Pàgina X/Y` pagination label uses global `biblio.size()`, not shelf count
+[ ] `aplicarFiltres`: valoracio/llegit filter operates on global fields, ignores shelf context
+[ ] `MostrarBibliotecaControl.showPage()`: when biblio is null, NPE if books never loaded
+[ ] OpenLibrary fetch swallows network errors silently — show user-facing message
+[ ] `GuardarLlibresDialogoControl`: `cercaInternet` thread not cancelled if dialog closed early
+[ ] `ServerConect.deleteLlibre(Llibre)` and `deleteLlibre(long)` are duplicated — unify
+[ ] `ControladorDomini.get10Llibres()` off-by-one: `subList(0, 9)` returns 9 not 10
+[ ] `MainFrameControl.getInstance(null)` passes null after first call — null check missing
+[ ] `MostrarBibliotecaControl`: `biblio` reference drifts after `restoreFromSQL` reloads domain
+[ ] Cover load in detail view blocks EDT if file is large (use SwingWorker)
+[ ] MariaDB URL embeds password in plaintext connection string (use props instead)
+[ ] `backupToSQL` doesn't escape backtick-quoted field names correctly for MariaDB restore
+[ ] `LlistesDelLlibreDialog.findLlistaByNom` re-queries DB each time; cache result of reload()
 
-═══════════════════════════════════════════════════════════
+── PERFORMANCE ───────────────────────────────────────────────────────────────
+[ ] `imatge_blob` loaded for ALL books on startup — lazy-load blobs only when row opened
+[ ] `ControladorDomini` loads entire library into RAM — add DB-side pagination for >10k books
+[ ] `aplicarFiltres` linear scan every filter apply — push filter to SQL query instead
+[ ] OpenLibrary fetch blocks UI thread when called from `escanejarISBN` — move to SwingWorker
+
+── CONFIG / ADMIN ────────────────────────────────────────────────────────────
+[ ] DB size display in Configuració dialog
+[ ] "Buidar tota la biblioteca" (clear all data) button in Configuració with confirmation
+[ ] Multiple DB profiles: switch between different ~/.biblioteca/*.h2 files
+[ ] Currency symbol preference (€, $, £) saved to config
+[ ] Default valoració when adding new book (0.0 now, should be configurable)
+[x] Auto-add new book to currently selected shelf
+[ ] Font size preference (small/medium/large) saved to config and applied at startup
+
+── TESTS ─────────────────────────────────────────────────────────────────────
+[ ] Test: tags CRUD + getLlibresWithTag
+[ ] Test: CSV round-trip (export then re-import produces identical library)
+[ ] Test: filter applied on shelf subset (not global biblio)
+[ ] Test: duplicate ISBN on edit path (delete succeeds, add throws, DB left consistent)
+[ ] Test: getLlibresInLlista returns shelf valoracio not global valoracio
+[ ] Test: deleteLlista cascades — no orphan rows in llibre_llista
+[ ] Test: pagination edge cases (0 books, exactly PAGE_SIZE books, PAGE_SIZE+1 books)
+[ ] Test: backupToSQL + restoreFromSQL round-trip (once backup includes llista data)
+[ ] Test: get10Llibres off-by-one fix
+[ ] Test: OpenLibraryClient returns empty map (not null) on network error

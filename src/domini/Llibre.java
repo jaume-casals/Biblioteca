@@ -11,6 +11,8 @@ public class Llibre {
 	private Double Preu;
 	private Boolean Llegit;
 	private String Imatge;
+	private byte[] ImatgeBlob;
+	private String Notes = "";
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
@@ -96,6 +98,12 @@ public class Llibre {
 	public void setImatge(String imatge) {
 		Imatge = imatge;
 	}
+
+	public byte[] getImatgeBlob() { return ImatgeBlob; }
+	public void setImatgeBlob(byte[] blob) { ImatgeBlob = blob; }
+
+	public String getNotes() { return Notes != null ? Notes : ""; }
+	public void setNotes(String notes) { Notes = notes != null ? notes : ""; }
 
 	@Override
 	public String toString() {

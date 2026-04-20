@@ -2,7 +2,6 @@ package main;
 
 import java.awt.Color;
 import java.awt.EventQueue;
-import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 
 import javax.swing.UIManager;
@@ -35,34 +34,24 @@ public class Ejecutable {
 			System.exit(1);
 		}
 
-		EventQueue.invokeLater(new Runnable() {
-			private MainFramePanel vista;
-			private MainFrameControl mainControl;
-
-			public void run() {
-				try {
-					if (herramienta.Config.isDarkMode()) UITheme.setDark(true);
-					UIManager.put("nimbusBase",                UITheme.ACCENT);
-					UIManager.put("nimbusBlueGrey",            UITheme.isDark ? new Color(0x3D4451) : new Color(0x5D8AA8));
-					UIManager.put("control",                   UITheme.BG_MAIN);
-					UIManager.put("text",                      UITheme.TEXT_DARK);
-					UIManager.put("nimbusFocus",               UITheme.ACCENT);
-					UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
-					UIManager.put("nimbusSelectedText",        Color.WHITE);
-					UIManager.put("defaultFont",               UITheme.FONT_BASE);
-					UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-					UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
-					this.vista = new MainFramePanel();
-					mainControl = MainFrameControl.getInstance(this.vista);
-					mainControl.setVisible(true);
-				} catch (Exception e) {
-					new DialogoError(e).showErrorMessage();
-				}
+		EventQueue.invokeLater(() -> {
+			try {
+				if (herramienta.Config.isDarkMode()) UITheme.setDark(true);
+				UIManager.put("nimbusBase",                UITheme.ACCENT);
+				UIManager.put("nimbusBlueGrey",            UITheme.isDark ? new Color(0x3D4451) : new Color(0x5D8AA8));
+				UIManager.put("control",                   UITheme.BG_MAIN);
+				UIManager.put("text",                      UITheme.TEXT_DARK);
+				UIManager.put("nimbusFocus",               UITheme.ACCENT);
+				UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
+				UIManager.put("nimbusSelectedText",        Color.WHITE);
+				UIManager.put("defaultFont",               UITheme.FONT_BASE);
+				UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+				UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
+				MainFramePanel vista = new MainFramePanel();
+				MainFrameControl.getInstance(vista).setVisible(true);
+			} catch (Exception e) {
+				new DialogoError(e).showErrorMessage();
 			}
 		});
-//		ControladorDomini cd = ControladorDomini.getInstance();
-//		System.out.println("resultat:");
-//		System.out.println(cd.aplicarFiltres(null, null, null, null, null, false));
-
 	}
 }

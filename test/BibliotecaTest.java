@@ -1,255 +1,396 @@
-import java.util.ArrayList;
+package test;
 
+import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.FiltreUtils;
-import herramienta.checkLlibre;
+import herramienta.LlibreValidator;
+import persistencia.ControladorPersistencia;
 
+import java.util.ArrayList;
+
+import domini.Llista;
+
+/**
+ * Plain-Java integration/unit tests. No JUnit needed.
+ * Run: java -cp lib/h2-2.3.232.jar:bin test.BibliotecaTest
+ */
 public class BibliotecaTest {
-
-    // ── ANSI colours ─────────────────────────────────────────────────────────
-    private static final String G = "\u001B[32m";
-    private static final String R = "\u001B[31m";
-    private static final String C = "\u001B[36m";
-    private static final String B = "\u001B[1m";
-    private static final String X = "\u001B[0m";
 
     private static int passed = 0;
     private static int failed = 0;
 
     public static void main(String[] args) {
-        testLlibre();
-        testCountDig();
-        testCheackLlibre();
-        testMatchISBN();
-        testMatchString();
-        testFiltreLogic();
+        System.setProperty("biblioteca.test", "true");
+        System.setProperty("biblioteca.h2.url",
+            "jdbc:h2:mem:test;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1");
 
-        printSummary();
-        System.exit(failed > 0 ? 1 : 0);
+        // ── LlibreValidator ──────────────────────────────────────────────────
+        test("ISBN-13 valid accepted", () -> {
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Nom", null, null, null, null, null, null, null);
+            assertEqual(9780306406157L, l.getISBN());
+        });
+        test("ISBN-10 valid accepted", () -> {
+            Llibre l = LlibreValidator.checkLlibre(8420413739L, "Test", null, null, null, null, null, null, null);
+            assertEqual(8420413739L, l.getISBN());
+        });
+        test("Invalid ISBN (14 digits) rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(12345678901234L, "X", null, null, null, null, null, null, null));
+        });
+        test("Invalid ISBN (null) rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(null, "X", null, null, null, null, null, null, null));
+        });
+        test("Blank nom rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(9780306406157L, "  ", null, null, null, null, null, null, null));
+        });
+        test("Null nom rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(9780306406157L, null, null, null, null, null, null, null, null));
+        });
+        test("Valoracio > 10 rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, 11.0, null, null, null));
+        });
+        test("Valoracio < 0 rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, -1.0, null, null, null));
+        });
+        test("Optional fields get defaults", () -> {
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null);
+            assertEqual("", l.getAutor());
+            assertEqual(0, l.getAny());
+            assertEqual(0.0, l.getValoracio());
+            assertEqual(0.0, l.getPreu());
+            assertEqual(false, l.getLlegit());
+        });
+
+        // ── FiltreUtils ──────────────────────────────────────────────────────
+        test("matchString case-insensitive", () -> {
+            assertEqual(true, FiltreUtils.matchString("cervantes", "Cervantes"));
+            assertEqual(true, FiltreUtils.matchString("CERVANTES", "cervantes de saavedra"));
+            assertEqual(false, FiltreUtils.matchString("tolkien", "Cervantes"));
+        });
+        test("matchISBN prefix match", () -> {
+            assertEqual(true, FiltreUtils.matchISBN(978L, 9780306406157L));
+            assertEqual(false, FiltreUtils.matchISBN(123L, 9780306406157L));
+        });
+
+        // ── DB integration (H2 in-memory) ───────────────────────────────────
+        test("Empty library returns empty list", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            assertEqual(0, cd.getSize());
+            assertEqual(0, cd.getAllLlibres().size());
+        });
+
+        test("Add book and retrieve it", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "El Quixot", "Cervantes", 1605, "", 9.0, 12.5, true, "");
+            cd.addLlibre(l);
+            assertEqual(1, cd.getSize());
+            Llibre retrieved = cd.getLlibre(9780306406157L);
+            assertEqual("El Quixot", retrieved.getNom());
+            assertEqual("Cervantes", retrieved.getAutor());
+            assertEqual(1605, retrieved.getAny());
+        });
+
+        test("Duplicate ISBN insert throws", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Llibre A", null, null, null, null, null, null, null);
+            cd.addLlibre(l);
+            assertThrows(() -> cd.addLlibre(
+                LlibreValidator.checkLlibre(9780306406157L, "Llibre B", null, null, null, null, null, null, null)));
+        });
+
+        test("Delete non-existent book throws", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            assertThrows(() -> cd.deleteLlibre(9780000000000L));
+        });
+
+        test("Delete existing book removes it", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null);
+            cd.addLlibre(l);
+            assertEqual(1, cd.getSize());
+            cd.deleteLlibre(l);
+            assertEqual(0, cd.getSize());
+        });
+
+        test("Filter with all params set", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "El Quixot", "Cervantes", 1605, "", 9.0, 12.5, true, ""));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "Hamlet", "Shakespeare", 1603, "", 8.5, 10.0, false, ""));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780064400558L, "El Senyor dels Anells", "Tolkien", 1954, "", 10.0, 25.0, true, ""));
+
+            ArrayList<Llibre> r = cd.aplicarFiltres(
+                "Cervantes", null, null,
+                1600, 1700,
+                8.0, 10.0,
+                10.0, 15.0,
+                true);
+            assertEqual(1, r.size());
+            assertEqual("El Quixot", r.get(0).getNom());
+        });
+
+        test("Filter llegit=false returns only unread", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Llegit", null, null, null, null, null, true, ""));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "No llegit", null, null, null, null, null, false, ""));
+            ArrayList<Llibre> r = cd.aplicarFiltres(null, null, null, null, null, null, null, null, null, false);
+            assertEqual(1, r.size());
+            assertEqual("No llegit", r.get(0).getNom());
+        });
+
+        // ── Llista (shelf) tests ──────────────────────────────────────────────
+        test("Create llista and retrieve it", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            Llista l = cd.addLlista("Favorits");
+            assertEqual("Favorits", l.getNom());
+            assertEqual(1, cd.getAllLlistes().size());
+        });
+
+        test("Delete llista removes it", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            Llista l = cd.addLlista("Temporal");
+            assertEqual(1, cd.getAllLlistes().size());
+            cd.deleteLlista(l);
+            assertEqual(0, cd.getAllLlistes().size());
+        });
+
+        test("Add book to llista and retrieve it", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("Lectura");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 7.5, true);
+            ArrayList<Llibre> llibres = cd.getLlibresInLlista(llista.getId());
+            assertEqual(1, llibres.size());
+            assertEqual(9780306406157L, llibres.get(0).getISBN());
+            assertEqual(7.5, llibres.get(0).getValoracio());
+            assertEqual(true, llibres.get(0).getLlegit());
+        });
+
+        test("Remove book from llista", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("Lectura");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 5.0, false);
+            assertEqual(1, cd.getLlibresInLlista(llista.getId()).size());
+            cd.removeLlibreFromLlista(9780306406157L, llista.getId());
+            assertEqual(0, cd.getLlibresInLlista(llista.getId()).size());
+        });
+
+        test("getLlistesForLlibre returns per-book shelf values", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("Favorits");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 8.0, true);
+            ArrayList<Llista> llistes = cd.getLlistesForLlibre(9780306406157L);
+            assertEqual(1, llistes.size());
+            assertEqual("Favorits", llistes.get(0).getNom());
+            assertEqual(8.0, llistes.get(0).getValoracioLlibre());
+            assertEqual(true, llistes.get(0).getLlegitLlibre());
+        });
+
+        test("Update per-book shelf values", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("Lectura");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 5.0, false);
+            cd.updateLlibreInLlista(9780306406157L, llista.getId(), 9.0, true);
+            ArrayList<Llista> llistes = cd.getLlistesForLlibre(9780306406157L);
+            assertEqual(9.0, llistes.get(0).getValoracioLlibre());
+            assertEqual(true, llistes.get(0).getLlegitLlibre());
+        });
+
+        test("Book deletion cascades to llista membership", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("Lectura");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 5.0, false);
+            cd.deleteLlibre(9780306406157L);
+            assertEqual(0, cd.getLlibresInLlista(llista.getId()).size());
+        });
+
+        // ── LlibreValidator: preu ────────────────────────────────────────────
+        test("Preu negative rejected", () -> {
+            assertThrows(() -> LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, null, -0.01, null, null));
+        });
+        test("Preu zero accepted", () -> {
+            Llibre l = LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, null, 0.0, null, null);
+            assertEqual(0.0, l.getPreu());
+        });
+
+        // ── Llista: shelf valoracio vs global valoracio ───────────────────────
+        test("getLlibresInLlista returns shelf valoracio, not global", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, 3.0, null, null, null));
+            Llista llista = cd.addLlista("Shelf");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 9.0, true);
+            ArrayList<Llibre> llibres = cd.getLlibresInLlista(llista.getId());
+            assertEqual(9.0, llibres.get(0).getValoracio());
+        });
+
+        // ── Llista: cascade delete ───────────────────────────────────────────
+        test("deleteLlista cascades: book survives, membership gone", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null));
+            Llista llista = cd.addLlista("TempShelf");
+            cd.addLlibreToLlista(9780306406157L, llista.getId(), 5.0, false);
+            cd.deleteLlista(llista);
+            assertEqual(1, cd.getSize());
+            assertEqual(0, cd.getLlibresInLlista(llista.getId()).size());
+        });
+
+        // ── get10Llibres ─────────────────────────────────────────────────────
+        test("get10Llibres returns exactly 10 when 15 books present", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            for (int i = 1; i <= 15; i++)
+                cd.addLlibre(LlibreValidator.checkLlibre(9780000000000L + i, "Llibre " + i, null, null, null, null, null, null, null));
+            assertEqual(10, cd.get10Llibres().size());
+        });
+        test("get10Llibres returns all books when fewer than 10", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            for (int i = 1; i <= 5; i++)
+                cd.addLlibre(LlibreValidator.checkLlibre(9780000000000L + i, "Llibre " + i, null, null, null, null, null, null, null));
+            assertEqual(5, cd.get10Llibres().size());
+        });
+
+        // ── Pagination ───────────────────────────────────────────────────────
+        test("Pagination: 0 books", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            assertEqual(0, cd.get100Llibres(0).size());
+            assertEqual(0, cd.maxIndex100Llibres());
+        });
+        test("Pagination: exactly 100 books", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            for (int i = 1; i <= 100; i++)
+                cd.addLlibre(LlibreValidator.checkLlibre(9780000000000L + i, "L" + i, null, null, null, null, null, null, null));
+            assertEqual(100, cd.get100Llibres(0).size());
+            assertEqual(0, cd.get100Llibres(1).size());
+            assertEqual(1, cd.maxIndex100Llibres());
+        });
+        test("Pagination: 101 books", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            for (int i = 1; i <= 101; i++)
+                cd.addLlibre(LlibreValidator.checkLlibre(9780000000000L + i, "L" + i, null, null, null, null, null, null, null));
+            assertEqual(100, cd.get100Llibres(0).size());
+            assertEqual(1, cd.get100Llibres(1).size());
+            assertEqual(1, cd.maxIndex100Llibres());
+        });
+
+        // ── backupToSQL + restoreFromSQL round-trip ──────────────────────────
+        test("backupToSQL + restoreFromSQL round-trip", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "El Quixot", "Cervantes", 1605, "", 9.0, 12.5, true, ""));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "Hamlet", "Shakespeare", 1603, "", 8.5, 10.0, false, ""));
+            java.io.File tmp = java.io.File.createTempFile("biblioteca_test", ".sql");
+            tmp.deleteOnExit();
+            cd.backupToSQL(tmp);
+            resetSingletons();
+            cd = ControladorDomini.getInstance();
+            cd.restoreFromSQL(tmp);
+            assertEqual(2, cd.getSize());
+            Llibre q = cd.getLlibre(9780306406157L);
+            assertEqual("El Quixot", q.getNom());
+            assertEqual("Cervantes", q.getAutor());
+            assertEqual(9.0, q.getValoracio());
+        });
+
+        test("backupToSQL + restoreFromSQL preserves llista memberships", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Quixot", null, null, null, null, null, null, null));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "Hamlet", null, null, null, null, null, null, null));
+            Llista shelf = cd.addLlista("Favorits");
+            cd.addLlibreToLlista(9780306406157L, shelf.getId(), 8.5, true);
+            java.io.File tmp = java.io.File.createTempFile("biblioteca_llista_test", ".sql");
+            tmp.deleteOnExit();
+            cd.backupToSQL(tmp);
+            resetSingletons();
+            cd = ControladorDomini.getInstance();
+            cd.restoreFromSQL(tmp);
+            assertEqual(2, cd.getSize());
+            assertEqual(1, cd.getAllLlistes().size());
+            assertEqual("Favorits", cd.getAllLlistes().get(0).getNom());
+            ArrayList<Llibre> inShelf = cd.getLlibresInLlista(cd.getAllLlistes().get(0).getId());
+            assertEqual(1, inShelf.size());
+            assertEqual(9780306406157L, inShelf.get(0).getISBN());
+            assertEqual(8.5, inShelf.get(0).getValoracio());
+        });
+
+        // ── Edit path: partial failure leaves library consistent ─────────────
+        test("Edit path: delete A then add A-with-B-ISBN throws, only B remains", () -> {
+            resetSingletons();
+            ControladorDomini cd = ControladorDomini.getInstance();
+            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "A", null, null, null, null, null, null, null));
+            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "B", null, null, null, null, null, null, null));
+            cd.deleteLlibre(9780306406157L);
+            assertEqual(1, cd.getSize());
+            assertThrows(() -> cd.addLlibre(
+                LlibreValidator.checkLlibre(9780743273565L, "A-edited", null, null, null, null, null, null, null)));
+            assertEqual(1, cd.getSize());
+            assertEqual("B", cd.getLlibre(9780743273565L).getNom());
+        });
+
+        // ── Summary ──────────────────────────────────────────────────────────
+        System.out.println("\n══════════════════════════════════════");
+        System.out.println("  Passed: " + passed + "  |  Failed: " + failed);
+        System.out.println("══════════════════════════════════════");
+        if (failed > 0) System.exit(1);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    static void section(String name) {
-        System.out.println("\n" + C + B + "── " + name + " ──" + X);
+    // ── Test infrastructure ──────────────────────────────────────────────────
+
+    private static void resetSingletons() {
+        ControladorDomini.resetForTest();
+        ControladorPersistencia.resetForTest();
     }
 
-    static void pass(String name) {
-        passed++;
-        System.out.println(G + "  ✓ " + X + name);
-    }
+    @FunctionalInterface
+    interface TestBody { void run() throws Exception; }
 
-    static void fail(String name, String reason) {
-        failed++;
-        System.out.println(R + B + "  ✗ " + name + X + R + "  →  " + reason + X);
-    }
-
-    static void check(String name, boolean ok) {
-        if (ok) pass(name); else fail(name, "condition was false");
-    }
-
-    static void eq(String name, Object expected, Object actual) {
-        boolean ok = expected == null ? actual == null : expected.equals(actual);
-        if (ok) pass(name);
-        else fail(name, "expected [" + expected + "] got [" + actual + "]");
-    }
-
-    static void isNull(String name, Object obj) {
-        if (obj == null) pass(name); else fail(name, "expected null, got " + obj);
-    }
-
-    static void notNull(String name, Object obj) {
-        if (obj != null) pass(name); else fail(name, "expected non-null, got null");
-    }
-
-    static void throws_(String name, Runnable r) {
-        try { r.run(); fail(name, "expected exception, none thrown"); }
-        catch (Exception e) { pass(name); }
-    }
-
-    static void printSummary() {
-        System.out.println("\n" + B + "═══════════════════════════════════════" + X);
-        int total = passed + failed;
-        String color = failed == 0 ? G : R;
-        System.out.printf(B + "  %s%d/%d passed%s   %s%d failed%s%n" + X,
-            G, passed, total, X, failed > 0 ? R : G, failed, X);
-        System.out.println(B + "═══════════════════════════════════════" + X);
-    }
-
-    // ── Tests: Llibre ─────────────────────────────────────────────────────────
-    static void testLlibre() {
-        section("Llibre — constructor & getters");
-        Long   isbn  = 97884179104580L;
-        String nom   = "Títol de prova";
-        String autor = "Autor Prova";
-        int    any   = 2024;
-        String desc  = "Descripció";
-        double val   = 8.5;
-        double preu  = 19.99;
-        String port  = "portades/test.jpg";
-
-        Llibre l = new Llibre(isbn, nom, autor, any, desc, val, preu, false, port);
-
-        eq("ISBN",       isbn,  l.getISBN());
-        eq("Nom",        nom,   l.getNom());
-        eq("Autor",      autor, l.getAutor());
-        eq("Any",        any,   l.getAny());
-        eq("Descripcio", desc,  l.getDescripcio());
-        eq("Valoracio",  val,   l.getValoracio());
-        eq("Preu",       preu,  l.getPreu());
-        eq("Llegit",     false, l.getLlegit());
-        eq("Portada",    port,  l.getPortada());
-
-        section("Llibre — setters");
-        l.setNom("Nou nom");       eq("setNom",   "Nou nom",   l.getNom());
-        l.setAutor("Nou autor");   eq("setAutor", "Nou autor", l.getAutor());
-        l.setAny(2025);            eq("setAny",   2025,        l.getAny());
-        l.setValoracio(5.0);       eq("setVal",   5.0,         l.getValoracio());
-        l.setPreu(9.99);           eq("setPreu",  9.99,        l.getPreu());
-        l.setLlegit(true);         eq("setLlegit",true,        l.getLlegit());
-        l.setPortada("p/x.png");   eq("setPort",  "p/x.png",   l.getPortada());
-
-        section("Llibre — toString");
-        String s = l.toString();
-        check("toString contains ISBN",  s.contains(isbn.toString()));
-        check("toString contains nom",   s.contains("Nou nom"));
-        check("toString contains autor", s.contains("Nou autor"));
-    }
-
-    // ── Tests: checkLlibre.countDig ───────────────────────────────────────────
-    static void testCountDig() {
-        section("checkLlibre — countDig");
-        eq("1 digit",       1,  checkLlibre.countDig(5));
-        eq("2 digits",      2,  checkLlibre.countDig(42));
-        eq("10 digits",    10,  checkLlibre.countDig(1234567890L));
-        eq("13 digits",    13,  checkLlibre.countDig(9788412345678L));
-        eq("14 digits",    14,  checkLlibre.countDig(97884123456789L));
-    }
-
-    // ── Tests: checkLlibre.cheackLlibre ───────────────────────────────────────
-    static void testCheackLlibre() {
-        section("checkLlibre — cheackLlibre (all valid)");
-        Llibre l = checkLlibre.cheackLlibre(97884179104580L, "Nom", "A", 2024, "D", 5.0, 10.0, false, "/img/x.jpg");
-        notNull("valid → returns Llibre", l);
-        eq("ISBN preserved",    97884179104580L, l == null ? null : l.getISBN());
-        eq("nom preserved",     "Nom",           l == null ? null : l.getNom());
-        eq("portada any path",  "/img/x.jpg",    l == null ? null : l.getPortada());
-
-        section("checkLlibre — cheackLlibre (invalid ISBN → throws)");
-        throws_("short ISBN throws",   () -> checkLlibre.cheackLlibre(123L, "N", "A", 2024, "D", 5.0, 10.0, false, ""));
-        throws_("null ISBN throws",    () -> checkLlibre.cheackLlibre(null, "N", "A", 2024, "D", 5.0, 10.0, false, ""));
-
-        section("checkLlibre — cheackLlibre (invalid valoracio → throws)");
-        throws_("valoracio > 10 throws",  () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 11.0, 10.0, false, ""));
-        throws_("valoracio < 0 throws",   () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", -1.0, 10.0, false, ""));
-        throws_("null valoracio throws",  () -> checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", null, 10.0, false, ""));
-
-        section("checkLlibre — cheackLlibre (edge: valoracio boundaries)");
-        notNull("valoracio=0 ok",  checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 0.0,  10.0, false, ""));
-        notNull("valoracio=10 ok", checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 10.0, 10.0, false, ""));
-
-        section("checkLlibre — cheackLlibre (null portada → empty string)");
-        Llibre l2 = checkLlibre.cheackLlibre(97884179104580L, "N", "A", 2024, "D", 5.0, 10.0, false, null);
-        eq("null portada → empty string", "", l2 == null ? null : l2.getPortada());
-    }
-
-    // ── Tests: FiltreUtils.matchISBN ──────────────────────────────────────────
-    static void testMatchISBN() {
-        section("FiltreUtils — matchISBN");
-        Long full = 97884179104580L;
-
-        check("exact match",                FiltreUtils.matchISBN(full, full));
-        check("4-digit prefix match",       FiltreUtils.matchISBN(9788L, full));
-        check("10-digit prefix match",      FiltreUtils.matchISBN(9788417910L, full));
-        check("non-matching prefix",       !FiltreUtils.matchISBN(1234L, full));
-        check("1-digit match first digit",  FiltreUtils.matchISBN(9L, full));
-        check("1-digit no match",          !FiltreUtils.matchISBN(8L, full));
-        check("null ISBN → false",         !FiltreUtils.matchISBN(null, full));
-        check("null book → false",         !FiltreUtils.matchISBN(9788L, null));
-    }
-
-    // ── Tests: FiltreUtils.matchString ────────────────────────────────────────
-    static void testMatchString() {
-        section("FiltreUtils — matchString");
-        check("full match",          FiltreUtils.matchString("Hola", "Hola món"));
-        check("end match",           FiltreUtils.matchString("món", "Hola món"));
-        check("middle match",        FiltreUtils.matchString("la", "Hola món"));
-        check("no match",           !FiltreUtils.matchString("xyz", "Hola món"));
-        check("case insensitive match", FiltreUtils.matchString("hola", "Hola món"));
-        check("empty needle",        FiltreUtils.matchString("", "qualsevol"));
-        check("exact equal",         FiltreUtils.matchString("Exacte", "Exacte"));
-        check("needle longer",      !FiltreUtils.matchString("MoltLlarg", "curt"));
-        check("null needle → false", !FiltreUtils.matchString(null, "text"));
-        check("null haystack → false",!FiltreUtils.matchString("text", null));
-    }
-
-    // ── Tests: filter predicate logic ─────────────────────────────────────────
-    static void testFiltreLogic() {
-        section("Filter predicate — any/valoracio/preu ranges");
-
-        ArrayList<Llibre> bib = new ArrayList<>();
-        bib.add(new Llibre(11111111111111L, "El Quixot",     "Cervantes", 1605, "", 9.0, 15.0, true,  "p/a.jpg"));
-        bib.add(new Llibre(22222222222222L, "Tirant lo Blanc","Martorell",1490, "", 7.5, 12.0, false, "p/b.jpg"));
-        bib.add(new Llibre(33333333333333L, "L'Odissea",     "Homer",      -800, "", 10.0, 8.0, true,  "p/c.jpg"));
-
-        // Filter by year min
-        ArrayList<Llibre> r1 = filtrar(bib, null, null, null, 1000, null, null, null, null, null);
-        eq("any >= 1000: 2 results", 2, r1.size());
-
-        // Filter by year max
-        ArrayList<Llibre> r2 = filtrar(bib, null, null, null, null, 1500, null, null, null, null);
-        eq("any <= 1500: 2 results", 2, r2.size());
-
-        // Filter by year range
-        ArrayList<Llibre> r3 = filtrar(bib, null, null, null, 1000, 1700, null, null, null, null);
-        eq("1000 <= any <= 1700: 2 results", 2, r3.size());
-
-        // Filter by valoracio min
-        ArrayList<Llibre> r4 = filtrar(bib, null, null, null, null, null, 9.0, null, null, null);
-        eq("valoracio >= 9: 2 results", 2, r4.size());
-
-        // Filter by preu max
-        ArrayList<Llibre> r5 = filtrar(bib, null, null, null, null, null, null, null, null, 10.0);
-        eq("preu <= 10: 1 result", 1, r5.size());
-
-        // Filter llegit=true
-        ArrayList<Llibre> r6 = filtrar(bib, null, null, null, null, null, null, null, null, null);
-        eq("no filter: 3 results", 3, r6.size());
-
-        ArrayList<Llibre> r7 = filtrar(bib, null, null, null, null, null, null, null, null, null);
-        eq("llegit filter not applied if null: 3 results", 3, r7.size());
-
-        // Filter by nom substring
-        ArrayList<Llibre> r8 = filtrar(bib, null, "Quixot", null, null, null, null, null, null, null);
-        eq("nom 'Quixot': 1 result", 1, r8.size());
-
-        // Filter by autor
-        ArrayList<Llibre> r9 = filtrar(bib, "Homer", null, null, null, null, null, null, null, null);
-        eq("autor 'Homer': 1 result", 1, r9.size());
-
-        // Filter combined: llegit + year
-        ArrayList<Llibre> r10 = filtrar(bib, null, null, null, 1000, null, null, null, null, null);
-        eq("llegit=true + any>=1000 combined: correct", 2, r10.size());
-    }
-
-    // Mirrors ControladorDomini.aplicarFiltres for testing without DB
-    static ArrayList<Llibre> filtrar(ArrayList<Llibre> bib,
-            String nomAutor, String nomLlibre, Long ISBN,
-            Integer iniciAny, Integer fiAny,
-            Double valoracioMin, Double valoracioMax,
-            Double preuMin, Double preuMax) {
-        ArrayList<Llibre> res = new ArrayList<>();
-        for (Llibre l : bib) {
-            if ((nomAutor    == null || FiltreUtils.matchString(nomAutor, l.getAutor()))
-             && (nomLlibre   == null || FiltreUtils.matchString(nomLlibre, l.getNom()))
-             && (ISBN        == null || FiltreUtils.matchISBN(ISBN, l.getISBN()))
-             && (iniciAny    == null || l.getAny() >= iniciAny)
-             && (fiAny       == null || l.getAny() <= fiAny)
-             && (valoracioMin== null || l.getValoracio() >= valoracioMin)
-             && (valoracioMax== null || l.getValoracio() <= valoracioMax)
-             && (preuMin     == null || l.getPreu() >= preuMin)
-             && (preuMax     == null || l.getPreu() <= preuMax))
-                res.add(l);
+    private static void test(String name, TestBody body) {
+        try {
+            body.run();
+            System.out.println("  PASS  " + name);
+            passed++;
+        } catch (AssertionError e) {
+            System.out.println("  FAIL  " + name + "  →  " + e.getMessage());
+            failed++;
+        } catch (Exception e) {
+            System.out.println("  FAIL  " + name + "  →  unexpected: " + e);
+            failed++;
         }
-        return res;
+    }
+
+    private static void assertEqual(Object expected, Object actual) {
+        if (expected == null ? actual != null : !expected.equals(actual))
+            throw new AssertionError("expected <" + expected + "> but was <" + actual + ">");
+    }
+
+    private static void assertThrows(TestBody body) {
+        try {
+            body.run();
+            throw new AssertionError("expected an exception but none was thrown");
+        } catch (AssertionError e) {
+            throw e;
+        } catch (Exception ignored) {}
     }
 }

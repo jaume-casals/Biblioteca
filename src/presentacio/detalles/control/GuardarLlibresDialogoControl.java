@@ -1,24 +1,16 @@
 package presentacio.detalles.control;
 
-import java.awt.Color;
 import java.awt.Dialog;
-import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.Map;
 
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -31,6 +23,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 
 	private GuardarLlibresDialogo vista;
 	private ControladorDomini cLlibres;
+	private byte[] selectedBlob;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
 		this.vista = vista;
@@ -69,6 +62,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		JButton btn = vista.getBtnCercaInternet();
 		btn.setEnabled(false);
 		btn.setText("Cercant...");
+		vista.getProgressBar().setVisible(true);
 
 		Thread t = new Thread(() -> {
 			Map<String, String> meta;
@@ -83,7 +77,8 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			SwingUtilities.invokeLater(() -> {
 				btn.setEnabled(true);
 				btn.setText("⬇  Cerca a Internet (ISBN / Títol / Autor)");
-				btn.setBackground(new Color(0x117A65));
+				btn.setBackground(UITheme.GREEN);
+				vista.getProgressBar().setVisible(false);
 
 				if (meta.isEmpty()) {
 					JOptionPane.showMessageDialog(vista,
@@ -109,27 +104,19 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	}
 
 	private void carregarImatge(String path) {
-		if (path == null || path.isBlank()) {
-			this.vista.getLabelPreview().setIcon(null);
-			return;
-		}
+		selectedBlob = null;
+		if (path == null || path.isBlank()) { this.vista.getLabelPreview().setIcon(null); return; }
 		try {
-			BufferedImage img = ImageIO.read(new FileInputStream(path));
-			if (img == null) { this.vista.getLabelPreview().setIcon(null); return; }
-			this.vista.getLabelPreview().setIcon(
-				new ImageIcon(img.getScaledInstance(120, 120, Image.SCALE_SMOOTH)));
+			selectedBlob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));
+			this.vista.getLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
 		} catch (Exception ignored) {
 			this.vista.getLabelPreview().setIcon(null);
 		}
 	}
 
 	private void seleccionarImatge() {
-		String imgDir = herramienta.Config.getDefaultImgDir();
-		JFileChooser chooser = new JFileChooser(new File(imgDir).exists() ? imgDir : System.getProperty("user.home"));
-		chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
-		if (chooser.showOpenDialog(this.vista) == JFileChooser.APPROVE_OPTION) {
-			this.vista.getTextPortada().setText(chooser.getSelectedFile().getAbsolutePath());
-		}
+		File f = UITheme.chooseImageFile(this.vista);
+		if (f != null) this.vista.getTextPortada().setText(f.getAbsolutePath());
 	}
 
 	private void crearLlibre() {
@@ -150,6 +137,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 				vista.getTextDescripcio().getText().trim(),
 				valoracio, preu, vista.getChckLlegit().isSelected(),
 				vista.getTextPortada().getText().trim());
+			l.setImatgeBlob(selectedBlob);
 			cLlibres.addLlibre(l);
 			vista.dispose();
 		} catch (Exception e) {

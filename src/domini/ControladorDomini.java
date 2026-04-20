@@ -11,13 +11,10 @@ public class ControladorDomini {
 	private static ControladorDomini inst;
 	private ControladorPersistencia cp;
 	private ArrayList<Llibre> bib;
+	private ArrayList<Llista> llistes;
 
-	Comparator<Llibre> compararISBN = new Comparator<Llibre>() {
-		@Override
-		public int compare(Llibre arg0, Llibre arg1) {
-			return arg0.getISBN().compareTo(arg1.getISBN());
-		}
-	};
+	private static final Comparator<Llibre> compararISBN =
+		(a, b) -> a.getISBN().compareTo(b.getISBN());
 
 	public static ControladorDomini getInstance() {
 		if (ControladorDomini.inst == null)
@@ -25,11 +22,18 @@ public class ControladorDomini {
 		return ControladorDomini.inst;
 	}
 
+	public static void resetForTest() { inst = null; }
+
 	private ControladorDomini() {
 		cp = ControladorPersistencia.getInstance();
 		bib = new ArrayList<Llibre>(cp.getAllLlibres());
-
 		Collections.sort(bib, compararISBN);
+		llistes = new ArrayList<>(cp.getAllLlistes());
+		if (!"true".equals(System.getProperty("biblioteca.test"))) {
+			Thread t = new Thread(this::autoBackup);
+			t.setDaemon(true);
+			t.start();
+		}
 	}
 
 	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
@@ -59,11 +63,11 @@ public class ControladorDomini {
 	}
 
 	public ArrayList<Llibre> get10Llibres() {
-		return (ArrayList<Llibre>) bib.subList(0, Math.min(9, bib.size()));
+		return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
 	}
 
 	public ArrayList<Llibre> get100Llibres(int index) { // Comença des del 0 fins al final
-		return (ArrayList<Llibre>) bib.subList(100 * index, Math.min(100 * index + 100, bib.size()));
+		return new ArrayList<>(bib.subList(100 * index, Math.min(100 * index + 100, bib.size())));
 	}
 
 	public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
@@ -76,9 +80,6 @@ public class ControladorDomini {
 
 	public void addLlibre(Llibre l) throws Exception {
 		cp.afegirLlibre(l);
-//		for (int i = 0; i < bib.size(); ++i)
-//			System.out.println(bib.get(i).getISBN());
-
 		int pos = Collections.binarySearch(bib, l, compararISBN);
 		if (pos >= 0)
 			throw new Exception("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la base de dades");
@@ -119,22 +120,34 @@ public class ControladorDomini {
 		return bib.get(index);
 	}
 
-	public boolean matchISBN(Long ISBN, Long ISBNLlibre) {
-		return FiltreUtils.matchISBN(ISBN, ISBNLlibre);
-	}
-
-	public boolean matchString(String s, String x) {
-		return FiltreUtils.matchString(s, x);
+	private void autoBackup() {
+		if (bib.isEmpty()) return;
+		try {
+			java.io.File dir = new java.io.File(
+				System.getProperty("user.home") + "/.biblioteca/backups");
+			dir.mkdirs();
+			String ts = java.time.LocalDateTime.now()
+				.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+			backupToSQL(new java.io.File(dir, "biblioteca_" + ts + ".sql"));
+			java.io.File[] backups = dir.listFiles(
+				(d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
+			if (backups != null && backups.length > 5) {
+				java.util.Arrays.sort(backups);
+				for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
+			}
+		} catch (Exception ignored) {}
 	}
 
 	public void backupToSQL(java.io.File file) throws Exception {
 		try (java.io.PrintWriter pw = new java.io.PrintWriter(
 				new java.io.FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
 			pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
+			pw.println("DELETE FROM llibre_llista;");
+			pw.println("DELETE FROM llista;");
 			pw.println("DELETE FROM llibre;");
 			for (Llibre l : bib) {
 				pw.printf(
-					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s');%n",
+					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s','%s');%n",
 					l.getISBN(),
 					sqlEsc(l.getNom()),
 					sqlEsc(l.getAutor() != null ? l.getAutor() : ""),
@@ -143,7 +156,16 @@ public class ControladorDomini {
 					l.getValoracio() != null ? l.getValoracio() : 0.0,
 					l.getPreu() != null ? l.getPreu() : 0.0,
 					Boolean.TRUE.equals(l.getLlegit()),
-					sqlEsc(l.getImatge() != null ? l.getImatge() : ""));
+					sqlEsc(l.getImatge() != null ? l.getImatge() : ""),
+					sqlEsc(l.getNotes()));
+			}
+			for (Llista ll : llistes) {
+				pw.printf("INSERT INTO llista (`id`,`nom`) VALUES (%d,'%s');%n",
+					ll.getId(), sqlEsc(ll.getNom()));
+			}
+			for (Object[] row : cp.getAllLlibreLlista()) {
+				pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
+					(Long) row[0], (Integer) row[1], (Double) row[2], (Boolean) row[3]);
 			}
 		}
 	}
@@ -152,9 +174,48 @@ public class ControladorDomini {
 		cp.executeSQLFile(file);
 		bib = new ArrayList<>(cp.getAllLlibres());
 		Collections.sort(bib, compararISBN);
+		llistes = new ArrayList<>(cp.getAllLlistes());
 	}
 
 	private static String sqlEsc(String s) {
 		return s == null ? "" : s.replace("'", "''");
+	}
+
+	// ── Llista (shelf) management ──────────────────────────────────────────────
+
+	public ArrayList<Llista> getAllLlistes() { return llistes; }
+
+	public Llista addLlista(String nom) throws Exception {
+		int id = cp.createLlista(nom);
+		Llista l = new Llista(id, nom);
+		llistes.add(l);
+		return l;
+	}
+
+	public void deleteLlista(Llista llista) throws Exception {
+		cp.deleteLlista(llista.getId());
+		llistes.remove(llista);
+	}
+
+	public int getCountInLlista(int llistaId) { return cp.getCountInLlista(llistaId); }
+
+	public ArrayList<Llibre> getLlibresInLlista(int llistaId) {
+		return cp.getLlibresInLlista(llistaId);
+	}
+
+	public ArrayList<Llista> getLlistesForLlibre(long isbn) {
+		return cp.getLlistesForLlibre(isbn);
+	}
+
+	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws Exception {
+		cp.addLlibreToLlista(isbn, llistaId, valoracio, llegit);
+	}
+
+	public void removeLlibreFromLlista(long isbn, int llistaId) throws Exception {
+		cp.removeLlibreFromLlista(isbn, llistaId);
+	}
+
+	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws Exception {
+		cp.updateLlibreInLlista(isbn, llistaId, valoracio, llegit);
 	}
 }

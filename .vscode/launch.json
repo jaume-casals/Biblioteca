@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Biblioteca",
+            "request": "launch",
+            "mainClass": "main.Ejecutable",
+            "vmArgs": "-Dbiblioteca.root=${workspaceFolder}",
+            "classPaths": [
+                "${workspaceFolder}/lib/h2-2.3.232.jar",
+                "${workspaceFolder}/lib/mariadb-java-client-3.3.3.jar",
+                "$Auto"
+            ],
+            "projectName": "Biblioteca"
+        }
+    ]
+}

@@ -5,6 +5,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -27,6 +28,7 @@ public class GuardarLlibresDialogo extends JDialog {
 	private JTextField textPreu;
 	private JTextField textPortada;
 	private JCheckBox chckLlegit;
+	private JProgressBar progressBar;
 
 	public GuardarLlibresDialogo() {
 		setResizable(false);
@@ -171,9 +173,16 @@ public class GuardarLlibresDialogo extends JDialog {
 		btnCercaInternet.setBounds(24, 548, 458, 40);
 		btnCercaInternet.setToolTipText("Omple els camps automàticament cercant a OpenLibrary.org");
 		getContentPane().add(btnCercaInternet);
+
+		progressBar = new JProgressBar();
+		progressBar.setIndeterminate(true);
+		progressBar.setBounds(24, 596, 458, 8);
+		progressBar.setVisible(false);
+		getContentPane().add(progressBar);
 	}
 
 	public JLabel getLabelPreview() { return labelPreview; }
+	public JProgressBar getProgressBar() { return progressBar; }
 	public JButton getBtnGuardar() { return btnGuardar; }
 	public JButton getBtnSeleccionarImatge() { return btnSeleccionarImatge; }
 	public JButton getBtnCercaInternet() { return btnCercaInternet; }

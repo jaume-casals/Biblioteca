@@ -1,15 +1,6 @@
 package presentacio.detalles.control;
 
-import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import domini.ControladorDomini;
 import domini.Llibre;
@@ -17,12 +8,14 @@ import herramienta.DialogoError;
 import herramienta.LlibreValidator;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
+import presentacio.detalles.vista.LlistesDelLlibreDialog;
 
 public class DetallesLlibrePanelControl {
 
 	private DetallesLlibrePanel vista;
 	private ControladorDomini cLlibres;
 	private EnActualizarBBDD enActualizarBBDD;
+	private byte[] pendingBlob;
 
 	private static final int IMG_W = 200;
 	private static final int IMG_H = 200;
@@ -33,11 +26,15 @@ public class DetallesLlibrePanelControl {
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = ControladorDomini.getInstance();
 
-		carregarImatge(l.getImatge());
+		pendingBlob = l.getImatgeBlob();
+		if (pendingBlob != null) carregarImatgeBlob(pendingBlob);
+		else carregarImatge(l.getImatge());
 
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnEditar().addActionListener(e -> editar(l));
 		this.vista.getBtnEliminar().addActionListener(e -> eliminar(l));
+		this.vista.getBtnGestioLlistes().addActionListener(e ->
+			new LlistesDelLlibreDialog(this.vista, l).setVisible(true));
 
 		this.vista.getTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
@@ -54,6 +51,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextPreu().setText(l.getPreu().toString());
 		this.vista.getTextValoracio().setText(l.getValoracio().toString());
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
+		this.vista.getTextNotes().setText(l.getNotes());
 
 		this.vista.setTitle("Expedient del llibre " + l.getNom());
 	}
@@ -77,33 +75,35 @@ public class DetallesLlibrePanelControl {
 
 	private void previewPortada() {
 		String path = this.vista.getTextPortada().getText().trim();
-		if (path.isEmpty()) {
+		if (path.isEmpty()) { this.vista.getLabelIcono().setIcon(null); pendingBlob = null; return; }
+		try {
+			pendingBlob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));
+			carregarImatgeBlob(pendingBlob);
+		} catch (Exception e) {
+			pendingBlob = null;
 			this.vista.getLabelIcono().setIcon(null);
-		} else {
-			carregarImatge(path);
 		}
 	}
 
 	private void carregarImatge(String path) {
 		if (path == null || path.isBlank()) return;
 		try {
-			BufferedImage img = ImageIO.read(new FileInputStream(path));
-			if (img == null) return;
-			ImageIcon icon = new ImageIcon(img.getScaledInstance(IMG_W, IMG_H, Image.SCALE_SMOOTH));
-			this.vista.getLabelIcono().setIcon(icon);
+			pendingBlob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));
+			carregarImatgeBlob(pendingBlob);
 		} catch (Exception e) {
 			// invalid path or unreadable file — leave label empty
 		}
 	}
 
+	private void carregarImatgeBlob(byte[] data) {
+		this.vista.getLabelIcono().setIcon(herramienta.UITheme.scaledIcon(data, IMG_W));
+	}
+
 	private void seleccionarImatge() {
-		String imgDir = herramienta.Config.getDefaultImgDir();
-		JFileChooser chooser = new JFileChooser(new File(imgDir).exists() ? imgDir : System.getProperty("user.home"));
-		chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
-		if (chooser.showOpenDialog(this.vista) == JFileChooser.APPROVE_OPTION) {
-			String path = chooser.getSelectedFile().getAbsolutePath();
-			this.vista.getTextPortada().setText(path);
-			carregarImatge(path);
+		File f = herramienta.UITheme.chooseImageFile(this.vista);
+		if (f != null) {
+			this.vista.getTextPortada().setText(f.getAbsolutePath());
+			carregarImatge(f.getAbsolutePath());
 		}
 	}
 
@@ -119,6 +119,7 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextValoracio().setEnabled(true);
 			this.vista.getChckLlegit().setEnabled(true);
 			this.vista.getBtnSeleccionarImatge().setEnabled(true);
+			this.vista.getTextNotes().setEnabled(true);
 			this.vista.getBtnEditar().setText("Guardar");
 		} else if (this.vista.getBtnEditar().getText().equals("Guardar")) {
 			this.vista.getTextAny().setEnabled(false);
@@ -131,6 +132,7 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextValoracio().setEnabled(false);
 			this.vista.getChckLlegit().setEnabled(false);
 			this.vista.getBtnSeleccionarImatge().setEnabled(false);
+			this.vista.getTextNotes().setEnabled(false);
 			this.vista.getBtnEditar().setText("Editar");
 			try {
 				// Validate before deleting so a bad edit can't destroy the record
@@ -140,6 +142,8 @@ public class DetallesLlibrePanelControl {
 						Double.parseDouble(vista.getTextValoracio().getText()),
 						Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
 						vista.getTextPortada().getText());
+				a.setNotes(vista.getTextNotes().getText());
+				a.setImatgeBlob(pendingBlob);
 				cLlibres.deleteLlibre(llibre);
 				cLlibres.addLlibre(a);
 				enActualizarBBDD.actualitzarLlibre(a, false);

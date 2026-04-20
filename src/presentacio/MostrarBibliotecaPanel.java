@@ -4,11 +4,13 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Window;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -31,6 +33,10 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JScrollPane scrolpaneFiltro;
 	private JPanel panelFiltros;
 	private JPanel filterWrapper;
+	private JPanel paginationPanel;
+	private JButton btnPaginaAnterior;
+	private JButton btnPaginaSeguent;
+	private JLabel lblPagina;
 	private JButton btnSortir;
 	private JButton btnThemeToggle;
 
@@ -47,6 +53,9 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JCheckBox chckbxLlegit;
 	private JCheckBox chckbxNoLlegit;
 
+	private JComboBox<Object> comboLlistes;
+	private JButton btnGestioLlistes;
+
 	private JButton bttnFiltrar;
 	private JButton bttnQuitarFiltros;
 	private JButton btnNouLlibre;
@@ -54,6 +63,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JButton btnImportarCSV;
 	private JButton btnEscanejarISBN;
 	private JButton btnEstadistiques;
+	private JButton btnLlibreAleatori;
 	private JButton btnBackupBD;
 	private JButton btnRestaurarBD;
 	private JButton btnConfiguracio;
@@ -62,20 +72,37 @@ public class MostrarBibliotecaPanel extends JPanel {
 		setLayout(new BorderLayout(8, 0));
 		setBackground(UITheme.BG_MAIN);
 
-		// ── Search bar above table ─────────────────────────────────────────────
-		JPanel northPanel = new JPanel(new BorderLayout(6, 0));
+		// ── North panel: search bar + shelf selector ───────────────────────────
+		JPanel northPanel = new JPanel(new BorderLayout(0, 3));
 		northPanel.setBackground(UITheme.BG_MAIN);
 		northPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
 
+		// Row 1: search bar
+		JPanel searchRow = new JPanel(new BorderLayout(6, 0));
+		searchRow.setBackground(UITheme.BG_MAIN);
 		JLabel searchIcon = new JLabel("Cerca:");
 		UITheme.styleLabel(searchIcon);
 		searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 2));
-		northPanel.add(searchIcon, BorderLayout.WEST);
-
+		searchRow.add(searchIcon, BorderLayout.WEST);
 		searchBar = new JTextField();
 		UITheme.styleField(searchBar);
 		searchBar.setToolTipText("Cerca ràpida per qualsevol camp (ISBN, nom, autor, any...)");
-		northPanel.add(searchBar, BorderLayout.CENTER);
+		searchRow.add(searchBar, BorderLayout.CENTER);
+		northPanel.add(searchRow, BorderLayout.NORTH);
+
+		// Row 2: shelf selector
+		JPanel shelfRow = new JPanel(new BorderLayout(6, 0));
+		shelfRow.setBackground(UITheme.BG_MAIN);
+		JLabel lblLlista = new JLabel("Llista:");
+		UITheme.styleLabel(lblLlista);
+		lblLlista.setPreferredSize(new Dimension(45, 28));
+		shelfRow.add(lblLlista, BorderLayout.WEST);
+		comboLlistes = new JComboBox<>();
+		shelfRow.add(comboLlistes, BorderLayout.CENTER);
+		btnGestioLlistes = new JButton("Gestionar llistes");
+		UITheme.styleSecondaryButton(btnGestioLlistes);
+		shelfRow.add(btnGestioLlistes, BorderLayout.EAST);
+		northPanel.add(shelfRow, BorderLayout.SOUTH);
 
 		add(northPanel, BorderLayout.NORTH);
 
@@ -84,7 +111,21 @@ public class MostrarBibliotecaPanel extends JPanel {
 		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
 		scrollPaneJTable.getViewport().setBackground(UITheme.BG_PANEL);
 
-		jTableBilio = new JTable();
+		jTableBilio = new JTable() {
+			@Override
+			public String getToolTipText(java.awt.event.MouseEvent e) {
+				int row = rowAtPoint(e.getPoint());
+				int col = columnAtPoint(e.getPoint());
+				if (row < 0 || col < 0) return null;
+				Object val = getValueAt(row, col);
+				if (val == null) return null;
+				String text = val.toString();
+				if (text.isBlank()) return null;
+				java.awt.Rectangle r = getCellRect(row, col, false);
+				java.awt.FontMetrics fm = getFontMetrics(getFont());
+				return fm.stringWidth(text) > r.width ? text : null;
+			}
+		};
 		jTableBilio.setDefaultEditor(Object.class, null);
 		jTableBilio.setAutoCreateRowSorter(true);
 		jTableBilio.getTableHeader().setReorderingAllowed(false);
@@ -125,7 +166,26 @@ public class MostrarBibliotecaPanel extends JPanel {
 			}
 		});
 		scrollPaneJTable.setViewportView(jTableBilio);
-		add(scrollPaneJTable, BorderLayout.CENTER);
+
+		// Pagination bar below table
+		paginationPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 12, 4));
+		paginationPanel.setBackground(UITheme.BG_MAIN);
+		btnPaginaAnterior = new JButton("‹ Anterior");
+		UITheme.styleSecondaryButton(btnPaginaAnterior);
+		lblPagina = new JLabel("Pàgina 1 / 1");
+		UITheme.styleLabel(lblPagina);
+		btnPaginaSeguent = new JButton("Seguent ›");
+		UITheme.styleSecondaryButton(btnPaginaSeguent);
+		paginationPanel.add(btnPaginaAnterior);
+		paginationPanel.add(lblPagina);
+		paginationPanel.add(btnPaginaSeguent);
+		paginationPanel.setVisible(false);
+
+		JPanel centerWrapper = new JPanel(new BorderLayout(0, 2));
+		centerWrapper.setBackground(UITheme.BG_MAIN);
+		centerWrapper.add(scrollPaneJTable, BorderLayout.CENTER);
+		centerWrapper.add(paginationPanel, BorderLayout.SOUTH);
+		add(centerWrapper, BorderLayout.CENTER);
 
 		// ── Filter wrapper: scroll content + pinned buttons ───────────────────
 		filterWrapper = new JPanel(new BorderLayout(0, 4));
@@ -149,7 +209,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		panelFiltros.setBackground(UITheme.BG_PANEL);
 		panelFiltros.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 		panelFiltros.setLayout(null);
-		panelFiltros.setPreferredSize(new Dimension(265, 1020));
+		panelFiltros.setPreferredSize(new Dimension(265, 1068));
 		scrolpaneFiltro.setViewportView(panelFiltros);
 
 		// ── Llegit checkboxes ─────────────────────────────────────────────────
@@ -369,31 +429,37 @@ public class MostrarBibliotecaPanel extends JPanel {
 		btnEstadistiques.setToolTipText("Mostrar estadístiques de la biblioteca");
 		panelFiltros.add(btnEstadistiques);
 
+		btnLlibreAleatori = new JButton("Llibre Aleatori");
+		UITheme.styleSecondaryButton(btnLlibreAleatori);
+		btnLlibreAleatori.setBounds(10, 874, 245, 36);
+		btnLlibreAleatori.setToolTipText("Tria un llibre no llegit a l'atzar de la vista actual");
+		panelFiltros.add(btnLlibreAleatori);
+
 		// ── Backup / Restore ─────────────────────────────────────────────────
 		JSeparator sep7 = new JSeparator();
-		sep7.setBounds(10, 874, 245, 2);
+		sep7.setBounds(10, 918, 245, 2);
 		panelFiltros.add(sep7);
 
 		btnBackupBD = new JButton("Backup BD");
 		UITheme.styleSecondaryButton(btnBackupBD);
-		btnBackupBD.setBounds(10, 882, 245, 36);
+		btnBackupBD.setBounds(10, 926, 245, 36);
 		btnBackupBD.setToolTipText("Exportar tota la base de dades a un fitxer SQL");
 		panelFiltros.add(btnBackupBD);
 
 		btnRestaurarBD = new JButton("Restaurar BD");
 		UITheme.styleSecondaryButton(btnRestaurarBD);
-		btnRestaurarBD.setBounds(10, 926, 245, 36);
+		btnRestaurarBD.setBounds(10, 970, 245, 36);
 		btnRestaurarBD.setToolTipText("Restaurar la base de dades des d'un fitxer SQL de backup");
 		panelFiltros.add(btnRestaurarBD);
 
 		// ── Settings ─────────────────────────────────────────────────────────
 		JSeparator sep8 = new JSeparator();
-		sep8.setBounds(10, 970, 245, 2);
+		sep8.setBounds(10, 1014, 245, 2);
 		panelFiltros.add(sep8);
 
 		btnConfiguracio = new JButton("Configuració");
 		UITheme.styleSecondaryButton(btnConfiguracio);
-		btnConfiguracio.setBounds(10, 978, 245, 36);
+		btnConfiguracio.setBounds(10, 1022, 245, 36);
 		btnConfiguracio.setToolTipText("Configuració: BD, carpeta d'imatges...");
 		panelFiltros.add(btnConfiguracio);
 
@@ -456,18 +522,30 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleSecondaryButton(btnImportarCSV);
 		UITheme.styleSecondaryButton(btnEscanejarISBN);
 		UITheme.styleSecondaryButton(btnEstadistiques);
+		UITheme.styleSecondaryButton(btnLlibreAleatori);
 		UITheme.styleSecondaryButton(btnBackupBD);
 		UITheme.styleSecondaryButton(btnRestaurarBD);
 		UITheme.styleSecondaryButton(btnConfiguracio);
+		UITheme.styleSecondaryButton(btnPaginaAnterior);
+		UITheme.styleSecondaryButton(btnPaginaSeguent);
+		UITheme.styleLabel(lblPagina);
+		paginationPanel.setBackground(UITheme.BG_MAIN);
+		UITheme.styleSecondaryButton(btnGestioLlistes);
 
 		repaint();
 	}
+
+	public JButton getBtnPaginaAnterior() { return btnPaginaAnterior; }
+	public JButton getBtnPaginaSeguent() { return btnPaginaSeguent; }
+	public JLabel getLblPagina() { return lblPagina; }
+	public JPanel getPaginationPanel() { return paginationPanel; }
 
 	public JButton getBtnNouLlibre() { return btnNouLlibre; }
 	public JButton getBtnExportCSV() { return btnExportCSV; }
 	public JButton getBtnImportarCSV() { return btnImportarCSV; }
 	public JButton getBtnEscanejarISBN() { return btnEscanejarISBN; }
 	public JButton getBtnEstadistiques() { return btnEstadistiques; }
+	public JButton getBtnLlibreAleatori() { return btnLlibreAleatori; }
 	public JButton getBtnBackupBD() { return btnBackupBD; }
 	public JButton getBtnRestaurarBD() { return btnRestaurarBD; }
 	public JButton getBtnConfiguracio() { return btnConfiguracio; }
@@ -489,4 +567,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JCheckBox getchckbxNoLlegit() { return chckbxNoLlegit; }
 	public JButton getbtnFiltrar() { return bttnFiltrar; }
 	public JButton getbttnQuitarFiltros() { return bttnQuitarFiltros; }
+	public JComboBox<Object> getComboLlistes() { return comboLlistes; }
+	public JButton getBtnGestioLlistes() { return btnGestioLlistes; }
 }

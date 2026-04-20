@@ -1,76 +1,124 @@
 package herramienta;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicButtonUI;
 
 public class UITheme {
 
     public static boolean isDark = false;
 
-    public static Color BG_MAIN    = new Color(0xEEF2F7);
-    public static Color BG_PANEL   = new Color(0xFFFFFF);
-    public static Color ACCENT     = new Color(0x2471A3);
-    public static Color ACCENT_ALT = new Color(0x1A5276);
-    public static Color TEXT_DARK  = new Color(0x1C2833);
-    public static Color TEXT_MID   = new Color(0x566573);
-    public static Color BORDER_CLR = new Color(0xD5D8DC);
-    public static Color HEADER_BG  = new Color(0x1C2833);
-    public static Color HEADER_FG  = Color.WHITE;
-    public static Color TABLE_GRID = new Color(0xE5EBF1);
-    public static Color TABLE_ALT  = new Color(0xEBF5FB);
+    // ── Palette (updated by setDark) ─────────────────────────────────────────
+    public static Color BG_MAIN;
+    public static Color BG_PANEL;
+    public static Color ACCENT;
+    public static Color ACCENT_ALT;
+    public static Color TEXT_DARK;
+    public static Color TEXT_MID;
+    public static Color BORDER_CLR;
+    public static Color HEADER_BG;
+    public static Color HEADER_FG;
+    public static Color TABLE_GRID;
+    public static Color TABLE_ALT;
 
-    public static final Font FONT_BASE  = new Font("SansSerif", Font.PLAIN,  13);
-    public static final Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,   13);
-    public static final Font FONT_LABEL = new Font("SansSerif", Font.BOLD,   12);
-    public static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD,   18);
-    public static final Font FONT_SMALL = new Font("SansSerif", Font.PLAIN,  11);
+    // Derived — used internally by style methods
+    static Color SECONDARY_BTN_BG;
+    static Color FIELD_BG;
+    static Color NIMBUS_BLUE_GREY;
 
-    // Updates all color fields and Nimbus UIManager properties for the chosen mode
+    // ── Fixed colors (theme-independent) ─────────────────────────────────────
+    public static final Color DANGER = new Color(0xC0392B);
+    public static final Color GREEN  = new Color(0x117A65);
+
+    // ── Light palette ─────────────────────────────────────────────────────────
+    private static final Color L_BG_MAIN        = new Color(0xEEF2F7);
+    private static final Color L_BG_PANEL       = new Color(0xFFFFFF);
+    private static final Color L_ACCENT         = new Color(0x2471A3);
+    private static final Color L_ACCENT_ALT     = new Color(0x1A5276);
+    private static final Color L_TEXT_DARK      = new Color(0x1C2833);
+    private static final Color L_TEXT_MID       = new Color(0x566573);
+    private static final Color L_BORDER_CLR     = new Color(0xD5D8DC);
+    private static final Color L_HEADER_BG      = new Color(0x1C2833);
+    private static final Color L_HEADER_FG      = Color.WHITE;
+    private static final Color L_TABLE_GRID     = new Color(0xE5EBF1);
+    private static final Color L_TABLE_ALT      = new Color(0xEBF5FB);
+    private static final Color L_SECONDARY_BTN  = new Color(0xABB2B9);
+    private static final Color L_FIELD_BG       = new Color(0xFDFEFF);
+    private static final Color L_NIMBUS_BG      = new Color(0x5D8AA8);
+
+    // ── Dark palette ──────────────────────────────────────────────────────────
+    private static final Color D_BG_MAIN        = new Color(0x2B2B2B);
+    private static final Color D_BG_PANEL       = new Color(0x3C3F41);
+    private static final Color D_ACCENT         = new Color(0x589DF6);
+    private static final Color D_ACCENT_ALT     = new Color(0x3A6DB5);
+    private static final Color D_TEXT_DARK      = new Color(0xCCCCCC);
+    private static final Color D_TEXT_MID       = new Color(0x999999);
+    private static final Color D_BORDER_CLR     = new Color(0x565656);
+    private static final Color D_HEADER_BG      = new Color(0x1E1E1E);
+    private static final Color D_HEADER_FG      = new Color(0xCCCCCC);
+    private static final Color D_TABLE_GRID     = new Color(0x4A4A4A);
+    private static final Color D_TABLE_ALT      = new Color(0x353535);
+    private static final Color D_SECONDARY_BTN  = new Color(0x3D4451);
+    private static final Color D_FIELD_BG       = new Color(0x45474A);
+    private static final Color D_NIMBUS_BG      = new Color(0x3D4451);
+
+    // ── Fonts ─────────────────────────────────────────────────────────────────
+    public static final Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
+    public static final Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
+    public static final Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
+    public static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
+    public static final Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+
+    static { setDark(false); }
+
+    // ── Theme switching ───────────────────────────────────────────────────────
     public static void setDark(boolean dark) {
         isDark = dark;
-        if (dark) {
-            BG_MAIN    = new Color(0x2B2B2B);
-            BG_PANEL   = new Color(0x3C3F41);
-            ACCENT     = new Color(0x589DF6);
-            ACCENT_ALT = new Color(0x3A6DB5);
-            TEXT_DARK  = new Color(0xCCCCCC);
-            TEXT_MID   = new Color(0x999999);
-            BORDER_CLR = new Color(0x565656);
-            HEADER_BG  = new Color(0x1E1E1E);
-            HEADER_FG  = new Color(0xCCCCCC);
-            TABLE_GRID = new Color(0x4A4A4A);
-            TABLE_ALT  = new Color(0x353535);
-        } else {
-            BG_MAIN    = new Color(0xEEF2F7);
-            BG_PANEL   = new Color(0xFFFFFF);
-            ACCENT     = new Color(0x2471A3);
-            ACCENT_ALT = new Color(0x1A5276);
-            TEXT_DARK  = new Color(0x1C2833);
-            TEXT_MID   = new Color(0x566573);
-            BORDER_CLR = new Color(0xD5D8DC);
-            HEADER_BG  = new Color(0x1C2833);
-            HEADER_FG  = Color.WHITE;
-            TABLE_GRID = new Color(0xE5EBF1);
-            TABLE_ALT  = new Color(0xEBF5FB);
-        }
-        UIManager.put("control",                    BG_MAIN);
-        UIManager.put("text",                       TEXT_DARK);
-        UIManager.put("nimbusBase",                 ACCENT);
-        UIManager.put("nimbusBlueGrey",             isDark ? new Color(0x3D4451) : new Color(0x5D8AA8));
-        UIManager.put("nimbusFocus",                ACCENT);
-        UIManager.put("nimbusSelectionBackground",  ACCENT);
-        UIManager.put("nimbusSelectedText",         Color.WHITE);
-        UIManager.put("Table.alternateRowColor",    TABLE_ALT);
+        BG_MAIN          = dark ? D_BG_MAIN       : L_BG_MAIN;
+        BG_PANEL         = dark ? D_BG_PANEL      : L_BG_PANEL;
+        ACCENT           = dark ? D_ACCENT        : L_ACCENT;
+        ACCENT_ALT       = dark ? D_ACCENT_ALT    : L_ACCENT_ALT;
+        TEXT_DARK        = dark ? D_TEXT_DARK     : L_TEXT_DARK;
+        TEXT_MID         = dark ? D_TEXT_MID      : L_TEXT_MID;
+        BORDER_CLR       = dark ? D_BORDER_CLR    : L_BORDER_CLR;
+        HEADER_BG        = dark ? D_HEADER_BG     : L_HEADER_BG;
+        HEADER_FG        = dark ? D_HEADER_FG     : L_HEADER_FG;
+        TABLE_GRID       = dark ? D_TABLE_GRID    : L_TABLE_GRID;
+        TABLE_ALT        = dark ? D_TABLE_ALT     : L_TABLE_ALT;
+        SECONDARY_BTN_BG = dark ? D_SECONDARY_BTN : L_SECONDARY_BTN;
+        FIELD_BG         = dark ? D_FIELD_BG      : L_FIELD_BG;
+        NIMBUS_BLUE_GREY = dark ? D_NIMBUS_BG     : L_NIMBUS_BG;
+        applyUIManager();
     }
 
+    public static void applyUIManager() {
+        UIManager.put("control",                   BG_MAIN);
+        UIManager.put("text",                      TEXT_DARK);
+        UIManager.put("nimbusBase",                ACCENT);
+        UIManager.put("nimbusBlueGrey",            NIMBUS_BLUE_GREY);
+        UIManager.put("nimbusFocus",               ACCENT);
+        UIManager.put("nimbusSelectionBackground", ACCENT);
+        UIManager.put("nimbusSelectedText",        Color.WHITE);
+        UIManager.put("Table.alternateRowColor",   TABLE_ALT);
+    }
+
+    // ── Style helpers ─────────────────────────────────────────────────────────
     public static void styleAccentButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
         btn.setBackground(ACCENT);
@@ -84,7 +132,7 @@ public class UITheme {
 
     public static void styleSecondaryButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
-        btn.setBackground(isDark ? new Color(0x3D4451) : new Color(0xABB2B9));
+        btn.setBackground(SECONDARY_BTN_BG);
         btn.setForeground(Color.WHITE);
         btn.setFont(FONT_BOLD);
         btn.setFocusPainted(false);
@@ -101,7 +149,7 @@ public class UITheme {
     public static void styleField(JTextField field) {
         field.setFont(FONT_BASE);
         field.setForeground(TEXT_DARK);
-        field.setBackground(isDark ? new Color(0x45474A) : new Color(0xFDFEFF));
+        field.setBackground(FIELD_BG);
         field.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_CLR),
             BorderFactory.createEmptyBorder(3, 7, 3, 7)
@@ -113,5 +161,24 @@ public class UITheme {
             BorderFactory.createLineBorder(BORDER_CLR),
             BorderFactory.createEmptyBorder(6, 6, 6, 6)
         );
+    }
+
+    public static ImageIcon scaledIcon(byte[] data, int size) {
+        if (data == null) return null;
+        try {
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+            if (img == null) return null;
+            return new ImageIcon(img.getScaledInstance(size, size, Image.SCALE_SMOOTH));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    public static File chooseImageFile(Component parent) {
+        String dir = Config.getDefaultImgDir();
+        JFileChooser chooser = new JFileChooser(new File(dir).exists() ? dir : System.getProperty("user.home"));
+        chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
+        return chooser.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION
+            ? chooser.getSelectedFile() : null;
     }
 }

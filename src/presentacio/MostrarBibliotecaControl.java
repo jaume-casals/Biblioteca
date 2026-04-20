@@ -8,14 +8,22 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JTable;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
@@ -27,6 +35,7 @@ import herramienta.OpenLibraryClient;
 import herramienta.UITheme;
 import domini.ControladorDomini;
 import domini.Llibre;
+import domini.Llista;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.control.DetallesLlibrePanelControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
@@ -43,11 +52,16 @@ public class MostrarBibliotecaControl {
 	private static final int COLUMNA_lLEGIT = 6;
 	private static final int COLUMNA_DETALLS = 7;
 
+	private static final int PAGE_SIZE = 100;
+
 	private MostrarBibliotecaPanel vista;
 	private ArrayList<Llibre> biblio;
 	private DefaultTableModel model;
 	private JButton botonDetalles;
 	private EnActualizarBBDD enActualizarBBDD;
+	private int currentPage = 0;
+	private boolean paginatedMode = false;
+	private Integer currentLlistaId = null;
 
 	public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, ArrayList<Llibre> biblio,
 			EnActualizarBBDD enActualizarBBDD) {
@@ -57,17 +71,30 @@ public class MostrarBibliotecaControl {
 		this.biblio = biblio;
 		this.enActualizarBBDD = enActualizarBBDD;
 
+		this.vista.getBtnPaginaAnterior().addActionListener(e -> showPage(currentPage - 1));
+		this.vista.getBtnPaginaSeguent().addActionListener(e -> showPage(currentPage + 1));
 		this.vista.getBtnExportCSV().addActionListener(e -> exportarCSV());
 		this.vista.getBtnImportarCSV().addActionListener(e -> importarCSV());
 		this.vista.getBtnEscanejarISBN().addActionListener(e -> escanejarISBN());
 		this.vista.getbtnFiltrar().addActionListener(e -> filtrar());
 		this.vista.getbttnQuitarFiltros().addActionListener(e -> quitarFiltros());
 		this.vista.getBtnEstadistiques().addActionListener(e -> mostrarEstadistiques());
+		this.vista.getBtnLlibreAleatori().addActionListener(e -> mostrarLlibreAleatori());
 		this.vista.getBtnBackupBD().addActionListener(e -> backupBD());
 		this.vista.getBtnRestaurarBD().addActionListener(e -> restaurarBD());
 		this.vista.getBtnConfiguracio().addActionListener(e -> obrirConfiguracio());
 		this.botonDetalles.addActionListener(e -> abrirDetallesLlibres());
 		this.vista.getjTableBilio().addMouseListener(abrirDetalles());
+		this.vista.getjTableBilio().addMouseListener(contextMenu());
+
+		JTable table = this.vista.getjTableBilio();
+		table.getInputMap(JComponent.WHEN_FOCUSED)
+				.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "obrirDetalls");
+		table.getActionMap().put("obrirDetalls", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				if (vista.getjTableBilio().getSelectedRow() >= 0) abrirDetallesLlibres();
+			}
+		});
 		this.vista.getchckbxLlegit().addItemListener(e -> enLlegitSeleccionado(e));
 		this.vista.getchckbxNoLlegit().addItemListener(e -> enNoLlegitSeleccionado(e));
 
@@ -83,12 +110,36 @@ public class MostrarBibliotecaControl {
 		this.vista.getPreuMax().addActionListener(enterFiltrar);
 
 		this.vista.getSearchBar().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); }
+			public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
 		});
 
-		setTable(this.biblio);
+		this.vista.getComboLlistes().addActionListener(e -> onLlistaSelected());
+		this.vista.getBtnGestioLlistes().addActionListener(e -> obrirGestioLlistes());
+		refreshComboLlistes();
+
+		showPage(0);
+
+		javax.swing.Timer saveWidthsTimer = new javax.swing.Timer(800, e -> {
+			JTable t = this.vista.getjTableBilio();
+			int n = t.getColumnCount();
+			if (n == 0) return;
+			int[] widths = new int[n];
+			for (int i = 0; i < n; i++) widths[i] = t.getColumnModel().getColumn(i).getWidth();
+			herramienta.Config.setColWidths(widths);
+		});
+		saveWidthsTimer.setRepeats(false);
+		this.vista.getjTableBilio().getColumnModel().addColumnModelListener(
+			new javax.swing.event.TableColumnModelListener() {
+				public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
+					saveWidthsTimer.restart();
+				}
+				public void columnAdded(javax.swing.event.TableColumnModelEvent e)   {}
+				public void columnRemoved(javax.swing.event.TableColumnModelEvent e) {}
+				public void columnMoved(javax.swing.event.TableColumnModelEvent e)   {}
+				public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) {}
+			});
 	}
 
 	private void enNoLlegitSeleccionado(ItemEvent e) {
@@ -108,22 +159,100 @@ public class MostrarBibliotecaControl {
 	private MouseAdapter abrirDetalles() {
 		return new MouseAdapter() {
 			@Override
-			public void mousePressed(MouseEvent mouseEvent) {
-				JTable table = (JTable) mouseEvent.getSource();
-				if (mouseEvent.getClickCount() == 2 && table.getSelectedRow() != -1) {
-					abrirDetallesLlibres();
-				}
+			public void mouseClicked(MouseEvent e) {
+				JTable table = (JTable) e.getSource();
+				int row = table.rowAtPoint(e.getPoint());
+				if (row >= 0) table.setRowSelectionInterval(row, row);
+				if (e.getClickCount() == 2 && row >= 0) abrirDetallesLlibres();
 			}
 		};
 	}
 
+	private MouseAdapter contextMenu() {
+		return new MouseAdapter() {
+			private void maybeShow(MouseEvent e) {
+				if (!e.isPopupTrigger()) return;
+				JTable table = vista.getjTableBilio();
+				int row = table.rowAtPoint(e.getPoint());
+				if (row < 0) return;
+				table.setRowSelectionInterval(row, row);
+				String isbnStr = (String) table.getValueAt(row, COLUMNA_ISBN);
+
+				JPopupMenu menu = new JPopupMenu();
+
+				JMenuItem itemObrir = new JMenuItem("Obrir detalls");
+				itemObrir.addActionListener(ev -> abrirDetallesLlibres());
+				menu.add(itemObrir);
+
+				JMenuItem itemEliminar = new JMenuItem("Eliminar");
+				itemEliminar.addActionListener(ev -> eliminarFilaSeleccionada());
+				menu.add(itemEliminar);
+
+				JMenuItem itemDuplicar = new JMenuItem("Duplicar...");
+				itemDuplicar.addActionListener(ev -> duplicarLlibre(isbnStr));
+				menu.add(itemDuplicar);
+
+				menu.addSeparator();
+
+				JMenuItem itemCopiarISBN = new JMenuItem("Copiar ISBN");
+				itemCopiarISBN.addActionListener(ev ->
+					Toolkit.getDefaultToolkit().getSystemClipboard()
+						.setContents(new StringSelection(isbnStr), null));
+				menu.add(itemCopiarISBN);
+
+				menu.show(e.getComponent(), e.getX(), e.getY());
+			}
+
+			@Override public void mousePressed(MouseEvent e)  { maybeShow(e); }
+			@Override public void mouseReleased(MouseEvent e) { maybeShow(e); }
+		};
+	}
+
 	private void abrirDetallesLlibres() {
+		abrirDetalles(false);
+	}
+
+	public void abrirDetallesEnEdicio() {
+		abrirDetalles(true);
+	}
+
+	private void abrirDetalles(boolean editMode) {
 		try {
+			int row = this.vista.getjTableBilio().getSelectedRow();
+			if (row < 0) return;
 			Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(
-					(String) this.vista.getjTableBilio().getValueAt(this.vista.getjTableBilio().getSelectedRow(), 0)));
+					(String) this.vista.getjTableBilio().getValueAt(row, COLUMNA_ISBN)));
 			DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(l, enActualizarBBDD);
 			detalles.getDetallesLlibrePanel().setLocationRelativeTo(this.vista);
+			if (editMode) detalles.getDetallesLlibrePanel().getBtnEditar().doClick();
 			detalles.getDetallesLlibrePanel().setVisible(true);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private void duplicarLlibre(String isbnStr) {
+		try {
+			Llibre src = MainFrameControl.getInstance(null).getLlibreIsbn(Long.parseLong(isbnStr));
+			if (src == null) return;
+			presentacio.detalles.vista.GuardarLlibresDialogo dialeg =
+				new presentacio.detalles.vista.GuardarLlibresDialogo();
+			new presentacio.detalles.control.GuardarLlibresDialogoControl(dialeg);
+			dialeg.getTextNom().setText(src.getNom());
+			dialeg.getTextAutor().setText(src.getAutor() != null ? src.getAutor() : "");
+			dialeg.getTextAny().setText(src.getAny() != null && src.getAny() != 0
+				? String.valueOf(src.getAny()) : "");
+			dialeg.getTextDescripcio().setText(src.getDescripcio() != null ? src.getDescripcio() : "");
+			dialeg.getTextValoracio().setText(src.getValoracio() != null && src.getValoracio() != 0.0
+				? String.valueOf(src.getValoracio()) : "");
+			dialeg.getTextPreu().setText(src.getPreu() != null && src.getPreu() != 0.0
+				? String.valueOf(src.getPreu()) : "");
+			dialeg.getChckLlegit().setSelected(Boolean.TRUE.equals(src.getLlegit()));
+			dialeg.getTextISBN().setText("");
+			dialeg.getTextISBN().requestFocusInWindow();
+			dialeg.setLocationRelativeTo(this.vista);
+			dialeg.setVisible(true);
+			refresh();
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}
@@ -171,6 +300,17 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellEditor(new BotonDetallesEditor(new JCheckBox()));
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
 		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellEditor(new LlegitCheckBoxEditor());
+		SearchHighlightRenderer highlightRenderer = new SearchHighlightRenderer();
+		for (int i = 0; i < t.getColumnCount(); i++) {
+			if (i != COLUMNA_lLEGIT && i != COLUMNA_DETALLS)
+				t.getColumnModel().getColumn(i).setCellRenderer(highlightRenderer);
+		}
+
+		int[] defaults = { 130, 220, 180, 55, 75, 60, 80, 85 };
+		for (int i = 0; i < defaults.length; i++) {
+			int saved = herramienta.Config.getColWidth(i, -1);
+			if (saved > 0) t.getColumnModel().getColumn(i).setPreferredWidth(saved);
+		}
 
 		// update model ref after setHeader() replaced it
 		this.model = (DefaultTableModel) t.getModel();
@@ -181,15 +321,33 @@ public class MostrarBibliotecaControl {
 	private void aplicarSearchBar() {
 		String query = this.vista.getSearchBar().getText().trim();
 		javax.swing.RowSorter<?> sorter = this.vista.getjTableBilio().getRowSorter();
-		if (sorter instanceof javax.swing.DefaultRowSorter) {
-			if (query.isEmpty()) {
-				((javax.swing.DefaultRowSorter<?, ?>) sorter).setRowFilter(null);
-			} else {
-				try {
-					((javax.swing.DefaultRowSorter<?, ?>) sorter).setRowFilter(
-						javax.swing.RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
-				} catch (java.util.regex.PatternSyntaxException ignored) {}
-			}
+		if (!(sorter instanceof javax.swing.DefaultRowSorter)) { updateTitleBar(); return; }
+		@SuppressWarnings("unchecked")
+		javax.swing.DefaultRowSorter<DefaultTableModel, Integer> drs =
+			(javax.swing.DefaultRowSorter<DefaultTableModel, Integer>) sorter;
+		if (query.isEmpty()) {
+			drs.setRowFilter(null);
+		} else {
+			String q = query.toLowerCase();
+			drs.setRowFilter(new javax.swing.RowFilter<DefaultTableModel, Integer>() {
+				@Override
+				public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+					for (int i = 0; i < entry.getValueCount(); i++) {
+						if (entry.getStringValue(i).toLowerCase().contains(q)) return true;
+					}
+					try {
+						long isbn = Long.parseLong(entry.getStringValue(COLUMNA_ISBN));
+						Llibre l = MainFrameControl.getInstance(null).getLlibreIsbn(isbn);
+						if (l != null) {
+							String desc = l.getDescripcio();
+							String notes = l.getNotes();
+							if (desc  != null && desc.toLowerCase().contains(q))  return true;
+							if (notes != null && notes.toLowerCase().contains(q)) return true;
+						}
+					} catch (Exception ignored) {}
+					return false;
+				}
+			});
 		}
 		updateTitleBar();
 	}
@@ -199,12 +357,20 @@ public class MostrarBibliotecaControl {
 		int shown = t.getRowCount();
 		int total = this.biblio != null ? this.biblio.size() : 0;
 		java.awt.Window w = SwingUtilities.getWindowAncestor(this.vista);
-		if (w instanceof JFrame) {
-			String title = shown == total
-				? "Biblioteca  (" + total + " llibres)"
-				: "Biblioteca  (" + shown + " / " + total + " llibres)";
-			((JFrame) w).setTitle(title);
+		if (w instanceof MainFramePanel) {
+			((JFrame) w).setTitle("Biblioteca");
+			String shelf = currentLlistaId == null ? "Totes les llistes" : currentShelfName();
+			String count = shown == total
+				? total + " llibres"
+				: shown + " / " + total + " llibres";
+			((MainFramePanel) w).getStatusBar().setText(shelf + "  —  " + count);
 		}
+	}
+
+	private String currentShelfName() {
+		Object sel = this.vista.getComboLlistes().getSelectedItem();
+		if (sel instanceof domini.Llista) return ((domini.Llista) sel).getNom();
+		return "Totes les llistes";
 	}
 
 	private void removeAlldataFiltros() {
@@ -234,8 +400,9 @@ public class MostrarBibliotecaControl {
 		javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
 		fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("CSV files", "csv"));
 		if (fc.showOpenDialog(this.vista) != javax.swing.JFileChooser.APPROVE_OPTION) return;
-		int ok = 0, err = 0;
+		int ok = 0, err = 0, skipped = 0;
 		StringBuilder errors = new StringBuilder();
+		ControladorDomini cd = ControladorDomini.getInstance();
 		try (java.io.BufferedReader br = new java.io.BufferedReader(
 				new java.io.FileReader(fc.getSelectedFile(), java.nio.charset.StandardCharsets.UTF_8))) {
 			br.readLine();
@@ -244,15 +411,17 @@ public class MostrarBibliotecaControl {
 				if (line.isBlank()) continue;
 				try {
 					String[] c = parseCSVLine(line);
+					long isbn = Long.parseLong(c[0].trim());
+					try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
 					Llibre l = LlibreValidator.checkLlibre(
-						Long.parseLong(c[0].trim()), c[1], c[2],
+						isbn, c[1], c[2],
 						Integer.parseInt(c[3].trim()),
 						c.length > 4 ? c[4] : "",
 						c.length > 5 ? Double.parseDouble(c[5].trim()) : 0.0,
 						c.length > 6 ? Double.parseDouble(c[6].trim()) : 0.0,
 						c.length > 7 ? Boolean.parseBoolean(c[7].trim()) : false,
 						c.length > 8 ? c[8] : "");
-					ControladorDomini.getInstance().addLlibre(l);
+					cd.addLlibre(l);
 					ok++;
 				} catch (Exception ex) {
 					err++;
@@ -264,6 +433,7 @@ public class MostrarBibliotecaControl {
 			return;
 		}
 		String msg = ok + " llibres importats.";
+		if (skipped > 0) msg += "\n" + skipped + " omesos (ISBN ja existeix).";
 		if (err > 0) msg += "\n" + err + " errors:" + errors;
 		JOptionPane.showMessageDialog(this.vista, msg, "Importació",
 			err > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
@@ -399,6 +569,34 @@ public class MostrarBibliotecaControl {
 			JOptionPane.INFORMATION_MESSAGE);
 	}
 
+	private void mostrarLlibreAleatori() {
+		if (biblio == null || biblio.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "No hi ha llibres a la vista actual.", "Llibre Aleatori",
+				JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		java.util.List<Llibre> noLlegits = biblio.stream()
+			.filter(l -> !Boolean.TRUE.equals(l.getLlegit()))
+			.collect(Collectors.toList());
+		if (noLlegits.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "Tots els llibres de la vista actual ja estan llegits.", "Llibre Aleatori",
+				JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		Llibre aleatori = noLlegits.get(new java.util.Random().nextInt(noLlegits.size()));
+		JTable t = vista.getjTableBilio();
+		for (int row = 0; row < t.getRowCount(); row++) {
+			if (String.valueOf(aleatori.getISBN()).equals(t.getValueAt(row, COLUMNA_ISBN))) {
+				t.setRowSelectionInterval(row, row);
+				t.scrollRectToVisible(t.getCellRect(row, 0, true));
+				break;
+			}
+		}
+		DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(aleatori, enActualizarBBDD);
+		detalles.getDetallesLlibrePanel().setLocationRelativeTo(vista);
+		detalles.getDetallesLlibrePanel().setVisible(true);
+	}
+
 	private void filtrar() {
 		String nomAutor = null;
 		String nomLlibre = null;
@@ -445,7 +643,53 @@ public class MostrarBibliotecaControl {
 		this.vista.getPreuMin().setText("");
 		this.vista.getPreuMax().setText("");
 		removeAlldataFiltros();
-		setTable(biblio);
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void showPage(int page) {
+		if (biblio == null || biblio.size() <= PAGE_SIZE) {
+			paginatedMode = false;
+			vista.getPaginationPanel().setVisible(false);
+			setTable(biblio);
+			return;
+		}
+		int totalPages = (int) Math.ceil((double) biblio.size() / PAGE_SIZE);
+		page = Math.max(0, Math.min(page, totalPages - 1));
+		currentPage = page;
+		paginatedMode = true;
+
+		int from = page * PAGE_SIZE;
+		int to   = Math.min(from + PAGE_SIZE, biblio.size());
+		setTable(new ArrayList<>(biblio.subList(from, to)));
+
+		vista.getLblPagina().setText("Pàgina " + (page + 1) + " / " + totalPages);
+		vista.getBtnPaginaAnterior().setEnabled(page > 0);
+		vista.getBtnPaginaSeguent().setEnabled(page < totalPages - 1);
+		vista.getPaginationPanel().setVisible(true);
+	}
+
+	// ── Search highlight renderer ─────────────────────────────────────────────
+
+	private class SearchHighlightRenderer extends javax.swing.table.DefaultTableCellRenderer {
+		@Override
+		public Component getTableCellRendererComponent(JTable t, Object value,
+				boolean selected, boolean focus, int row, int col) {
+			super.getTableCellRendererComponent(t, value, selected, focus, row, col);
+			String query = vista.getSearchBar().getText().trim();
+			String text = value != null ? value.toString() : "";
+			if (!query.isEmpty() && !selected) {
+				String escaped = text
+					.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+				String escapedQ = java.util.regex.Pattern.quote(query);
+				String highlighted = escaped.replaceAll(
+					"(?i)(" + escapedQ.replace("\\Q", "\\Q").replace("\\E", "\\E") + ")",
+					"<span style='background:#F39C12;color:#000'>$1</span>");
+				if (!highlighted.equals(escaped))
+					setText("<html>" + highlighted + "</html>");
+			}
+			return this;
+		}
 	}
 
 	// ── Llegit column: checkbox renderer + in-place toggle editor ─────────────
@@ -589,15 +833,74 @@ public class MostrarBibliotecaControl {
 		for (int x = 0; x < model.getRowCount(); x++) {
 			if (model.getValueAt(x, COLUMNA_ISBN).toString().contentEquals(Long.toString(l.getISBN()))) {
 				model.removeRow(x);
-				biblio.remove(l);
+				biblio.removeIf(b -> b.getISBN().equals(l.getISBN()));
 				break;
 			}
 		}
 		updateTitleBar();
 	}
 
+	public Integer getCurrentLlistaId() { return currentLlistaId; }
+
 	public void refresh() {
+		currentPage = 0;
+		if (currentLlistaId != null) {
+			biblio = ControladorDomini.getInstance().getLlibresInLlista(currentLlistaId);
+		} else {
+			biblio = ControladorDomini.getInstance().getAllLlibres();
+		}
 		quitarFiltros();
+	}
+
+	public void refreshComboLlistes() {
+		javax.swing.JComboBox<Object> combo = this.vista.getComboLlistes();
+		// Remove listener temporarily to avoid triggering onLlistaSelected
+		java.awt.event.ActionListener[] listeners = combo.getActionListeners();
+		for (java.awt.event.ActionListener al : listeners) combo.removeActionListener(al);
+		combo.removeAllItems();
+		ControladorDomini cd = ControladorDomini.getInstance();
+		java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
+		combo.addItem("Totes les llistes (" + cd.getAllLlibres().size() + ")");
+		for (Llista l : cd.getAllLlistes()) {
+			counts.put(l.getId(), cd.getCountInLlista(l.getId()));
+			combo.addItem(l);
+		}
+		combo.setRenderer(new javax.swing.DefaultListCellRenderer() {
+			@Override
+			public java.awt.Component getListCellRendererComponent(
+					javax.swing.JList<?> list, Object value, int index,
+					boolean isSelected, boolean cellHasFocus) {
+				if (value instanceof Llista) {
+					Llista ll = (Llista) value;
+					value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
+				}
+				return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+			}
+		});
+		combo.setSelectedIndex(0);
+		for (java.awt.event.ActionListener al : listeners) combo.addActionListener(al);
+		// Reset to all-books view
+		currentLlistaId = null;
+		biblio = cd.getAllLlibres();
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void onLlistaSelected() {
+		Object sel = this.vista.getComboLlistes().getSelectedItem();
+		if (sel instanceof Llista) {
+			currentLlistaId = ((Llista) sel).getId();
+			biblio = ControladorDomini.getInstance().getLlibresInLlista(currentLlistaId);
+		} else {
+			currentLlistaId = null;
+			biblio = ControladorDomini.getInstance().getAllLlibres();
+		}
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void obrirGestioLlistes() {
+		new GestioLlistesDialog(SwingUtilities.getWindowAncestor(vista), this).setVisible(true);
 	}
 
 	private void obrirConfiguracio() {
