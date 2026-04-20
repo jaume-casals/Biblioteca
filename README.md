@@ -1,55 +1,57 @@
 # Biblioteca
 
-A personal library manager built with Java and Swing. Track your books, organise them into shelves, rate what you've read, and fetch metadata straight from OpenLibrary.
+Gestor personal de biblioteca construït amb Java i Swing. Organitza els teus llibres en prestatges, puntua el que has llegit i obté metadades directament des d'OpenLibrary.
 
 ---
 
-## Features
+## Funcionalitats
 
-- **Book catalogue** — add, edit, and delete books with title, author, ISBN, price, rating, and cover image
-- **Shelves** — organise books into named shelves with per-shelf ratings and read status
-- **Search & filter** — live search across title, author, ISBN, description, and notes; filter by rating, read status, and shelf
-- **Cover images** — load from a local file or fetch from OpenLibrary by ISBN
-- **Import / Export** — CSV import and export, SQL backup and restore with auto-backup on startup
-- **Statistics** — per-shelf averages, read percentages, and book counts
-- **Dark mode** — full dark/light theme with configurable font size
-- **Keyboard shortcuts** — `Ctrl+N` new book, `Ctrl+F` search, `Ctrl+E` edit, `Ctrl+A` select all, `Delete` delete, `Enter` open details
-
----
-
-## Requirements
-
-- Java 11 or later
-- A graphical display (X11 on Linux, native on macOS/Windows)
-
-No installation needed. All dependencies are bundled in `lib/`.
+- **Catàleg de llibres** — afegeix, edita i elimina llibres amb títol, autor, ISBN, preu, valoració i portada
+- **Prestatges** — organitza els llibres en prestatges amb valoració i estat de lectura propis per prestatge
+- **Cerca i filtres** — cerca en temps real per títol, autor, ISBN, descripció i notes; filtra per valoració, estat de lectura i prestatge
+- **Portades** — carrega des d'un fitxer local o obté automàticament des d'OpenLibrary per ISBN
+- **Importació / Exportació** — importació i exportació CSV, còpia de seguretat SQL i restauració amb còpia automàtica a l'inici
+- **Estadístiques** — mitjanes per prestatge, percentatge de llegits i recompte de llibres
+- **Mode fosc** — tema clar/fosc complet amb mida de lletra configurable
+- **Dreceres de teclat** — `Ctrl+N` nou llibre, `Ctrl+F` cerca, `Ctrl+E` editar, `Ctrl+A` seleccionar tot, `Supr` eliminar, `Intro` obrir detalls
+- **Préstecs** — registra a qui has prestat un llibre i marca'l com a retornat
+- **Progrés de lectura** — camp de pàgines llegides amb barra de progrés a la taula
 
 ---
 
-## Running
+## Requisits
+
+- Java 11 o superior
+- Pantalla gràfica (X11 a Linux, natiu a macOS/Windows)
+
+No cal instal·lació. Totes les dependències estan incloses a `lib/`.
+
+---
+
+## Execució
 
 ```bash
-# Compile and launch
+# Compilar i executar
 make run
 
-# Run without recompiling (bin/ must already exist)
+# Executar sense recompilar (bin/ ha d'existir)
 make run-only
 
-# Or run the prebuilt jar directly
+# O executar el jar directament
 java -jar biblioteca.jar
 ```
 
 ---
 
-## Building from source
+## Compilació des del codi font
 
 ```bash
-make compile          # compile src/ → bin/
-make test             # compile + run all tests (37 tests must pass)
-make clean            # remove bin/
+make compile          # compila src/ → bin/
+make test             # compila + executa tots els tests (37 han de passar)
+make clean            # elimina bin/
 ```
 
-Manual classpath:
+Classpath manual:
 
 ```bash
 java -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar main.Ejecutable
@@ -57,42 +59,42 @@ java -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar main.Ejecutabl
 
 ---
 
-## Database
+## Base de dades
 
-Uses **H2 embedded** by default — no setup required. The database lives at `~/.biblioteca/biblioteca`.
+Utilitza **H2 embeguda** per defecte — no cal cap configuració. La base de dades es troba a `~/.biblioteca/biblioteca`.
 
-To switch to **MariaDB**, edit `~/.biblioteca/config.properties`:
+Per canviar a **MariaDB**, edita `~/.biblioteca/config.properties`:
 
 ```properties
 dbType=mariadb
 dbHost=localhost
-dbUser=youruser
-dbPassword=yourpassword
+dbUser=usuari
+dbPassword=contrasenya
 ```
 
-Schema migrations run automatically on startup.
+Les migracions d'esquema s'executen automàticament a l'inici.
 
 ---
 
-## Populate with sample data
+## Poblar amb dades d'exemple
 
 ```bash
-make populate          # fetch 2000 books from OpenLibrary
-make populate MAX=500  # custom limit
+make populate          # obté 2000 llibres d'OpenLibrary
+make populate MAX=500  # límit personalitzat
 ```
 
 ---
 
-## Project structure
+## Estructura del projecte
 
 ```
 src/
-  main/          Entry point
-  presentacio/   Swing GUI — panels (layout) + controls (logic), one pair per screen
-  domini/        Business logic — in-memory sorted list of Llibre
-  persistencia/  JDBC layer — ControladorPersistencia → ServerConect
-  herramienta/   Utilities — Config, UITheme, LlibreValidator, FiltreUtils, AutoCompletion
-  interficie/    EnActualizarBBDD callback interface
+  main/          Punt d'entrada
+  presentacio/   GUI Swing — panells (disseny) + controls (lògica), un parell per pantalla
+  domini/        Lògica de negoci — llista en memòria ordenada de Llibre
+  persistencia/  Capa JDBC — ControladorPersistencia → ServerConect
+  herramienta/   Utilitats — Config, UITheme, LlibreValidator, FiltreUtils, AutoCompletion
+  interficie/    Interfície de callback EnActualizarBBDD
 lib/
   h2-2.3.232.jar
   mariadb-java-client-3.3.3.jar
@@ -102,12 +104,13 @@ test/
 
 ---
 
-## Configuration
+## Configuració
 
-All settings live in `~/.biblioteca/config.properties` and are managed through the in-app settings dialog. Includes window geometry, column widths, dark mode, font size, and DB connection.
+Tots els ajustos es guarden a `~/.biblioteca/config.properties` i es gestionen des del diàleg de configuració de l'aplicació. Inclou geometria de finestra, amplades de columnes, mode fosc, mida de lletra i connexió a la base de dades.
 
 ---
 
-## License
+## Llicència
 
-Personal project. No licence.
+Aquest projecte es distribueix sota la llicència **GNU General Public License v3.0**.  
+Consulta el fitxer [LICENSE](LICENSE) per als detalls complets.

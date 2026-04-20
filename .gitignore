@@ -25,12 +25,16 @@ hs_err_pid*
 .project
 .classpath
 
+.
+
 # Project-local files not for version control
 CLAUDE.md
 Makefile
 todo.txt
 install.exe
 install.sh
+Biblioteca.html
+components.jsx
 
 # IDE / editor configs
 .idea/
