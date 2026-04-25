@@ -34,6 +34,9 @@ public class Ejecutable {
 			System.exit(1);
 		}
 
+		// Init DB on main thread so the EDT is never blocked waiting for disk I/O
+		domini.ControladorDomini.getInstance();
+
 		EventQueue.invokeLater(() -> {
 			try {
 				if (herramienta.Config.isDarkMode()) UITheme.setDark(true);

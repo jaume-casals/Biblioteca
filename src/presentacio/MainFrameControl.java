@@ -44,7 +44,41 @@ public class MainFrameControl implements EnActualizarBBDD {
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrl), "focusFiltres");
 		am.put("focusFiltres", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				vista.getMostrarBibliotecaPanel().getTextISBN().requestFocusInWindow();
+				vista.getMostrarBibliotecaPanel().getSearchBar().requestFocusInWindow();
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, ctrl), "galeriaZoomIn");
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ADD,    ctrl), "galeriaZoomIn");
+		am.put("galeriaZoomIn", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				vista.getMostrarBibliotecaPanel().getGaleria().adjustZoom(1);
+			}
+		});
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS,    ctrl), "galeriaZoomOut");
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SUBTRACT, ctrl), "galeriaZoomOut");
+		am.put("galeriaZoomOut", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				vista.getMostrarBibliotecaPanel().getGaleria().adjustZoom(-1);
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, ctrl), "seleccionarTot");
+		am.put("seleccionarTot", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				if (vista.getMostrarBibliotecaPanel().isGaleriaMode()) {
+					vista.getMostrarBibliotecaPanel().getGaleria().selectAll();
+				} else {
+					JTable t = vista.getMostrarBibliotecaPanel().getjTableBilio();
+					if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
+				}
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_E, ctrl), "editarLlibre");
+		am.put("editarLlibre", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				mostrarControl.abrirDetallesEnEdicio();
 			}
 		});
 
@@ -55,27 +89,6 @@ public class MainFrameControl implements EnActualizarBBDD {
 				.getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
 					@Override public void actionPerformed(java.awt.event.ActionEvent e) {
 						mostrarControl.eliminarFilaSeleccionada();
-					}
-				});
-
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getInputMap(JComponent.WHEN_FOCUSED)
-				.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, ctrl), "seleccionarTot");
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getActionMap().put("seleccionarTot", new javax.swing.AbstractAction() {
-					@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-						JTable t = vista.getMostrarBibliotecaPanel().getjTableBilio();
-						if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
-					}
-				});
-
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getInputMap(JComponent.WHEN_FOCUSED)
-				.put(KeyStroke.getKeyStroke(KeyEvent.VK_E, ctrl), "editarLlibre");
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getActionMap().put("editarLlibre", new javax.swing.AbstractAction() {
-					@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-						mostrarControl.abrirDetallesEnEdicio();
 					}
 				});
 
@@ -110,7 +123,11 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	public static MainFrameControl getInstance(MainFramePanel vista) {
-		if (instance == null) instance = new MainFrameControl(vista);
+		if (instance == null && vista != null) instance = new MainFrameControl(vista);
+		return instance;
+	}
+
+	public static MainFrameControl getInstance() {
 		return instance;
 	}
 
@@ -125,7 +142,24 @@ public class MainFrameControl implements EnActualizarBBDD {
 			Double valoracioMin, Double valoracioMax,
 			Double preuMin, Double preuMax, Boolean llegit) {
 		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit);
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, null);
+	}
+
+	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId);
+	}
+
+	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
+			String editorial, String serie, String format, String idioma) {
+		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, editorial, serie, format, idioma);
 	}
 
 	protected Llibre getLlibreIsbn(long ISBN) {

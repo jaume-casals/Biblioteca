@@ -46,21 +46,28 @@ public class UITheme {
     public static final Color DANGER = new Color(0xC0392B);
     public static final Color GREEN  = new Color(0x117A65);
 
-    // ── Light palette ─────────────────────────────────────────────────────────
-    private static final Color L_BG_MAIN        = new Color(0xEEF2F7);
+    // ── Sidebar colors (updated by setDark) ───────────────────────────────────
+    public static Color SIDEBAR_BG;
+    public static Color SIDEBAR_ACCENT;
+    public static Color SIDEBAR_TEXT;
+    public static Color SIDEBAR_TEXT_MID;
+    public static Color SIDEBAR_SEL_BG;
+
+    // ── Light palette (warm library theme) ───────────────────────────────────
+    private static final Color L_BG_MAIN        = new Color(0xF5F3EE);
     private static final Color L_BG_PANEL       = new Color(0xFFFFFF);
-    private static final Color L_ACCENT         = new Color(0x2471A3);
-    private static final Color L_ACCENT_ALT     = new Color(0x1A5276);
-    private static final Color L_TEXT_DARK      = new Color(0x1C2833);
-    private static final Color L_TEXT_MID       = new Color(0x566573);
-    private static final Color L_BORDER_CLR     = new Color(0xD5D8DC);
-    private static final Color L_HEADER_BG      = new Color(0x1C2833);
-    private static final Color L_HEADER_FG      = Color.WHITE;
-    private static final Color L_TABLE_GRID     = new Color(0xE5EBF1);
-    private static final Color L_TABLE_ALT      = new Color(0xEBF5FB);
-    private static final Color L_SECONDARY_BTN  = new Color(0xABB2B9);
-    private static final Color L_FIELD_BG       = new Color(0xFDFEFF);
-    private static final Color L_NIMBUS_BG      = new Color(0x5D8AA8);
+    private static final Color L_ACCENT         = new Color(0x9B5E1A);
+    private static final Color L_ACCENT_ALT     = new Color(0x7A4A14);
+    private static final Color L_TEXT_DARK      = new Color(0x2C1810);
+    private static final Color L_TEXT_MID       = new Color(0x7A6E66);
+    private static final Color L_BORDER_CLR     = new Color(0xE5E0D8);
+    private static final Color L_HEADER_BG      = new Color(0x2A2520);
+    private static final Color L_HEADER_FG      = new Color(0xE8E0D8);
+    private static final Color L_TABLE_GRID     = new Color(0xEDE8E1);
+    private static final Color L_TABLE_ALT      = new Color(0xFAF8F5);
+    private static final Color L_SECONDARY_BTN  = new Color(0xB8A89A);
+    private static final Color L_FIELD_BG       = new Color(0xFDFCFA);
+    private static final Color L_NIMBUS_BG      = new Color(0x9B5E1A);
 
     // ── Dark palette ──────────────────────────────────────────────────────────
     private static final Color D_BG_MAIN        = new Color(0x2B2B2B);
@@ -90,6 +97,11 @@ public class UITheme {
     // ── Theme switching ───────────────────────────────────────────────────────
     public static void setDark(boolean dark) {
         isDark = dark;
+        SIDEBAR_BG       = dark ? new Color(0x1A1510) : new Color(0x2A2520);
+        SIDEBAR_ACCENT   = new Color(0xC48F45);
+        SIDEBAR_TEXT     = dark ? new Color(0xE0D8D0) : new Color(0xE8E0D8);
+        SIDEBAR_TEXT_MID = dark ? new Color(0x8B7E74) : new Color(0x9B8E84);
+        SIDEBAR_SEL_BG   = dark ? new Color(0x2A2010) : new Color(0x3D3028);
         BG_MAIN          = dark ? D_BG_MAIN       : L_BG_MAIN;
         BG_PANEL         = dark ? D_BG_PANEL      : L_BG_PANEL;
         ACCENT           = dark ? D_ACCENT        : L_ACCENT;
@@ -151,6 +163,18 @@ public class UITheme {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    public static void styleSidebarButton(JButton btn) {
+        btn.setUI(new BasicButtonUI());
+        btn.setBackground(SIDEBAR_BG);
+        btn.setForeground(SIDEBAR_TEXT);
+        btn.setFont(FONT_BASE);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setOpaque(true);
+        btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
     public static void styleLabel(JLabel lbl) {
         lbl.setFont(FONT_LABEL);
         lbl.setForeground(TEXT_MID);
@@ -164,6 +188,22 @@ public class UITheme {
             BorderFactory.createLineBorder(BORDER_CLR),
             BorderFactory.createEmptyBorder(3, 7, 3, 7)
         ));
+        if (field.getClientProperty("hoverInstalled") == null) {
+            field.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                    if (field.isEnabled())
+                        field.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(ACCENT, 1),
+                            BorderFactory.createEmptyBorder(3, 7, 3, 7)));
+                }
+                @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_CLR),
+                        BorderFactory.createEmptyBorder(3, 7, 3, 7)));
+                }
+            });
+            field.putClientProperty("hoverInstalled", Boolean.TRUE);
+        }
     }
 
     public static Border cardBorder() {

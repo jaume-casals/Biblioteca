@@ -15,6 +15,7 @@ import javax.swing.SwingUtilities;
 import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.DialogoError;
+import herramienta.FieldAutoComplete;
 import herramienta.OpenLibraryClient;
 import herramienta.UITheme;
 import interficie.EnActualizarBBDD;
@@ -26,6 +27,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	private ControladorDomini cLlibres;
 	private byte[] selectedBlob;
 	private EnActualizarBBDD callback;
+	private volatile Thread searchThread;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
 		this(vista, null);
@@ -45,13 +47,22 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		this.vista.getBtnGuardar().addActionListener(e -> crearLlibre());
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnCercaInternet().addActionListener(e -> cercaInternet());
+		this.vista.addWindowListener(this);
 		cLlibres = ControladorDomini.getInstance();
+
+		double defVal = herramienta.Config.getDefaultValoracio();
+		if (defVal > 0.0) this.vista.getTextValoracio().setText(String.valueOf(defVal));
 
 		this.vista.getTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
 			public void removeUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
 			public void changedUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
 		});
+
+		FieldAutoComplete.attach(vista.getTextAutor(),    cLlibres.getDistinctAutorNames());
+		FieldAutoComplete.attach(vista.getTextEditorial(), cLlibres.getDistinctValues("editorial"));
+		FieldAutoComplete.attach(vista.getTextSerie(),     cLlibres.getDistinctValues("serie"));
+		FieldAutoComplete.attach(vista.getTextIdioma(),    cLlibres.getDistinctValues("idioma"));
 	}
 
 	private void cercaInternet() {
@@ -81,12 +92,30 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 				meta = OpenLibraryClient.lookupByAutor(autor);
 			}
 
+			if (Thread.interrupted()) return;
+
+			// Auto-fetch cover if we have an ISBN and no image already selected
+			String isbnForCover = !isbn.isEmpty() ? isbn : meta.get("isbn");
+			byte[] coverBlob = null;
+			if (isbnForCover != null && !isbnForCover.isBlank() && selectedBlob == null
+					&& !meta.containsKey("error")) {
+				coverBlob = OpenLibraryClient.fetchCoverByISBN(isbnForCover);
+			}
+			final byte[] finalCover = coverBlob;
+
 			SwingUtilities.invokeLater(() -> {
+				if (!vista.isDisplayable()) return;
 				btn.setEnabled(true);
 				btn.setText("⬇  Cerca a Internet (ISBN / Títol / Autor)");
 				btn.setBackground(UITheme.GREEN);
 				vista.getProgressBar().setVisible(false);
 
+				if (meta.containsKey("error")) {
+					JOptionPane.showMessageDialog(vista,
+						"Error de connexió amb OpenLibrary:\n" + meta.get("error"),
+						"Error de xarxa", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
 				if (meta.isEmpty()) {
 					JOptionPane.showMessageDialog(vista,
 						"No s'han trobat resultats a OpenLibrary.",
@@ -104,9 +133,15 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 					vista.getTextISBN().setText(meta.get("isbn"));
 				if (meta.containsKey("descripcio") && vista.getTextDescripcio().getText().isEmpty())
 					vista.getTextDescripcio().setText(meta.get("descripcio"));
+
+				if (finalCover != null && selectedBlob == null) {
+					selectedBlob = finalCover;
+					vista.getLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
+				}
 			});
 		});
 		t.setDaemon(true);
+		searchThread = t;
 		t.start();
 	}
 
@@ -144,6 +179,18 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 				vista.getTextDescripcio().getText().trim(),
 				valoracio, preu, vista.getChckLlegit().isSelected(),
 				vista.getTextPortada().getText().trim());
+			java.util.List<String> autors = java.util.Arrays.stream(vista.getTextAutor().getText().split(","))
+				.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
+			l.setAutors(autors);
+			l.setEditorial(vista.getTextEditorial().getText().trim());
+			l.setSerie(vista.getTextSerie().getText().trim());
+			try { l.setVolum(Integer.parseInt(vista.getTextVolum().getText().trim())); } catch (NumberFormatException ignored) {}
+			l.setDataCompra(vista.getTextDataCompra().getText().trim());
+			l.setDataLectura(vista.getTextDataLectura().getText().trim());
+			l.setIdioma(vista.getTextIdioma().getText().trim());
+			String fmt = (String) vista.getComboFormat().getSelectedItem();
+			l.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
+			l.setDesitjat(vista.getChckDesitjat().isSelected());
 			l.setImatgeBlob(selectedBlob);
 			cLlibres.addLlibre(l);
 			vista.dispose();
@@ -157,7 +204,9 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 
 	@Override public void windowOpened(WindowEvent e) {}
 	@Override public void windowClosing(WindowEvent e) {}
-	@Override public void windowClosed(WindowEvent e) {}
+	@Override public void windowClosed(WindowEvent e) {
+		if (searchThread != null) { searchThread.interrupt(); searchThread = null; }
+	}
 	@Override public void windowIconified(WindowEvent e) {}
 	@Override public void windowDeiconified(WindowEvent e) {}
 	@Override public void windowActivated(WindowEvent e) {}

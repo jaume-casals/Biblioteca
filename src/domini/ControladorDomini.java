@@ -6,12 +6,15 @@ import java.util.Comparator;
 
 import herramienta.FiltreUtils;
 import persistencia.ControladorPersistencia;
+import java.util.Set;
+import java.util.HashSet;
 
 public class ControladorDomini {
 	private static ControladorDomini inst;
 	private ControladorPersistencia cp;
 	private ArrayList<Llibre> bib;
 	private ArrayList<Llista> llistes;
+	private ArrayList<Tag> tags;
 
 	private static final Comparator<Llibre> compararISBN =
 		(a, b) -> a.getISBN().compareTo(b.getISBN());
@@ -29,6 +32,7 @@ public class ControladorDomini {
 		bib = new ArrayList<Llibre>(cp.getAllLlibres());
 		Collections.sort(bib, compararISBN);
 		llistes = new ArrayList<>(cp.getAllLlistes());
+		tags = new ArrayList<>(cp.getAllTags());
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
 			Thread t = new Thread(this::autoBackup);
 			t.setDaemon(true);
@@ -40,8 +44,45 @@ public class ControladorDomini {
 			Integer iniciAny, Integer fiAny,
 			Double valoracioMin, Double valoracioMax,
 			Double preuMin, Double preuMax, Boolean llegit) {
+		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, null, null, null, null, null);
+	}
+
+	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
+		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, null, null, null, null);
+	}
+
+	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
+			String editorial, String serie, String format, String idioma) {
+		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, editorial, serie, format, idioma);
+	}
+
+	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
+		return aplicarFiltres(font, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, null, null, null, null);
+	}
+
+	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
+			String editorial, String serie, String format, String idioma) {
+		Set<Long> tagISBNs = null;
+		if (tagId != null) tagISBNs = cp.getLlibresWithTag(tagId);
+		final Set<Long> tagFilter = tagISBNs;
 		ArrayList<Llibre> resultat = new ArrayList<Llibre>();
-		for (Llibre l : bib) {
+		for (Llibre l : font) {
 			if ((nomAutor == null || FiltreUtils.matchString(nomAutor, l.getAutor()))
 					&& (nomLlibre == null || FiltreUtils.matchString(nomLlibre, l.getNom()))
 					&& (ISBN == null || FiltreUtils.matchISBN(ISBN, l.getISBN()))
@@ -51,7 +92,12 @@ public class ControladorDomini {
 					&& (valoracioMax == null || l.getValoracio() <= valoracioMax)
 					&& (preuMin == null || l.getPreu() >= preuMin)
 					&& (preuMax == null || l.getPreu() <= preuMax)
-					&& (llegit == null || l.getLlegit().equals(llegit))) {
+					&& (llegit == null || l.getLlegit().equals(llegit))
+					&& (tagFilter == null || tagFilter.contains(l.getISBN()))
+					&& (editorial == null || FiltreUtils.matchString(editorial, l.getEditorial()))
+					&& (serie == null || FiltreUtils.matchString(serie, l.getSerie()))
+					&& (format == null || format.equalsIgnoreCase(l.getFormat()))
+					&& (idioma == null || FiltreUtils.matchString(idioma, l.getIdioma()))) {
 				resultat.add(l);
 			}
 		}
@@ -109,6 +155,11 @@ public class ControladorDomini {
 		bib.remove(pos);
 	}
 
+	public boolean existsLlibre(long ISBN) {
+		return Collections.binarySearch(bib,
+			new Llibre(ISBN, "", "autor", 13, "", 1.0, 0.0, false, ""), compararISBN) >= 0;
+	}
+
 	public Llibre getLlibre(long ISBN) throws Exception {
 
 		int index = Collections.binarySearch(bib,
@@ -142,12 +193,17 @@ public class ControladorDomini {
 		try (java.io.PrintWriter pw = new java.io.PrintWriter(
 				new java.io.FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
 			pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
+			pw.println("DELETE FROM prestec;");
 			pw.println("DELETE FROM llibre_llista;");
 			pw.println("DELETE FROM llista;");
+			pw.println("DELETE FROM llibre_autor;");
+			pw.println("DELETE FROM llibre_tag;");
+			pw.println("DELETE FROM tag;");
+			pw.println("DELETE FROM autor;");
 			pw.println("DELETE FROM llibre;");
 			for (Llibre l : bib) {
 				pw.printf(
-					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s','%s');%n",
+					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`,`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`,`desitjat`,`pais_origen`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s','%s',%d,%d,'%s','%s',%d,%s,%s,%s,%s,%b,%s);%n",
 					l.getISBN(),
 					sqlEsc(l.getNom()),
 					sqlEsc(l.getAutor() != null ? l.getAutor() : ""),
@@ -157,15 +213,47 @@ public class ControladorDomini {
 					l.getPreu() != null ? l.getPreu() : 0.0,
 					Boolean.TRUE.equals(l.getLlegit()),
 					sqlEsc(l.getImatge() != null ? l.getImatge() : ""),
-					sqlEsc(l.getNotes()));
+					sqlEsc(l.getNotes()),
+					l.getPagines(),
+					l.getPaginesLlegides(),
+					sqlEsc(l.getEditorial()),
+					sqlEsc(l.getSerie()),
+					l.getVolum(),
+					l.getDataCompra() != null ? "'" + sqlEsc(l.getDataCompra()) + "'" : "NULL",
+					l.getDataLectura() != null ? "'" + sqlEsc(l.getDataLectura()) + "'" : "NULL",
+					l.getIdioma() != null ? "'" + sqlEsc(l.getIdioma()) + "'" : "NULL",
+					l.getFormat() != null ? "'" + sqlEsc(l.getFormat()) + "'" : "NULL",
+					l.getDesitjat(),
+					l.getPaisOrigen() != null ? "'" + sqlEsc(l.getPaisOrigen()) + "'" : "NULL");
+			}
+			for (Object[] row : cp.getAllAutors()) {
+				pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,'%s');%n",
+					(Integer) row[0], sqlEsc((String) row[1]));
+			}
+			for (Object[] row : cp.getAllLlibreAutor()) {
+				pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
+					(Long) row[0], (Integer) row[1]);
 			}
 			for (Llista ll : llistes) {
-				pw.printf("INSERT INTO llista (`id`,`nom`) VALUES (%d,'%s');%n",
-					ll.getId(), sqlEsc(ll.getNom()));
+				pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,'%s',%d,%s);%n",
+					ll.getId(), sqlEsc(ll.getNom()), ll.getOrdre(),
+					ll.getColor() != null ? "'" + sqlEsc(ll.getColor()) + "'" : "NULL");
 			}
 			for (Object[] row : cp.getAllLlibreLlista()) {
 				pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
 					(Long) row[0], (Integer) row[1], (Double) row[2], (Boolean) row[3]);
+			}
+			for (Tag t : tags) {
+				pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,'%s');%n",
+					t.getId(), sqlEsc(t.getNom()));
+			}
+			for (Object[] row : cp.getAllLlibreTag()) {
+				pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
+					(Long) row[0], (Integer) row[1]);
+			}
+			for (Object[] row : cp.getAllPrestecs()) {
+				pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,'%s','%s',%b);%n",
+					(Long) row[0], sqlEsc((String) row[1]), row[2], (Boolean) row[3]);
 			}
 		}
 	}
@@ -175,7 +263,17 @@ public class ControladorDomini {
 		bib = new ArrayList<>(cp.getAllLlibres());
 		Collections.sort(bib, compararISBN);
 		llistes = new ArrayList<>(cp.getAllLlistes());
+		tags = new ArrayList<>(cp.getAllTags());
 	}
+
+	public void clearAll() throws Exception {
+		cp.clearAllData();
+		bib.clear();
+		llistes.clear();
+		tags.clear();
+	}
+
+	public long getDbSizeBytes() { return cp.getDbSizeBytes(); }
 
 	private static String sqlEsc(String s) {
 		return s == null ? "" : s.replace("'", "''");
@@ -270,5 +368,45 @@ public class ControladorDomini {
 
 	public java.util.Set<Long> getLoanedISBNs() {
 		return cp.getLoanedISBNs();
+	}
+
+	public byte[] getLlibreBlob(long isbn) {
+		return cp.getLlibreBlob(isbn);
+	}
+
+	// ── Tag management ─────────────────────────────────────────────────────────
+
+	public ArrayList<Tag> getAllTags() { return tags; }
+
+	public Tag addTag(String nom) throws Exception {
+		int id = cp.createTag(nom);
+		Tag t = new Tag(id, nom);
+		tags.add(t);
+		return t;
+	}
+
+	public void deleteTag(Tag tag) throws Exception {
+		cp.deleteTag(tag.getId());
+		tags.remove(tag);
+	}
+
+	public ArrayList<Tag> getTagsForLlibre(long isbn) {
+		return cp.getTagsForLlibre(isbn);
+	}
+
+	public void addLlibreToTag(long isbn, int tagId) throws Exception {
+		cp.addLlibreToTag(isbn, tagId);
+	}
+
+	public void removeLlibreFromTag(long isbn, int tagId) throws Exception {
+		cp.removeLlibreFromTag(isbn, tagId);
+	}
+
+	public java.util.List<String> getDistinctValues(String column) {
+		return cp.getDistinctValues(column);
+	}
+
+	public java.util.List<String> getDistinctAutorNames() {
+		return cp.getDistinctAutorNames();
 	}
 }

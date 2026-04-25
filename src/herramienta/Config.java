@@ -44,6 +44,18 @@ public class Config {
     public static String getFontSize() { return props.getProperty("fontSize", "medium"); }
     public static void setFontSize(String size) { props.setProperty("fontSize", size); save(); }
 
+    public static String getCurrencySymbol() { return props.getProperty("currencySymbol", "€"); }
+    public static void setCurrencySymbol(String s) { props.setProperty("currencySymbol", s != null ? s : "€"); save(); }
+
+    public static double getDefaultValoracio() {
+        try { return Double.parseDouble(props.getProperty("defaultValoracio", "0.0")); }
+        catch (NumberFormatException e) { return 0.0; }
+    }
+    public static void setDefaultValoracio(double v) {
+        props.setProperty("defaultValoracio", String.valueOf(Math.max(0.0, Math.min(10.0, v))));
+        save();
+    }
+
     // ── Filter presets ────────────────────────────────────────────────────────
     private static final String[] PRESET_KEYS =
         {"nom","autor","isbn","anyMin","anyMax","valoracioMin","valoracioMax","preuMin","preuMax","llegit"};
@@ -130,6 +142,14 @@ public class Config {
 
     public static int getReadingGoal() { return parseInt(props.getProperty("readingGoal", "0")); }
     public static void setReadingGoal(int goal) { props.setProperty("readingGoal", String.valueOf(goal)); save(); }
+
+    /** "taula" or "galeria" */
+    public static String getViewMode() { return props.getProperty("viewMode", "taula"); }
+    public static void setViewMode(String mode) { props.setProperty("viewMode", mode); save(); }
+
+    /** Gallery zoom level 0–4 (default 2 = 140px wide cards) */
+    public static int getGalleryZoom() { return parseInt(props.getProperty("galleryZoom", "2")); }
+    public static void setGalleryZoom(int zoom) { props.setProperty("galleryZoom", String.valueOf(zoom)); save(); }
 
     private static int parseInt(String s) {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
