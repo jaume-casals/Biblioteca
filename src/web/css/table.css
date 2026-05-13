@@ -1,0 +1,56 @@
+/* ── Book table ── */
+#table-view {
+    flex: 1;
+    overflow: auto;
+}
+#book-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+#book-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface2);
+    border-bottom: 2px solid var(--border);
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-2);
+}
+#book-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+#book-table tbody tr:nth-child(even) { background: var(--table-alt); }
+#book-table tbody tr:hover { background: var(--surface2); }
+#book-table td {
+    padding: 5px 10px;
+    vertical-align: middle;
+    overflow: hidden;
+    max-width: 220px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Cover thumbnail ── */
+.cover-cell { width: 40px; padding: 2px 6px !important; }
+.cover-thumb {
+    width: 32px;
+    height: 46px;
+    object-fit: cover;
+    border-radius: 2px;
+    display: block;
+}
+
+/* ── Loan badge ── */
+.loaned-badge {
+    background: #E67E22;
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}

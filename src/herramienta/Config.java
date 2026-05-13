@@ -10,6 +10,8 @@ import java.util.Properties;
 
 public class Config {
 
+    private Config() {}
+
     private static final File FILE = new File(
         System.getProperty("user.home") + "/.biblioteca/config.properties");
 
@@ -96,9 +98,34 @@ public class Config {
     }
     public static void setDefaultImgDir(String dir) { props.setProperty("defaultImgDir", dir); save(); }
 
+    /** "ca" (default), "es", or "en". */
+    public static String getLang() { return props.getProperty("lang", "ca"); }
+    public static void setLang(String lang) { props.setProperty("lang", lang); save(); }
+
     /** "h2" (embedded, default) or "mariadb" (external server). */
     public static String getDbType() { return props.getProperty("dbType", "h2"); }
     public static void setDbType(String type) { props.setProperty("dbType", type); save(); }
+
+    /** Active H2 profile name (filename without .mv.db). Default "biblioteca". */
+    public static String getDbProfile() { return props.getProperty("dbProfile", "biblioteca"); }
+    public static void setDbProfile(String name) { props.setProperty("dbProfile", name); save(); }
+
+    /** List all H2 profile files in ~/.biblioteca/. */
+    public static java.util.List<String> listDbProfiles() {
+        java.io.File dir = new java.io.File(System.getProperty("user.home") + "/.biblioteca");
+        java.util.List<String> names = new java.util.ArrayList<>();
+        names.add("biblioteca"); // always include default
+        if (dir.isDirectory()) {
+            for (java.io.File f : dir.listFiles()) {
+                String n = f.getName();
+                if (n.endsWith(".mv.db")) {
+                    String base = n.substring(0, n.length() - 6);
+                    if (!base.equals("biblioteca") && !names.contains(base)) names.add(base);
+                }
+            }
+        }
+        return names;
+    }
 
     public static int getWindowX()      { return parseInt(props.getProperty("windowX",      "100"));  }
     public static int getWindowY()      { return parseInt(props.getProperty("windowY",      "100"));  }
@@ -143,13 +170,25 @@ public class Config {
     public static int getReadingGoal() { return parseInt(props.getProperty("readingGoal", "0")); }
     public static void setReadingGoal(int goal) { props.setProperty("readingGoal", String.valueOf(goal)); save(); }
 
-    /** "taula" or "galeria" */
-    public static String getViewMode() { return props.getProperty("viewMode", "taula"); }
+    public static String getViewMode() {
+        String v = props.getProperty("viewMode", "table");
+        if ("taula".equals(v)) return "table";
+        if ("galeria".equals(v)) return "gallery";
+        return v;
+    }
     public static void setViewMode(String mode) { props.setProperty("viewMode", mode); save(); }
 
     /** Gallery zoom level 0–4 (default 2 = 140px wide cards) */
     public static int getGalleryZoom() { return parseInt(props.getProperty("galleryZoom", "2")); }
     public static void setGalleryZoom(int zoom) { props.setProperty("galleryZoom", String.valueOf(zoom)); save(); }
+
+    /** Last sorted column index (-1 = none) */
+    public static int getSortColumn() { return parseInt(props.getProperty("sortColumn", "-1")); }
+    public static void setSortColumn(int col) { props.setProperty("sortColumn", String.valueOf(col)); save(); }
+
+    /** Last sort direction: "ASCENDING" or "DESCENDING" */
+    public static String getSortOrder() { return props.getProperty("sortOrder", "ASCENDING"); }
+    public static void setSortOrder(String order) { props.setProperty("sortOrder", order); save(); }
 
     private static int parseInt(String s) {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }

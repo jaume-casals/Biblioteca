@@ -22,6 +22,8 @@ import javax.swing.plaf.basic.BasicButtonUI;
 
 public class UITheme {
 
+    private UITheme() {}
+
     public static boolean isDark = false;
 
     // ── Palette (updated by setDark) ─────────────────────────────────────────

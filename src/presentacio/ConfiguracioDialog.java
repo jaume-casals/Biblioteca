@@ -1,9 +1,6 @@
 package presentacio;
 
 import java.awt.Frame;
-import java.io.File;
-
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -15,16 +12,19 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import herramienta.Config;
+import herramienta.I18n;
 import herramienta.UITheme;
+
+import static herramienta.I18n.t;
 
 public class ConfiguracioDialog extends JDialog {
 
 	public ConfiguracioDialog(Frame parent) { this(parent, null, null); }
 
 	public ConfiguracioDialog(Frame parent, Runnable onReapply, Runnable onRefreshData) {
-		super(parent, "Configuració", true);
+		super(parent, t("modal_settings"), true);
 		setResizable(false);
-		setBounds(0, 0, 490, 692);
+		setBounds(0, 0, 490, 776);
 		setLocationRelativeTo(parent);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(UITheme.BG_PANEL);
@@ -32,27 +32,27 @@ public class ConfiguracioDialog extends JDialog {
 		int lx = 20, fx = 185, fw = 280, fh = 32, lh = 22;
 
 		// ── Base de dades ────────────────────────────────────────────────────
-		JLabel lblSeccioDb = new JLabel("Base de dades");
+		JLabel lblSeccioDb = new JLabel(t("lbl_database"));
 		lblSeccioDb.setFont(UITheme.FONT_BOLD);
 		lblSeccioDb.setForeground(UITheme.ACCENT);
 		lblSeccioDb.setBounds(lx, 16, 300, lh);
 		getContentPane().add(lblSeccioDb);
 
-		JLabel lblTipus = new JLabel("Tipus");
+		JLabel lblTipus = new JLabel(t("lbl_type"));
 		UITheme.styleLabel(lblTipus);
 		lblTipus.setBounds(lx, 48, 155, lh);
 		getContentPane().add(lblTipus);
 
 		JComboBox<String> cmbType = new JComboBox<>(new String[]{
-			"Integrada — H2 (sense servidor)",
-			"Externa — MariaDB / MySQL"
+			t("opt_h2_full"),
+			t("opt_mariadb_full")
 		});
 		cmbType.setSelectedIndex("h2".equals(Config.getDbType()) ? 0 : 1);
 		cmbType.setFont(UITheme.FONT_BASE);
 		cmbType.setBounds(fx, 48, fw, fh);
 		getContentPane().add(cmbType);
 
-		JLabel lblHost = new JLabel("Servidor (host)");
+		JLabel lblHost = new JLabel(t("lbl_server"));
 		UITheme.styleLabel(lblHost);
 		lblHost.setBounds(lx, 92, 155, lh);
 		getContentPane().add(lblHost);
@@ -62,7 +62,7 @@ public class ConfiguracioDialog extends JDialog {
 		txtHost.setBounds(fx, 92, fw, fh);
 		getContentPane().add(txtHost);
 
-		JLabel lblUser = new JLabel("Usuari");
+		JLabel lblUser = new JLabel(t("lbl_user"));
 		UITheme.styleLabel(lblUser);
 		lblUser.setBounds(lx, 136, 155, lh);
 		getContentPane().add(lblUser);
@@ -72,7 +72,7 @@ public class ConfiguracioDialog extends JDialog {
 		txtUser.setBounds(fx, 136, fw, fh);
 		getContentPane().add(txtUser);
 
-		JLabel lblPass = new JLabel("Contrasenya");
+		JLabel lblPass = new JLabel(t("lbl_password"));
 		UITheme.styleLabel(lblPass);
 		lblPass.setBounds(lx, 180, 155, lh);
 		getContentPane().add(lblPass);
@@ -82,13 +82,12 @@ public class ConfiguracioDialog extends JDialog {
 		txtPass.setBounds(fx, 180, fw, fh);
 		getContentPane().add(txtPass);
 
-		JLabel lblDbNote = new JLabel("Els canvis de BD requereixen reiniciar l'aplicació.");
+		JLabel lblDbNote = new JLabel(t("lbl_db_restart"));
 		lblDbNote.setFont(UITheme.FONT_SMALL);
 		lblDbNote.setForeground(UITheme.TEXT_MID);
 		lblDbNote.setBounds(lx, 222, 440, lh);
 		getContentPane().add(lblDbNote);
 
-		// Enable/disable external fields based on selected type
 		Runnable updateFields = () -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			txtHost.setEnabled(external);
@@ -99,13 +98,13 @@ public class ConfiguracioDialog extends JDialog {
 		cmbType.addActionListener(e -> updateFields.run());
 
 		// ── Imatges ──────────────────────────────────────────────────────────
-		JLabel lblSeccioImg = new JLabel("Imatges");
+		JLabel lblSeccioImg = new JLabel(t("lbl_images"));
 		lblSeccioImg.setFont(UITheme.FONT_BOLD);
 		lblSeccioImg.setForeground(UITheme.ACCENT);
 		lblSeccioImg.setBounds(lx, 258, 300, lh);
 		getContentPane().add(lblSeccioImg);
 
-		JLabel lblImgDir = new JLabel("Carpeta per defecte");
+		JLabel lblImgDir = new JLabel(t("lbl_default_folder"));
 		UITheme.styleLabel(lblImgDir);
 		lblImgDir.setBounds(lx, 290, 155, lh);
 		getContentPane().add(lblImgDir);
@@ -127,19 +126,19 @@ public class ConfiguracioDialog extends JDialog {
 		getContentPane().add(btnExplorar);
 
 		// ── Aparença ─────────────────────────────────────────────────────────
-		JLabel lblSeccioFont = new JLabel("Aparença");
+		JLabel lblSeccioFont = new JLabel(t("lbl_appearance"));
 		lblSeccioFont.setFont(UITheme.FONT_BOLD);
 		lblSeccioFont.setForeground(UITheme.ACCENT);
 		lblSeccioFont.setBounds(lx, 334, 300, lh);
 		getContentPane().add(lblSeccioFont);
 
-		JLabel lblFont = new JLabel("Mida de lletra");
+		JLabel lblFont = new JLabel(t("lbl_font_size"));
 		UITheme.styleLabel(lblFont);
 		lblFont.setBounds(lx, 366, 155, lh);
 		getContentPane().add(lblFont);
 
-		String[] fontSizeLabels = {"Petita", "Mitjana", "Gran"};
-		String[] fontSizeKeys   = {"small",  "medium",  "large"};
+		String[] fontSizeLabels = {t("opt_small"), t("opt_medium"), t("opt_large")};
+		String[] fontSizeKeys   = {"small", "medium", "large"};
 		JComboBox<String> cmbFont = new JComboBox<>(fontSizeLabels);
 		String curSize = Config.getFontSize();
 		for (int i = 0; i < fontSizeKeys.length; i++)
@@ -148,7 +147,7 @@ public class ConfiguracioDialog extends JDialog {
 		cmbFont.setBounds(fx, 366, 140, fh);
 		getContentPane().add(cmbFont);
 
-		JLabel lblCurrency = new JLabel("Símbol de moneda");
+		JLabel lblCurrency = new JLabel(t("lbl_currency_symbol"));
 		UITheme.styleLabel(lblCurrency);
 		lblCurrency.setBounds(lx, 408, 160, lh);
 		getContentPane().add(lblCurrency);
@@ -162,7 +161,7 @@ public class ConfiguracioDialog extends JDialog {
 		cmbCurrency.setBounds(fx, 406, 80, fh);
 		getContentPane().add(cmbCurrency);
 
-		JLabel lblDefVal = new JLabel("Valoració per defecte");
+		JLabel lblDefVal = new JLabel(t("lbl_default_rating"));
 		UITheme.styleLabel(lblDefVal);
 		lblDefVal.setBounds(lx, 448, 160, lh);
 		getContentPane().add(lblDefVal);
@@ -177,16 +176,32 @@ public class ConfiguracioDialog extends JDialog {
 		lblDefValHint.setBounds(fx + 86, 448, 100, lh);
 		getContentPane().add(lblDefValHint);
 
+		// ── Language ─────────────────────────────────────────────────────────
+		JLabel lblLang = new JLabel(t("lbl_language_setting"));
+		UITheme.styleLabel(lblLang);
+		lblLang.setBounds(lx, 490, 160, lh);
+		getContentPane().add(lblLang);
+
+		String[] langLabels = {t("opt_lang_ca"), t("opt_lang_es"), t("opt_lang_en")};
+		String[] langKeys   = {"ca", "es", "en"};
+		JComboBox<String> cmbLang = new JComboBox<>(langLabels);
+		String curLang = Config.getLang();
+		for (int i = 0; i < langKeys.length; i++)
+			if (langKeys[i].equals(curLang)) { cmbLang.setSelectedIndex(i); break; }
+		cmbLang.setFont(UITheme.FONT_BASE);
+		cmbLang.setBounds(fx, 488, 160, fh);
+		getContentPane().add(cmbLang);
+
 		// ── Dades ────────────────────────────────────────────────────────────
-		JLabel lblSeccioDades = new JLabel("Dades");
+		JLabel lblSeccioDades = new JLabel(t("lbl_data"));
 		lblSeccioDades.setFont(UITheme.FONT_BOLD);
 		lblSeccioDades.setForeground(UITheme.ACCENT);
-		lblSeccioDades.setBounds(lx, 500, 300, lh);
+		lblSeccioDades.setBounds(lx, 544, 300, lh);
 		getContentPane().add(lblSeccioDades);
 
-		JLabel lblDbSize = new JLabel("Mida de la BD");
+		JLabel lblDbSize = new JLabel(t("lbl_db_size"));
 		UITheme.styleLabel(lblDbSize);
-		lblDbSize.setBounds(lx, 532, 155, lh);
+		lblDbSize.setBounds(lx, 576, 155, lh);
 		getContentPane().add(lblDbSize);
 
 		long dbBytes = domini.ControladorDomini.getInstance().getDbSizeBytes();
@@ -196,10 +211,10 @@ public class ConfiguracioDialog extends JDialog {
 		JLabel lblDbSizeVal = new JLabel(dbSizeStr);
 		lblDbSizeVal.setFont(UITheme.FONT_BASE);
 		lblDbSizeVal.setForeground(UITheme.TEXT_DARK);
-		lblDbSizeVal.setBounds(fx, 532, 180, lh);
+		lblDbSizeVal.setBounds(fx, 576, 180, lh);
 		getContentPane().add(lblDbSizeVal);
 
-		JButton btnBuidar = new JButton("Buidar tota la biblioteca");
+		JButton btnBuidar = new JButton(t("btn_clear_library"));
 		btnBuidar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
 		btnBuidar.setBackground(UITheme.DANGER);
 		btnBuidar.setForeground(java.awt.Color.WHITE);
@@ -208,21 +223,21 @@ public class ConfiguracioDialog extends JDialog {
 		btnBuidar.setBorderPainted(false);
 		btnBuidar.setOpaque(true);
 		btnBuidar.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-		btnBuidar.setBounds(lx, 566, fw + fx - lx, 36);
+		btnBuidar.setBounds(lx, 610, fw + fx - lx, 36);
 		btnBuidar.addActionListener(e -> {
 			int r1 = JOptionPane.showConfirmDialog(this,
-				"Aquesta acció eliminarà TOTS els llibres, llistes i préstecs.\nNo es pot desfer.",
-				"Confirmar buidat", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+				t("dlg_confirm_clear_1"),
+				t("dlg_confirm_clear_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (r1 != JOptionPane.YES_OPTION) return;
 			int r2 = JOptionPane.showConfirmDialog(this,
-				"Segur? Es perdran totes les dades permanentment.",
-				"Confirmació final", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+				t("dlg_confirm_clear_2"),
+				t("dlg_confirm_clear_2_title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
 			if (r2 != JOptionPane.YES_OPTION) return;
 			try {
 				domini.ControladorDomini.getInstance().clearAll();
 				if (onRefreshData != null) onRefreshData.run();
-				JOptionPane.showMessageDialog(this, "Biblioteca buidada correctament.",
-					"Completat", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(this, t("dlg_clear_done"),
+					t("dlg_clear_done_title"), JOptionPane.INFORMATION_MESSAGE);
 				dispose();
 			} catch (Exception ex) {
 				new herramienta.DialogoError(ex).showErrorMessage();
@@ -230,10 +245,39 @@ public class ConfiguracioDialog extends JDialog {
 		});
 		getContentPane().add(btnBuidar);
 
+		// ── DB Profiles ──────────────────────────────────────────────────────
+		JButton btnPerfils = new JButton(t("btn_gestio_perfils"));
+		UITheme.styleSecondaryButton(btnPerfils);
+		btnPerfils.setBounds(lx, 655, fw + fx - lx, 32);
+		btnPerfils.setToolTipText(t("tip_gestio_perfils"));
+		btnPerfils.addActionListener(e -> {
+			if (!"h2".equals(Config.getDbType())) {
+				JOptionPane.showMessageDialog(this,
+					t("dlg_perfils_h2_only"),
+					t("dlg_perfils_bd_title"), JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			java.util.List<String> profiles = Config.listDbProfiles();
+			String[] opts = profiles.toArray(new String[0]);
+			String current = Config.getDbProfile();
+			String chosen = (String) JOptionPane.showInputDialog(this,
+				t("dlg_perfil_actiu", current),
+				t("dlg_canviar_perfil_title"), JOptionPane.PLAIN_MESSAGE, null, opts, current);
+			if (chosen == null) return;
+			chosen = chosen.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
+			if (chosen.isEmpty() || chosen.equals(current)) return;
+			Config.setDbProfile(chosen);
+			String finalChosen = chosen;
+			JOptionPane.showMessageDialog(this,
+				t("dlg_perfil_canviat", finalChosen),
+				t("dlg_perfil_bd_info_title"), JOptionPane.INFORMATION_MESSAGE);
+		});
+		getContentPane().add(btnPerfils);
+
 		// ── Buttons ──────────────────────────────────────────────────────────
-		JButton btnGuardar = new JButton("Guardar");
+		JButton btnGuardar = new JButton(t("btn_save"));
 		UITheme.styleAccentButton(btnGuardar);
-		btnGuardar.setBounds(lx, 617, 215, 42);
+		btnGuardar.setBounds(lx, 701, 215, 42);
 		btnGuardar.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			if (external) {
@@ -241,8 +285,8 @@ public class ConfiguracioDialog extends JDialog {
 				String user = txtUser.getText().trim();
 				if (host.isEmpty() || user.isEmpty()) {
 					JOptionPane.showMessageDialog(this,
-						"El servidor i l'usuari no poden estar buits.",
-						"Error", JOptionPane.ERROR_MESSAGE);
+						t("dlg_db_validation"),
+						t("dlg_error_title"), JOptionPane.ERROR_MESSAGE);
 					return;
 				}
 				Config.setDbHost(host);
@@ -254,19 +298,20 @@ public class ConfiguracioDialog extends JDialog {
 			if (!imgDir.isEmpty()) Config.setDefaultImgDir(imgDir);
 			Config.setFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
 			Config.setCurrencySymbol((String) cmbCurrency.getSelectedItem());
+			Config.setLang(langKeys[Math.max(0, cmbLang.getSelectedIndex())]);
 			try { Config.setDefaultValoracio(Double.parseDouble(txtDefVal.getText().trim())); }
 			catch (NumberFormatException ignored) {}
 			if (onReapply != null) onReapply.run();
 			JOptionPane.showMessageDialog(this,
-				"Configuració guardada.\nReinicia l'app per aplicar canvis de BD.",
-				"Guardat", JOptionPane.INFORMATION_MESSAGE);
+				t("dlg_config_saved"),
+				t("dlg_config_saved_title"), JOptionPane.INFORMATION_MESSAGE);
 			dispose();
 		});
 		getContentPane().add(btnGuardar);
 
-		JButton btnCancel = new JButton("Cancel·lar");
+		JButton btnCancel = new JButton(t("btn_cancel"));
 		UITheme.styleSecondaryButton(btnCancel);
-		btnCancel.setBounds(255, 617, 215, 42);
+		btnCancel.setBounds(255, 701, 215, 42);
 		btnCancel.addActionListener(e -> dispose());
 		getContentPane().add(btnCancel);
 

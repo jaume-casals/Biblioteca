@@ -2,6 +2,8 @@ package herramienta;
 
 public class FiltreUtils {
 
+    private FiltreUtils() {}
+
     public static boolean matchISBN(Long prefix, Long isbn) {
         if (prefix == null || isbn == null) return false;
         return isbn.toString().startsWith(prefix.toString());

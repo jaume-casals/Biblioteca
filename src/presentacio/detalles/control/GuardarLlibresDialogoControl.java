@@ -16,6 +16,7 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
+import herramienta.I18n;
 import herramienta.OpenLibraryClient;
 import herramienta.UITheme;
 import interficie.EnActualizarBBDD;
@@ -72,14 +73,14 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 
 		if (isbn.isEmpty() && titol.isEmpty() && autor.isEmpty()) {
 			JOptionPane.showMessageDialog(vista,
-				"Introdueix un ISBN, un títol o un autor per cercar.",
-				"Cerca a Internet", JOptionPane.INFORMATION_MESSAGE);
+				I18n.t("dlg_search_hint_msg"),
+				I18n.t("dlg_search_internet_title"), JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
 
 		JButton btn = vista.getBtnCercaInternet();
 		btn.setEnabled(false);
-		btn.setText("Cercant...");
+		btn.setText(I18n.t("btn_searching"));
 		vista.getProgressBar().setVisible(true);
 
 		Thread t = new Thread(() -> {
@@ -106,20 +107,20 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			SwingUtilities.invokeLater(() -> {
 				if (!vista.isDisplayable()) return;
 				btn.setEnabled(true);
-				btn.setText("⬇  Cerca a Internet (ISBN / Títol / Autor)");
+				btn.setText(I18n.t("btn_cerca_internet"));
 				btn.setBackground(UITheme.GREEN);
 				vista.getProgressBar().setVisible(false);
 
 				if (meta.containsKey("error")) {
 					JOptionPane.showMessageDialog(vista,
-						"Error de connexió amb OpenLibrary:\n" + meta.get("error"),
-						"Error de xarxa", JOptionPane.ERROR_MESSAGE);
+						I18n.t("dlg_network_error") + "\n" + meta.get("error"),
+						I18n.t("dlg_network_error_title"), JOptionPane.ERROR_MESSAGE);
 					return;
 				}
 				if (meta.isEmpty()) {
 					JOptionPane.showMessageDialog(vista,
-						"No s'han trobat resultats a OpenLibrary.",
-						"Cerca a Internet", JOptionPane.INFORMATION_MESSAGE);
+						I18n.t("dlg_no_results_msg"),
+						I18n.t("dlg_search_internet_title"), JOptionPane.INFORMATION_MESSAGE);
 					return;
 				}
 
@@ -205,7 +206,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	@Override public void windowOpened(WindowEvent e) {}
 	@Override public void windowClosing(WindowEvent e) {}
 	@Override public void windowClosed(WindowEvent e) {
-		if (searchThread != null) { searchThread.interrupt(); searchThread = null; }
+		Thread t = searchThread; if (t != null) { t.interrupt(); searchThread = null; }
 	}
 	@Override public void windowIconified(WindowEvent e) {}
 	@Override public void windowDeiconified(WindowEvent e) {}

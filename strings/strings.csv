@@ -1,0 +1,514 @@
+key,ca,es,en
+# ── Navigation / Navbar ──────────────────────────────────────────────────────
+btn_settings,Configuració,Configuración,Settings
+btn_tags,🏷 Etiquetes,🏷 Etiquetas,🏷 Tags
+btn_theme,☾ Tema,☾ Tema,☾ Theme
+# ── Sidebar ──────────────────────────────────────────────────────────────────
+shelves_title,Prestatges,Estantes,Shelves
+btn_add_shelf,+ Nou prestatge,+ Nuevo estante,+ New shelf
+all_books,📚 Tots els llibres,📚 Todos los libros,📚 All Books
+# ── Toolbar ──────────────────────────────────────────────────────────────────
+search_placeholder,Cerca per títol…,Buscar por título…,Search title…
+btn_new_book,+ Nou llibre,+ Nuevo libro,+ New book
+btn_gallery,▦ Galeria,▦ Galería,▦ Gallery
+btn_table,☰ Taula,☰ Tabla,☰ Table
+btn_filters_open,▼ Filtres,▼ Filtros,▼ Filters
+btn_filters_close,▲ Filtres,▲ Filtros,▲ Filters
+# ── Filter form ──────────────────────────────────────────────────────────────
+filter_author,Autor,Autor,Author
+filter_year_from,Any des de,Año desde,Year from
+filter_year_to,Any fins a,Año hasta,Year to
+filter_rating_min,Valoració mín,Valoración mín,Rating min
+filter_rating_max,Valoració màx,Valoración máx,Rating max
+filter_price_min,Preu mín,Precio mín,Price min
+filter_price_max,Preu màx,Precio máx,Price max
+filter_read_status,Estat lectura,Estado lectura,Read status
+filter_any,Qualsevol,Cualquiera,Any
+filter_read,Llegit,Leído,Read
+filter_unread,No llegit,No leído,Unread
+filter_tag,Etiqueta,Etiqueta,Tag
+filter_all_tags,Totes les etiquetes,Todas las etiquetas,All tags
+filter_publisher,Editorial,Editorial,Publisher
+filter_series,Sèrie,Serie,Series
+filter_format,Format,Formato,Format
+filter_language,Idioma,Idioma,Language
+btn_apply,Aplicar,Aplicar,Apply
+btn_clear,Netejar,Limpiar,Clear
+# ── Table columns ─────────────────────────────────────────────────────────────
+col_cover,Portada,Portada,Cover
+col_title,Títol,Título,Title
+col_author,Autor,Autor,Author
+col_year,Any,Año,Year
+col_rating,Valoració,Valoración,Rating
+col_price,Preu,Precio,Price
+col_read,Llegit,Leído,Read
+col_isbn,ISBN,ISBN,ISBN
+col_loan,Préstec,Préstamo,Loan
+col_progress,Progrés,Progreso,Progress
+col_details,Detalls,Detalles,Details
+# ── Book detail fields ────────────────────────────────────────────────────────
+field_author,Autor,Autor,Author
+field_year,Any,Año,Year
+field_isbn,ISBN,ISBN,ISBN
+field_rating,Valoració,Valoración,Rating
+field_price,Preu,Precio,Price
+field_read,Llegit,Leído,Read
+field_pages,Pàgines,Páginas,Pages
+field_pages_read,Pàgines llegides,Páginas leídas,Pages read
+field_publisher,Editorial,Editorial,Publisher
+field_series,Sèrie,Serie,Series
+field_volume,Volum,Volumen,Volume
+field_language,Idioma,Idioma,Language
+field_format,Format,Formato,Format
+field_country,País d'origen,País de origen,Country
+field_purchased,Data compra,Fecha compra,Purchased
+field_read_on,Data lectura,Fecha lectura,Read on
+field_wishlist,Desitjat,Deseado,Wishlist
+field_notes,Notes,Notas,Notes
+field_shelves,Prestatges,Estantes,Shelves
+field_tags,Etiquetes,Etiquetas,Tags
+field_description,Descripció,Descripción,Description
+field_title,Títol,Título,Title
+field_title_req,Títol *,Título *,Title *
+# ── Modal titles ──────────────────────────────────────────────────────────────
+modal_new_book,Nou llibre,Nuevo libro,New Book
+modal_edit_book,Editar llibre,Editar libro,Edit Book
+modal_manage_tags,Gestionar etiquetes,Gestionar etiquetas,Manage Tags
+modal_settings,Configuració,Configuración,Settings
+modal_manage_shelves,Gestionar prestatges,Gestionar estantes,Manage Shelves
+# ── Buttons ───────────────────────────────────────────────────────────────────
+btn_save,Desar,Guardar,Save
+btn_cancel,Cancel·lar,Cancelar,Cancel
+btn_edit,Editar,Editar,Edit
+btn_delete,Eliminar,Eliminar,Delete
+btn_loan,Prestar,Prestar,Loan
+btn_return,Retornar,Devolver,Return
+btn_manage_shelves,Gestionar prestatges,Gestionar estantes,Manage shelves
+btn_lookup_isbn,🔍 Buscar ISBN,🔍 Buscar ISBN,🔍 Lookup ISBN
+btn_add,Afegir,Añadir,Add
+btn_export_backup,Exportar còpia,Exportar copia,Export backup
+btn_import_backup,Importar còpia,Importar copia,Import backup
+btn_clear_all,Esborrar tot,Borrar todo,Clear all data
+btn_move_up,Pujar,Subir,Move up
+btn_move_down,Baixar,Bajar,Move down
+btn_remove,Treure,Quitar,Remove
+btn_add_to_shelf,Afegir al prestatge,Añadir al estante,Add to shelf
+btn_update,Actualitzar,Actualizar,Update
+btn_change_cover,Canviar portada,Cambiar portada,Change cover
+btn_close,Tancar,Cerrar,Close
+# ── Yes / No ─────────────────────────────────────────────────────────────────
+yes,Sí,Sí,Yes
+no,No,No,No
+# ── Loan badge ───────────────────────────────────────────────────────────────
+loaned_badge,Prestat,Prestado,Loaned
+# ── Toast messages ───────────────────────────────────────────────────────────
+toast_book_added,Llibre afegit,Libro añadido,Book added
+toast_book_updated,Llibre actualitzat,Libro actualizado,Book updated
+toast_book_deleted,Llibre eliminat,Libro eliminado,Book deleted
+toast_book_loaned,Llibre prestat a,Libro prestado a,Book loaned to
+toast_book_returned,Llibre retornat,Libro devuelto,Book returned
+toast_settings_saved,Configuració desada,Configuración guardada,Settings saved
+toast_backup_created,Còpia de seguretat creada,Copia de seguridad creada,Backup created
+toast_restored,Restaurat,Restaurado,Restored
+toast_data_cleared,Totes les dades eliminades,Todos los datos eliminados,All data cleared
+toast_isbn_required,ISBN obligatori,ISBN obligatorio,ISBN required
+toast_isbn_first,Introdueix l'ISBN primer,Introduce el ISBN primero,Enter ISBN first
+toast_ol_loaded,Dades carregades d'OpenLibrary,Datos cargados de OpenLibrary,Data loaded from OpenLibrary
+toast_added_to_shelf,Afegit al prestatge,Añadido al estante,Added to shelf
+toast_all_shelves,El llibre ja és a tots els prestatges,El libro ya está en todos los estantes,Book is on all shelves
+toast_shelf_updated,Prestatge actualitzat,Estante actualizado,Shelf updated
+toast_shelf_removed,Tret del prestatge,Quitado del estante,Removed from shelf
+# ── Confirm dialogs ───────────────────────────────────────────────────────────
+confirm_delete_book,Eliminar aquest llibre?,¿Eliminar este libro?,Delete this book?
+confirm_delete_shelf,Eliminar el prestatge,Eliminar el estante,Delete shelf
+confirm_delete_tag,Eliminar l'etiqueta,Eliminar la etiqueta,Delete tag
+confirm_restore,Restaurar des d'aquest fitxer? Totes les dades actuals seran substituïdes.,¿Restaurar desde este archivo? Todos los datos actuales serán reemplazados.,Restore from this file? All current data will be replaced.
+"confirm_clear_all","Eliminar TOTS els llibres, prestatges i etiquetes? Aquesta acció no es pot desfer.","¿Eliminar TODOS los libros, estantes y etiquetas? Esta acción no se puede deshacer.","Delete ALL books, shelves, and tags? This cannot be undone."
+# ── Prompts ───────────────────────────────────────────────────────────────────
+prompt_borrower,Nom del prestatari:,Nombre del prestatario:,Borrower name:
+prompt_new_shelf,Nom del nou prestatge:,Nombre del nuevo estante:,New shelf name:
+# ── Pagination ────────────────────────────────────────────────────────────────
+db_size,BD:,BD:,DB:
+"page_info","Pàgina {0} de {1} ({2} llibres)","Página {0} de {1} ({2} libros)","Page {0} of {1} ({2} books)"
+# ── Settings (web) ───────────────────────────────────────────────────────────
+s_currency,Moneda,Moneda,Currency
+s_reading_goal,Objectiu (llibres/any),Objetivo (libros/año),Reading goal (books/year)
+s_db_type,Tipus BD,Tipo BD,DB type
+s_db_host,Host BD,Host BD,DB host
+s_db_user,Usuari BD,Usuario BD,DB user
+s_db_password,Contrasenya BD,Contraseña BD,DB password
+s_backup_restore,Còpia de seguretat / Restaurar,Copia de seguridad / Restaurar,Backup / Restore
+s_db_h2,H2 (embedded),H2 (embedded),H2 (embedded)
+s_db_mariadb,MariaDB/MySQL,MariaDB/MySQL,MariaDB/MySQL
+# ── Shelf manager (web) ──────────────────────────────────────────────────────
+shelf_valoracio,Valoració,Valoración,Rating
+shelf_llegit,Llegit,Leído,Read
+shelf_not_on_any,(cap prestatge),(ningún estante),(no shelves)
+tag_new_placeholder,Nom de la nova etiqueta,Nombre de la nueva etiqueta,New tag name
+shelf_color,Color del prestatge,Color del estante,Shelf color
+unchanged_pw,(sense canvis),(sin cambios),(unchanged)
+saved_to,Desat a:,Guardado en:,Saved to:
+# ── Java: App exit ────────────────────────────────────────────────────────────
+confirm_exit_msg,Sortir de l'aplicació?,¿Salir de la aplicación?,Exit application?
+confirm_exit_title,Confirmar sortida,Confirmar salida,Confirm exit
+# ── Java: Config dialog ───────────────────────────────────────────────────────
+lbl_database,Base de dades,Base de datos,Database
+lbl_type,Tipus,Tipo,Type
+opt_h2_full,Integrada — H2 (sense servidor),Integrada — H2 (sin servidor),Embedded — H2 (no server)
+opt_mariadb_full,Externa — MariaDB / MySQL,Externa — MariaDB / MySQL,External — MariaDB / MySQL
+lbl_server,Servidor (host),Servidor (host),Server (host)
+lbl_user,Usuari,Usuario,User
+lbl_password,Contrasenya,Contraseña,Password
+lbl_db_restart,Els canvis de BD requereixen reiniciar l'aplicació.,Los cambios de BD requieren reiniciar la aplicación.,DB changes require restarting the application.
+lbl_images,Imatges,Imágenes,Images
+lbl_default_folder,Carpeta per defecte,Carpeta por defecto,Default folder
+lbl_appearance,Aparença,Apariencia,Appearance
+lbl_font_size,Mida de lletra,Tamaño de letra,Font size
+opt_small,Petita,Pequeña,Small
+opt_medium,Mitjana,Media,Medium
+opt_large,Gran,Grande,Large
+lbl_currency_symbol,Símbol de moneda,Símbolo de moneda,Currency symbol
+lbl_default_rating,Valoració per defecte,Valoración por defecto,Default rating
+lbl_data,Dades,Datos,Data
+lbl_db_size,Mida de la BD,Tamaño de la BD,DB size
+btn_clear_library,Buidar tota la biblioteca,Vaciar toda la biblioteca,Clear all library
+"dlg_confirm_clear_1","Aquesta acció eliminarà TOTS els llibres, llistes i préstecs.\nNo es pot desfer.","Esta acción eliminará TODOS los libros, listas y préstamos.\nNo se puede deshacer.","This will delete ALL books, lists and loans.\nCannot be undone."
+dlg_confirm_clear_title,Confirmar buidat,Confirmar vaciado,Confirm clear
+dlg_confirm_clear_2,Segur? Es perdran totes les dades permanentment.,¿Seguro? Se perderán todos los datos permanentemente.,Sure? All data will be lost permanently.
+dlg_confirm_clear_2_title,Confirmació final,Confirmación final,Final confirmation
+dlg_clear_done,Biblioteca buidada correctament.,Biblioteca vaciada correctamente.,Library cleared successfully.
+dlg_clear_done_title,Completat,Completado,Done
+dlg_db_validation,El servidor i l'usuari no poden estar buits.,El servidor y el usuario no pueden estar vacíos.,Server and user cannot be empty.
+dlg_error_title,Error,Error,Error
+"dlg_config_saved","Configuració guardada.\nReinicia l'app per aplicar canvis de BD.","Configuración guardada.\nReinicia la app para aplicar cambios de BD.","Settings saved.\nRestart the app to apply DB changes."
+dlg_config_saved_title,Guardat,Guardado,Saved
+lbl_language_setting,Idioma,Idioma,Language
+opt_lang_ca,Català,Català,Català
+opt_lang_es,Español,Español,Español
+opt_lang_en,English,English,English
+dlg_lang_restart,Cal reiniciar l'aplicació per aplicar el nou idioma.,Es necesario reiniciar para aplicar el nuevo idioma.,Restart the app to apply the new language.
+# ── Java: Main table ──────────────────────────────────────────────────────────
+btn_filters_label,Filtres,Filtros,Filters
+btn_filters_label_open,Filtres ▲,Filtros ▲,Filters ▲
+btn_visible_cols,Columnes visibles,Columnas visibles,Visible columns
+btn_table_view,Taula,Tabla,Table
+btn_gallery_view,Galeria,Galería,Gallery
+lbl_all_library,Tota la biblioteca,Toda la biblioteca,All library
+lbl_all_lists,Totes les llistes,Todas las listas,All lists
+lbl_books_count,{0} llibres,{0} libros,{0} books
+"page_info_java","Pàgina {0} / {1}","Página {0} / {1}","Page {0} / {1}"
+# ── Java: Context menu ────────────────────────────────────────────────────────
+menu_open_details,Obrir detalls,Abrir detalles,Open details
+menu_delete_n,Eliminar {0} llibres,Eliminar {0} libros,Delete {0} books
+menu_delete_one,Eliminar,Eliminar,Delete
+menu_add_to_list_n,Afegir {0} a llista...,Añadir {0} a lista...,Add {0} to list...
+menu_add_to_list,Afegir a llista...,Añadir a lista...,Add to list...
+menu_duplicate,Duplicar...,Duplicar...,Duplicate...
+menu_batch_edit_n,Editar {0} llibres...,Editar {0} libros...,Edit {0} books...
+menu_return_book,Marcar retornat,Marcar devuelto,Mark returned
+menu_loan_book,Prestar...,Prestar...,Loan...
+menu_copy_isbn,Copiar ISBN,Copiar ISBN,Copy ISBN
+menu_create_list,＋ Crear nova llista...,＋ Crear nueva lista...,＋ Create new list...
+menu_add_to_list_title,Afegir a llista,Añadir a lista,Add to list
+# ── Java: Dialogs (main) ──────────────────────────────────────────────────────
+dlg_new_list_title,Nova llista,Nueva lista,New list
+dlg_add_to_list_msg,Selecciona la llista on afegir {0} llibre(s):,Selecciona la lista donde añadir {0} libro(s):,Select the list to add {0} book(s) to:
+dlg_save_filter_title,Desa filtre,Guardar filtro,Save filter
+dlg_filter_name_prompt,Nom del preset:,Nombre del preset:,Filter name:
+"dlg_delete_preset","Eliminar preset ""{0}""?","¿Eliminar preset ""{0}""?","Delete preset ""{0}""?"
+dlg_delete_preset_title,Confirmar,Confirmar,Confirm
+dlg_scan_isbn_msg,"Escaneja o escriu el codi ISBN\n(el lector de barres escriurà automàticament):","Escanea o escribe el código ISBN\n(el lector de barras escribirá automáticamente):","Scan or type the ISBN code\n(barcode reader will type automatically):"
+dlg_scan_isbn_title,Escanejar ISBN,Escanear ISBN,Scan ISBN
+dlg_network_error,Error de connexió amb OpenLibrary:,Error de conexión con OpenLibrary:,Connection error with OpenLibrary:
+dlg_network_error_title,Error de xarxa,Error de red,Network error
+dlg_export_done,Exportat a: {0},Exportado a: {0},Exported to: {0}
+dlg_export_title,Exportació completada,Exportación completada,Export complete
+dlg_empty_library,La biblioteca és buida.,La biblioteca está vacía.,Library is empty.
+dlg_stats_title,Estadístiques,Estadísticas,Statistics
+lbl_per_list,Per llista,Por lista,By list
+col_list,Llista,Lista,List
+col_books_count,Llibres,Libros,Books
+col_read_pct,% Llegit,% Leído,% Read
+col_avg_rating,Val. Mitjana,Val. Media,Avg. Rating
+lbl_reading_goal_section,Objectiu de lectura,Objetivo de lectura,Reading goal
+lbl_goal,Objectiu:,Objetivo:,Goal:
+lbl_read_count,llegits: {0},leídos: {0},read: {0}
+dlg_no_books_view,No hi ha llibres a la vista actual.,No hay libros en la vista actual.,No books in the current view.
+dlg_random_book_title,Llibre Aleatori,Libro Aleatorio,Random Book
+dlg_all_read,Tots els llibres de la vista actual ja estan llegits.,Todos los libros de la vista actual ya están leídos.,All books in the current view are already read.
+dlg_loan_msg,Nom de la persona que s'enduu el llibre:,Nombre de la persona que se lleva el libro:,Name of the person borrowing the book:
+dlg_loan_dialog_title,Prestar,Prestar,Loan
+dlg_loan_done,Llibre prestat a "{0}".,Libro prestado a "{0}".,Book loaned to "{0}".
+dlg_loan_done_title,Préstec registrat,Préstamo registrado,Loan registered
+dlg_no_books_recent,No hi ha llibres.,No hay libros.,No books found.
+dlg_recently_added_title,Afegits recentment,Añadidos recientemente,Recently added
+dlg_no_read,Cap llibre marcat com a llegit.,Ningún libro marcado como leído.,No books marked as read.
+dlg_read_title,Llegits,Leídos,Read books
+# ── Java: Delete confirms ─────────────────────────────────────────────────────
+"dlg_confirm_delete_one","Eliminar ""{0}""?\nAquesta acció no es pot desfer.","¿Eliminar ""{0}""?\nEsta acción no se puede deshacer.","Delete ""{0}""?\nThis action cannot be undone."
+"dlg_confirm_delete_n","Eliminar {0} llibres seleccionats?\nAquesta acció no es pot desfer.","¿Eliminar {0} libros seleccionados?\nEsta acción no se puede deshacer.","Delete {0} selected books?\nThis action cannot be undone."
+dlg_confirm_delete_title,Confirmar eliminació,Confirmar eliminación,Confirm deletion
+# ── Java: Backup / restore ────────────────────────────────────────────────────
+"dlg_backup_done","Backup guardat a:\n{0}","Backup guardado en:\n{0}","Backup saved to:\n{0}"
+dlg_backup_done_title,Backup complet,Backup completo,Backup complete
+"dlg_confirm_restore_msg","Restaurar la base de dades des d'un fitxer SQL?\nATENCIÓ: Tots els llibres actuals seran eliminats i substituïts.","¿Restaurar la base de datos desde un fichero SQL?\nATENCIÓN: Todos los libros actuales serán eliminados y sustituidos.","Restore the database from a SQL file?\nWARNING: All current books will be deleted and replaced."
+dlg_confirm_restore_title,Confirmar restauració,Confirmar restauración,Confirm restore
+dlg_restore_done,Base de dades restaurada correctament.,Base de datos restaurada correctamente.,Database restored successfully.
+dlg_restore_done_title,Restauració completada,Restauración completada,Restore complete
+# ── Java: Book detail panel ───────────────────────────────────────────────────
+"dlg_book_detail_title","Expedient del llibre {0}","Ficha del libro {0}","Book details: {0}"
+"dlg_confirm_delete_book_one","Eliminar ""{0}""?\nAquesta acció no es pot desfer.","¿Eliminar ""{0}""?\nEsta acción no se puede deshacer.","Delete ""{0}""?\nThis action cannot be undone."
+btn_save_java,Guardar,Guardar,Save
+btn_edit_java,Editar,Editar,Edit
+dlg_isbn_exists,El llibre amb ISBN {0} ja existeix a la biblioteca,El libro con ISBN {0} ya existe en la biblioteca,A book with ISBN {0} already exists in the library
+# ── Java: About dialog ────────────────────────────────────────────────────────
+dlg_about_title,Sobre Biblioteca,Sobre Biblioteca,About Biblioteca
+lbl_app_desc,Gestió personal de llibres,Gestión personal de libros,Personal book management
+lbl_license,Llicència,Licencia,License
+lbl_source,Font,Fuente,Source
+lbl_license_section,Llicència (GPL v3 — extracte),Licencia (GPL v3 — extracto),License (GPL v3 — excerpt)
+btn_source_github,Codi font (GitHub),Código fuente (GitHub),Source code (GitHub)
+# ── Java: Import/export CSV ───────────────────────────────────────────────────
+lbl_csv_files,CSV files,CSV files,CSV files
+dlg_import_title,Importació,Importación,Import
+dlg_import_warn,Cuidado que hay diferentes columnas en la tabla de Libros,Cuidado: diferentes columnas en la tabla,Warning: different column structure in CSV
+dlg_books_added_to_list,{0} llibres afegits a "{1}".,{0} libros añadidos a "{1}".,{0} books added to "{1}".
+dlg_books_existing_list,{0} ja existien a la llista.,{0} ya existían en la lista.,{0} already existed in the list.
+dlg_added_to_list_title,Afegit a llista,Añadido a lista,Added to list
+# ── Java: Misc ────────────────────────────────────────────────────────────────
+lbl_no_presets,(sense presets),(sin presets),(no presets)
+# ── HTML: Filter placeholders ─────────────────────────────────────────────────
+filter_year_from_ph,1990,1990,1990
+filter_year_to_ph,2024,2024,2024
+# ── Java: GestioLlistesDialog ─────────────────────────────────────────────────
+dlg_gestio_llistes_title,Gestionar Llistes,Gestionar Listas,Manage Lists
+tip_nom_nova_llista,Nom de la nova llista,Nombre de la nueva lista,New list name
+btn_nova_llista,Nova Llista,Nueva Lista,New List
+btn_eliminar_seleccionada,Eliminar Seleccionada,Eliminar Seleccionada,Delete Selected
+"dlg_confirm_delete_llista","Eliminar la llista ""{0}""?\nS'eliminaran totes les assignacions de llibres a aquesta llista.","¿Eliminar la lista ""{0}""?\nSe eliminarán todas las asignaciones de libros a esta lista.","Delete list ""{0}""?\nAll book assignments will be removed."
+btn_color_llista,Color,Color,Color
+tip_color_llista,Canviar color de la llista seleccionada,Cambiar color de la lista seleccionada,Change list color
+dlg_escull_color_title,Escull color,Elegir color,Choose color
+tip_pujar_llista,Pujar llista,Subir lista,Move list up
+tip_baixar_llista,Baixar llista,Bajar lista,Move list down
+# ── Java: ConfiguracioDialog profile management ───────────────────────────────
+btn_gestio_perfils,Gestió de perfils BD,Gestión de perfiles BD,DB Profile Management
+"tip_gestio_perfils","Canviar entre bases de dades H2 (~/.biblioteca/*.mv.db)","Cambiar entre bases de datos H2 (~/.biblioteca/*.mv.db)","Switch H2 database profiles (~/.biblioteca/*.mv.db)"
+dlg_perfils_h2_only,Els perfils només estan disponibles per a H2 (base de dades interna).,Los perfiles solo están disponibles para H2 (base de datos interna).,Profiles only available for H2 (embedded database).
+dlg_perfils_bd_title,Perfils BD,Perfiles BD,DB Profiles
+"dlg_perfil_actiu","Perfil actiu: {0}\nSelecciona o escriu un nom nou:","Perfil activo: {0}\nSelecciona o escribe un nombre nuevo:","Active profile: {0}\nSelect or type a new name:"
+dlg_canviar_perfil_title,Canviar perfil BD,Cambiar perfil BD,Change DB Profile
+"dlg_perfil_canviat","Perfil canviat a ""{0}"".\nReinicia l'aplicació per aplicar el canvi.","Perfil cambiado a ""{0}"".\nReinicia la aplicación para aplicar el cambio.","Profile changed to ""{0}"".\nRestart the app to apply the change."
+dlg_perfil_bd_info_title,Perfil BD,Perfil BD,DB Profile
+# ── Java: GuardarLlibresDialogoControl (internet search) ─────────────────────
+dlg_search_hint_msg,Introdueix un ISBN un títol o un autor per cercar.,Introduce un ISBN un título o un autor para buscar.,Enter an ISBN title or author to search.
+dlg_search_internet_title,Cerca a Internet,Buscar en Internet,Internet Search
+btn_searching,Cercant...,Buscando...,Searching...
+dlg_no_results_msg,No s'han trobat resultats a OpenLibrary.,No se encontraron resultados en OpenLibrary.,No results found on OpenLibrary.
+# ── Java: ModeSelectorDialog ──────────────────────────────────────────────────
+dlg_mode_selector_title,Biblioteca — Tria el mode d'inici,Biblioteca — Elige el modo de inicio,Biblioteca — Choose startup mode
+lbl_mode_selector_subtitle,Com vols obrir l'aplicació?,¿Cómo quieres abrir la aplicación?,How do you want to open the app?
+mode_web,Web,Web,Web
+mode_web_sub,Obre al navegador,Abrir en el navegador,Open in browser
+mode_desktop,Escriptori,Escritorio,Desktop
+mode_desktop_sub,Finestra Java nativa,Ventana Java nativa,Native Java window
+# ── Java: TagsDelLlibreDialog ─────────────────────────────────────────────────
+"dlg_tags_for_book","Etiquetes de: {0}","Etiquetas de: {0}","Tags for: {0}"
+col_tag_name,Etiqueta,Etiqueta,Tag
+btn_afegir_etiqueta,Afegir etiqueta,Añadir etiqueta,Add tag
+tip_nom_nova_etiqueta,Nom nova etiqueta,Nombre nueva etiqueta,New tag name
+btn_crear,Crear,Crear,Create
+lbl_etiqueta_colon,Etiqueta:,Etiqueta:,Tag:
+lbl_nova_colon,Nova:,Nueva:,New:
+btn_treure_seleccionada,Treure seleccionada,Quitar seleccionada,Remove selected
+dlg_no_tags_msg,No hi ha cap etiqueta. Crea'n una primer.,No hay ninguna etiqueta. Crea una primero.,No tags exist. Create one first.
+dlg_no_tags_title,Sense etiquetes,Sin etiquetas,No tags
+"dlg_tag_duplicate","El llibre ja te l'etiqueta ""{0}"".",El libro ya tiene la etiqueta "{0}".,The book already has tag "{0}".
+dlg_duplicate_title,Duplicat,Duplicado,Duplicate
+# ── Java: GuardarLlibresDialogo (add book dialog) ────────────────────────────
+btn_sel_imatge,Sel. imatge,Sel. imagen,Sel. image
+fmt_hardcover,Tapa dura,Tapa dura,Hardcover
+fmt_softcover,Tapa blanda,Tapa blanda,Softcover
+fmt_ebook,eBook,eBook,eBook
+fmt_audiobook,Audiollibre,Audiolibro,Audiobook
+tip_desitjat,Vull comprar aquest llibre (no el tinc),Quiero comprar este libro (no lo tengo),I want to buy this book (don't have it yet)
+btn_cerca_internet,⬇  Cerca a Internet (ISBN / Títol / Autor),⬇  Buscar en Internet (ISBN / Título / Autor),⬇  Search Internet (ISBN / Title / Author)
+tip_cerca_internet,Omple els camps automàticament cercant a OpenLibrary.org,Rellena los campos automáticamente buscando en OpenLibrary.org,Auto-fill fields by searching OpenLibrary.org
+# ── Java: MostrarBibliotecaPanel sidebar/toolbar ─────────────────────────────
+btn_tots_els_llibres,Tots els llibres,Todos los libros,All books
+tip_tots_els_llibres,Mostra tots els llibres de la biblioteca,Muestra todos los libros de la biblioteca,Show all library books
+btn_afegits_recentment,Afegits recentment,Añadidos recientemente,Recently added
+tip_afegits_recentment,Mostra els 20 darrers llibres afegits,Muestra los 20 últimos libros añadidos,Show 20 most recently added books
+btn_llegits_sidebar,Llegits,Leídos,Read books
+tip_llegits_sidebar,Mostra tots els llibres marcats com a llegits,Muestra todos los libros marcados como leídos,Show all read books
+btn_desitjats_sidebar,Llista de desitjos,Lista de deseos,Wishlist
+tip_desitjats_sidebar,Mostra tots els llibres marcats com a desitjats,Muestra todos los libros marcados como deseados,Show all wishlisted books
+btn_en_curs_sidebar,En curs,En curso,Currently reading
+tip_en_curs_sidebar,Mostra els llibres amb pàgines llegides però no acabats,Muestra los libros con páginas leídas pero no terminados,Show books in progress
+btn_estadistiques_sidebar,Estadístiques,Estadísticas,Statistics
+tip_estadistiques_sidebar,Mostrar estadístiques de la biblioteca,Mostrar estadísticas de la biblioteca,Show library statistics
+btn_aleatori_sidebar,Llibre aleatori,Libro aleatorio,Random book
+tip_aleatori_sidebar,Tria un llibre no llegit a l'atzar de la vista actual,Elige un libro no leído al azar de la vista actual,Pick a random unread book from current view
+btn_gestio_llistes_sidebar,Gestionar llistes,Gestionar listas,Manage lists
+tip_gestio_llistes_sidebar,Crear reordenar i eliminar llistes,Crear reordenar y eliminar listas,Create reorder and delete lists
+btn_mode_fosc,Mode fosc,Modo oscuro,Dark mode
+tip_mode_fosc,Canviar entre mode clar i fosc,Cambiar entre modo claro y oscuro,Toggle light/dark mode
+btn_configuracio_sidebar,Configuració,Configuración,Settings
+tip_configuracio_sidebar,Configuració: BD carpeta d'imatges font...,Configuración: BD carpeta de imágenes fuente...,Settings: DB image folder font...
+btn_sobre_sidebar,Sobre...,Sobre...,About...
+tip_sobre_sidebar,Informació sobre l'aplicació autor i llicència,Información sobre la aplicación autor y licencia,About the app author and license
+btn_sortir_sidebar,Sortir,Salir,Quit
+tip_sortir_sidebar,Tancar l'aplicació,Cerrar la aplicación,Close the application
+lbl_sidebar_nav,NAVEGAR,NAVEGAR,NAVIGATE
+lbl_sidebar_lists,LES MEVES LLISTES,MIS LISTAS,MY LISTS
+tip_search_bar,Cerca ràpida (ISBN nom autor any descripció notes),Búsqueda rápida (ISBN nombre autor año descripción notas),Quick search (ISBN title author year description notes)
+btn_toggle_filtres_lbl,Filtres,Filtros,Filters
+tip_toggle_filtres,Mostrar/amagar filtres avançats,Mostrar/ocultar filtros avanzados,Show/hide advanced filters
+btn_toggle_vista_lbl,Galeria,Galería,Gallery
+tip_toggle_vista,Alternar entre vista taula i galeria de portades,Alternar entre vista tabla y galería de portadas,Toggle between table and gallery view
+btn_group_series_lbl,Sèries,Series,Series
+tip_group_series,Agrupar llibres per sèrie i volum,Agrupar libros por serie y volumen,Group books by series and volume
+btn_nou_llibre_short,+ Afegir,+ Añadir,+ Add
+tip_nou_llibre_short,Afegir un nou llibre (Ctrl+N),Añadir un nuevo libro (Ctrl+N),Add a new book (Ctrl+N)
+lbl_preset_colon,Preset:,Preset:,Preset:
+tip_combo_presets,Selecciona un preset guardat,Selecciona un preset guardado,Select a saved preset
+btn_load_preset,Carrega,Cargar,Load
+tip_load_preset,Aplica el preset als filtres,Aplica el preset a los filtros,Apply preset to filters
+btn_save_preset_lbl,Desa,Guardar,Save
+tip_save_preset,Guarda el filtre actual com a preset,Guarda el filtro actual como preset,Save current filter as preset
+btn_delete_preset_lbl,Esborra,Borrar,Delete
+tip_delete_preset,Elimina el preset seleccionat,Elimina el preset seleccionado,Delete selected preset
+filter_llegit_chk,Llegit,Leído,Read
+filter_no_llegit_chk,No llegit,No leído,Unread
+tip_filter_llegit,Mostra només els llegits,Muestra solo los leídos,Show only read books
+tip_filter_no_llegit,Mostra només els no llegits,Muestra solo los no leídos,Show only unread books
+filter_isbn_lbl,ISBN,ISBN,ISBN
+filter_nom_lbl,Nom,Nombre,Name
+filter_autor_lbl,Autor,Autor,Author
+filter_editorial_lbl,Editorial,Editorial,Publisher
+filter_serie_lbl,Sèrie,Serie,Series
+filter_idioma_lbl,Idioma,Idioma,Language
+filter_format_lbl,Format,Formato,Format
+filter_etiqueta_lbl,Etiqueta:,Etiqueta:,Tag:
+tip_filter_tag,Filtrar per etiqueta/gènere,Filtrar por etiqueta/género,Filter by tag/genre
+filter_any_lbl,Any,Año,Year
+filter_valoracio_lbl,Valoració,Valoración,Rating
+filter_preu_lbl,Preu,Precio,Price
+tip_filtrar,Aplicar filtres seleccionats,Aplicar filtros seleccionados,Apply selected filters
+tip_quitar_filtres,Treure tots els filtres aplicats,Quitar todos los filtros aplicados,Clear all applied filters
+btn_filtrar,Filtrar,Filtrar,Filter
+btn_quitar_filtres,Treure filtres,Quitar filtros,Clear filters
+btn_export_lbl,Exportar,Exportar,Export
+btn_import_lbl,Importar,Importar,Import
+btn_export_csv,Export CSV,Exportar CSV,Export CSV
+tip_export_csv,Exportar la llista actual a CSV,Exportar la lista actual a CSV,Export current list to CSV
+btn_import_csv,Importar CSV,Importar CSV,Import CSV
+tip_import_csv,Importar llibres des d'un fitxer CSV (Goodreads compatible),Importar libros desde un archivo CSV (compatible con Goodreads),Import books from CSV (Goodreads compatible)
+btn_export_json_lbl,Export JSON,Exportar JSON,Export JSON
+tip_export_json,Exportar tota la biblioteca a JSON (inclou llistes i tags),Exportar toda la biblioteca a JSON (incluye listas y tags),Export full library to JSON (includes lists and tags)
+btn_import_json_lbl,Importar JSON,Importar JSON,Import JSON
+tip_import_json,Importar biblioteca des d'un fitxer JSON,Importar biblioteca desde un archivo JSON,Import library from JSON file
+btn_export_html_lbl,Export HTML,Exportar HTML,Export HTML
+tip_export_html,Exportar la llista actual a pàgina HTML estàtica amb portades,Exportar la lista actual a página HTML estática con portadas,Export current list to static HTML with covers
+btn_export_pdf_lbl,Export PDF,Exportar PDF,Export PDF
+tip_export_pdf,Imprimir/exportar la llista actual a PDF,Imprimir/exportar la lista actual a PDF,Print/export current list to PDF
+btn_fetch_covers_lbl,Fetch portades,Descarregar portades,Fetch covers
+tip_fetch_covers,Descarregar portades que falten de tots els llibres,Descargar portadas que faltan de todos los libros,Download missing covers for all books
+btn_scan_isbn_lbl,Escanejar ISBN,Escanear ISBN,Scan ISBN
+tip_scan_isbn,Introduir ISBN i auto-omplir dades d'OpenLibrary,Introducir ISBN y auto-rellenar datos de OpenLibrary,Enter ISBN and auto-fill from OpenLibrary
+btn_backup_bd,Backup BD,Backup BD,DB Backup
+tip_backup_bd,Exportar tota la base de dades a un fitxer SQL,Exportar toda la base de datos a un archivo SQL,Export full database to SQL file
+btn_restore_bd,Restaurar BD,Restaurar BD,DB Restore
+tip_restore_bd,Restaurar la base de dades des d'un fitxer SQL de backup,Restaurar la base de datos desde un archivo SQL de backup,Restore database from SQL backup file
+btn_page_prev,Anterior,Anterior,Previous
+btn_page_next,Seguent,Siguiente,Next
+# ── Java: MostrarBibliotecaControl dialogs ────────────────────────────────────
+lbl_pending,Pendent,Pendiente,Pending
+dlg_export_json_title,Export JSON complet,Export JSON completo,Export JSON complete
+dlg_export_html_title,Export HTML complet,Export HTML completo,Export HTML complete
+html_group_shelf_opt,Agrupar per prestatgeria,Agrupar por estantería,Group by shelf
+html_table_view_opt,Vista de taula (en lloc de graella),Vista de tabla (en lugar de cuadrícula),Table view (instead of grid)
+lbl_no_shelf,Sense prestatgeria,Sin estantería,No shelf
+dlg_fetch_portades_all_done,Tots els llibres ja tenen portada.,Todos los libros ya tienen portada.,All books already have a cover.
+dlg_fetch_portades_title,Fetch portades,Descàrrega portades,Fetch covers
+"dlg_fetch_portades_progress","Descarregant portades {0}/{1}...","Descargando portadas {0}/{1}...","Downloading covers {0}/{1}..."
+"dlg_fetch_portades_done","{0} portades noves descarregades de {1} llibres.","{0} portadas nuevas descargadas de {1} libros.","{0} new covers downloaded for {1} books."
+dlg_fetch_portades_done_title,Fetch portades completat,Descarga portadas completada,Cover fetch complete
+"dlg_pdf_title","La meva biblioteca — {0} llibres","Mi biblioteca — {0} libros","My library — {0} books"
+pdf_col_title,Títol,Título,Title
+pdf_col_author,Autor,Autor,Author
+pdf_col_year,Any,Año,Year
+pdf_col_rating,Val.,Val.,Rating
+pdf_col_read,Llegit,Leído,Read
+"dlg_pdf_page_footer","Pàgina {0} / {1}","Página {0} / {1}","Page {0} / {1}"
+dlg_import_json_title,Import JSON,Import JSON,Import JSON
+"dlg_import_json_msg","{0} llibres importats.","{0} libros importados.","{0} books imported."
+"dlg_import_json_skipped","{0} omesos (ISBN ja existeix).","{0} omitidos (ISBN ya existe).","{0} skipped (ISBN already exists)."
+"dlg_import_json_errors","{0} errors.","{0} errores.","{0} errors."
+col_read_count,Llegits,Leídos,Read
+# ── Java: Statistics summary ──────────────────────────────────────────────────
+stats_total,Total:,Total:,Total:
+stats_llegits_colon,Llegits:,Leídos:,Read:
+stats_no_llegits_colon,No llegits:,No leídos:,Unread:
+stats_avg_rating_colon,Valoració mitjana:,Valoración media:,Avg. rating:
+stats_avg_price_colon,Preu mitjà:,Precio medio:,Avg. price:
+stats_top_years,Anys top:,Años top:,Top years:
+stats_no_years,(cap any registrat),(ningún año registrado),(no years recorded)
+stats_book_singular,llibre,libro,book
+stats_book_plural,llibres,libros,books
+# ── Java: Statistics table columns ───────────────────────────────────────────
+col_stats_llista,Llista,Lista,List
+col_stats_llibres,Llibres,Libros,Books
+col_stats_llegits,Llegits,Leídos,Read
+col_stats_pct,% Llegit,% Leído,% Read
+col_stats_val,Val. Mitjana,Val. Media,Avg. Rating
+dlg_aleatori_title,Llibre Aleatori,Libro Aleatorio,Random Book
+# ── Java: DetallesLlibrePanel buttons ────────────────────────────────────────
+btn_sel_imatge_detail,Seleccionar imatge,Seleccionar imagen,Select image
+btn_llistes,Llistes...,Listas...,Lists...
+tip_llistes,"Gestionar l'assignació d'aquest llibre a llistes","Gestionar la asignación de este libro a listas","Manage list assignments for this book"
+btn_etiquetes,Etiquetes...,Etiquetas...,Tags...
+tip_etiquetes,"Gestionar les etiquetes/gèneres d'aquest llibre","Gestionar las etiquetas/géneros de este libro","Manage tags/genres for this book"
+btn_historial_prestecs,Historial préstecs,Historial préstamos,Loan history
+tip_historial_prestecs,"Veure l'historial de préstecs d'aquest llibre","Ver el historial de préstamos de este libro","View loan history for this book"
+# ── Java: GestioLlistesDialog / AboutDialog rows ─────────────────────────────
+lbl_autor_row,Autor,Autor,Author
+lbl_llicencia_row,Llicència,Licencia,License
+lbl_font_row,Font,Fuente,Source
+btn_import_calibre,Importar des de Calibre,Importar desde Calibre,Import from Calibre
+tip_import_calibre,"Importar una biblioteca Calibre (carpeta amb metadata.db)","Importar una biblioteca Calibre (carpeta con metadata.db)","Import a Calibre library (folder with metadata.db)"
+dlg_calibre_choose_title,Importar des de Calibre,Importar desde Calibre,Import from Calibre
+dlg_calibre_not_found,No s'ha trobat metadata.db en la carpeta seleccionada.,No se encontró metadata.db en la carpeta seleccionada.,metadata.db not found in the selected folder.
+dlg_calibre_no_sqlite3,"Cal tenir sqlite3 instal·lat per importar de Calibre.","Se necesita sqlite3 instalado para importar de Calibre.","sqlite3 must be installed to import from Calibre."
+lbl_imported_ok,llibres importats.,libros importados.,books imported.
+lbl_skipped,omesos (ISBN ja existeix).,omitidos (ISBN ya existe).,skipped (ISBN already exists).
+lbl_errors,errors.,errores.,errors.
+field_estat,Estat,Estado,Condition
+estat_nou,Nou,Nuevo,New
+estat_bo,Bo,Bueno,Good
+estat_usat,Usat,Usado,Worn
+estat_deteriorat,Deteriorat,Deteriorado,Damaged
+field_exemplars,Exemplars,Ejemplares,Copies
+field_llengua_original,Llengua orig.,Lengua orig.,Orig. language
+stats_tab_general,General,General,General
+stats_tab_charts,Gràfics,Gráficos,Charts
+stats_tab_tags,Etiquetes,Etiquetas,Tags
+stats_tab_pace,Ritme,Ritmo,Pace
+stats_chart_books_year,Llibres llegits per any,Libros leídos por año,Books read per year
+stats_chart_publishers,Top editorials (per nombre de llibres),Top editoriales (por número de libros),Top publishers (by book count)
+stats_no_data,Sense dades suficients,Sin datos suficientes,Insufficient data
+stats_no_tags,Cap etiqueta assignada,Ninguna etiqueta asignada,No tags assigned
+stats_books_with_tag,llibres amb aquesta etiqueta,libros con esta etiqueta,books with this tag
+"stats_pace_year","Llibres llegits el {0}: {1}","Libros leídos en {0}: {1}","Books read in {0}: {1}"
+"stats_pace_per_month","Ritme actual: {0} llibres/mes","Ritmo actual: {0} libros/mes","Current pace: {0} books/month"
+"stats_pace_projected","Projecció per a l''any: {0} llibres","Proyección para el año: {0} libros","Projected for the year: {0} books"
+"stats_pace_goal_remaining","Objectiu: {0} · Per assolir: {1} en {2} dies","Objetivo: {0} · Por lograr: {1} en {2} días","Goal: {0} · To reach: {1} in {2} days"
+"stats_pace_total_pages","Total pàgines llegides (progrés actiu): {0}","Total páginas leídas (progreso activo): {0}","Total pages read (active progress): {0}"
+alert_overdue_loans_title,Préstecs vençuts,Préstamos vencidos,Overdue loans
+"alert_overdue_loans_msg","Tens llibres prestats sense retornar des de fa més de 30 dies:","Tienes libros prestados sin devolver desde hace más de 30 días:","You have books on loan for more than 30 days:"
+alert_goal_pace_title,Objectiu de lectura,Objetivo de lectura,Reading goal
+"alert_goal_pace_msg","Objectiu: {0} llibres · Llegits enguany: {1} · Dies restants: {2}\nCal llegir {3} llibres/dia per assolir l''objectiu.","Objetivo: {0} libros · Leídos este año: {1} · Días restantes: {2}\nHay que leer {3} libros/día para alcanzar el objetivo.","Goal: {0} books · Read this year: {1} · Days left: {2}\nNeed to read {3} books/day to reach the goal."
+btn_imprimir_detail,Imprimir fitxa,Imprimir ficha,Print sheet
+tip_imprimir_detail,Imprimir la fitxa d'aquest llibre,Imprimir la ficha de este libro,Print this book detail sheet
+yes_lbl,Sí,Sí,Yes
+no_lbl,No,No,No

@@ -1,0 +1,195 @@
+[19:42:18.383] === Biblioteca StressTest ===
+[19:42:18.389] Started: 2026-05-13T19:42:18.387780228
+[19:42:19.335] OK: main window visible — "Biblioteca"
+[19:42:20.136] 
+══════════════════════════════════════════════════════
+[19:42:20.136] PHASE 01: Validation: empty ISBN
+[19:42:20.136] ══════════════════════════════════════════════════════
+[19:42:21.516]   ✓ PASS: Empty ISBN → validation dialog: "Error"
+[19:42:22.624]   SCREENSHOT: checkBiblio/screenshots/stress_1_p01.png
+[19:42:22.624] 
+══════════════════════════════════════════════════════
+[19:42:22.624] PHASE 02: Validation: non-numeric ISBN
+[19:42:22.624] ══════════════════════════════════════════════════════
+[19:42:24.030]   ✓ PASS: Non-numeric ISBN → validation dialog: "Error"
+[19:42:25.022]   SCREENSHOT: checkBiblio/screenshots/stress_2_p02.png
+[19:42:25.022] 
+══════════════════════════════════════════════════════
+[19:42:25.022] PHASE 03: Validation: 3-digit ISBN
+[19:42:25.022] ══════════════════════════════════════════════════════
+[19:42:26.428]   ✓ PASS: 3-digit ISBN → validation dialog: "Error"
+[19:42:27.428]   SCREENSHOT: checkBiblio/screenshots/stress_3_p03.png
+[19:42:27.428] 
+══════════════════════════════════════════════════════
+[19:42:27.428] PHASE 04: Validation: empty title
+[19:42:27.428] ══════════════════════════════════════════════════════
+[19:42:28.790]   ✓ PASS: Empty title → validation dialog: "Error"
+[19:42:29.817]   SCREENSHOT: checkBiblio/screenshots/stress_4_p04.png
+[19:42:29.817] 
+══════════════════════════════════════════════════════
+[19:42:29.818] PHASE 05: Validation: rating 11.0
+[19:42:29.818] ══════════════════════════════════════════════════════
+[19:42:31.264]   ✓ PASS: Rating 11.0 → validation dialog: "Error"
+[19:42:32.288]   SCREENSHOT: checkBiblio/screenshots/stress_5_p05.png
+[19:42:32.289] 
+══════════════════════════════════════════════════════
+[19:42:32.289] PHASE 06: Validation: rating -1.0
+[19:42:32.289] ══════════════════════════════════════════════════════
+[19:42:33.730]   ✓ PASS: Rating -1.0 → validation dialog: "Error"
+[19:42:34.741]   SCREENSHOT: checkBiblio/screenshots/stress_6_p06.png
+[19:42:34.742] 
+══════════════════════════════════════════════════════
+[19:42:34.742] PHASE 07: Validation: negative price
+[19:42:34.742] ══════════════════════════════════════════════════════
+[19:42:36.189]   ✓ PASS: Negative price → validation error
+[19:42:37.175]   SCREENSHOT: checkBiblio/screenshots/stress_7_p07.png
+[19:42:37.176] 
+══════════════════════════════════════════════════════
+[19:42:37.176] PHASE 08: Validation: year non-numeric
+[19:42:37.176] ══════════════════════════════════════════════════════
+[19:42:38.621]   ✓ PASS: Non-numeric year → validation error
+[19:42:39.633]   SCREENSHOT: checkBiblio/screenshots/stress_8_p08.png
+[19:42:39.634] 
+══════════════════════════════════════════════════════
+[19:42:39.634] PHASE 09: Chaos: SQL injection in title/autor
+[19:42:39.634] ══════════════════════════════════════════════════════
+[19:42:41.358]   ✓ PASS: SQL injection saved without crash — no error dialog
+[19:42:41.651]   SCREENSHOT: checkBiblio/screenshots/stress_9_p09.png
+[19:42:41.651] 
+══════════════════════════════════════════════════════
+[19:42:41.651] PHASE 10: Chaos: emoji + unicode title
+[19:42:41.651] ══════════════════════════════════════════════════════
+[19:42:43.375]   ✓ PASS: Unicode emoji title saved without crash
+[19:42:43.657]   SCREENSHOT: checkBiblio/screenshots/stress_10_p10.png
+[19:42:43.657] 
+══════════════════════════════════════════════════════
+[19:42:43.657] PHASE 11: Chaos: 500-char title
+[19:42:43.657] ══════════════════════════════════════════════════════
+[19:42:45.344]   ! WARN: 500-char title → validation dialog (may be by design)
+[19:42:46.320]   SCREENSHOT: checkBiblio/screenshots/stress_11_p11.png
+[19:42:46.320] 
+══════════════════════════════════════════════════════
+[19:42:46.320] PHASE 12: Chaos: whitespace-only fields
+[19:42:46.320] ══════════════════════════════════════════════════════
+[19:42:47.724]   ✓ PASS: Whitespace-only ISBN/title → validation error
+[19:42:48.745]   SCREENSHOT: checkBiblio/screenshots/stress_12_p12.png
+[19:42:48.746] 
+══════════════════════════════════════════════════════
+[19:42:48.746] PHASE 13: Chaos: duplicate ISBN
+[19:42:48.746] ══════════════════════════════════════════════════════
+[19:42:50.347]   ✓ PASS: Duplicate ISBN → error dialog: "Error"
+[19:42:51.339]   SCREENSHOT: checkBiblio/screenshots/stress_13_p13.png
+[19:42:51.340] 
+══════════════════════════════════════════════════════
+[19:42:51.340] PHASE 14: Create 5 valid test books
+[19:42:51.340] ══════════════════════════════════════════════════════
+[19:42:53.133]   ✓ PASS: Valid book 0 created (ISBN=9780294138204)
+[19:42:54.919]   ✓ PASS: Valid book 1 created (ISBN=9780294138205)
+[19:42:56.705]   ✓ PASS: Valid book 2 created (ISBN=9780294138206)
+[19:42:58.497]   ✓ PASS: Valid book 3 created (ISBN=9780294138207)
+[19:43:00.290]   ✓ PASS: Valid book 4 created (ISBN=9780294138208)
+[19:43:00.290]   ✓ PASS: All 5 test books created
+[19:43:00.570]   SCREENSHOT: checkBiblio/screenshots/stress_14_p14.png
+[19:43:00.570] 
+══════════════════════════════════════════════════════
+[19:43:00.570] PHASE 15: Rapid pagination fwd+bwd
+[19:43:00.570] ══════════════════════════════════════════════════════
+[19:43:03.557]   SCREENSHOT: checkBiblio/screenshots/stress_15_pagination_fwd15.png
+[19:43:08.187]   SCREENSHOT: checkBiblio/screenshots/stress_16_pagination_last.png
+[19:43:10.382]   ✓ PASS: Pagination stress: fwd/bwd/last/first — no crash
+[19:43:10.668]   SCREENSHOT: checkBiblio/screenshots/stress_17_p15.png
+[19:43:10.669] 
+══════════════════════════════════════════════════════
+[19:43:10.669] PHASE 16: Search: SQL wildcard chars
+[19:43:10.669] ══════════════════════════════════════════════════════
+[19:43:13.338]   ✓ PASS: SQL injection search patterns → no crash
+[19:43:13.609]   SCREENSHOT: checkBiblio/screenshots/stress_18_p16.png
+[19:43:13.610] 
+══════════════════════════════════════════════════════
+[19:43:13.610] PHASE 17: Search: regex metacharacters
+[19:43:13.610] ══════════════════════════════════════════════════════
+[19:43:16.865]   ✓ PASS: Regex metachar searches → no crash
+[19:43:17.172]   SCREENSHOT: checkBiblio/screenshots/stress_19_p17.png
+[19:43:17.172] 
+══════════════════════════════════════════════════════
+[19:43:17.172] PHASE 18: Search: whitespace / empty
+[19:43:17.172] ══════════════════════════════════════════════════════
+[19:43:18.518]   ✓ PASS: Empty/whitespace search → no crash
+[19:43:18.717]   SCREENSHOT: checkBiblio/screenshots/stress_20_p18.png
+[19:43:18.718] 
+══════════════════════════════════════════════════════
+[19:43:18.718] PHASE 19: Search: very long string
+[19:43:18.718] ══════════════════════════════════════════════════════
+[19:43:19.379]   ✓ PASS: 5000-char search → no crash
+[19:43:19.846]   SCREENSHOT: checkBiblio/screenshots/stress_21_p19.png
+[19:43:19.846] 
+══════════════════════════════════════════════════════
+[19:43:19.847] PHASE 20: Filter: llegit + no llegit both
+[19:43:19.847] ══════════════════════════════════════════════════════
+[19:43:20.968]   ✓ PASS: Filter llegit+noLlegit → no crash
+[19:43:21.971]   SCREENSHOT: checkBiblio/screenshots/stress_22_p20.png
+[19:43:21.971] 
+══════════════════════════════════════════════════════
+[19:43:21.971] PHASE 21: Filter: inverted year range
+[19:43:21.971] ══════════════════════════════════════════════════════
+[19:43:23.393]   ✓ PASS: Inverted year range handled without crash
+[19:43:24.399]   SCREENSHOT: checkBiblio/screenshots/stress_23_p21.png
+[19:43:24.400] 
+══════════════════════════════════════════════════════
+[19:43:24.400] PHASE 22: Filter: apply then clear
+[19:43:24.400] ══════════════════════════════════════════════════════
+[19:43:25.943]   ✓ PASS: Filter apply+clear → no crash
+[19:43:26.593]   SCREENSHOT: checkBiblio/screenshots/stress_24_p22.png
+[19:43:26.593] 
+══════════════════════════════════════════════════════
+[19:43:26.593] PHASE 23: Rapid dark mode toggle x6
+[19:43:26.593] ══════════════════════════════════════════════════════
+[19:43:28.436]   ✓ PASS: Dark mode toggled 6x → no crash (even count → restored)
+[19:43:28.733]   SCREENSHOT: checkBiblio/screenshots/stress_25_p23.png
+[19:43:28.733] 
+══════════════════════════════════════════════════════
+[19:43:28.733] PHASE 24: Rapid gallery toggle x4
+[19:43:28.733] ══════════════════════════════════════════════════════
+[19:43:30.491]   ✓ PASS: Gallery toggled 4x → no crash
+[19:43:30.992]   SCREENSHOT: checkBiblio/screenshots/stress_26_p24.png
+[19:43:30.993] 
+══════════════════════════════════════════════════════
+[19:43:30.993] PHASE 25: Rapid series toggle x4
+[19:43:30.993] ══════════════════════════════════════════════════════
+[19:43:32.754]   ✗ FAIL: Series toggle → dialog
+[19:43:38.806]   SCREENSHOT: checkBiblio/screenshots/stress_27_p25.png
+[19:43:38.806] 
+══════════════════════════════════════════════════════
+[19:43:38.806] PHASE 26: Rapid filter drawer toggle x6
+[19:43:38.806] ══════════════════════════════════════════════════════
+[19:43:40.188]   ✗ FAIL: Filter drawer rapid toggle → dialog
+[19:43:46.252]   SCREENSHOT: checkBiblio/screenshots/stress_28_p26.png
+[19:43:46.252] 
+══════════════════════════════════════════════════════
+[19:43:46.252] PHASE 27: Book details: open/close x5 rapid
+[19:43:46.252] ══════════════════════════════════════════════════════
+[19:43:52.848]   ✓ PASS: Rapid open/close x5: 5 dialogs — no crash
+[19:43:56.003]   SCREENSHOT: checkBiblio/screenshots/stress_29_p27.png
+[19:43:56.004] 
+══════════════════════════════════════════════════════
+[19:43:56.004] PHASE 28: Book details: Llistes sub-dialog
+[19:43:56.004] ══════════════════════════════════════════════════════
+[19:43:56.907]   ! WARN: Llistes button missing
+[19:44:02.959]   SCREENSHOT: checkBiblio/screenshots/stress_30_p28.png
+[19:44:02.959] 
+══════════════════════════════════════════════════════
+[19:44:02.959] PHASE 29: Book details: Etiquetes sub-dialog
+[19:44:02.959] ══════════════════════════════════════════════════════
+[19:44:03.868]   ! WARN: Etiquetes button missing
+[19:44:09.921]   SCREENSHOT: checkBiblio/screenshots/stress_31_p29.png
+[19:44:09.922] 
+══════════════════════════════════════════════════════
+[19:44:09.922] PHASE 30: Book details: Historial préstecs
+[19:44:09.922] ══════════════════════════════════════════════════════
+[19:44:10.829]   ! WARN: Historial préstecs button missing
+[19:44:16.845]   SCREENSHOT: checkBiblio/screenshots/stress_32_p30.png
+[19:44:16.846] 
+══════════════════════════════════════════════════════
+[19:44:16.846] PHASE 31: Book details: Imprimir fitxa
+[19:44:16.846] ══════════════════════════════════════════════════════
+[19:44:17.748]   ! WARN: Imprimir button missing

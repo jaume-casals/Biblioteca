@@ -16,6 +16,7 @@ import javax.swing.JTextField;
 import domini.ControladorDomini;
 import domini.Llista;
 import herramienta.DialogoError;
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class GestioLlistesDialog extends JDialog {
@@ -25,7 +26,7 @@ public class GestioLlistesDialog extends JDialog {
     private final JList<Llista> jList = new JList<>(listModel);
 
     public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl) {
-        super(owner, "Gestionar Llistes", ModalityType.APPLICATION_MODAL);
+        super(owner, I18n.t("dlg_gestio_llistes_title"), ModalityType.APPLICATION_MODAL);
         this.mainControl = mainControl;
         setSize(340, 400);
         setLocationRelativeTo(owner);
@@ -46,9 +47,9 @@ public class GestioLlistesDialog extends JDialog {
 
         JTextField txtNom = new JTextField();
         UITheme.styleField(txtNom);
-        txtNom.setToolTipText("Nom de la nova llista");
+        txtNom.setToolTipText(I18n.t("tip_nom_nova_llista"));
 
-        JButton btnAfegir = new JButton("Nova Llista");
+        JButton btnAfegir = new JButton(I18n.t("btn_nova_llista"));
         UITheme.styleAccentButton(btnAfegir);
         btnAfegir.addActionListener(e -> {
             String nom = txtNom.getText().trim();
@@ -63,16 +64,15 @@ public class GestioLlistesDialog extends JDialog {
             }
         });
 
-        JButton btnEliminar = new JButton("Eliminar Seleccionada");
+        JButton btnEliminar = new JButton(I18n.t("btn_eliminar_seleccionada"));
         UITheme.styleSecondaryButton(btnEliminar);
         btnEliminar.setBackground(UITheme.DANGER);
         btnEliminar.addActionListener(e -> {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;
             int confirm = JOptionPane.showConfirmDialog(this,
-                "Eliminar la llista \"" + sel.getNom() + "\"?\n" +
-                "S'eliminaran totes les assignacions de llibres a aquesta llista.",
-                "Confirmar eliminació", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                I18n.t("dlg_confirm_delete_llista", sel.getNom()),
+                I18n.t("dlg_confirm_delete_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (confirm != JOptionPane.YES_OPTION) return;
             try {
                 ControladorDomini.getInstance().deleteLlista(sel);
@@ -83,15 +83,15 @@ public class GestioLlistesDialog extends JDialog {
             }
         });
 
-        JButton btnColor = new JButton("Color");
+        JButton btnColor = new JButton(I18n.t("btn_color_llista"));
         UITheme.styleSecondaryButton(btnColor);
-        btnColor.setToolTipText("Canviar color de la llista seleccionada");
+        btnColor.setToolTipText(I18n.t("tip_color_llista"));
         btnColor.addActionListener(e -> {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;
             java.awt.Color initial = sel.getColor() != null
                 ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode("#3498DB");
-            java.awt.Color chosen = javax.swing.JColorChooser.showDialog(this, "Escull color", initial);
+            java.awt.Color chosen = javax.swing.JColorChooser.showDialog(this, I18n.t("dlg_escull_color_title"), initial);
             if (chosen == null) return;
             String hex = String.format("#%02X%02X%02X", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
             try {
@@ -103,7 +103,7 @@ public class GestioLlistesDialog extends JDialog {
 
         JButton btnUp = new JButton("▲");
         UITheme.styleSecondaryButton(btnUp);
-        btnUp.setToolTipText("Pujar llista");
+        btnUp.setToolTipText(I18n.t("tip_pujar_llista"));
         btnUp.addActionListener(e -> {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;
@@ -118,7 +118,7 @@ public class GestioLlistesDialog extends JDialog {
 
         JButton btnDown = new JButton("▼");
         UITheme.styleSecondaryButton(btnDown);
-        btnDown.setToolTipText("Baixar llista");
+        btnDown.setToolTipText(I18n.t("tip_baixar_llista"));
         btnDown.addActionListener(e -> {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;

@@ -15,8 +15,18 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetAdapter;
+import java.awt.dnd.DropTargetDropEvent;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.TransferHandler;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -29,6 +39,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.table.DefaultTableCellRenderer;
 
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class MostrarBibliotecaPanel extends JPanel {
@@ -84,8 +95,18 @@ public class MostrarBibliotecaPanel extends JPanel {
 	private JButton btnNouLlibre;
 	private JButton btnAfegitsRecentment;
 	private JButton btnLlegitsRecentment;
+	private JButton btnDesitjats;
+	private JButton btnEnCurs;
 	private JButton btnExportCSV;
 	private JButton btnImportarCSV;
+	private JButton btnImportarCalibre;
+	private JButton btnExportJSON;
+	private JButton btnImportarJSON;
+	private JButton btnExportHTML;
+	private JButton btnExportPDF;
+	private JButton btnExportDropdown;
+	private JButton btnImportDropdown;
+	private JButton btnFetchCovers;
 	private JButton btnEscanejarISBN;
 	private JButton btnEstadistiques;
 	private JButton btnLlibreAleatori;
@@ -99,6 +120,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	// ── New layout components ─────────────────────────────────────────────────
 	private JButton btnToggleFiltres;
 	private JButton btnToggleVista;
+	private JButton btnGroupSeries;
 	private JPanel filterDrawer;
 	private JPanel contentCards;
 	private java.awt.CardLayout cardLayout;
@@ -111,6 +133,8 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	// Reference to sidebar for applyTheme
 	private JPanel sidebar;
+
+	private java.util.function.BiConsumer<Integer, java.util.List<Long>> onDragToShelf;
 
 	public MostrarBibliotecaPanel() {
 		setLayout(new BorderLayout(0, 0));
@@ -182,29 +206,39 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		top.add(makeSidebarSep());
 
-		top.add(makeSectionLabel("NAVEGAR"));
+		top.add(makeSectionLabel(I18n.t("lbl_sidebar_nav")));
 
-		btnTotsElsLlibres = makeSidebarBtn("Tots els llibres");
-		btnTotsElsLlibres.setToolTipText("Mostra tots els llibres de la biblioteca");
+		btnTotsElsLlibres = makeSidebarBtn(I18n.t("btn_tots_els_llibres"));
+		btnTotsElsLlibres.setToolTipText(I18n.t("tip_tots_els_llibres"));
 		btnTotsElsLlibres.addActionListener(e -> {
 			if (comboLlistes.getItemCount() > 0) comboLlistes.setSelectedIndex(0);
 		});
 		sidebarBtns.add(btnTotsElsLlibres);
 		top.add(btnTotsElsLlibres);
 
-		btnAfegitsRecentment = makeSidebarBtn("Afegits recentment");
-		btnAfegitsRecentment.setToolTipText("Mostra els 20 darrers llibres afegits");
+		btnAfegitsRecentment = makeSidebarBtn(I18n.t("btn_afegits_recentment"));
+		btnAfegitsRecentment.setToolTipText(I18n.t("tip_afegits_recentment"));
 		sidebarBtns.add(btnAfegitsRecentment);
 		top.add(btnAfegitsRecentment);
 
-		btnLlegitsRecentment = makeSidebarBtn("Llegits");
-		btnLlegitsRecentment.setToolTipText("Mostra tots els llibres marcats com a llegits");
+		btnLlegitsRecentment = makeSidebarBtn(I18n.t("btn_llegits_sidebar"));
+		btnLlegitsRecentment.setToolTipText(I18n.t("tip_llegits_sidebar"));
 		sidebarBtns.add(btnLlegitsRecentment);
 		top.add(btnLlegitsRecentment);
 
+		btnDesitjats = makeSidebarBtn(I18n.t("btn_desitjats_sidebar"));
+		btnDesitjats.setToolTipText(I18n.t("tip_desitjats_sidebar"));
+		sidebarBtns.add(btnDesitjats);
+		top.add(btnDesitjats);
+
+		btnEnCurs = makeSidebarBtn(I18n.t("btn_en_curs_sidebar"));
+		btnEnCurs.setToolTipText(I18n.t("tip_en_curs_sidebar"));
+		sidebarBtns.add(btnEnCurs);
+		top.add(btnEnCurs);
+
 		top.add(makeSidebarSep());
 
-		top.add(makeSectionLabel("LES MEVES LLISTES"));
+		top.add(makeSectionLabel(I18n.t("lbl_sidebar_lists")));
 
 		sb.add(top, BorderLayout.NORTH);
 
@@ -228,27 +262,27 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		bottom.add(makeSidebarSep());
 
-		btnEstadistiques = makeSidebarBtn("Estadistiques");
-		btnEstadistiques.setToolTipText("Mostrar estadistiques de la biblioteca");
+		btnEstadistiques = makeSidebarBtn(I18n.t("btn_estadistiques_sidebar"));
+		btnEstadistiques.setToolTipText(I18n.t("tip_estadistiques_sidebar"));
 		sidebarBtns.add(btnEstadistiques);
 		bottom.add(btnEstadistiques);
 
-		btnLlibreAleatori = makeSidebarBtn("Llibre aleatori");
-		btnLlibreAleatori.setToolTipText("Tria un llibre no llegit a l'atzar de la vista actual");
+		btnLlibreAleatori = makeSidebarBtn(I18n.t("btn_aleatori_sidebar"));
+		btnLlibreAleatori.setToolTipText(I18n.t("tip_aleatori_sidebar"));
 		sidebarBtns.add(btnLlibreAleatori);
 		bottom.add(btnLlibreAleatori);
 
 		bottom.add(makeSidebarSep());
 
-		btnGestioLlistes = makeSidebarBtn("Gestionar llistes");
-		btnGestioLlistes.setToolTipText("Crear, reanomenar, reordenar i eliminar llistes");
+		btnGestioLlistes = makeSidebarBtn(I18n.t("btn_gestio_llistes_sidebar"));
+		btnGestioLlistes.setToolTipText(I18n.t("tip_gestio_llistes_sidebar"));
 		sidebarBtns.add(btnGestioLlistes);
 		bottom.add(btnGestioLlistes);
 
 		bottom.add(makeSidebarSep());
 
-		btnThemeToggle = makeSidebarBtn("Mode fosc");
-		btnThemeToggle.setToolTipText("Canviar entre mode clar i fosc");
+		btnThemeToggle = makeSidebarBtn(I18n.t("btn_mode_fosc"));
+		btnThemeToggle.setToolTipText(I18n.t("tip_mode_fosc"));
 		btnThemeToggle.addActionListener(e -> {
 			UITheme.setDark(!UITheme.isDark);
 			applyTheme();
@@ -256,24 +290,24 @@ public class MostrarBibliotecaPanel extends JPanel {
 		sidebarBtns.add(btnThemeToggle);
 		bottom.add(btnThemeToggle);
 
-		btnConfiguracio = makeSidebarBtn("Configuracio");
-		btnConfiguracio.setToolTipText("Configuracio: BD, carpeta d'imatges, font...");
+		btnConfiguracio = makeSidebarBtn(I18n.t("btn_configuracio_sidebar"));
+		btnConfiguracio.setToolTipText(I18n.t("tip_configuracio_sidebar"));
 		sidebarBtns.add(btnConfiguracio);
 		bottom.add(btnConfiguracio);
 
-		btnSobre = makeSidebarBtn("Sobre...");
-		btnSobre.setToolTipText("Informació sobre l'aplicació, autor i llicència");
+		btnSobre = makeSidebarBtn(I18n.t("btn_sobre_sidebar"));
+		btnSobre.setToolTipText(I18n.t("tip_sobre_sidebar"));
 		sidebarBtns.add(btnSobre);
 		bottom.add(btnSobre);
 
 		bottom.add(makeSidebarSep());
 
-		btnSortir = makeSidebarBtn("Sortir");
+		btnSortir = makeSidebarBtn(I18n.t("btn_sortir_sidebar"));
 		btnSortir.setForeground(new Color(0xFF8080));
-		btnSortir.setToolTipText("Tancar l'aplicacio");
+		btnSortir.setToolTipText(I18n.t("tip_sortir_sidebar"));
 		btnSortir.addActionListener(e -> {
 			if (javax.swing.JOptionPane.showConfirmDialog(this,
-					"Sortir de l'aplicacio?", "Confirmar sortida",
+					I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 					javax.swing.JOptionPane.YES_NO_OPTION) == javax.swing.JOptionPane.YES_OPTION)
 				System.exit(0);
 		});
@@ -298,7 +332,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		JPanel searchWrap = new JPanel(new BorderLayout(6, 0));
 		searchWrap.setBackground(UITheme.BG_PANEL);
 		searchBar = new JTextField();
-		searchBar.setToolTipText("Cerca rapida (ISBN, nom, autor, any, descripcio, notes)");
+		searchBar.setToolTipText(I18n.t("tip_search_bar"));
 		UITheme.styleField(searchBar);
 		searchWrap.add(searchBar, BorderLayout.CENTER);
 		topBar.add(searchWrap, BorderLayout.CENTER);
@@ -306,19 +340,24 @@ public class MostrarBibliotecaPanel extends JPanel {
 		JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 		rightBtns.setBackground(UITheme.BG_PANEL);
 
-		btnToggleFiltres = new JButton("Filtres");
+		btnToggleFiltres = new JButton(I18n.t("btn_toggle_filtres_lbl"));
 		UITheme.styleSecondaryButton(btnToggleFiltres);
-		btnToggleFiltres.setToolTipText("Mostrar/amagar filtres avancats");
+		btnToggleFiltres.setToolTipText(I18n.t("tip_toggle_filtres"));
 		rightBtns.add(btnToggleFiltres);
 
-		btnToggleVista = new JButton("Galeria");
+		btnToggleVista = new JButton(I18n.t("btn_toggle_vista_lbl"));
 		UITheme.styleSecondaryButton(btnToggleVista);
-		btnToggleVista.setToolTipText("Alternar entre vista taula i galeria de portades");
+		btnToggleVista.setToolTipText(I18n.t("tip_toggle_vista"));
 		rightBtns.add(btnToggleVista);
 
-		btnNouLlibre = new JButton("+ Afegir");
+		btnGroupSeries = new JButton(I18n.t("btn_group_series_lbl"));
+		UITheme.styleSecondaryButton(btnGroupSeries);
+		btnGroupSeries.setToolTipText(I18n.t("tip_group_series"));
+		rightBtns.add(btnGroupSeries);
+
+		btnNouLlibre = new JButton(I18n.t("btn_nou_llibre_short"));
 		UITheme.styleAccentButton(btnNouLlibre);
-		btnNouLlibre.setToolTipText("Afegir un nou llibre (Ctrl+N)");
+		btnNouLlibre.setToolTipText(I18n.t("tip_nou_llibre_short"));
 		rightBtns.add(btnNouLlibre);
 
 		topBar.add(rightBtns, BorderLayout.EAST);
@@ -336,32 +375,32 @@ public class MostrarBibliotecaPanel extends JPanel {
 		presetBar.setBackground(UITheme.BG_MAIN);
 		presetBar.setPreferredSize(new Dimension(0, 38));
 
-		JLabel lblPresets = new JLabel("Preset:");
+		JLabel lblPresets = new JLabel(I18n.t("lbl_preset_colon"));
 		UITheme.styleLabel(lblPresets);
 		lblPresets.setBounds(8, 9, 50, 20);
 		presetBar.add(lblPresets);
 
 		comboPresets = new JComboBox<>();
 		comboPresets.setFont(UITheme.FONT_BASE);
-		comboPresets.setToolTipText("Selecciona un preset guardat");
+		comboPresets.setToolTipText(I18n.t("tip_combo_presets"));
 		comboPresets.setBounds(62, 6, 150, 26);
 		presetBar.add(comboPresets);
 
-		btnCarregaPreset = new JButton("Carrega");
+		btnCarregaPreset = new JButton(I18n.t("btn_load_preset"));
 		UITheme.styleAccentButton(btnCarregaPreset);
-		btnCarregaPreset.setToolTipText("Aplica el preset als filtres");
+		btnCarregaPreset.setToolTipText(I18n.t("tip_load_preset"));
 		btnCarregaPreset.setBounds(216, 6, 75, 26);
 		presetBar.add(btnCarregaPreset);
 
-		btnDesaPreset = new JButton("Desa");
+		btnDesaPreset = new JButton(I18n.t("btn_save_preset_lbl"));
 		UITheme.styleSecondaryButton(btnDesaPreset);
-		btnDesaPreset.setToolTipText("Guarda el filtre actual com a preset");
+		btnDesaPreset.setToolTipText(I18n.t("tip_save_preset"));
 		btnDesaPreset.setBounds(295, 6, 65, 26);
 		presetBar.add(btnDesaPreset);
 
-		btnEsborraPreset = new JButton("Esborra");
+		btnEsborraPreset = new JButton(I18n.t("btn_delete_preset_lbl"));
 		UITheme.styleSecondaryButton(btnEsborraPreset);
-		btnEsborraPreset.setToolTipText("Elimina el preset seleccionat");
+		btnEsborraPreset.setToolTipText(I18n.t("tip_delete_preset"));
 		btnEsborraPreset.setBounds(364, 6, 75, 26);
 		presetBar.add(btnEsborraPreset);
 
@@ -377,34 +416,34 @@ public class MostrarBibliotecaPanel extends JPanel {
 		JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row1.setBackground(UITheme.BG_PANEL);
 
-		chckbxLlegit = new JCheckBox("Llegit");
+		chckbxLlegit = new JCheckBox(I18n.t("filter_llegit_chk"));
 		chckbxLlegit.setFont(UITheme.FONT_BASE);
 		chckbxLlegit.setBackground(UITheme.BG_PANEL);
 		chckbxLlegit.setForeground(UITheme.TEXT_DARK);
-		chckbxLlegit.setToolTipText("Mostra nomes els llegits");
+		chckbxLlegit.setToolTipText(I18n.t("tip_filter_llegit"));
 		row1.add(chckbxLlegit);
 
-		chckbxNoLlegit = new JCheckBox("No llegit");
+		chckbxNoLlegit = new JCheckBox(I18n.t("filter_no_llegit_chk"));
 		chckbxNoLlegit.setFont(UITheme.FONT_BASE);
 		chckbxNoLlegit.setBackground(UITheme.BG_PANEL);
 		chckbxNoLlegit.setForeground(UITheme.TEXT_DARK);
-		chckbxNoLlegit.setToolTipText("Mostra nomes els no llegits");
+		chckbxNoLlegit.setToolTipText(I18n.t("tip_filter_no_llegit"));
 		row1.add(chckbxNoLlegit);
 
 		row1.add(makeSep());
 
-		row1.add(makeFieldWrap("ISBN", textISBN = new JTextField(10)));
-		row1.add(makeFieldWrap("Nom", textNom = new JTextField(14)));
-		row1.add(makeFieldWrap("Autor", textAutor = new JTextField(14)));
+		row1.add(makeFieldWrap(I18n.t("filter_isbn_lbl"), textISBN = new JTextField(10)));
+		row1.add(makeFieldWrap(I18n.t("filter_nom_lbl"), textNom = new JTextField(14)));
+		row1.add(makeFieldWrap(I18n.t("filter_autor_lbl"), textAutor = new JTextField(14)));
 
 		row1.add(makeSep());
 
-		JLabel lblTag = new JLabel("Etiqueta:");
+		JLabel lblTag = new JLabel(I18n.t("filter_etiqueta_lbl"));
 		UITheme.styleLabel(lblTag);
 		row1.add(lblTag);
 		comboTagFilter = new JComboBox<>();
 		comboTagFilter.setFont(UITheme.FONT_BASE);
-		comboTagFilter.setToolTipText("Filtrar per etiqueta/gènere");
+		comboTagFilter.setToolTipText(I18n.t("tip_filter_tag"));
 		comboTagFilter.setPreferredSize(new Dimension(140, 28));
 		row1.add(comboTagFilter);
 
@@ -413,13 +452,13 @@ public class MostrarBibliotecaPanel extends JPanel {
 		// Row 1b: editorial, serie, format, idioma
 		JPanel row1b = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row1b.setBackground(UITheme.BG_PANEL);
-		row1b.add(makeFieldWrap("Editorial", filterEditorial = new JTextField(14)));
-		row1b.add(makeFieldWrap("Sèrie",     filterSerie     = new JTextField(12)));
-		row1b.add(makeFieldWrap("Idioma",    filterIdioma    = new JTextField(10)));
-		JLabel lblFormat = new JLabel("Format:");
+		row1b.add(makeFieldWrap(I18n.t("filter_editorial_lbl"), filterEditorial = new JTextField(14)));
+		row1b.add(makeFieldWrap(I18n.t("filter_serie_lbl"),     filterSerie     = new JTextField(12)));
+		row1b.add(makeFieldWrap(I18n.t("filter_idioma_lbl"),    filterIdioma    = new JTextField(10)));
+		JLabel lblFormat = new JLabel(I18n.t("filter_format_lbl") + ":");
 		UITheme.styleLabel(lblFormat);
 		row1b.add(lblFormat);
-		filterFormat = new JComboBox<>(new String[]{"", "Tapa dura", "Tapa blanda", "eBook", "Audiollibre"});
+		filterFormat = new JComboBox<>(new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
 		filterFormat.setFont(UITheme.FONT_BASE);
 		filterFormat.setPreferredSize(new Dimension(130, 28));
 		row1b.add(filterFormat);
@@ -429,20 +468,20 @@ public class MostrarBibliotecaPanel extends JPanel {
 		JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row2.setBackground(UITheme.BG_PANEL);
 
-		row2.add(makeRangeWrap("Any", anyMin = new JTextField(5), anyMax = new JTextField(5)));
-		row2.add(makeRangeWrap("Valoracio", valoracioMin = new JTextField(5), valoracioMax = new JTextField(5)));
-		row2.add(makeRangeWrap("Preu", preuMin = new JTextField(5), preuMax = new JTextField(5)));
+		row2.add(makeRangeWrap(I18n.t("filter_any_lbl"), anyMin = new JTextField(5), anyMax = new JTextField(5)));
+		row2.add(makeRangeWrap(I18n.t("filter_valoracio_lbl"), valoracioMin = new JTextField(5), valoracioMax = new JTextField(5)));
+		row2.add(makeRangeWrap(I18n.t("filter_preu_lbl"), preuMin = new JTextField(5), preuMax = new JTextField(5)));
 
 		row2.add(makeSep());
 
-		bttnFiltrar = new JButton("Filtrar");
+		bttnFiltrar = new JButton(I18n.t("btn_filtrar"));
 		UITheme.styleAccentButton(bttnFiltrar);
-		bttnFiltrar.setToolTipText("Aplicar filtres seleccionats");
+		bttnFiltrar.setToolTipText(I18n.t("tip_filtrar"));
 		row2.add(bttnFiltrar);
 
-		bttnQuitarFiltros = new JButton("Treure filtres");
+		bttnQuitarFiltros = new JButton(I18n.t("btn_quitar_filtres"));
 		UITheme.styleSecondaryButton(bttnQuitarFiltros);
-		bttnQuitarFiltros.setToolTipText("Treure tots els filtres aplicats");
+		bttnQuitarFiltros.setToolTipText(I18n.t("tip_quitar_filtres"));
 		row2.add(bttnQuitarFiltros);
 
 		panelFiltros.add(row2);
@@ -451,31 +490,75 @@ public class MostrarBibliotecaPanel extends JPanel {
 		JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row3.setBackground(UITheme.BG_PANEL);
 
-		btnExportCSV = new JButton("Export CSV");
-		UITheme.styleSecondaryButton(btnExportCSV);
-		btnExportCSV.setToolTipText("Exportar la llista actual a CSV");
-		row3.add(btnExportCSV);
+		btnExportCSV = new JButton();
+		btnExportJSON = new JButton();
+		btnExportHTML = new JButton();
+		btnExportPDF = new JButton();
 
-		btnImportarCSV = new JButton("Importar CSV");
-		UITheme.styleSecondaryButton(btnImportarCSV);
-		btnImportarCSV.setToolTipText("Importar llibres des d'un fitxer CSV");
-		row3.add(btnImportarCSV);
+		btnExportDropdown = new JButton(I18n.t("btn_export_lbl") + " ▾");
+		UITheme.styleSecondaryButton(btnExportDropdown);
+		JPopupMenu exportMenu = new JPopupMenu();
+		JMenuItem miExportCSV = new JMenuItem(I18n.t("btn_export_csv"));
+		miExportCSV.setToolTipText(I18n.t("tip_export_csv"));
+		miExportCSV.addActionListener(e -> btnExportCSV.doClick());
+		JMenuItem miExportJSON = new JMenuItem(I18n.t("btn_export_json_lbl"));
+		miExportJSON.setToolTipText(I18n.t("tip_export_json"));
+		miExportJSON.addActionListener(e -> btnExportJSON.doClick());
+		JMenuItem miExportHTML = new JMenuItem(I18n.t("btn_export_html_lbl"));
+		miExportHTML.setToolTipText(I18n.t("tip_export_html"));
+		miExportHTML.addActionListener(e -> btnExportHTML.doClick());
+		JMenuItem miExportPDF = new JMenuItem(I18n.t("btn_export_pdf_lbl"));
+		miExportPDF.setToolTipText(I18n.t("tip_export_pdf"));
+		miExportPDF.addActionListener(e -> btnExportPDF.doClick());
+		exportMenu.add(miExportCSV);
+		exportMenu.add(miExportJSON);
+		exportMenu.add(miExportHTML);
+		exportMenu.add(miExportPDF);
+		btnExportDropdown.addActionListener(e -> exportMenu.show(btnExportDropdown, 0, btnExportDropdown.getHeight()));
+		row3.add(btnExportDropdown);
 
-		btnEscanejarISBN = new JButton("Escanejar ISBN");
+		btnImportarCSV = new JButton();
+		btnImportarCalibre = new JButton();
+		btnImportarJSON = new JButton();
+
+		btnImportDropdown = new JButton(I18n.t("btn_import_lbl") + " ▾");
+		UITheme.styleSecondaryButton(btnImportDropdown);
+		JPopupMenu importMenu = new JPopupMenu();
+		JMenuItem miImportCSV = new JMenuItem(I18n.t("btn_import_csv"));
+		miImportCSV.setToolTipText(I18n.t("tip_import_csv"));
+		miImportCSV.addActionListener(e -> btnImportarCSV.doClick());
+		JMenuItem miImportJSON = new JMenuItem(I18n.t("btn_import_json_lbl"));
+		miImportJSON.setToolTipText(I18n.t("tip_import_json"));
+		miImportJSON.addActionListener(e -> btnImportarJSON.doClick());
+		JMenuItem miImportCalibre = new JMenuItem(I18n.t("btn_import_calibre"));
+		miImportCalibre.setToolTipText(I18n.t("tip_import_calibre"));
+		miImportCalibre.addActionListener(e -> btnImportarCalibre.doClick());
+		importMenu.add(miImportCSV);
+		importMenu.add(miImportJSON);
+		importMenu.add(miImportCalibre);
+		btnImportDropdown.addActionListener(e -> importMenu.show(btnImportDropdown, 0, btnImportDropdown.getHeight()));
+		row3.add(btnImportDropdown);
+
+		btnFetchCovers = new JButton(I18n.t("btn_fetch_covers_lbl"));
+		UITheme.styleSecondaryButton(btnFetchCovers);
+		btnFetchCovers.setToolTipText(I18n.t("tip_fetch_covers"));
+		row3.add(btnFetchCovers);
+
+		btnEscanejarISBN = new JButton(I18n.t("btn_scan_isbn_lbl"));
 		UITheme.styleSecondaryButton(btnEscanejarISBN);
-		btnEscanejarISBN.setToolTipText("Introduir ISBN i auto-omplir dades d'OpenLibrary");
+		btnEscanejarISBN.setToolTipText(I18n.t("tip_scan_isbn"));
 		row3.add(btnEscanejarISBN);
 
 		row3.add(makeSep());
 
-		btnBackupBD = new JButton("Backup BD");
+		btnBackupBD = new JButton(I18n.t("btn_backup_bd"));
 		UITheme.styleSecondaryButton(btnBackupBD);
-		btnBackupBD.setToolTipText("Exportar tota la base de dades a un fitxer SQL");
+		btnBackupBD.setToolTipText(I18n.t("tip_backup_bd"));
 		row3.add(btnBackupBD);
 
-		btnRestaurarBD = new JButton("Restaurar BD");
+		btnRestaurarBD = new JButton(I18n.t("btn_restore_bd"));
 		UITheme.styleSecondaryButton(btnRestaurarBD);
-		btnRestaurarBD.setToolTipText("Restaurar la base de dades des d'un fitxer SQL de backup");
+		btnRestaurarBD.setToolTipText(I18n.t("tip_restore_bd"));
 		row3.add(btnRestaurarBD);
 
 		panelFiltros.add(row3);
@@ -555,16 +638,32 @@ public class MostrarBibliotecaPanel extends JPanel {
 			}
 		});
 		scrollPaneJTable.setViewportView(jTableBilio);
+
+		jTableBilio.setDragEnabled(true);
+		jTableBilio.setTransferHandler(new TransferHandler() {
+			@Override
+			public int getSourceActions(javax.swing.JComponent c) { return COPY; }
+			@Override
+			protected Transferable createTransferable(javax.swing.JComponent c) {
+				JTable t = (JTable) c;
+				StringBuilder sb = new StringBuilder();
+				for (int row : t.getSelectedRows()) {
+					Object v = t.getValueAt(row, 1); // COLUMNA_ISBN = 1
+					if (v != null) { if (sb.length() > 0) sb.append(","); sb.append(v); }
+				}
+				return new StringSelection(sb.toString());
+			}
+		});
 	}
 
 	private void buildPagination() {
 		paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
 		paginationPanel.setBackground(UITheme.BG_MAIN);
-		btnPaginaAnterior = new JButton("Anterior");
+		btnPaginaAnterior = new JButton(I18n.t("btn_page_prev"));
 		UITheme.styleSecondaryButton(btnPaginaAnterior);
-		lblPagina = new JLabel("Pagina 1 / 1");
+		lblPagina = new JLabel(I18n.t("page_info_java", 1, 1));
 		UITheme.styleLabel(lblPagina);
-		btnPaginaSeguent = new JButton("Seguent");
+		btnPaginaSeguent = new JButton(I18n.t("btn_page_next"));
 		UITheme.styleSecondaryButton(btnPaginaSeguent);
 		paginationPanel.add(btnPaginaAnterior);
 		paginationPanel.add(lblPagina);
@@ -697,6 +796,22 @@ public class MostrarBibliotecaPanel extends JPanel {
 			});
 			sidebarShelfBtnMap.put(l.getId(), btn);
 			sidebarShelvesPanel.add(btn);
+			final int shelfId = l.getId();
+			new DropTarget(btn, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
+				@Override public void drop(DropTargetDropEvent ev) {
+					try {
+						ev.acceptDrop(DnDConstants.ACTION_COPY);
+						String data = (String) ev.getTransferable().getTransferData(DataFlavor.stringFlavor);
+						if (data == null || data.isBlank()) return;
+						java.util.List<Long> isbns = new java.util.ArrayList<>();
+						for (String part : data.split(",")) {
+							try { isbns.add(Long.parseLong(part.trim())); } catch (NumberFormatException ignored) {}
+						}
+						if (!isbns.isEmpty() && onDragToShelf != null) onDragToShelf.accept(shelfId, isbns);
+						ev.dropComplete(true);
+					} catch (Exception ex) { ev.dropComplete(false); }
+				}
+			});
 		}
 		sidebarShelvesPanel.revalidate();
 		sidebarShelvesPanel.repaint();
@@ -780,8 +895,9 @@ public class MostrarBibliotecaPanel extends JPanel {
 		}
 		UITheme.styleAccentButton(bttnFiltrar);
 		UITheme.styleSecondaryButton(bttnQuitarFiltros);
-		UITheme.styleSecondaryButton(btnExportCSV);
-		UITheme.styleSecondaryButton(btnImportarCSV);
+		UITheme.styleSecondaryButton(btnExportDropdown);
+		UITheme.styleSecondaryButton(btnImportDropdown);
+		UITheme.styleSecondaryButton(btnFetchCovers);
 		UITheme.styleSecondaryButton(btnEscanejarISBN);
 		UITheme.styleSecondaryButton(btnBackupBD);
 		UITheme.styleSecondaryButton(btnRestaurarBD);
@@ -795,6 +911,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleAccentButton(btnNouLlibre);
 		UITheme.styleSecondaryButton(btnToggleFiltres);
 		UITheme.styleSecondaryButton(btnToggleVista);
+		UITheme.styleSecondaryButton(btnGroupSeries);
 
 		// Pagination
 		paginationPanel.setBackground(UITheme.BG_MAIN);
@@ -831,8 +948,10 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleAccentButton(btnNouLlibre);
 		UITheme.styleSecondaryButton(btnToggleFiltres);
 		UITheme.styleSecondaryButton(btnToggleVista);
-		UITheme.styleSecondaryButton(btnExportCSV);
-		UITheme.styleSecondaryButton(btnImportarCSV);
+		UITheme.styleSecondaryButton(btnGroupSeries);
+		UITheme.styleSecondaryButton(btnExportDropdown);
+		UITheme.styleSecondaryButton(btnImportDropdown);
+		UITheme.styleSecondaryButton(btnFetchCovers);
 		UITheme.styleSecondaryButton(btnEscanejarISBN);
 		UITheme.styleSecondaryButton(btnBackupBD);
 		UITheme.styleSecondaryButton(btnRestaurarBD);
@@ -867,6 +986,12 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JButton getBtnNouLlibre()          { return btnNouLlibre; }
 	public JButton getBtnExportCSV()          { return btnExportCSV; }
 	public JButton getBtnImportarCSV()        { return btnImportarCSV; }
+	public JButton getBtnImportarCalibre()    { return btnImportarCalibre; }
+	public JButton getBtnExportJSON()         { return btnExportJSON; }
+	public JButton getBtnImportarJSON()       { return btnImportarJSON; }
+	public JButton getBtnExportHTML()         { return btnExportHTML; }
+	public JButton getBtnExportPDF()          { return btnExportPDF; }
+	public JButton getBtnFetchCovers()        { return btnFetchCovers; }
 	public JButton getBtnEscanejarISBN()      { return btnEscanejarISBN; }
 	public JButton getBtnEstadistiques()      { return btnEstadistiques; }
 	public JButton getBtnLlibreAleatori()     { return btnLlibreAleatori; }
@@ -901,11 +1026,15 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JComboBox<String> getFilterFormat()   { return filterFormat; }
 	public JButton getBtnAfegitsRecentment()  { return btnAfegitsRecentment; }
 	public JButton getBtnLlegitsRecentment()  { return btnLlegitsRecentment; }
+	public JButton getBtnDesitjats()          { return btnDesitjats; }
+	public JButton getBtnEnCurs()             { return btnEnCurs; }
+	public void setOnDragToShelf(java.util.function.BiConsumer<Integer, java.util.List<Long>> cb) { this.onDragToShelf = cb; }
 	public JComboBox<String> getComboPresets(){ return comboPresets; }
 	public JButton getBtnCarregaPreset()      { return btnCarregaPreset; }
 	public JButton getBtnDesaPreset()         { return btnDesaPreset; }
 	public JButton getBtnEsborraPreset()      { return btnEsborraPreset; }
 	public JButton getBtnToggleFiltres()      { return btnToggleFiltres; }
 	public JButton getBtnToggleVista()        { return btnToggleVista; }
+	public JButton getBtnGroupSeries()        { return btnGroupSeries; }
 	public GaleriaCobertesPanel getGaleria()  { return galeria; }
 }

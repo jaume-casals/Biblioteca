@@ -23,6 +23,7 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import domini.Tag;
 import herramienta.DialogoError;
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class TagsDelLlibreDialog extends JDialog {
@@ -34,7 +35,7 @@ public class TagsDelLlibreDialog extends JDialog {
     private JComboBox<Tag> comboAdd;
 
     public TagsDelLlibreDialog(Window owner, Llibre llibre) {
-        super(owner, "Etiquetes de: " + llibre.getNom(), ModalityType.APPLICATION_MODAL);
+        super(owner, I18n.t("dlg_tags_for_book", llibre.getNom()), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
         setSize(400, 380);
         setLocationRelativeTo(owner);
@@ -45,7 +46,7 @@ public class TagsDelLlibreDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
 
-        tableModel = new DefaultTableModel(new String[]{"Etiqueta"}, 0) {
+        tableModel = new DefaultTableModel(new String[]{I18n.t("col_tag_name")}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(tableModel);
@@ -64,19 +65,19 @@ public class TagsDelLlibreDialog extends JDialog {
         reloadComboAdd();
         comboAdd.setPreferredSize(new Dimension(180, 30));
 
-        JButton btnAfegir = new JButton("Afegir etiqueta");
+        JButton btnAfegir = new JButton(I18n.t("btn_afegir_etiqueta"));
         UITheme.styleAccentButton(btnAfegir);
 
         JTextField txtNovaEtiqueta = new JTextField(12);
         UITheme.styleField(txtNovaEtiqueta);
-        txtNovaEtiqueta.setToolTipText("Nom nova etiqueta");
+        txtNovaEtiqueta.setToolTipText(I18n.t("tip_nom_nova_etiqueta"));
 
-        JButton btnCrear = new JButton("Crear");
+        JButton btnCrear = new JButton(I18n.t("btn_crear"));
         UITheme.styleSecondaryButton(btnCrear);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         addRow.setBackground(UITheme.BG_PANEL);
-        JLabel lblEtiq = new JLabel("Etiqueta:");
+        JLabel lblEtiq = new JLabel(I18n.t("lbl_etiqueta_colon"));
         UITheme.styleLabel(lblEtiq);
         addRow.add(lblEtiq);
         addRow.add(comboAdd);
@@ -84,13 +85,13 @@ public class TagsDelLlibreDialog extends JDialog {
 
         JPanel createRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         createRow.setBackground(UITheme.BG_PANEL);
-        JLabel lblNova = new JLabel("Nova:");
+        JLabel lblNova = new JLabel(I18n.t("lbl_nova_colon"));
         UITheme.styleLabel(lblNova);
         createRow.add(lblNova);
         createRow.add(txtNovaEtiqueta);
         createRow.add(btnCrear);
 
-        JButton btnTreure = new JButton("Treure seleccionada");
+        JButton btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
         UITheme.styleSecondaryButton(btnTreure);
         btnTreure.setBackground(UITheme.DANGER);
 
@@ -123,16 +124,16 @@ public class TagsDelLlibreDialog extends JDialog {
             reloadComboAdd();
             if (comboAdd.getItemCount() == 0) {
                 JOptionPane.showMessageDialog(this,
-                    "No hi ha cap etiqueta. Crea'n una primer.",
-                    "Sense etiquetes", JOptionPane.INFORMATION_MESSAGE);
+                    I18n.t("dlg_no_tags_msg"),
+                    I18n.t("dlg_no_tags_title"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
             Tag tag = (Tag) comboAdd.getSelectedItem();
             if (tag == null) return;
             if (tagsCache.stream().anyMatch(t -> t.getId() == tag.getId())) {
                 JOptionPane.showMessageDialog(this,
-                    "El llibre ja te l'etiqueta \"" + tag.getNom() + "\".",
-                    "Duplicat", JOptionPane.INFORMATION_MESSAGE);
+                    I18n.t("dlg_tag_duplicate", tag.getNom()),
+                    I18n.t("dlg_duplicate_title"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
             try {

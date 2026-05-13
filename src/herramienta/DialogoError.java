@@ -1,66 +1,151 @@
 package herramienta;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.GraphicsEnvironment;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.io.*;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import javax.swing.*;
 
 public class DialogoError {
 
     private final String titol;
     private final String missatge;
     private final String detalls;
+    private final boolean isValidation;
 
     public DialogoError(Exception e) {
         this("Error", e);
     }
 
     public DialogoError(String titol, Exception e) {
-        this.titol = titol;
+        this.isValidation = e instanceof IllegalArgumentException;
+        this.titol = isValidation ? "Camp no vàlid" : titol;
 
-        StringBuilder msg = new StringBuilder();
-        if (e.getMessage() != null) msg.append(e.getMessage());
-        if (e.getCause() != null && e.getCause().getMessage() != null) {
-            msg.append("\n\nCausa: ").append(e.getCause().getMessage());
+        this.missatge = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+
+        if (isValidation) {
+            this.detalls = "";
+        } else {
+            StringBuilder sb = new StringBuilder();
+            if (e.getCause() != null && e.getCause().getMessage() != null)
+                sb.append("\nCausa: ").append(e.getCause().getMessage());
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            sb.append("\n\n─── Stack trace ───\n").append(sw);
+            this.detalls = sb.toString();
         }
-        this.missatge = msg.toString();
-
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        this.detalls = sw.toString();
     }
 
     public DialogoError(String titol, String missatge) {
         this.titol = titol;
         this.missatge = missatge;
         this.detalls = "";
+        this.isValidation = false;
+    }
+
+    private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private static void writeToLog(String titol, String missatge, String detalls) {
+        try {
+            Path logFile = Path.of(System.getProperty("user.home"), ".biblioteca", "errors.log");
+            logFile.getParent().toFile().mkdirs();
+            try (FileWriter fw = new FileWriter(logFile.toFile(), true)) {
+                fw.write("[" + LocalDateTime.now().format(LOG_FMT) + "] " + titol + ": " + missatge + "\n");
+                if (!detalls.isBlank()) fw.write(detalls + "\n");
+                fw.write("---\n");
+            }
+        } catch (IOException ignored) {}
     }
 
     public void showErrorMessage() {
+        writeToLog(titol, missatge, detalls);
         if (GraphicsEnvironment.isHeadless() || Boolean.getBoolean("biblioteca.test")) {
             System.err.println("[" + titol + "] " + missatge);
             if (!detalls.isBlank()) System.err.println(detalls);
             return;
         }
+        if (isValidation) showValidationDialog();
+        else showSystemErrorDialog();
+    }
 
-        // Top label with error title
+    // ── Validation (user mistake) ─────────────────────────────────────────────
+
+    private void showValidationDialog() {
+        Color accent = UITheme.SIDEBAR_ACCENT;
+
+        JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 11));
+        header.setBackground(accent);
+
+        JLabel iconLbl = new JLabel("⚠");
+        iconLbl.setFont(new Font("SansSerif", Font.BOLD, 17));
+        iconLbl.setForeground(Color.WHITE);
+
+        JLabel titleLbl = new JLabel(titol);
+        titleLbl.setFont(UITheme.FONT_BOLD);
+        titleLbl.setForeground(Color.WHITE);
+
+        header.add(iconLbl);
+        header.add(titleLbl);
+
+        JLabel msgLbl = new JLabel(
+            "<html><body style='width:300px'>" + escHtml(missatge) + "</body></html>");
+        msgLbl.setFont(UITheme.FONT_BASE);
+        msgLbl.setForeground(UITheme.TEXT_DARK);
+        msgLbl.setBorder(BorderFactory.createEmptyBorder(18, 22, 10, 22));
+
+        JButton btnOk = new JButton("D'acord");
+        btnOk.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btnOk.setBackground(accent);
+        btnOk.setForeground(Color.WHITE);
+        btnOk.setFont(UITheme.FONT_BOLD);
+        btnOk.setFocusPainted(false);
+        btnOk.setBorderPainted(false);
+        btnOk.setOpaque(true);
+        btnOk.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnOk.setPreferredSize(new Dimension(110, 32));
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 10));
+        btnPanel.setBackground(UITheme.BG_MAIN);
+        btnPanel.add(btnOk);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(UITheme.BG_MAIN);
+        content.add(msgLbl, BorderLayout.CENTER);
+        content.add(btnPanel, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle(titol);
+        dialog.setModal(true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(header, BorderLayout.NORTH);
+        dialog.add(content, BorderLayout.CENTER);
+        dialog.pack();
+        dialog.setMinimumSize(new Dimension(360, dialog.getHeight()));
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+
+        btnOk.addActionListener(ev -> dialog.dispose());
+        dialog.getRootPane().setDefaultButton(btnOk);
+        dialog.getRootPane().registerKeyboardAction(
+            ev -> dialog.dispose(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        dialog.setVisible(true);
+    }
+
+    // ── System / technical error ──────────────────────────────────────────────
+
+    private void showSystemErrorDialog() {
         JLabel lblTitol = new JLabel(titol, SwingConstants.LEFT);
         lblTitol.setFont(UITheme.FONT_BOLD);
-        lblTitol.setForeground(new java.awt.Color(0xC0392B));
+        lblTitol.setForeground(UITheme.DANGER);
         lblTitol.setBorder(BorderFactory.createEmptyBorder(8, 10, 4, 10));
 
-        // Selectable text area — shows message + full stack trace
-        String full = missatge + (detalls.isBlank() ? "" : "\n\n─── Stack trace ───\n" + detalls);
+        String full = missatge + (detalls.isBlank() ? "" : detalls);
         JTextArea textArea = new JTextArea(full);
         textArea.setEditable(false);
         textArea.setLineWrap(true);
@@ -101,5 +186,11 @@ public class DialogoError {
         dialog.getRootPane().setDefaultButton(btnTancar);
 
         dialog.setVisible(true);
+    }
+
+    private static String escHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\n", "<br>");
     }
 }

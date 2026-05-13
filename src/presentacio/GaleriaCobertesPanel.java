@@ -58,6 +58,9 @@ public class GaleriaCobertesPanel extends JPanel {
     private java.util.function.BiConsumer<java.awt.event.MouseEvent, List<Llibre>> onRightClick;
     private java.util.function.Consumer<List<Llibre>> onDeleteSelected;
     private int lastClickedIdx = -1;
+    private int keyboardIdx = -1;
+    private JWindow zoomPopup;
+    private javax.swing.Timer zoomTimer;
 
     public GaleriaCobertesPanel() {
         setLayout(new BorderLayout());
@@ -99,6 +102,49 @@ public class GaleriaCobertesPanel extends JPanel {
                 if (!sel.isEmpty() && onDeleteSelected != null) onDeleteSelected.accept(sel);
             }
         });
+        javax.swing.InputMap im2 = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        im2.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, 0), "galRight");
+        im2.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  0), "galLeft");
+        im2.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DOWN,  0), "galDown");
+        im2.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_UP,    0), "galUp");
+        im2.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "galEnter");
+        getActionMap().put("galRight", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moveKeyboard(1); }
+        });
+        getActionMap().put("galLeft", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moveKeyboard(-1); }
+        });
+        getActionMap().put("galDown", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moveKeyboard(computeCols()); }
+        });
+        getActionMap().put("galUp", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moveKeyboard(-computeCols()); }
+        });
+        getActionMap().put("galEnter", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (keyboardIdx >= 0 && currentLlibres != null && keyboardIdx < currentLlibres.size() && onCardClick != null)
+                    onCardClick.accept(currentLlibres.get(keyboardIdx));
+            }
+        });
+    }
+
+    private int computeCols() {
+        int vw = wrap.getWidth();
+        int cellW = CARD_W + SDX + 3 + GAP;
+        return Math.max(1, vw / cellW);
+    }
+
+    private void moveKeyboard(int delta) {
+        if (currentLlibres == null || currentLlibres.isEmpty()) return;
+        int n = currentLlibres.size();
+        if (keyboardIdx < 0) keyboardIdx = 0;
+        else keyboardIdx = Math.max(0, Math.min(n - 1, keyboardIdx + delta));
+        selectedISBNs.clear();
+        selectedISBNs.add(currentLlibres.get(keyboardIdx).getISBN());
+        lastClickedIdx = keyboardIdx;
+        wrap.repaint();
+        JPanel card = cardMap.get(currentLlibres.get(keyboardIdx).getISBN());
+        if (card != null) card.scrollRectToVisible(card.getBounds());
     }
 
     public void setOnCardClick(java.util.function.Consumer<Llibre> cb)  { this.onCardClick = cb; }
@@ -157,6 +203,30 @@ public class GaleriaCobertesPanel extends JPanel {
         setBackground(UITheme.BG_MAIN);
         wrap.setBackground(UITheme.BG_MAIN);
         if (currentLlibres != null) updateLlibres(currentLlibres);
+    }
+
+    // ── Zoom popup ────────────────────────────────────────────────────────────
+
+    private void showZoomPopup(Llibre l, JPanel card) {
+        hideZoomPopup();
+        BufferedImage img = imageCache.get(l.getISBN());
+        if (img == null) return;
+        int pw = Math.min(img.getWidth() * 2, 300);
+        int ph = (int)((double) img.getHeight() / img.getWidth() * pw);
+        java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(pw, ph, BufferedImage.TYPE_INT_ARGB);
+        scaled.createGraphics().drawImage(img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+        JLabel lbl = new JLabel(new ImageIcon(scaled));
+        lbl.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR, 1));
+        zoomPopup = new JWindow(SwingUtilities.getWindowAncestor(this));
+        zoomPopup.setContentPane(lbl);
+        zoomPopup.pack();
+        java.awt.Point loc = card.getLocationOnScreen();
+        zoomPopup.setLocation(loc.x + card.getWidth() + 4, loc.y);
+        zoomPopup.setVisible(true);
+    }
+
+    private void hideZoomPopup() {
+        if (zoomPopup != null) { zoomPopup.dispose(); zoomPopup = null; }
     }
 
     // ── Targeted repaint helpers ──────────────────────────────────────────────
@@ -261,8 +331,18 @@ public class GaleriaCobertesPanel extends JPanel {
 
         card.setFocusable(true);
         card.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseEntered(java.awt.event.MouseEvent e) { hov[0] = true;  card.repaint(); }
-            @Override public void mouseExited (java.awt.event.MouseEvent e) { hov[0] = false; card.repaint(); }
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                hov[0] = true; card.repaint();
+                if (zoomTimer != null) zoomTimer.stop();
+                zoomTimer = new javax.swing.Timer(500, ev -> showZoomPopup(l, card));
+                zoomTimer.setRepeats(false);
+                zoomTimer.start();
+            }
+            @Override public void mouseExited (java.awt.event.MouseEvent e) {
+                hov[0] = false; card.repaint();
+                if (zoomTimer != null) { zoomTimer.stop(); zoomTimer = null; }
+                hideZoomPopup();
+            }
             @Override public void mousePressed(java.awt.event.MouseEvent e) {
                 card.requestFocusInWindow();
                 if (javax.swing.SwingUtilities.isRightMouseButton(e)) {

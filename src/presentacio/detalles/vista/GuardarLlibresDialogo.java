@@ -22,6 +22,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class GuardarLlibresDialogo extends JDialog {
@@ -59,7 +60,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		setModal(true);
 		setResizable(true);
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-		setTitle("Nou Llibre");
+		setTitle(I18n.t("modal_new_book"));
 		setMinimumSize(new Dimension(400, 500));
 		setPreferredSize(new Dimension(600, 720));
 		setLayout(new BorderLayout(0, 0));
@@ -84,14 +85,14 @@ public class GuardarLlibresDialogo extends JDialog {
 		west.add(labelPreview);
 		west.add(Box.createVerticalStrut(6));
 
-		btnGuardar = new JButton("Guardar");
+		btnGuardar = new JButton(I18n.t("btn_save_java"));
 		UITheme.styleAccentButton(btnGuardar);
 
-		JButton btnCancel = new JButton("Cancel·lar");
+		JButton btnCancel = new JButton(I18n.t("btn_cancel"));
 		UITheme.styleSecondaryButton(btnCancel);
 		btnCancel.addActionListener(e -> dispose());
 
-		btnSeleccionarImatge = new JButton("Sel. imatge");
+		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge"));
 		UITheme.styleSecondaryButton(btnSeleccionarImatge);
 
 		for (JButton btn : new JButton[]{btnGuardar, btnCancel, btnSeleccionarImatge}) {
@@ -108,27 +109,27 @@ public class GuardarLlibresDialogo extends JDialog {
 		grid.setBackground(UITheme.BG_PANEL);
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
-		textISBN       = addFieldEntry(grid, "ISBN");
-		textNom        = addFieldEntry(grid, "NOM");
-		textAutor      = addFieldEntry(grid, "AUTOR");
-		textAny        = addFieldEntry(grid, "ANY");
-		textDescripcio = addFieldEntry(grid, "DESCRIPCIO");
-		textValoracio  = addFieldEntry(grid, "VALORACIO");
-		textPreu       = addFieldEntry(grid, "PREU");
-		textEditorial  = addFieldEntry(grid, "EDITORIAL");
-		textSerie      = addFieldEntry(grid, "SÈRIE");
-		textVolum      = addFieldEntry(grid, "VOLUM");
-		textDataCompra  = addFieldEntry(grid, "DATA COMPRA");
-		textDataLectura = addFieldEntry(grid, "DATA LECTURA");
+		textISBN       = addFieldEntry(grid, I18n.t("field_isbn"));
+		textNom        = addFieldEntry(grid, I18n.t("field_title"));
+		textAutor      = addFieldEntry(grid, I18n.t("field_author"));
+		textAny        = addFieldEntry(grid, I18n.t("field_year"));
+		textDescripcio = addFieldEntry(grid, I18n.t("field_description"));
+		textValoracio  = addFieldEntry(grid, I18n.t("field_rating"));
+		textPreu       = addFieldEntry(grid, I18n.t("field_price"));
+		textEditorial  = addFieldEntry(grid, I18n.t("field_publisher"));
+		textSerie      = addFieldEntry(grid, I18n.t("field_series"));
+		textVolum      = addFieldEntry(grid, I18n.t("field_volume"));
+		textDataCompra  = addFieldEntry(grid, I18n.t("field_purchased"));
+		textDataLectura = addFieldEntry(grid, I18n.t("field_read_on"));
 		textDataCompra.setToolTipText("YYYY-MM-DD");
 		textDataLectura.setToolTipText("YYYY-MM-DD");
-		textIdioma     = addFieldEntry(grid, "IDIOMA");
-		comboFormat    = addComboEntry(grid, "FORMAT",
-				new String[]{"", "Tapa dura", "Tapa blanda", "eBook", "Audiollibre"});
-		chckDesitjat   = addCheckEntry(grid, "DESITJAT",
-				"Vull comprar aquest llibre (no el tinc)");
-		chckLlegit     = addCheckEntry(grid, "LLEGIT", null);
-		textPortada    = addFieldEntry(grid, "PORTADA");
+		textIdioma     = addFieldEntry(grid, I18n.t("field_language"));
+		comboFormat    = addComboEntry(grid, I18n.t("field_format"),
+				new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
+		chckDesitjat   = addCheckEntry(grid, I18n.t("field_wishlist"),
+				I18n.t("tip_desitjat"));
+		chckLlegit     = addCheckEntry(grid, I18n.t("field_read"), null);
+		textPortada    = addFieldEntry(grid, I18n.t("col_cover"));
 
 		JScrollPane scroll = new JScrollPane(grid,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -159,11 +160,11 @@ public class GuardarLlibresDialogo extends JDialog {
 		south.setBackground(UITheme.BG_PANEL);
 		south.setBorder(new EmptyBorder(0, 8, 8, 8));
 
-		btnCercaInternet = new JButton("⬇  Cerca a Internet (ISBN / Títol / Autor)");
+		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
 		UITheme.styleAccentButton(btnCercaInternet);
 		btnCercaInternet.setBackground(new java.awt.Color(0x117A65));
 		btnCercaInternet.setForeground(java.awt.Color.WHITE);
-		btnCercaInternet.setToolTipText("Omple els camps automàticament cercant a OpenLibrary.org");
+		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
 		south.add(btnCercaInternet, BorderLayout.CENTER);
 
 		progressBar = new JProgressBar();

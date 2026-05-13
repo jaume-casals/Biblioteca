@@ -24,6 +24,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class DetallesLlibrePanel extends JDialog {
@@ -52,6 +53,9 @@ public class DetallesLlibrePanel extends JDialog {
 	private JTextField textIdioma;
 	private JTextField textPaisOrigen;
 	private JComboBox<String> comboFormat;
+	private JComboBox<String> comboEstat;
+	private JTextField textExemplars;
+	private JTextField textLlenguaOriginal;
 	private JCheckBox  chckDesitjat;
 	private JTextField textPagines;
 	private JTextField textPaginesLlegides;
@@ -62,6 +66,8 @@ public class DetallesLlibrePanel extends JDialog {
 	private JButton    btnSeleccionarImatge;
 	private JButton    btnGestioLlistes;
 	private JButton    btnGestioTags;
+	private JButton    btnHistorialPrestecs;
+	private JButton    btnImprimir;
 
 	public DetallesLlibrePanel() {
 		setModal(true);
@@ -88,14 +94,14 @@ public class DetallesLlibrePanel extends JDialog {
 		east.add(labelIcono);
 		east.add(Box.createVerticalStrut(6));
 
-		btnSeleccionarImatge = new JButton("Seleccionar imatge");
+		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge_detail"));
 		UITheme.styleSecondaryButton(btnSeleccionarImatge);
 		btnSeleccionarImatge.setEnabled(false);
 
-		btnEditar = new JButton("Editar");
+		btnEditar = new JButton(I18n.t("btn_edit_java"));
 		UITheme.styleAccentButton(btnEditar);
 
-		btnEliminar = new JButton("Eliminar");
+		btnEliminar = new JButton(I18n.t("btn_delete"));
 		btnEliminar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
 		btnEliminar.setBackground(new Color(0xC0392B));
 		btnEliminar.setForeground(Color.WHITE);
@@ -105,22 +111,30 @@ public class DetallesLlibrePanel extends JDialog {
 		btnEliminar.setOpaque(true);
 		btnEliminar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-		JButton btnTancar = new JButton("Tancar");
+		JButton btnTancar = new JButton(I18n.t("btn_close"));
 		UITheme.styleSecondaryButton(btnTancar);
 		btnTancar.addActionListener(e -> dispose());
 
-		btnGestioLlistes = new JButton("Llistes...");
+		btnGestioLlistes = new JButton(I18n.t("btn_llistes"));
 		UITheme.styleSecondaryButton(btnGestioLlistes);
-		btnGestioLlistes.setToolTipText("Gestionar l'assignació d'aquest llibre a llistes");
+		btnGestioLlistes.setToolTipText(I18n.t("tip_llistes"));
 
-		btnGestioTags = new JButton("Etiquetes...");
+		btnGestioTags = new JButton(I18n.t("btn_etiquetes"));
 		UITheme.styleSecondaryButton(btnGestioTags);
-		btnGestioTags.setToolTipText("Gestionar les etiquetes/gèneres d'aquest llibre");
+		btnGestioTags.setToolTipText(I18n.t("tip_etiquetes"));
+
+		btnHistorialPrestecs = new JButton(I18n.t("btn_historial_prestecs"));
+		UITheme.styleSecondaryButton(btnHistorialPrestecs);
+		btnHistorialPrestecs.setToolTipText(I18n.t("tip_historial_prestecs"));
+
+		btnImprimir = new JButton(I18n.t("btn_imprimir_detail"));
+		UITheme.styleSecondaryButton(btnImprimir);
+		btnImprimir.setToolTipText(I18n.t("tip_imprimir_detail"));
 
 		int btnH = 36;
 		for (JButton btn : new JButton[]{
 				btnSeleccionarImatge, btnEditar, btnEliminar,
-				btnTancar, btnGestioLlistes, btnGestioTags}) {
+				btnTancar, btnGestioLlistes, btnGestioTags, btnHistorialPrestecs, btnImprimir}) {
 			btn.setAlignmentX(Component.LEFT_ALIGNMENT);
 			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btnH));
 			east.add(btn);
@@ -134,34 +148,38 @@ public class DetallesLlibrePanel extends JDialog {
 		grid.setBackground(UITheme.BG_PANEL);
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
 
-		textISBN            = addFieldEntry(grid, "ISBN");
-		textNom             = addFieldEntry(grid, "NOM");
-		textAutor           = addFieldEntry(grid, "AUTOR");
-		textAny             = addFieldEntry(grid, "ANY");
-		textDescripcio      = addFieldEntry(grid, "DESCRIPCIO");
-		textValoracio       = addFieldEntry(grid, "VALORACIO");
-		textPreu            = addFieldEntry(grid, "PREU");
-		textEditorial       = addFieldEntry(grid, "EDITORIAL");
-		textSerie           = addFieldEntry(grid, "SÈRIE");
-		textVolum           = addFieldEntry(grid, "VOLUM");
-		textDataCompra      = addFieldEntry(grid, "DATA COMP.");
-		textDataLectura     = addFieldEntry(grid, "DATA LECT.");
-		textIdioma          = addFieldEntry(grid, "IDIOMA");
-		textPaisOrigen      = addFieldEntry(grid, "PAÍS ORIGEN");
-		comboFormat         = addComboEntry(grid, "FORMAT",
-				new String[]{"", "Tapa dura", "Tapa blanda", "eBook", "Audiollibre"});
-		chckDesitjat        = addCheckEntry(grid, "DESITJAT",
-				"Vull comprar aquest llibre (no el tinc)");
-		chckLlegit          = addCheckEntry(grid, "LLEGIT", null);
-		textPortada         = addFieldEntry(grid, "PORTADA");
-		textPagines         = addFieldEntry(grid, "PAGINES");
-		textPaginesLlegides = addFieldEntry(grid, "PG. LLEGIDES");
+		textISBN            = addFieldEntry(grid, I18n.t("field_isbn"));
+		textNom             = addFieldEntry(grid, I18n.t("field_title"));
+		textAutor           = addFieldEntry(grid, I18n.t("field_author"));
+		textAny             = addFieldEntry(grid, I18n.t("field_year"));
+		textDescripcio      = addFieldEntry(grid, I18n.t("field_description"));
+		textValoracio       = addFieldEntry(grid, I18n.t("field_rating"));
+		textPreu            = addFieldEntry(grid, I18n.t("field_price"));
+		textEditorial       = addFieldEntry(grid, I18n.t("field_publisher"));
+		textSerie           = addFieldEntry(grid, I18n.t("field_series"));
+		textVolum           = addFieldEntry(grid, I18n.t("field_volume"));
+		textDataCompra      = addFieldEntry(grid, I18n.t("field_purchased"));
+		textDataLectura     = addFieldEntry(grid, I18n.t("field_read_on"));
+		textIdioma          = addFieldEntry(grid, I18n.t("field_language"));
+		textPaisOrigen      = addFieldEntry(grid, I18n.t("field_country"));
+		comboFormat         = addComboEntry(grid, I18n.t("field_format"),
+				new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
+		comboEstat          = addComboEntry(grid, I18n.t("field_estat"),
+				new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
+		textExemplars       = addFieldEntry(grid, I18n.t("field_exemplars"));
+		textLlenguaOriginal = addFieldEntry(grid, I18n.t("field_llengua_original"));
+		chckDesitjat        = addCheckEntry(grid, I18n.t("field_wishlist"),
+				I18n.t("tip_desitjat"));
+		chckLlegit          = addCheckEntry(grid, I18n.t("field_read"), null);
+		textPortada         = addFieldEntry(grid, I18n.t("col_cover"));
+		textPagines         = addFieldEntry(grid, I18n.t("field_pages"));
+		textPaginesLlegides = addFieldEntry(grid, I18n.t("field_pages_read"));
 
 		// Notes: full-width panel pinned to SOUTH
 		JPanel notesRow = new JPanel(new BorderLayout(4, 0));
 		notesRow.setBackground(UITheme.BG_PANEL);
 		notesRow.setBorder(new EmptyBorder(0, 8, 8, 4));
-		JLabel lblNotes = makeLabel("NOTES");
+		JLabel lblNotes = makeLabel(I18n.t("field_notes"));
 		lblNotes.setVerticalAlignment(SwingConstants.TOP);
 		lblNotes.setPreferredSize(new Dimension(LBL_W, 0));
 		notesRow.add(lblNotes, BorderLayout.WEST);
@@ -285,11 +303,16 @@ public class DetallesLlibrePanel extends JDialog {
 	public JTextField getTextIdioma()           { return textIdioma; }
 	public JTextField getTextPaisOrigen()       { return textPaisOrigen; }
 	public JComboBox<String> getComboFormat()   { return comboFormat; }
+	public JComboBox<String> getComboEstat()    { return comboEstat; }
+	public JTextField getTextExemplars()        { return textExemplars; }
+	public JTextField getTextLlenguaOriginal()  { return textLlenguaOriginal; }
 	public JCheckBox  getChckDesitjat()         { return chckDesitjat; }
 	public JTextField getTextPagines()          { return textPagines; }
 	public JTextField getTextPaginesLlegides()  { return textPaginesLlegides; }
 	public JCheckBox  getChckLlegit()           { return chckLlegit; }
 	public JTextArea  getTextNotes()            { return textNotes; }
-	public JButton    getBtnGestioLlistes()     { return btnGestioLlistes; }
-	public JButton    getBtnGestioTags()        { return btnGestioTags; }
+	public JButton    getBtnGestioLlistes()      { return btnGestioLlistes; }
+	public JButton    getBtnGestioTags()         { return btnGestioTags; }
+	public JButton    getBtnHistorialPrestecs()  { return btnHistorialPrestecs; }
+	public JButton    getBtnImprimir()           { return btnImprimir; }
 }

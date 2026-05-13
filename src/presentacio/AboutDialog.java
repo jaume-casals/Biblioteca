@@ -18,12 +18,13 @@ import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class AboutDialog extends JDialog {
 
 	public AboutDialog(Frame parent) {
-		super(parent, "Sobre Biblioteca", true);
+		super(parent, I18n.t("dlg_about_title"), true);
 		setResizable(false);
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setSize(420, 480);
@@ -45,7 +46,7 @@ public class AboutDialog extends JDialog {
 
 		main.add(Box.createVerticalStrut(4));
 
-		JLabel lblSub = new JLabel("Gestió personal de llibres");
+		JLabel lblSub = new JLabel(I18n.t("lbl_app_desc"));
 		UITheme.styleLabel(lblSub);
 		lblSub.setHorizontalAlignment(SwingConstants.CENTER);
 		lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -54,15 +55,15 @@ public class AboutDialog extends JDialog {
 		main.add(Box.createVerticalStrut(20));
 
 		// Author
-		addRow(main, "Autor",    "Jordi Casals");
-		addRow(main, "Llicència","GNU General Public License v3");
-		addRow(main, "Font",     "H2 Database Engine (EPL-1.0)");
-		addRow(main, "Font",     "MariaDB Connector/J (LGPL-2.1)");
+		addRow(main, I18n.t("lbl_autor_row"),    "Jordi Casals");
+		addRow(main, I18n.t("lbl_llicencia_row"),"GNU General Public License v3");
+		addRow(main, I18n.t("lbl_font_row"),     "H2 Database Engine (EPL-1.0)");
+		addRow(main, I18n.t("lbl_font_row"),     "MariaDB Connector/J (LGPL-2.1)");
 
 		main.add(Box.createVerticalStrut(16));
 
 		// License excerpt
-		JLabel lblLicTitle = new JLabel("Llicència (GPL v3 — extracte)");
+		JLabel lblLicTitle = new JLabel(I18n.t("lbl_license_section"));
 		UITheme.styleLabel(lblLicTitle);
 		lblLicTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 		main.add(lblLicTitle);
@@ -94,17 +95,21 @@ public class AboutDialog extends JDialog {
 		main.add(Box.createVerticalStrut(12));
 
 		// Source link button
-		JButton btnSource = new JButton("Codi font (GitHub)");
+		JButton btnSource = new JButton(I18n.t("btn_source_github"));
 		UITheme.styleSecondaryButton(btnSource);
 		btnSource.setAlignmentX(Component.CENTER_ALIGNMENT);
 		btnSource.setMaximumSize(new Dimension(200, 32));
-		btnSource.addActionListener(e -> openUrl("https://github.com/jaume-casals/Biblioteca"));
+		btnSource.addActionListener(e -> {
+			try {
+				Desktop.getDesktop().browse(new URI("https://github.com/jaume-casals/Biblioteca"));
+			} catch (Exception ex) { ex.printStackTrace(); }
+		});
 		main.add(btnSource);
 		main.add(Box.createVerticalStrut(8));
 
 		add(main, BorderLayout.CENTER);
 
-		JButton btnTancar = new JButton("Tancar");
+		JButton btnTancar = new JButton(I18n.t("btn_close"));
 		UITheme.styleAccentButton(btnTancar);
 		btnTancar.addActionListener(e -> dispose());
 		JPanel bottom = new JPanel();

@@ -11,6 +11,7 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.Config;
 import herramienta.DialogoError;
+import herramienta.I18n;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
@@ -18,7 +19,6 @@ import presentacio.detalles.vista.GuardarLlibresDialogo;
 public class MainFrameControl implements EnActualizarBBDD {
 
 	private ControladorDomini cLlibres;
-	private ArrayList<Llibre> biblio;
 	private MostrarBibliotecaControl mostrarControl;
 	private MainFramePanel vista;
 	private static MainFrameControl instance;
@@ -82,6 +82,30 @@ public class MainFrameControl implements EnActualizarBBDD {
 			}
 		});
 
+		int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme");
+		am.put("toggleTheme", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				herramienta.UITheme.setDark(!herramienta.UITheme.isDark);
+				vista.getMostrarBibliotecaPanel().applyTheme();
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrl), "undoDelete");
+		am.put("undoDelete", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				mostrarControl.undoDelete();
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "ajudaDreceres");
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, ctrl), "ajudaDreceres");
+		am.put("ajudaDreceres", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				mostrarAjudaDreceres();
+			}
+		});
+
 		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
 				.getInputMap(JComponent.WHEN_FOCUSED)
 				.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "eliminarFila");
@@ -111,7 +135,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
 				if (javax.swing.JOptionPane.showConfirmDialog(vista,
-						"Sortir de l'aplicació?", "Confirmar sortida",
+						I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 						javax.swing.JOptionPane.YES_NO_OPTION) != javax.swing.JOptionPane.YES_OPTION) return;
 				boolean max = (vista.getExtendedState() & java.awt.Frame.MAXIMIZED_BOTH) != 0;
 				Config.setWindowMaximized(max);
@@ -173,6 +197,51 @@ public class MainFrameControl implements EnActualizarBBDD {
 
 	public void setVisible(boolean b) {
 		this.vista.setVisible(b);
+		if (b) {
+			javax.swing.SwingUtilities.invokeLater(this::mostrarAlertes);
+		}
+	}
+
+	private void mostrarAlertes() {
+		// Overdue loan alert: retornat=false and data_prestec > 30 days ago
+		try {
+			java.util.List<Object[]> loans = ControladorDomini.getInstance().getAllOverdueLoans(30);
+			if (!loans.isEmpty()) {
+				StringBuilder sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
+				for (Object[] row : loans) {
+					sb.append("• ").append(row[0]).append(" → ").append(row[1]).append(" (").append(row[2]).append(")\n");
+				}
+				javax.swing.JOptionPane.showMessageDialog(this.vista, sb.toString(),
+					I18n.t("alert_overdue_loans_title"), javax.swing.JOptionPane.WARNING_MESSAGE);
+			}
+		} catch (Exception ignored) {}
+
+		// Reading goal deadline alert
+		try {
+			int goal = herramienta.Config.getReadingGoal();
+			if (goal > 0) {
+				java.util.ArrayList<domini.Llibre> all = ControladorDomini.getInstance().getAllLlibres();
+				int currentYear = java.time.LocalDate.now().getYear();
+				int dayOfYear = java.time.LocalDate.now().getDayOfYear();
+				long readThisYear = all.stream()
+					.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+					.filter(l -> {
+						if (l.getDataLectura() != null && l.getDataLectura().length() >= 4) {
+							try { return Integer.parseInt(l.getDataLectura().substring(0, 4)) == currentYear; }
+							catch (Exception e2) {}
+						}
+						return false;
+					}).count();
+				int daysLeft = 365 - dayOfYear;
+				double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;
+				double actualPerDay = dayOfYear > 0 ? (double) readThisYear / dayOfYear : 0;
+				if (readThisYear < goal && neededPerDay > actualPerDay * 1.5 && daysLeft < 90) {
+					javax.swing.JOptionPane.showMessageDialog(this.vista,
+						I18n.t("alert_goal_pace_msg", goal, readThisYear, daysLeft, String.format("%.2f", neededPerDay)),
+						I18n.t("alert_goal_pace_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
+				}
+			}
+		} catch (Exception ignored) {}
 	}
 
 	@Override
@@ -193,5 +262,23 @@ public class MainFrameControl implements EnActualizarBBDD {
 	@Override
 	public void eliminarLlibre(Llibre l) {
 		mostrarControl.eliminarFila(l);
+	}
+
+	private void mostrarAjudaDreceres() {
+		String msg =
+			"Ctrl+N          Nou llibre\n" +
+			"Ctrl+F          Cerca\n" +
+			"Ctrl+E          Editar llibre seleccionat\n" +
+			"Ctrl+A          Seleccionar tots\n" +
+			"Enter           Obrir detalls\n" +
+			"Delete          Eliminar seleccionat\n" +
+			"Ctrl+Shift+D    Alternar tema fosc/clar\n" +
+			"Ctrl++/-        Zoom galeria\n" +
+			"Ctrl+Roda       Zoom galeria\n" +
+			"Fletxes         Navegar galeria\n" +
+			"Ctrl+Clic autor Filtrar per autor\n" +
+			"Ctrl+Z          Desfer última eliminació\n" +
+			"F1 / Ctrl+?     Aquesta ajuda";
+		javax.swing.JOptionPane.showMessageDialog(vista, msg, "Dreceres de teclat", javax.swing.JOptionPane.INFORMATION_MESSAGE);
 	}
 }

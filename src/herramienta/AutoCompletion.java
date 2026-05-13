@@ -26,8 +26,8 @@ import javax.swing.text.PlainDocument;
 
 public class AutoCompletion extends PlainDocument {
 
-	JComboBox comboBox;
-	ComboBoxModel model;
+	JComboBox<String> comboBox;
+	ComboBoxModel<String> model;
 	JTextComponent editor;
 	boolean selecting = false;
 	boolean hidePopupOnFocusLoss;
@@ -37,7 +37,7 @@ public class AutoCompletion extends PlainDocument {
 	KeyListener editorKeyListener;
 	FocusListener editorFocusListener;
 
-	public AutoCompletion(final JComboBox comboBox) {
+	public AutoCompletion(final JComboBox<String> comboBox) {
 		this.comboBox = comboBox;
 		model = comboBox.getModel();
 		comboBox.addActionListener(new ActionListener() {
@@ -48,10 +48,10 @@ public class AutoCompletion extends PlainDocument {
 		});
 		comboBox.addPropertyChangeListener(new PropertyChangeListener() {
 			public void propertyChange(PropertyChangeEvent e) {
-				if (e.getPropertyName().equals("editor"))
+				if ("editor".equals(e.getPropertyName()))
 					configureEditor((ComboBoxEditor) e.getNewValue());
-				if (e.getPropertyName().equals("model"))
-					model = (ComboBoxModel) e.getNewValue();
+				if ("model".equals(e.getPropertyName()))
+					model = (ComboBoxModel<String>) e.getNewValue();
 			}
 		});
 		editorKeyListener = new KeyAdapter() {
@@ -89,7 +89,7 @@ public class AutoCompletion extends PlainDocument {
 		highlightCompletedText(0);
 	}
 
-	public static void enable(JComboBox comboBox) {
+	public static void enable(JComboBox<String> comboBox) {
 		comboBox.setEditable(true);
 		new AutoCompletion(comboBox);
 	}
@@ -129,17 +129,6 @@ public class AutoCompletion extends PlainDocument {
 		if (selecting)
 			return;
 		super.insertString(offs, str, a);
-		Object item = lookupItem(getText(0, getLength()));
-
-//		if (item != null) {
-//			setSelectedItem(item);
-//		} else {
-//			item = comboBox.getSelectedItem();
-//			offs = offs - str.length();
-//			comboBox.getToolkit().beep(); // when available use:
-//											// UIManager.getLookAndFeel().provideErrorFeedback(comboBox);
-//		}
-//		setText(item.toString());
 		highlightCompletedText(offs + str.length());
 	}
 
@@ -148,7 +137,7 @@ public class AutoCompletion extends PlainDocument {
 			super.remove(0, getLength());
 			super.insertString(0, text, null);
 		} catch (BadLocationException e) {
-			throw new RuntimeException(e.toString());
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -157,26 +146,6 @@ public class AutoCompletion extends PlainDocument {
 		editor.moveCaretPosition(start);
 	}
 
-	private void setSelectedItem(Object item) {
-		selecting = true;
-		model.setSelectedItem(item);
-		selecting = false;
-	}
-
-	private Object lookupItem(String pattern) {
-		Object selectedItem = model.getSelectedItem();
-		if (selectedItem != null && startsWithIgnoreCase(selectedItem.toString(), pattern)) {
-			return selectedItem;
-		} else {
-			for (int i = 0, n = model.getSize(); i < n; i++) {
-				Object currentItem = model.getElementAt(i);
-				if (currentItem != null && startsWithIgnoreCase(currentItem.toString(), pattern)) {
-					return currentItem;
-				}
-			}
-		}
-		return null;
-	}
 
 	private boolean startsWithIgnoreCase(String str1, String str2) {
 		return str1.toUpperCase().startsWith(str2.toUpperCase());

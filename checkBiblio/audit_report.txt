@@ -1,0 +1,400 @@
+[16:18:47.011] === Biblioteca UIAudit ===
+[16:18:47.013] Mode: AUTOMATED
+[16:18:47.013] Started: 2026-05-13T16:18:47.013377557
+[16:18:47.013] Screenshots -> checkBiblio/screenshots/
+[16:18:47.013] Launching Biblioteca in Swing mode...
+[16:18:47.013] Waiting for main JFrame (up to 12s)...
+[16:18:47.465] OK: Main window visible — "Biblioteca"
+[16:18:48.066] 
+=== AUTOMATED AUDIT START ===
+Screenshot: checkBiblio/screenshots/screen_1_00_start.png
+[16:18:48.170] SCREENSHOT: checkBiblio/screenshots/screen_1_00_start.png
+[16:18:48.170] 
+--- MAIN WINDOW ---
+[16:18:48.171]                 [LBL] "biblioteca"
+[16:18:48.171]                 [LBL] "NAVEGAR"
+[16:18:48.171]               [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
+[16:18:48.171]               [BTN] "Afegits recentment"  tip:"Mostra els 20 darrers llibres afegits"
+[16:18:48.171]               [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
+[16:18:48.171]               [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
+[16:18:48.171]               [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
+[16:18:48.171]                 [LBL] "LES MEVES LLISTES"
+[16:18:48.171]                   [BTN] "  hola (1)"
+[16:18:48.171]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
+[16:18:48.171]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
+[16:18:48.171]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
+[16:18:48.171]               [BTN] "Mode fosc"  tip:"Canviar entre mode clar i fosc"
+[16:18:48.171]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
+[16:18:48.171]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
+[16:18:48.171]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
+[16:18:48.171]                 [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
+[16:18:48.171]                 [BTN] "Filtres"  tip:"Mostrar/amagar filtres avançats"
+[16:18:48.171]                 [BTN] "Galeria"  tip:"Alternar entre vista taula i galeria de portades"
+[16:18:48.171]                 [BTN] "Sèries"  tip:"Agrupar llibres per sèrie i volum"
+[16:18:48.171]                 [BTN] "+ Afegir"  tip:"Afegir un nou llibre (Ctrl+N)"
+[16:18:48.171]                       [TBL] rows=100 cols=10
+[16:18:48.171]                       [BTN] ""
+[16:18:48.171]                       [BTN] ""
+[16:18:48.171]                   [BTN] "Anterior"
+[16:18:48.171]                   [LBL] "Pàgina 1 / 22"
+[16:18:48.171]                   [BTN] "Seguent"
+[16:18:48.171]         [LBL] "Totes les llistes  —  100 / 2106 llibres"
+[16:18:48.171] 
+--- SIDEBAR BUTTONS ---
+[16:18:48.174] CLICK: sidebar "Tots els llibres"
+[16:18:49.075]   -> No dialog (panel update)
+Screenshot: checkBiblio/screenshots/screen_2_sidebar_Tots_els.png
+[16:18:49.121] SCREENSHOT: checkBiblio/screenshots/screen_2_sidebar_Tots_els.png
+[16:18:49.121] CLICK: sidebar "Afegits recentment"
+[16:18:50.021]   -> No dialog (panel update)
+Screenshot: checkBiblio/screenshots/screen_3_sidebar_Afegits_r.png
+[16:18:50.075] SCREENSHOT: checkBiblio/screenshots/screen_3_sidebar_Afegits_r.png
+[16:18:50.075] CLICK: sidebar "Llegits"
+[16:18:50.975]   -> No dialog (panel update)
+Screenshot: checkBiblio/screenshots/screen_4_sidebar_Llegits.png
+[16:18:51.054] SCREENSHOT: checkBiblio/screenshots/screen_4_sidebar_Llegits.png
+[16:18:51.055] CLICK: sidebar "Estadístiques"
+[16:18:51.955]   -> Dialog: "Estadístiques" — scanning...
+[16:18:51.955]                 [LBL] "Objectiu:"
+[16:18:51.955]                   [BTN] ""
+[16:18:51.955]                   [BTN] ""
+[16:18:51.955]                     [TF ] value="4"
+[16:18:51.955]                 [LBL] "llegits: 48"
+[16:18:51.955]                   [TBL] rows=1 cols=5
+[16:18:51.955]           [BTN] "Tancar"
+Screenshot: checkBiblio/screenshots/screen_5_sidebar_Estad.png
+[16:18:52.002] SCREENSHOT: checkBiblio/screenshots/screen_5_sidebar_Estad.png
+[16:18:52.402] CLICK: sidebar "Llibre aleatori"
+[16:18:53.302]   -> Dialog: "Llibre Aleatori" — scanning...
+[16:18:53.303]                 [LBL] "Tots els llibres de la vista actual ja estan llegits."
+[16:18:53.303]             [BTN] "OK"
+Screenshot: checkBiblio/screenshots/screen_6_sidebar_aleatori.png
+[16:18:53.343] SCREENSHOT: checkBiblio/screenshots/screen_6_sidebar_aleatori.png
+[16:18:53.744] CLICK: sidebar "Gestionar llistes"
+[16:18:54.644]   -> Dialog: "Gestionar Llistes" — scanning...
+[16:18:54.644]               [BTN] "▲"  tip:"Pujar llista"
+[16:18:54.644]               [BTN] "▼"  tip:"Baixar llista"
+[16:18:54.644]               [BTN] "Color"  tip:"Canviar color de la llista seleccionada"
+[16:18:54.644]               [TF ] value=""  tip:"Nom de la nova llista"
+[16:18:54.644]               [BTN] "Nova Llista"
+[16:18:54.644]             [BTN] "Eliminar Seleccionada"
+Screenshot: checkBiblio/screenshots/screen_7_sidebar_llistes.png
+[16:18:54.685] SCREENSHOT: checkBiblio/screenshots/screen_7_sidebar_llistes.png
+[16:18:55.086] CLICK: sidebar "Configuració"
+[16:18:55.986]   -> Dialog: "Configuració" — scanning...
+[16:18:55.987]         [LBL] "Base de dades"
+[16:18:55.987]         [LBL] "Tipus"
+[16:18:55.987]         [CMB] selected="Integrada — H2 (sense servidor)" items=2
+[16:18:55.987]           [BTN] ""
+[16:18:55.987]         [LBL] "Servidor (host)"
+[16:18:55.987]         [TF ] value="localhost"
+[16:18:55.987]         [LBL] "Usuari"
+[16:18:55.987]         [TF ] value="user"
+[16:18:55.987]         [LBL] "Contrasenya"
+[16:18:55.987]         [TF ] value=""
+[16:18:55.987]         [LBL] "Els canvis de BD requereixen reiniciar l'aplicació."
+[16:18:55.987]         [LBL] "Imatges"
+[16:18:55.987]         [LBL] "Carpeta per defecte"
+[16:18:55.987]         [TF ] value="/home/j"
+[16:18:55.987]         [BTN] "..."
+[16:18:55.987]         [LBL] "Aparença"
+[16:18:55.987]         [LBL] "Mida de lletra"
+[16:18:55.987]         [CMB] selected="Petita" items=3
+[16:18:55.987]           [BTN] ""
+[16:18:55.987]         [LBL] "Símbol de moneda"
+[16:18:55.987]         [CMB] selected="€" items=5
+[16:18:55.987]           [BTN] ""
+[16:18:55.987]         [LBL] "Valoració per defecte"
+[16:18:55.987]         [TF ] value="0.0"
+[16:18:55.987]         [LBL] "(0.0 – 10.0)"
+[16:18:55.987]         [LBL] "Idioma"
+[16:18:55.987]         [CMB] selected="Català" items=3
+[16:18:55.987]           [BTN] ""
+[16:18:55.987]         [LBL] "Dades"
+[16:18:55.987]         [LBL] "Mida de la BD"
+[16:18:55.987]         [LBL] "288.0 KB"
+[16:18:55.987]         [BTN] "Buidar tota la biblioteca"
+[16:18:55.987]         [BTN] "Gestió de perfils BD"  tip:"Canviar entre bases de dades H2 (~/.biblioteca/*.mv.db)"
+[16:18:55.987]         [BTN] "Desar"
+[16:18:55.987]         [BTN] "Cancel·lar"
+Screenshot: checkBiblio/screenshots/screen_8_sidebar_Configur.png
+[16:18:56.029] SCREENSHOT: checkBiblio/screenshots/screen_8_sidebar_Configur.png
+[16:18:56.429] CLICK: sidebar "Sobre..."
+[16:18:57.330]   -> Dialog: "Sobre Biblioteca" — scanning...
+[16:18:57.330]           [LBL] "Biblioteca"
+[16:18:57.330]           [LBL] "Gestió personal de llibres"
+[16:18:57.330]             [LBL] "Autor:"
+[16:18:57.330]             [LBL] "Jordi Casals"
+[16:18:57.330]             [LBL] "Llicència:"
+[16:18:57.330]             [LBL] "GNU General Public License v3"
+[16:18:57.330]             [LBL] "Font:"
+[16:18:57.330]             [LBL] "H2 Database Engine (EPL-1.0)"
+[16:18:57.330]             [LBL] "Font:"
+[16:18:57.330]             [LBL] "MariaDB Connector/J (LGPL-2.1)"
+[16:18:57.330]           [LBL] "Llicència (GPL v3 — extracte)"
+[16:18:57.330]               [BTN] ""
+[16:18:57.330]               [BTN] ""
+[16:18:57.330]           [BTN] "Codi font (GitHub)"
+[16:18:57.330]           [BTN] "Tancar"
+Screenshot: checkBiblio/screenshots/screen_9_sidebar_Sobre.png
+[16:18:57.371] SCREENSHOT: checkBiblio/screenshots/screen_9_sidebar_Sobre.png
+[16:18:57.771] 
+--- FILTER DRAWER ---
+[16:18:58.172] Filter drawer toggled open
+Screenshot: checkBiblio/screenshots/screen_10_filter_open.png
+[16:18:58.212] SCREENSHOT: checkBiblio/screenshots/screen_10_filter_open.png
+[16:18:58.213]                 [LBL] "biblioteca"
+[16:18:58.213]                 [LBL] "NAVEGAR"
+[16:18:58.213]               [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
+[16:18:58.213]               [BTN] "Afegits recentment"  tip:"Mostra els 20 darrers llibres afegits"
+[16:18:58.213]               [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
+[16:18:58.213]               [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
+[16:18:58.213]               [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
+[16:18:58.213]                 [LBL] "LES MEVES LLISTES"
+[16:18:58.213]                   [BTN] "  hola (1)"
+[16:18:58.213]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
+[16:18:58.213]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
+[16:18:58.213]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
+[16:18:58.213]               [BTN] "Mode fosc"  tip:"Canviar entre mode clar i fosc"
+[16:18:58.213]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
+[16:18:58.213]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
+[16:18:58.213]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
+[16:18:58.213]                 [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
+[16:18:58.213]                 [BTN] "Filtres ▲"  tip:"Mostrar/amagar filtres avançats"
+[16:18:58.213]                 [BTN] "Galeria"  tip:"Alternar entre vista taula i galeria de portades"
+[16:18:58.213]                 [BTN] "Sèries"  tip:"Agrupar llibres per sèrie i volum"
+[16:18:58.213]                 [BTN] "+ Afegir"  tip:"Afegir un nou llibre (Ctrl+N)"
+[16:18:58.213]                   [LBL] "Preset:"
+[16:18:58.213]                   [CMB] selected="(sense presets)" items=1
+[16:18:58.213]                     [BTN] ""  tip:"Selecciona un preset guardat"
+[16:18:58.213]                   [BTN] "Carrega"  tip:"Aplica el preset als filtres"
+[16:18:58.213]                   [BTN] "Desa"  tip:"Guarda el filtre actual com a preset"
+[16:18:58.213]                   [BTN] "Esborra"  tip:"Elimina el preset seleccionat"
+[16:18:58.213]                         [CHK] "Llegit" selected=false
+[16:18:58.213]                         [CHK] "No llegit" selected=false
+[16:18:58.213]                           [LBL] "ISBN:"
+[16:18:58.213]                           [TF ] value=""
+[16:18:58.213]                           [LBL] "Nom:"
+[16:18:58.213]                           [TF ] value=""
+[16:18:58.213]                           [LBL] "Autor:"
+[16:18:58.213]                           [TF ] value=""
+[16:18:58.213]                         [LBL] "Etiqueta:"
+[16:18:58.213]                         [CMB] selected="Totes les etiquetes" items=1
+[16:18:58.213]                           [BTN] ""  tip:"Filtrar per etiqueta/gènere"
+[16:18:58.213]                           [LBL] "Editorial:"
+[16:18:58.213]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "Sèrie:"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "Idioma:"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                         [LBL] "Format:"
+[16:18:58.214]                         [CMB] selected="" items=5
+[16:18:58.214]                           [BTN] ""
+[16:18:58.214]                           [LBL] "Any:"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "–"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "Valoració:"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "–"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "Preu:"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                           [LBL] "–"
+[16:18:58.214]                           [TF ] value=""
+[16:18:58.214]                         [BTN] "Filtrar"  tip:"Aplicar filtres seleccionats"
+[16:18:58.214]                         [BTN] "Treure filtres"  tip:"Treure tots els filtres aplicats"
+[16:18:58.214]                         [BTN] "Exportar ▾"
+[16:18:58.214]                         [BTN] "Importar ▾"
+[16:18:58.214]                         [BTN] "Fetch portades"  tip:"Descarregar portades que falten de tots els llibres"
+[16:18:58.214]                         [BTN] "Escanejar ISBN"  tip:"Introduir ISBN i auto-omplir dades d'OpenLibrary"
+[16:18:58.214]                         [BTN] "Backup BD"  tip:"Exportar tota la base de dades a un fitxer SQL"
+[16:18:58.214]                         [BTN] "Restaurar BD"  tip:"Restaurar la base de dades des d'un fitxer SQL de backup"
+[16:18:58.214]                       [TBL] rows=48 cols=10
+[16:18:58.214]                       [BTN] ""
+[16:18:58.214]                       [BTN] ""
+[16:18:58.214]         [LBL] "Totes les llistes  —  48 llibres"
+[16:18:59.115] 
+--- TABLE ---
+[16:18:59.115] Rows: 100  Cols: 10
+[16:18:59.115] Columns: [Portada] [ISBN] [Títol] [Autor] [Any] [Valoració] [Preu] [Llegit] [Progrés] [Detalls] 
+[16:18:59.115] 
+--- BOOK DETAILS (row 0) ---
+Opened dialog: "Expedient del llibre Death on the Nile"
+[16:19:01.359] OPEN-ROW 0 -> dialog "Expedient del llibre Death on the Nile"
+Screenshot: checkBiblio/screenshots/screen_11_book_details.png
+[16:19:01.419] SCREENSHOT: checkBiblio/screenshots/screen_11_book_details.png
+[16:19:01.420]           [BTN] "Seleccionar imatge"
+[16:19:01.420]           [BTN] "Guardar"
+[16:19:01.420]           [BTN] "Eliminar"
+[16:19:01.420]           [BTN] "Tancar"
+[16:19:01.420]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
+[16:19:01.420]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
+[16:19:01.420]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
+[16:19:01.420]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
+[16:19:01.420]                   [LBL] "ISBN"
+[16:19:01.420]                   [TF ] value="9780006168959"
+[16:19:01.420]                   [LBL] "Títol"
+[16:19:01.420]                   [TF ] value="Death on the Nile"
+[16:19:01.420]                   [LBL] "Autor"
+[16:19:01.420]                   [TF ] value="Agatha Christie"
+[16:19:01.420]                   [LBL] "Any"
+[16:19:01.420]                   [TF ] value="1937"
+[16:19:01.420]                   [LBL] "Descripció"
+[16:19:01.420]                   [TF ] value="Belgians"
+[16:19:01.420]                   [LBL] "Valoració"
+[16:19:01.420]                   [TF ] value="0.0"
+[16:19:01.420]                   [LBL] "Preu"
+[16:19:01.420]                   [TF ] value="0.0"
+[16:19:01.420]                   [LBL] "Editorial"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Sèrie"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Volum"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Data compra"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Data lectura"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Idioma"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "País d'origen"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Format"
+[16:19:01.420]                   [CMB] selected="" items=5
+[16:19:01.420]                     [BTN] ""
+[16:19:01.420]                   [LBL] "Estat"
+[16:19:01.420]                   [CMB] selected="" items=5
+[16:19:01.420]                     [BTN] ""
+[16:19:01.420]                   [LBL] "Exemplars"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Llengua orig."
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Desitjat"
+[16:19:01.420]                   [CHK] "" selected=false
+[16:19:01.420]                   [LBL] "Llegit"
+[16:19:01.420]                   [CHK] "" selected=false
+[16:19:01.420]                   [LBL] "Portada"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Pàgines"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                   [LBL] "Pàgines llegides"
+[16:19:01.420]                   [TF ] value=""
+[16:19:01.420]                 [LBL] "Notes"
+[16:19:01.420]             [BTN] ""
+[16:19:01.420]             [BTN] ""
+[16:19:01.420] WARN: Edit button not found in details dialog
+[16:19:01.821] 
+--- CREATE BOOK (random data) ---
+[16:19:02.722] Dialog: "Nou llibre"
+Screenshot: checkBiblio/screenshots/screen_12_create_book_empty.png
+[16:19:02.762] SCREENSHOT: checkBiblio/screenshots/screen_12_create_book_empty.png
+[16:19:02.763]   Set "ISBN" = "9780000942762"
+[16:19:02.824]   Set "Títol" = "Títol_a54b"
+[16:19:02.884]   Set "Autor" = "Autor_cb5d"
+[16:19:02.945]   Set "Any" = "1915"
+[16:19:03.005]   Set "Descripció" = "Desc_b399"
+[16:19:03.066]   Set "Valoració" = "0.1"
+[16:19:03.126]   Set "Preu" = "3.88"
+[16:19:03.186]   Set "Editorial" = "Edit_e23f"
+[16:19:03.247]   Set "Sèrie" = "Serie_2fe5"
+[16:19:03.307]   Set "Volum" = "3"
+[16:19:03.368]   Set "Idioma" = "Català"
+Screenshot: checkBiblio/screenshots/screen_13_create_book_filled.png
+[16:19:03.470] SCREENSHOT: checkBiblio/screenshots/screen_13_create_book_filled.png
+[16:19:03.470] Fields filled. Clicking Save...
+[16:19:04.471] OK: No error dialog — book likely saved (ISBN=9780000942762)
+[16:19:04.471] CREATE BOOK test done. ISBN=9780000942762
+[16:19:04.471] 
+--- EDIT BOOK (random data, row 0) ---
+Opened dialog: "Expedient del llibre Mistborn"
+[16:19:06.653] OPEN-ROW 0 -> dialog "Expedient del llibre Mistborn"
+[16:19:06.653] Details dialog: "Expedient del llibre Mistborn"
+Screenshot: checkBiblio/screenshots/screen_14_edit_book_before.png
+[16:19:07.312] SCREENSHOT: checkBiblio/screenshots/screen_14_edit_book_before.png
+[16:19:07.312] Edit mode active — filling fields with random data...
+[16:19:07.312]   Set "Títol" = "Títol_9f3b"
+[16:19:07.373]   Set "Autor" = "Autor_6293"
+[16:19:07.433]   Set "Any" = "2021"
+[16:19:07.493]   Set "Descripció" = "Desc_1aee"
+[16:19:07.554]   Set "Valoració" = "1.8"
+[16:19:07.614]   Set "Preu" = "2.89"
+[16:19:07.675]   Set "Editorial" = "Edit_6131"
+[16:19:07.735]   Set "Sèrie" = "Serie_ba0a"
+[16:19:07.796]   Set "Volum" = "7"
+[16:19:07.856]   Set "Idioma" = "Català"
+Screenshot: checkBiblio/screenshots/screen_15_edit_book_filled.png
+[16:19:07.959] SCREENSHOT: checkBiblio/screenshots/screen_15_edit_book_filled.png
+[16:19:07.959] Clicking Save...
+[16:19:08.960] RESULT dialog after edit save: "Expedient del llibre Mistborn"
+[16:19:08.960]           [BTN] "Seleccionar imatge"
+[16:19:08.960]           [BTN] "Editar"
+[16:19:08.960]           [BTN] "Eliminar"
+[16:19:08.960]           [BTN] "Tancar"
+[16:19:08.960]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
+[16:19:08.960]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
+[16:19:08.960]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
+[16:19:08.960]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
+[16:19:08.960]                   [LBL] "ISBN"
+[16:19:08.960]                   [TF ] value="1429989815"
+[16:19:08.960]                   [LBL] "Títol"
+[16:19:08.960]                   [TF ] value="Títol_9f3b"
+[16:19:08.960]                   [LBL] "Autor"
+[16:19:08.960]                   [TF ] value="Autor_6293"
+[16:19:08.960]                   [LBL] "Any"
+[16:19:08.960]                   [TF ] value="2021"
+[16:19:08.960]                   [LBL] "Descripció"
+[16:19:08.960]                   [TF ] value="Desc_1aee"
+[16:19:08.960]                   [LBL] "Valoració"
+[16:19:08.960]                   [TF ] value="1.8"
+[16:19:08.960]                   [LBL] "Preu"
+[16:19:08.960]                   [TF ] value="2.89"
+[16:19:08.960]                   [LBL] "Editorial"
+[16:19:08.960]                   [TF ] value="Edit_6131"
+[16:19:08.960]                   [LBL] "Sèrie"
+[16:19:08.960]                   [TF ] value="Serie_ba0a"
+[16:19:08.960]                   [LBL] "Volum"
+[16:19:08.960]                   [TF ] value="7"
+[16:19:08.960]                   [LBL] "Data compra"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Data lectura"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Idioma"
+[16:19:08.960]                   [TF ] value="Català"
+[16:19:08.960]                   [LBL] "País d'origen"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Format"
+[16:19:08.960]                   [CMB] selected="" items=5
+[16:19:08.960]                     [BTN] ""
+[16:19:08.960]                   [LBL] "Estat"
+[16:19:08.960]                   [CMB] selected="" items=5
+[16:19:08.960]                     [BTN] ""
+[16:19:08.960]                   [LBL] "Exemplars"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Llengua orig."
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Desitjat"
+[16:19:08.960]                   [CHK] "" selected=false
+[16:19:08.960]                   [LBL] "Llegit"
+[16:19:08.960]                   [CHK] "" selected=false
+[16:19:08.960]                   [LBL] "Portada"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Pàgines"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                   [LBL] "Pàgines llegides"
+[16:19:08.960]                   [TF ] value=""
+[16:19:08.960]                 [LBL] "Notes"
+[16:19:08.960]             [BTN] ""
+[16:19:08.960]             [BTN] ""
+Screenshot: checkBiblio/screenshots/screen_16_edit_book_result.png
+[16:19:09.004] SCREENSHOT: checkBiblio/screenshots/screen_16_edit_book_result.png
+[16:19:09.404] EDIT BOOK test done.
+Screenshot: checkBiblio/screenshots/screen_17_99_final.png
+[16:19:09.443] SCREENSHOT: checkBiblio/screenshots/screen_17_99_final.png
+[16:19:09.443] 
+=== AUTOMATED AUDIT COMPLETE ===
+[16:19:09.443] Report: checkBiblio/audit_report.txt
+[16:19:09.443] Screenshots: checkBiblio/screenshots/
+
+[AUTO] Audit complete. Check checkBiblio/audit_report.txt
+[16:19:09.443] === UIAudit finished ===

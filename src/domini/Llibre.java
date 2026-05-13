@@ -25,6 +25,9 @@ public class Llibre {
 	private String Format = null;
 	private boolean Desitjat = false;
 	private String PaisOrigen = null;
+	private String Estat = null;
+	private int Exemplars = 1;
+	private String LlenguaOriginal = null;
 	private java.util.List<String> Autors = new java.util.ArrayList<>();
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
@@ -148,6 +151,12 @@ public class Llibre {
 	public void setPaisOrigen(String p) { PaisOrigen = (p != null && !p.trim().isEmpty()) ? p.trim() : null; }
 	public boolean getDesitjat() { return Desitjat; }
 	public void setDesitjat(boolean d) { Desitjat = d; }
+	public String getEstat() { return Estat; }
+	public void setEstat(String e) { Estat = (e != null && !e.trim().isEmpty()) ? e.trim() : null; }
+	public int getExemplars() { return Exemplars; }
+	public void setExemplars(int n) { Exemplars = Math.max(0, n); }
+	public String getLlenguaOriginal() { return LlenguaOriginal; }
+	public void setLlenguaOriginal(String l) { LlenguaOriginal = (l != null && !l.trim().isEmpty()) ? l.trim() : null; }
 
 	@Override
 	public String toString() {

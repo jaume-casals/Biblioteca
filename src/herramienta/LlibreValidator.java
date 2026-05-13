@@ -4,6 +4,8 @@ import domini.Llibre;
 
 public class LlibreValidator {
 
+    private LlibreValidator() {}
+
 	/**
 	 * Validates and builds a Llibre.
 	 * Only isbn and nom are mandatory. All other fields accept null/blank and get
@@ -14,16 +16,16 @@ public class LlibreValidator {
 
 		int digits = isbn == null ? 0 : countDig(isbn);
 		if (digits != 13 && digits != 10)
-			throw new IllegalArgumentException("L'ISBN ha de tenir 13 o 10 dígits (era: " + digits + ")");
+			throw new IllegalArgumentException("L'ISBN ha de tenir 10 o 13 dígits");
 
 		if (nom == null || nom.isBlank())
-			throw new IllegalArgumentException("El nom no pot estar buit");
+			throw new IllegalArgumentException("El títol no pot estar buit");
 
 		if (valoracio != null && (valoracio < 0 || valoracio > 10))
-			throw new IllegalArgumentException("La valoració ha d'estar entre 0 i 10 (era: " + valoracio + ")");
+			throw new IllegalArgumentException("La valoració ha d'estar entre 0 i 10");
 
 		if (preu != null && preu < 0)
-			throw new IllegalArgumentException("El preu no pot ser negatiu (era: " + preu + ")");
+			throw new IllegalArgumentException("El preu no pot ser negatiu");
 
 		return new Llibre(
 			isbn, nom,
