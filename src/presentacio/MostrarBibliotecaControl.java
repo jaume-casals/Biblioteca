@@ -14,7 +14,6 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
 import javax.swing.AbstractCellEditor;
 import javax.swing.DefaultCellEditor;
-import java.io.ByteArrayInputStream;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -32,6 +31,7 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
 import herramienta.DialogoError;
+import herramienta.I18n;
 import herramienta.LlibreValidator;
 import herramienta.OpenLibraryClient;
 import herramienta.UITheme;
@@ -40,7 +40,6 @@ import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
 import interficie.EnActualizarBBDD;
-import presentacio.AboutDialog;
 import presentacio.detalles.control.DetallesLlibrePanelControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
@@ -54,11 +53,18 @@ public class MostrarBibliotecaControl {
 	private static final int COLUMNA_ANY      = 4;
 	private static final int COLUMNA_VALORACIO = 5;
 	private static final int COLUMNA_PREU     = 6;
-	private static final int COLUMNA_lLEGIT   = 7;
+	private static final int COLUMNA_LLEGIT    = 7;
 	private static final int COLUMNA_PROGRES  = 8;
 	private static final int COLUMNA_DETALLS  = 9;
 
-	private static final String[] COL_NAMES = {"Portada","ISBN","Nom","Autor","Any","Valoracio","Preu","Llegit","Progres","Detalls"};
+	private static String[] colNames() {
+		return new String[]{
+			I18n.t("col_cover"), I18n.t("col_isbn"), I18n.t("col_title"),
+			I18n.t("col_author"), I18n.t("col_year"), I18n.t("col_rating"),
+			I18n.t("col_price"), I18n.t("col_read"), I18n.t("col_progress"),
+			I18n.t("col_details")
+		};
+	}
 	private static final boolean[] COL_TOGGLEABLE = {true, false, false, true, true, true, true, true, true, false};
 
 	private static final java.util.Map<Long, javax.swing.ImageIcon> coverCache =
@@ -81,6 +87,10 @@ public class MostrarBibliotecaControl {
 	private EnActualizarBBDD enActualizarBBDD;
 	private int currentPage = 0;
 	private boolean paginatedMode = false;
+	private boolean useDBPagination = false;
+	private boolean groupBySeries = false;
+	private final java.util.Deque<Llibre> undoBuffer = new java.util.ArrayDeque<>();
+	private static final int UNDO_MAX = 20;
 	private Integer currentLlistaId = null;
 	private java.util.Set<Long> loanedISBNs = new java.util.HashSet<>();
 
@@ -96,6 +106,12 @@ public class MostrarBibliotecaControl {
 		this.vista.getBtnPaginaSeguent().addActionListener(e -> showPage(currentPage + 1));
 		this.vista.getBtnExportCSV().addActionListener(e -> exportarCSV());
 		this.vista.getBtnImportarCSV().addActionListener(e -> importarCSV());
+		this.vista.getBtnImportarCalibre().addActionListener(e -> importarCalibre());
+		this.vista.getBtnExportJSON().addActionListener(e -> exportarJSON());
+		this.vista.getBtnImportarJSON().addActionListener(e -> importarJSON());
+		this.vista.getBtnExportHTML().addActionListener(e -> exportarHTML());
+		this.vista.getBtnExportPDF().addActionListener(e -> exportarPDF());
+		this.vista.getBtnFetchCovers().addActionListener(e -> fetchMissingCovers());
 		this.vista.getBtnEscanejarISBN().addActionListener(e -> escanejarISBN());
 		this.vista.getbtnFiltrar().addActionListener(e -> filtrar());
 		this.vista.getbttnQuitarFiltros().addActionListener(e -> quitarFiltros());
@@ -109,6 +125,7 @@ public class MostrarBibliotecaControl {
 		this.botonDetalles.addActionListener(e -> abrirDetallesLlibres());
 		this.vista.getjTableBilio().addMouseListener(abrirDetalles());
 		this.vista.getjTableBilio().addMouseListener(contextMenu());
+		this.vista.getjTableBilio().addMouseListener(autorClickFilter());
 
 		JTable table = this.vista.getjTableBilio();
 		table.getInputMap(JComponent.WHEN_FOCUSED)
@@ -143,8 +160,17 @@ public class MostrarBibliotecaControl {
 
 		this.vista.getComboLlistes().addActionListener(e -> onLlistaSelected());
 		this.vista.getBtnGestioLlistes().addActionListener(e -> obrirGestioLlistes());
+		this.vista.setOnDragToShelf((shelfId, isbns) -> {
+			for (long isbn : isbns) {
+				try { ControladorDomini.getInstance().addLlibreToLlista(isbn, shelfId, 0.0, false); }
+				catch (Exception ignored) {}
+			}
+			refreshComboLlistes();
+		});
 		this.vista.getBtnAfegitsRecentment().addActionListener(e -> mostrarAfegitsRecentment());
 		this.vista.getBtnLlegitsRecentment().addActionListener(e -> mostrarLlegitsRecentment());
+		this.vista.getBtnDesitjats().addActionListener(e -> mostrarDesitjats());
+		this.vista.getBtnEnCurs().addActionListener(e -> mostrarEnCurs());
 		refreshComboLlistes();
 		refreshComboTags();
 		loanedISBNs = ControladorDomini.getInstance().getLoanedISBNs();
@@ -157,9 +183,10 @@ public class MostrarBibliotecaControl {
 		this.vista.getBtnToggleFiltres().addActionListener(e -> {
 			boolean show = !vista.isFilterDrawerVisible();
 			vista.setFilterDrawerVisible(show);
-			vista.getBtnToggleFiltres().setText(show ? "Filtres \u25b2" : "Filtres");
+			vista.getBtnToggleFiltres().setText(show ? I18n.t("btn_filters_label_open") : I18n.t("btn_filters_label"));
 		});
 		this.vista.getBtnToggleVista().addActionListener(e -> toggleVista());
+		this.vista.getBtnGroupSeries().addActionListener(e -> toggleGroupBySeries());
 
 		this.vista.getGaleria().setOnCardClick(l -> {
 			try {
@@ -179,8 +206,31 @@ public class MostrarBibliotecaControl {
 		if ("galeria".equals(herramienta.Config.getViewMode())) {
 			vista.getGaleria().updateLlibres(biblio);
 			vista.showGaleria();
-			vista.getBtnToggleVista().setText("Taula");
+			vista.getBtnToggleVista().setText(I18n.t("btn_table_view"));
 		}
+
+		// Restore persisted sort
+		int savedSortCol = herramienta.Config.getSortColumn();
+		if (savedSortCol >= 0 && savedSortCol < vista.getjTableBilio().getColumnCount()) {
+			javax.swing.RowSorter<?> sorter = vista.getjTableBilio().getRowSorter();
+			if (sorter != null) {
+				javax.swing.SortOrder order = "DESCENDING".equals(herramienta.Config.getSortOrder())
+					? javax.swing.SortOrder.DESCENDING : javax.swing.SortOrder.ASCENDING;
+				sorter.setSortKeys(java.util.Collections.singletonList(
+					new javax.swing.RowSorter.SortKey(savedSortCol, order)));
+			}
+		}
+
+		// Save sort on change
+		vista.getjTableBilio().getRowSorter().addRowSorterListener(e -> {
+			java.util.List<? extends javax.swing.RowSorter.SortKey> keys = vista.getjTableBilio().getRowSorter().getSortKeys();
+			if (keys.isEmpty()) {
+				herramienta.Config.setSortColumn(-1);
+			} else {
+				herramienta.Config.setSortColumn(keys.get(0).getColumn());
+				herramienta.Config.setSortOrder(keys.get(0).getSortOrder().name());
+			}
+		});
 
 		this.vista.getjTableBilio().getTableHeader().addMouseListener(new MouseAdapter() {
 			@Override public void mousePressed(MouseEvent e)  { maybeShowColMenu(e); }
@@ -188,11 +238,11 @@ public class MostrarBibliotecaControl {
 			private void maybeShowColMenu(MouseEvent e) {
 				if (!e.isPopupTrigger()) return;
 				JPopupMenu menu = new JPopupMenu("Columnes visibles");
-				for (int col = 0; col < COL_NAMES.length; col++) {
+				for (int col = 0; col < colNames().length; col++) {
 					if (!COL_TOGGLEABLE[col]) continue;
 					final int c = col;
 					boolean visible = !hiddenCols.containsKey(c);
-					javax.swing.JCheckBoxMenuItem item = new javax.swing.JCheckBoxMenuItem(COL_NAMES[c], visible);
+					javax.swing.JCheckBoxMenuItem item = new javax.swing.JCheckBoxMenuItem(colNames()[c], visible);
 					item.addActionListener(ev -> toggleColumn(c));
 					menu.add(item);
 				}
@@ -247,6 +297,25 @@ public class MostrarBibliotecaControl {
 		};
 	}
 
+	private MouseAdapter autorClickFilter() {
+		return new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (!e.isControlDown() || e.getClickCount() != 1) return;
+				JTable table = (JTable) e.getSource();
+				int col = table.columnAtPoint(e.getPoint());
+				int row = table.rowAtPoint(e.getPoint());
+				if (col != COLUMNA_AUTOR || row < 0) return;
+				Object val = table.getValueAt(row, COLUMNA_AUTOR);
+				if (val == null) return;
+				String autor = val.toString().trim();
+				if (autor.isEmpty()) return;
+				vista.getTextAutor().setText(autor);
+				filtrar();
+			}
+		};
+	}
+
 	private MouseAdapter contextMenu() {
 		return new MouseAdapter() {
 			private void maybeShow(MouseEvent e) {
@@ -261,32 +330,40 @@ public class MostrarBibliotecaControl {
 
 				int[] selectedRows = table.getSelectedRows();
 
-				JMenuItem itemObrir = new JMenuItem("Obrir detalls");
+				JMenuItem itemObrir = new JMenuItem(I18n.t("menu_open_details"));
 				itemObrir.setEnabled(selectedRows.length == 1);
 				itemObrir.addActionListener(ev -> abrirDetallesLlibres());
 				menu.add(itemObrir);
 
 				JMenuItem itemEliminar = new JMenuItem(
-					selectedRows.length > 1 ? "Eliminar " + selectedRows.length + " llibres" : "Eliminar");
+					selectedRows.length > 1 ? I18n.t("menu_delete_n", selectedRows.length) : I18n.t("menu_delete_one"));
 				itemEliminar.addActionListener(ev -> eliminarFilaSeleccionada());
 				menu.add(itemEliminar);
 
 				JMenuItem itemAfegirLlista = new JMenuItem(
-					selectedRows.length > 1 ? "Afegir " + selectedRows.length + " a llista..." : "Afegir a llista...");
+					selectedRows.length > 1 ? I18n.t("menu_add_to_list_n", selectedRows.length) : I18n.t("menu_add_to_list"));
 				itemAfegirLlista.addActionListener(ev -> afegirSeleccionatsALlista(selectedRows));
 				menu.add(itemAfegirLlista);
 
-				JMenuItem itemDuplicar = new JMenuItem("Duplicar...");
+				JMenuItem itemDuplicar = new JMenuItem(I18n.t("menu_duplicate"));
 				itemDuplicar.setEnabled(selectedRows.length == 1);
 				itemDuplicar.addActionListener(ev -> duplicarLlibre(isbnStr));
 				menu.add(itemDuplicar);
+
+				if (selectedRows.length > 1) {
+					JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selectedRows.length));
+					java.util.List<Long> batchIsbns = new java.util.ArrayList<>();
+					for (int r : selectedRows) batchIsbns.add(Long.parseLong((String) table.getValueAt(r, COLUMNA_ISBN)));
+					itemBatchEdit.addActionListener(ev -> batchEdit(batchIsbns));
+					menu.add(itemBatchEdit);
+				}
 
 				menu.addSeparator();
 
 				long isbnLong = Long.parseLong(isbnStr);
 				boolean loaned = loanedISBNs.contains(isbnLong);
 				if (selectedRows.length == 1 && loaned) {
-					JMenuItem itemRetornar = new JMenuItem("Marcar retornat");
+					JMenuItem itemRetornar = new JMenuItem(I18n.t("menu_return_book"));
 					itemRetornar.addActionListener(ev -> {
 						try {
 							ControladorDomini.getInstance().retornarLlibre(isbnLong);
@@ -296,14 +373,14 @@ public class MostrarBibliotecaControl {
 					});
 					menu.add(itemRetornar);
 				} else if (selectedRows.length == 1) {
-					JMenuItem itemPrestar = new JMenuItem("Prestar...");
+					JMenuItem itemPrestar = new JMenuItem(I18n.t("menu_loan_book"));
 					itemPrestar.addActionListener(ev -> prestarLlibre(isbnLong));
 					menu.add(itemPrestar);
 				}
 
 				menu.addSeparator();
 
-				JMenuItem itemCopiarISBN = new JMenuItem("Copiar ISBN");
+				JMenuItem itemCopiarISBN = new JMenuItem(I18n.t("menu_copy_isbn"));
 				itemCopiarISBN.setEnabled(selectedRows.length == 1);
 				itemCopiarISBN.addActionListener(ev ->
 					Toolkit.getDefaultToolkit().getSystemClipboard()
@@ -358,14 +435,14 @@ public class MostrarBibliotecaControl {
 		java.util.List<Llista> llistes = ControladorDomini.getInstance().getAllLlistes();
 		Object[] options = new Object[llistes.size() + 1];
 		for (int i = 0; i < llistes.size(); i++) options[i] = llistes.get(i);
-		options[llistes.size()] = "＋ Crear nova llista...";
-		Object sel = JOptionPane.showInputDialog(vista, prompt, "Afegir a llista",
+		options[llistes.size()] = I18n.t("menu_create_list");
+		Object sel = JOptionPane.showInputDialog(vista, prompt, I18n.t("menu_add_to_list_title"),
 			JOptionPane.QUESTION_MESSAGE, null, options,
 			options.length > 1 ? options[0] : options[0]);
 		if (sel == null) return null;
 		if (sel instanceof String) {
-			String name = JOptionPane.showInputDialog(vista, "Nom de la nova llista:",
-				"Nova llista", JOptionPane.QUESTION_MESSAGE);
+			String name = JOptionPane.showInputDialog(vista, I18n.t("dlg_new_list_title"),
+				I18n.t("dlg_new_list_title"), JOptionPane.QUESTION_MESSAGE);
 			if (name == null || name.isBlank()) return null;
 			try {
 				Llista nova = ControladorDomini.getInstance().addLlista(name.trim());
@@ -377,7 +454,7 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void afegirSeleccionatsALlista(int[] rows) {
-		Llista sel = pickLlista("Selecciona la llista on afegir " + rows.length + " llibre(s):");
+		Llista sel = pickLlista(I18n.t("dlg_add_to_list_msg", rows.length));
 		if (sel == null) return;
 		int ok = 0, skip = 0;
 		JTable t = this.vista.getjTableBilio();
@@ -388,9 +465,9 @@ public class MostrarBibliotecaControl {
 				ok++;
 			} catch (Exception ignored) { skip++; }
 		}
-		String msg = ok + " llibres afegits a \"" + sel.getNom() + "\".";
-		if (skip > 0) msg += "\n" + skip + " ja existien a la llista.";
-		JOptionPane.showMessageDialog(vista, msg, "Afegit a llista", JOptionPane.INFORMATION_MESSAGE);
+		String msg = I18n.t("dlg_books_added_to_list", ok, sel.getNom());
+		if (skip > 0) msg += "\n" + I18n.t("dlg_books_existing_list", skip);
+		JOptionPane.showMessageDialog(vista, msg, I18n.t("dlg_added_to_list_title"), JOptionPane.INFORMATION_MESSAGE);
 		refreshComboLlistes();
 	}
 
@@ -485,7 +562,7 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void desarPreset() {
-		String name = JOptionPane.showInputDialog(vista, "Nom del preset:", "Desa filtre", JOptionPane.QUESTION_MESSAGE);
+		String name = JOptionPane.showInputDialog(vista, I18n.t("dlg_filter_name_prompt"), I18n.t("dlg_save_filter_title"), JOptionPane.QUESTION_MESSAGE);
 		if (name == null || name.isBlank()) return;
 		herramienta.Config.savePreset(name.trim(), collectFilterState());
 		refreshComboPresets();
@@ -497,8 +574,8 @@ public class MostrarBibliotecaControl {
 		int idx = vista.getComboPresets().getSelectedIndex();
 		if (idx < 0 || herramienta.Config.getPresetCount() == 0) return;
 		String name = herramienta.Config.getPresetName(idx);
-		if (JOptionPane.showConfirmDialog(vista, "Eliminar preset \"" + name + "\"?",
-				"Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+		if (JOptionPane.showConfirmDialog(vista, I18n.t("dlg_delete_preset", name),
+				I18n.t("dlg_delete_preset_title"), JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
 		herramienta.Config.deletePreset(idx);
 		refreshComboPresets();
 	}
@@ -518,7 +595,7 @@ public class MostrarBibliotecaControl {
 			herramienta.Config.setColVisible(modelIndex, true);
 		} else {
 			// hide
-			javax.swing.table.TableColumn tc = t.getColumn(COL_NAMES[modelIndex]);
+			javax.swing.table.TableColumn tc = t.getColumn(colNames()[modelIndex]);
 			hiddenCols.put(modelIndex, tc);
 			t.removeColumn(tc);
 			herramienta.Config.setColVisible(modelIndex, false);
@@ -526,7 +603,7 @@ public class MostrarBibliotecaControl {
 	}
 
 	private void applyColumnVisibility() {
-		for (int col = 0; col < COL_NAMES.length; col++) {
+		for (int col = 0; col < colNames().length; col++) {
 			if (!COL_TOGGLEABLE[col]) continue;
 			boolean shouldBeVisible = herramienta.Config.getColVisible(col);
 			boolean isVisible = !hiddenCols.containsKey(col);
@@ -539,7 +616,7 @@ public class MostrarBibliotecaControl {
 	}
 
 	private Object[] addLlibreMostrar(Llibre l) {
-		String estat = Boolean.TRUE.equals(l.getLlegit()) ? "Llegit" : "No llegit";
+		String estat = Boolean.TRUE.equals(l.getLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
 		return new Object[] { "", l.getISBN() + "", l.getNom(), l.getAutor(), l.getAny(), l.getValoracio(), l.getPreu(),
 				estat, l.getPagines() + "/" + l.getPaginesLlegides(), "" };
 	}
@@ -548,7 +625,7 @@ public class MostrarBibliotecaControl {
 		this.model = (DefaultTableModel) this.vista.getjTableBilio().getModel();
 		this.model.getDataVector().removeAllElements();
 		removeAlldataFiltros();
-		setHeader(new String[] { "Portada", "ISBN", "Nom", "Autor", "Any", "Valoracio", "Preu", "Llegit", "Progres", "Detalls" });
+		setHeader(colNames());
 		if (llibres != null) {
 			for (Llibre l : llibres) {
 				addRow(addLlibreMostrar(l));
@@ -572,8 +649,8 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_VALORACIO).setMinWidth(50);
 		t.getColumnModel().getColumn(COLUMNA_PREU).setPreferredWidth(60);
 		t.getColumnModel().getColumn(COLUMNA_PREU).setMinWidth(40);
-		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setPreferredWidth(80);
-		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setMinWidth(55);
+		t.getColumnModel().getColumn(COLUMNA_LLEGIT).setPreferredWidth(80);
+		t.getColumnModel().getColumn(COLUMNA_LLEGIT).setMinWidth(55);
 		t.getColumnModel().getColumn(COLUMNA_PROGRES).setPreferredWidth(90);
 		t.getColumnModel().getColumn(COLUMNA_PROGRES).setMinWidth(50);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setPreferredWidth(85);
@@ -581,12 +658,12 @@ public class MostrarBibliotecaControl {
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setMaxWidth(110);
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellRenderer(new BotonDetallesRenderer());
 		t.getColumnModel().getColumn(COLUMNA_DETALLS).setCellEditor(new BotonDetallesEditor(new JCheckBox()));
-		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
-		t.getColumnModel().getColumn(COLUMNA_lLEGIT).setCellEditor(new LlegitCheckBoxEditor());
+		t.getColumnModel().getColumn(COLUMNA_LLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
+		t.getColumnModel().getColumn(COLUMNA_LLEGIT).setCellEditor(new LlegitCheckBoxEditor());
 		t.getColumnModel().getColumn(COLUMNA_PROGRES).setCellRenderer(new ProgressBarRenderer());
 		SearchHighlightRenderer highlightRenderer = new SearchHighlightRenderer();
 		for (int i = 0; i < t.getColumnCount(); i++) {
-			if (i != COLUMNA_COVER && i != COLUMNA_lLEGIT && i != COLUMNA_DETALLS && i != COLUMNA_PROGRES)
+			if (i != COLUMNA_COVER && i != COLUMNA_LLEGIT && i != COLUMNA_DETALLS && i != COLUMNA_PROGRES)
 				t.getColumnModel().getColumn(i).setCellRenderer(highlightRenderer);
 		}
 
@@ -648,7 +725,7 @@ public class MostrarBibliotecaControl {
 		java.awt.Window w = SwingUtilities.getWindowAncestor(this.vista);
 		if (w instanceof MainFramePanel) {
 			((JFrame) w).setTitle("Biblioteca");
-			String shelf = currentLlistaId == null ? "Totes les llistes" : currentShelfName();
+			String shelf = currentLlistaId == null ? I18n.t("lbl_all_lists") : currentShelfName();
 			String count = shown == total
 				? total + " llibres"
 				: shown + " / " + total + " llibres";
@@ -659,7 +736,7 @@ public class MostrarBibliotecaControl {
 	private String currentShelfName() {
 		Object sel = this.vista.getComboLlistes().getSelectedItem();
 		if (sel instanceof domini.Llista) return ((domini.Llista) sel).getNom();
-		return "Totes les llistes";
+		return I18n.t("lbl_all_lists");
 	}
 
 	private void removeAlldataFiltros() {
@@ -676,7 +753,7 @@ public class MostrarBibliotecaControl {
 		if (this.vista.getjTableBilio().getModel().getColumnCount() == string.length) {
 			((DefaultTableModel) this.vista.getjTableBilio().getModel()).addRow(string);
 		} else {
-			JOptionPane.showMessageDialog(vista, "Cuidado que hay diferentes columnas en la tabla de Libros", "Error",
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_import_warn"), I18n.t("dlg_error_title"),
 					0, null);
 		}
 	}
@@ -694,34 +771,48 @@ public class MostrarBibliotecaControl {
 		ControladorDomini cd = ControladorDomini.getInstance();
 		try (java.io.BufferedReader br = new java.io.BufferedReader(
 				new java.io.FileReader(fc.getSelectedFile(), java.nio.charset.StandardCharsets.UTF_8))) {
-			br.readLine();
+			String header = br.readLine();
+			if (header == null) return;
+			boolean isLibraryThing = header.contains("BCID");
+			boolean isGoodreads = !isLibraryThing && (header.contains("Book Id") || header.contains("Exclusive Shelf"));
+			String[] headers = (isGoodreads || isLibraryThing) ? parseCSVLine(header) : null;
+			java.util.Map<String, Integer> hMap = new java.util.HashMap<>();
+			if (headers != null) {
+				for (int i = 0; i < headers.length; i++) hMap.put(headers[i].trim(), i);
+			}
 			String line;
 			while ((line = br.readLine()) != null) {
 				if (line.isBlank()) continue;
 				try {
 					String[] c = parseCSVLine(line);
-					long isbn = Long.parseLong(c[0].trim());
-					try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
-					Llibre l = LlibreValidator.checkLlibre(
-						isbn, c[1], c[2],
-						Integer.parseInt(c[3].trim()),
-						c.length > 4 ? c[4] : "",
-						c.length > 5 ? Double.parseDouble(c[5].trim()) : 0.0,
-						c.length > 6 ? Double.parseDouble(c[6].trim()) : 0.0,
-						c.length > 7 ? Boolean.parseBoolean(c[7].trim()) : false,
-						c.length > 8 ? c[8] : "");
-					cd.addLlibre(l);
-					if (c.length > 9 && !c[9].isBlank()) {
-						for (String entry : c[9].split(";")) {
-							String[] parts = entry.split("\\|", 3);
-							if (parts.length < 1 || parts[0].isBlank()) continue;
-							String nomLlista = parts[0].trim();
-							double val = parts.length > 1 ? parseDoubleOrZero(parts[1]) : 0.0;
-							boolean llegitLl = parts.length > 2 && Boolean.parseBoolean(parts[2].trim());
-							domini.Llista llista = cd.getAllLlistes().stream()
-								.filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
-							if (llista == null) llista = cd.addLlista(nomLlista);
-							cd.addLlibreToLlista(isbn, llista.getId(), val, llegitLl);
+					if (isLibraryThing) {
+						importLibraryThingRow(cd, hMap, c);
+					} else if (isGoodreads) {
+						importGoodreadsRow(cd, hMap, c);
+					} else {
+						long isbn = Long.parseLong(c[0].trim());
+						try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
+						Llibre l = LlibreValidator.checkLlibre(
+							isbn, c[1], c[2],
+							Integer.parseInt(c[3].trim()),
+							c.length > 4 ? c[4] : "",
+							c.length > 5 ? Double.parseDouble(c[5].trim()) : 0.0,
+							c.length > 6 ? Double.parseDouble(c[6].trim()) : 0.0,
+							c.length > 7 ? Boolean.parseBoolean(c[7].trim()) : false,
+							c.length > 8 ? c[8] : "");
+						cd.addLlibre(l);
+						if (c.length > 9 && !c[9].isBlank()) {
+							for (String entry : c[9].split(";")) {
+								String[] parts = entry.split("\\|", 3);
+								if (parts.length < 1 || parts[0].isBlank()) continue;
+								String nomLlista = parts[0].trim();
+								double val = parts.length > 1 ? parseDoubleOrZero(parts[1]) : 0.0;
+								boolean llegitLl = parts.length > 2 && Boolean.parseBoolean(parts[2].trim());
+								domini.Llista llista = cd.getAllLlistes().stream()
+									.filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
+								if (llista == null) llista = cd.addLlista(nomLlista);
+								cd.addLlibreToLlista(isbn, llista.getId(), val, llegitLl);
+							}
 						}
 					}
 					ok++;
@@ -737,9 +828,179 @@ public class MostrarBibliotecaControl {
 		String msg = ok + " llibres importats.";
 		if (skipped > 0) msg += "\n" + skipped + " omesos (ISBN ja existeix).";
 		if (err > 0) msg += "\n" + err + " errors:" + errors;
-		JOptionPane.showMessageDialog(this.vista, msg, "Importació",
+		JOptionPane.showMessageDialog(this.vista, msg, I18n.t("dlg_import_title"),
 			err > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
 		quitarFiltros();
+	}
+
+	private void importGoodreadsRow(ControladorDomini cd, java.util.Map<String, Integer> hMap, String[] c) throws Exception {
+		String isbnRaw = colVal(hMap, c, "ISBN13");
+		if (isbnRaw.isEmpty()) isbnRaw = colVal(hMap, c, "ISBN");
+		// Goodreads wraps ISBNs as ="1234567890123"
+		isbnRaw = isbnRaw.replaceAll("[^0-9]", "");
+		if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
+		long isbn = Long.parseLong(isbnRaw);
+		try { cd.getLlibre(isbn); return; } catch (Exception ignored) {} // skip duplicates
+		String nom       = colVal(hMap, c, "Title");
+		String autor     = colVal(hMap, c, "Author");
+		String editorial = colVal(hMap, c, "Publisher");
+		String pagesStr  = colVal(hMap, c, "Number of Pages");
+		int pagines = pagesStr.isEmpty() ? 0 : (int) parseDoubleOrZero(pagesStr);
+		int any = 0;
+		String yearStr = colVal(hMap, c, "Year Published");
+		if (yearStr.isEmpty()) yearStr = colVal(hMap, c, "Original Publication Year");
+		if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
+		double valoracio = parseDoubleOrZero(colVal(hMap, c, "My Rating"));
+		String shelf    = colVal(hMap, c, "Exclusive Shelf");
+		boolean llegit  = "read".equalsIgnoreCase(shelf);
+		String notes    = colVal(hMap, c, "My Review");
+		String dataLect = colVal(hMap, c, "Date Read");
+		Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, "", valoracio, 0.0, llegit, "");
+		l.setEditorial(editorial);
+		l.setPagines(pagines);
+		l.setNotes(notes);
+		if (!dataLect.isEmpty()) l.setDataLectura(dataLect);
+		cd.addLlibre(l);
+		// shelves from Goodreads "Bookshelves" column (comma-separated)
+		String bookshelves = colVal(hMap, c, "Bookshelves");
+		if (!bookshelves.isEmpty()) {
+			for (String s : bookshelves.split(",")) {
+				String nomLlista = s.trim();
+				if (nomLlista.isEmpty()) continue;
+				domini.Llista llista = cd.getAllLlistes().stream()
+					.filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
+				if (llista == null) llista = cd.addLlista(nomLlista);
+				cd.addLlibreToLlista(isbn, llista.getId(), valoracio, llegit);
+			}
+		}
+	}
+
+	private void importLibraryThingRow(ControladorDomini cd, java.util.Map<String, Integer> hMap, String[] c) throws Exception {
+		String isbnRaw = colVal(hMap, c, "ISBN13");
+		if (isbnRaw.isEmpty()) isbnRaw = colVal(hMap, c, "ISBN");
+		isbnRaw = isbnRaw.replaceAll("[^0-9]", "");
+		if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
+		long isbn = Long.parseLong(isbnRaw);
+		try { cd.getLlibre(isbn); return; } catch (Exception ignored) {}
+		String nom   = colVal(hMap, c, "Title");
+		String autor = colVal(hMap, c, "Authors");
+		if (autor.contains(",") && !autor.contains(";")) {
+			String[] parts = autor.split(",", 2);
+			autor = parts[1].trim() + " " + parts[0].trim();
+		}
+		int any = 0;
+		String yearStr = colVal(hMap, c, "Original Publication Year");
+		if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
+		double valoracio = parseDoubleOrZero(colVal(hMap, c, "Rating")) * 2.0;
+		String desc  = colVal(hMap, c, "Summary");
+		String notes = colVal(hMap, c, "Comments");
+		if (notes.isEmpty()) notes = colVal(hMap, c, "Review");
+		Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, valoracio, 0.0, false, "");
+		if (!notes.isEmpty()) l.setNotes(notes);
+		cd.addLlibre(l);
+		String collections = colVal(hMap, c, "Collections");
+		if (!collections.isEmpty()) {
+			for (String s : collections.split(",")) {
+				String nomLlista = s.trim();
+				if (nomLlista.isEmpty()) continue;
+				domini.Llista llista = cd.getAllLlistes().stream()
+					.filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
+				if (llista == null) llista = cd.addLlista(nomLlista);
+				cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
+			}
+		}
+		String tags = colVal(hMap, c, "Tags");
+		if (!tags.isEmpty()) {
+			for (String t : tags.split(",")) {
+				String nomTag = t.trim();
+				if (nomTag.isEmpty()) continue;
+				domini.Tag tag = cd.getAllTags().stream()
+					.filter(tg -> tg.getNom().equals(nomTag)).findFirst().orElse(null);
+				if (tag == null) tag = cd.addTag(nomTag);
+				cd.addLlibreToTag(isbn, tag.getId());
+			}
+		}
+	}
+
+	private void importarCalibre() {
+		javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+		fc.setDialogTitle(I18n.t("dlg_calibre_choose_title"));
+		fc.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
+		if (fc.showOpenDialog(this.vista) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+		java.io.File dir = fc.getSelectedFile();
+		java.io.File dbFile = new java.io.File(dir, "metadata.db");
+		if (!dbFile.exists()) {
+			JOptionPane.showMessageDialog(this.vista,
+				I18n.t("dlg_calibre_not_found"), I18n.t("dlg_calibre_choose_title"),
+				JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+		try {
+			String sqlite3 = findSqlite3();
+			if (sqlite3 == null) {
+				JOptionPane.showMessageDialog(this.vista,
+					I18n.t("dlg_calibre_no_sqlite3"), I18n.t("dlg_calibre_choose_title"),
+					JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+			String sql = "SELECT b.id, b.title, GROUP_CONCAT(a.name, ', '), i.val, p.name, b.pubdate, b.rating, b.comment, b.series_index, s.name FROM books b LEFT JOIN books_authors_link ba ON b.id=ba.book LEFT JOIN authors a ON ba.author=a.id LEFT JOIN identifiers i ON b.id=i.book AND i.type='isbn' LEFT JOIN publishers p ON b.id=(SELECT book FROM books_publishers_link WHERE book=b.id LIMIT 1) LEFT JOIN books_series_link bs ON b.id=bs.book LEFT JOIN series s ON bs.series=s.id GROUP BY b.id;";
+			Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql});
+			java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(proc.getInputStream()));
+			ControladorDomini cd = ControladorDomini.getInstance();
+			int ok = 0, skipped = 0, err = 0;
+			String line;
+			while ((line = br.readLine()) != null) {
+				if (line.isBlank()) continue;
+				try {
+					String[] c = line.split("\\|", -1);
+					String isbnRaw = c.length > 3 ? c[3].replaceAll("[^0-9]", "") : "";
+					if (isbnRaw.isEmpty() || isbnRaw.length() < 10) { skipped++; continue; }
+					long isbn = Long.parseLong(isbnRaw);
+					try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
+					String nom   = c.length > 1 ? c[1].trim() : "?";
+					String autor = c.length > 2 ? c[2].trim() : "";
+					String editorial = c.length > 4 ? c[4].trim() : "";
+					int any = 0;
+					if (c.length > 5 && !c[5].isBlank()) { try { any = Integer.parseInt(c[5].substring(0, 4)); } catch (Exception ignored) {} }
+					double valoracio = c.length > 6 ? parseDoubleOrZero(c[6]) * 2.0 : 0.0;
+					String notes = c.length > 7 ? c[7].trim() : "";
+					String serie = c.length > 9 ? c[9].trim() : "";
+					int volum = 0;
+					if (c.length > 8) { try { volum = (int) Double.parseDouble(c[8].trim()); } catch (Exception ignored) {} }
+					Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, "", valoracio, 0.0, false, "");
+					l.setEditorial(editorial);
+					if (!notes.isEmpty()) l.setNotes(notes);
+					if (!serie.isEmpty()) { l.setSerie(serie); l.setVolum(volum); }
+					cd.addLlibre(l);
+					ok++;
+				} catch (Exception ex) { err++; }
+			}
+			proc.waitFor();
+			refresh();
+			String msg = ok + " " + I18n.t("lbl_imported_ok");
+			if (skipped > 0) msg += "\n" + skipped + " " + I18n.t("lbl_skipped");
+			if (err > 0) msg += "\n" + err + " " + I18n.t("lbl_errors");
+			JOptionPane.showMessageDialog(this.vista, msg, I18n.t("dlg_calibre_choose_title"),
+				err > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private static String findSqlite3() {
+		for (String candidate : new String[]{"sqlite3", "/usr/bin/sqlite3", "/usr/local/bin/sqlite3"}) {
+			try {
+				Process p = Runtime.getRuntime().exec(new String[]{candidate, "--version"});
+				if (p.waitFor() == 0) return candidate;
+			} catch (Exception ignored) {}
+		}
+		return null;
+	}
+
+	private static String colVal(java.util.Map<String, Integer> hMap, String[] c, String col) {
+		Integer idx = hMap.get(col);
+		if (idx == null || idx >= c.length) return "";
+		return c[idx].trim();
 	}
 
 	private static String[] parseCSVLine(String line) {
@@ -770,8 +1031,8 @@ public class MostrarBibliotecaControl {
 
 	private void escanejarISBN() {
 		String isbn = JOptionPane.showInputDialog(this.vista,
-			"Escaneja o escriu el codi ISBN\n(el lector de barres escriurà automàticament):",
-			"Escanejar ISBN", JOptionPane.QUESTION_MESSAGE);
+			I18n.t("dlg_scan_isbn_msg"),
+			I18n.t("dlg_scan_isbn_title"), JOptionPane.QUESTION_MESSAGE);
 		if (isbn == null || isbn.isBlank()) return;
 
 		GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
@@ -785,8 +1046,8 @@ public class MostrarBibliotecaControl {
 				if (!dialeg.isVisible()) return;
 				if (meta.containsKey("error")) {
 					JOptionPane.showMessageDialog(dialeg,
-						"Error de connexió amb OpenLibrary:\n" + meta.get("error"),
-						"Error de xarxa", JOptionPane.WARNING_MESSAGE);
+						I18n.t("dlg_network_error") + "\n" + meta.get("error"),
+						I18n.t("dlg_network_error_title"), JOptionPane.WARNING_MESSAGE);
 					return;
 				}
 				String title = meta.get("title");
@@ -840,11 +1101,472 @@ public class MostrarBibliotecaControl {
 				} catch (Exception ignored) {}
 			}
 			JOptionPane.showMessageDialog(this.vista,
-				"Exportat a: " + f.getAbsolutePath(), "Exportació completada",
+				I18n.t("dlg_export_done", f.getAbsolutePath()), I18n.t("dlg_export_title"),
 				JOptionPane.INFORMATION_MESSAGE);
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}
+	}
+
+	private void exportarJSON() {
+		javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+		fc.setSelectedFile(new java.io.File("biblioteca.json"));
+		fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("JSON files", "json"));
+		if (fc.showSaveDialog(this.vista) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+		java.io.File f = fc.getSelectedFile();
+		if (!f.getName().toLowerCase().endsWith(".json")) f = new java.io.File(f.getPath() + ".json");
+		ControladorDomini cd = ControladorDomini.getInstance();
+		try (java.io.PrintWriter pw = new java.io.PrintWriter(
+				new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
+			pw.println("{");
+			pw.println("\"version\":1,");
+			// books
+			ArrayList<Llibre> tots = cd.getAllLlibres();
+			pw.print("\"llibres\":[");
+			for (int i = 0; i < tots.size(); i++) {
+				Llibre l = tots.get(i);
+				pw.print(jsonLlibre(l, cd));
+				if (i < tots.size() - 1) pw.print(",");
+			}
+			pw.println("],");
+			// shelves
+			ArrayList<Llista> llistes = cd.getAllLlistes();
+			pw.print("\"llistes\":[");
+			for (int i = 0; i < llistes.size(); i++) {
+				Llista ll = llistes.get(i);
+				pw.print("{\"id\":" + ll.getId() + ",\"nom\":" + jsonStr(ll.getNom()) + "}");
+				if (i < llistes.size() - 1) pw.print(",");
+			}
+			pw.println("],");
+			// tags
+			ArrayList<Tag> tags = cd.getAllTags();
+			pw.print("\"tags\":[");
+			for (int i = 0; i < tags.size(); i++) {
+				Tag t = tags.get(i);
+				pw.print("{\"id\":" + t.getId() + ",\"nom\":" + jsonStr(t.getNom()) + "}");
+				if (i < tags.size() - 1) pw.print(",");
+			}
+			pw.println("]");
+			pw.println("}");
+			JOptionPane.showMessageDialog(this.vista,
+				I18n.t("dlg_export_done", f.getAbsolutePath()), I18n.t("dlg_export_json_title"),
+				JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private void exportarHTML() {
+		javax.swing.JCheckBox chkShelf = new javax.swing.JCheckBox(I18n.t("html_group_shelf_opt"), false);
+		javax.swing.JCheckBox chkTable = new javax.swing.JCheckBox(I18n.t("html_table_view_opt"), false);
+		Object[] opts = {chkShelf, chkTable};
+		int r = JOptionPane.showConfirmDialog(this.vista, opts,
+			I18n.t("dlg_export_html_title"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+		if (r != JOptionPane.OK_OPTION) return;
+		boolean groupByShelf = chkShelf.isSelected();
+		boolean tableView = chkTable.isSelected();
+
+		javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+		fc.setSelectedFile(new java.io.File("biblioteca.html"));
+		fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("HTML files", "html", "htm"));
+		if (fc.showSaveDialog(this.vista) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+		java.io.File f = fc.getSelectedFile();
+		if (!f.getName().toLowerCase().endsWith(".html") && !f.getName().toLowerCase().endsWith(".htm"))
+			f = new java.io.File(f.getPath() + ".html");
+		javax.swing.table.TableModel m = this.vista.getjTableBilio().getModel();
+		ControladorDomini cd = ControladorDomini.getInstance();
+		try (java.io.PrintWriter pw = new java.io.PrintWriter(
+				new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
+			pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
+			pw.println("<title>La meva biblioteca</title><style>");
+			pw.println("body{font-family:sans-serif;background:#1a1a2e;color:#e0e0e0;margin:0;padding:20px}");
+			pw.println("h1{color:#a78bfa;text-align:center;margin-bottom:30px}");
+			pw.println("h2{color:#c4b5fd;border-bottom:1px solid #4c1d95;padding-bottom:8px;margin:30px 0 16px}");
+			pw.println(".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}");
+			pw.println(".card{background:#16213e;border-radius:10px;padding:12px;text-align:center;transition:transform .2s}");
+			pw.println(".card:hover{transform:translateY(-4px)}");
+			pw.println(".card img{width:100%;height:200px;object-fit:cover;border-radius:6px;margin-bottom:8px}");
+			pw.println(".card .no-cover{width:100%;height:200px;background:#0f3460;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:40px}");
+			pw.println(".card .title{font-weight:bold;font-size:13px;margin:4px 0}");
+			pw.println(".card .autor{color:#a0a0c0;font-size:12px}");
+			pw.println(".card .stars{color:#f59e0b;font-size:12px;margin:4px 0}");
+			pw.println(".card .badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:10px;margin-top:4px}");
+			pw.println(".read{background:#065f46;color:#6ee7b7}.unread{background:#3b0764;color:#c4b5fd}");
+			pw.println("table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}");
+			pw.println("th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}");
+			pw.println("</style></head><body>");
+			pw.println("<h1>📚 La meva biblioteca</h1>");
+
+			java.util.List<Llibre> currentView = new java.util.ArrayList<>();
+			for (int row = 0; row < m.getRowCount(); row++) {
+				try {
+					long isbn = Long.parseLong(m.getValueAt(row, COLUMNA_ISBN).toString());
+					Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
+					if (l != null) currentView.add(l);
+				} catch (Exception ignored) {}
+			}
+
+			if (groupByShelf) {
+				java.util.List<domini.Llista> llistes = cd.getAllLlistes();
+				java.util.Set<Long> printed = new java.util.HashSet<>();
+				for (domini.Llista llista : llistes) {
+					java.util.List<Llibre> shelfBooks = currentView.stream()
+						.filter(l -> { try { return cd.getLlistesForLlibre(l.getISBN()).stream().anyMatch(ll -> ll.getId() == llista.getId()); } catch (Exception e2) { return false; } })
+						.collect(Collectors.toList());
+					if (shelfBooks.isEmpty()) continue;
+					pw.println("<h2>" + htmlEsc(llista.getNom()) + " (" + shelfBooks.size() + ")</h2>");
+					if (tableView) printHtmlTable(pw, shelfBooks);
+					else printHtmlGrid(pw, shelfBooks, cd);
+					shelfBooks.forEach(l -> printed.add(l.getISBN()));
+				}
+				java.util.List<Llibre> unshelfed = currentView.stream()
+					.filter(l -> !printed.contains(l.getISBN())).collect(Collectors.toList());
+				if (!unshelfed.isEmpty()) {
+					pw.println("<h2>" + I18n.t("lbl_no_shelf") + "</h2>");
+					if (tableView) printHtmlTable(pw, unshelfed);
+					else printHtmlGrid(pw, unshelfed, cd);
+				}
+			} else {
+				if (tableView) printHtmlTable(pw, currentView);
+				else printHtmlGrid(pw, currentView, cd);
+			}
+
+			pw.println("</body></html>");
+			JOptionPane.showMessageDialog(this.vista,
+				I18n.t("dlg_export_done", f.getAbsolutePath()), I18n.t("dlg_export_html_title"),
+				JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private void printHtmlGrid(java.io.PrintWriter pw, java.util.List<Llibre> books, ControladorDomini cd) {
+		pw.println("<div class=\"grid\">");
+		for (Llibre l : books) {
+			pw.println("<div class=\"card\">");
+			byte[] blob = null;
+			try { blob = cd.getLlibreBlob(l.getISBN()); } catch (Exception ignored) {}
+			if (blob == null && l.getImatge() != null && !l.getImatge().isEmpty()) {
+				try { blob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(l.getImatge())); } catch (Exception ignored) {}
+			}
+			if (blob != null) {
+				String mime = (blob.length > 4 && blob[0] == (byte)0x89) ? "image/png" : "image/jpeg";
+				String b64 = java.util.Base64.getEncoder().encodeToString(blob);
+				pw.println("<img src=\"data:" + mime + ";base64," + b64 + "\" alt=\"portada\">");
+			} else {
+				pw.println("<div class=\"no-cover\">📖</div>");
+			}
+			pw.println("<div class=\"title\">" + htmlEsc(l.getNom()) + "</div>");
+			pw.println("<div class=\"autor\">" + htmlEsc(l.getAutor()) + " (" + l.getAny() + ")</div>");
+			if (l.getValoracio() > 0) {
+				int stars = (int) Math.round(l.getValoracio());
+				pw.println("<div class=\"stars\">" + "★".repeat(stars) + "☆".repeat(Math.max(0, 5-stars)) + "</div>");
+			}
+			pw.println("<span class=\"badge " + (l.getLlegit() ? "read" : "unread") + "\">" +
+				(l.getLlegit() ? I18n.t("filter_read") : I18n.t("lbl_pending")) + "</span>");
+			pw.println("</div>");
+		}
+		pw.println("</div>");
+	}
+
+	private void printHtmlTable(java.io.PrintWriter pw, java.util.List<Llibre> books) {
+		pw.println("<table><thead><tr>");
+		pw.println("<th>ISBN</th><th>" + htmlEsc(I18n.t("field_title")) + "</th><th>" + htmlEsc(I18n.t("field_author")) + "</th>");
+		pw.println("<th>" + htmlEsc(I18n.t("field_year")) + "</th><th>" + htmlEsc(I18n.t("field_publisher")) + "</th>");
+		pw.println("<th>" + htmlEsc(I18n.t("field_rating")) + "</th><th>" + htmlEsc(I18n.t("field_read")) + "</th>");
+		pw.println("</tr></thead><tbody>");
+		for (Llibre l : books) {
+			pw.println("<tr>");
+			pw.println("<td>" + l.getISBN() + "</td>");
+			pw.println("<td>" + htmlEsc(l.getNom()) + "</td>");
+			pw.println("<td>" + htmlEsc(l.getAutor()) + "</td>");
+			pw.println("<td>" + (l.getAny() > 0 ? l.getAny() : "") + "</td>");
+			pw.println("<td>" + htmlEsc(l.getEditorial() != null ? l.getEditorial() : "") + "</td>");
+			pw.println("<td>" + (l.getValoracio() > 0 ? l.getValoracio() : "") + "</td>");
+			pw.println("<td>" + (l.getLlegit() ? "✓" : "") + "</td>");
+			pw.println("</tr>");
+		}
+		pw.println("</tbody></table>");
+	}
+
+	private void fetchMissingCovers() {
+		ControladorDomini cd = ControladorDomini.getInstance();
+		ArrayList<Llibre> all = cd.getAllLlibres();
+		List<Llibre> missing = all.stream()
+			.filter(l -> !l.hasBlob() && l.getImatgeBlob() == null)
+			.collect(Collectors.toList());
+		if (missing.isEmpty()) {
+			JOptionPane.showMessageDialog(this.vista,
+				I18n.t("dlg_fetch_portades_all_done"), I18n.t("dlg_fetch_portades_title"), JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		int total = missing.size();
+		javax.swing.JProgressBar bar = new javax.swing.JProgressBar(0, total);
+		bar.setStringPainted(true);
+		JLabel lbl = new JLabel(I18n.t("dlg_fetch_portades_progress", 0, total));
+		JPanel p = new JPanel(new java.awt.BorderLayout(8, 8));
+		p.add(lbl, java.awt.BorderLayout.NORTH);
+		p.add(bar, java.awt.BorderLayout.CENTER);
+		javax.swing.JDialog dlg = new javax.swing.JDialog(
+			SwingUtilities.getWindowAncestor(this.vista), I18n.t("dlg_fetch_portades_title"),
+			java.awt.Dialog.ModalityType.MODELESS);
+		dlg.setContentPane(p);
+		dlg.pack(); dlg.setSize(360, 90);
+		dlg.setLocationRelativeTo(this.vista);
+		dlg.setVisible(true);
+		this.vista.getBtnFetchCovers().setEnabled(false);
+		int[] done = {0}, fetched = {0};
+		for (Llibre l : missing) {
+			Thread t = new Thread(() -> {
+				try {
+					byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
+					if (blob != null && blob.length > 0) {
+						cd.setLlibreBlob(l.getISBN(), blob);
+						fetched[0]++;
+					}
+				} catch (Exception ignored) {} finally {
+					synchronized (done) {
+						done[0]++;
+						int d = done[0];
+						SwingUtilities.invokeLater(() -> {
+							bar.setValue(d);
+							lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
+							if (d >= total) {
+								dlg.dispose();
+								this.vista.getBtnFetchCovers().setEnabled(true);
+								JOptionPane.showMessageDialog(this.vista,
+									I18n.t("dlg_fetch_portades_done", fetched[0], total),
+									I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+								refresh();
+							}
+						});
+					}
+				}
+			});
+			t.setDaemon(true);
+			t.start();
+		}
+	}
+
+	private void exportarPDF() {
+		javax.swing.table.TableModel m = this.vista.getjTableBilio().getModel();
+		java.util.List<String[]> rows = new java.util.ArrayList<>();
+		for (int i = 0; i < m.getRowCount(); i++) {
+			try {
+				long isbn = Long.parseLong(m.getValueAt(i, COLUMNA_ISBN).toString());
+				Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
+				if (l == null) continue;
+				String stars = l.getValoracio() > 0 ? "★".repeat((int) Math.round(l.getValoracio())) : "-";
+				rows.add(new String[]{
+					l.getNom(), l.getAutor(), String.valueOf(l.getAny()),
+					stars, l.getLlegit() ? "✓" : "○"
+				});
+			} catch (Exception ignored) {}
+		}
+		java.awt.print.PrinterJob pj = java.awt.print.PrinterJob.getPrinterJob();
+		pj.setJobName("Biblioteca");
+		String[] headers = {I18n.t("pdf_col_title"), I18n.t("pdf_col_author"), I18n.t("pdf_col_year"), I18n.t("pdf_col_rating"), I18n.t("pdf_col_read")};
+		int[] colWidths = {250, 160, 45, 55, 45};
+		pj.setPrintable((graphics, pageFormat, pageIndex) -> {
+			java.awt.Graphics2D g = (java.awt.Graphics2D) graphics;
+			int lineH = 16, margin = (int) pageFormat.getImageableX();
+			int topY  = (int) pageFormat.getImageableY();
+			int pageW = (int) pageFormat.getImageableWidth();
+			int perPage = (int)((pageFormat.getImageableHeight() - 40) / lineH);
+			int totalPages = (rows.size() + perPage - 1) / perPage;
+			if (pageIndex >= totalPages) return java.awt.print.Printable.NO_SUCH_PAGE;
+			g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 11));
+			g.drawString(I18n.t("dlg_pdf_title", rows.size()), margin, topY + 14);
+			g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 9));
+			int x = margin, y = topY + 30;
+			for (int c = 0; c < headers.length; c++) {
+				g.drawString(headers[c], x, y);
+				x += colWidths[c];
+			}
+			g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 9));
+			g.drawLine(margin, y + 2, margin + pageW, y + 2);
+			y += lineH;
+			int start = pageIndex * perPage;
+			int end   = Math.min(start + perPage, rows.size());
+			for (int r = start; r < end; r++) {
+				x = margin;
+				for (int c = 0; c < headers.length; c++) {
+					String val = rows.get(r)[c];
+					int maxW = colWidths[c] - 4;
+					java.awt.FontMetrics fm = g.getFontMetrics();
+					while (fm.stringWidth(val) > maxW && val.length() > 3)
+						val = val.substring(0, val.length() - 4) + "…";
+					g.drawString(val, x, y);
+					x += colWidths[c];
+				}
+				y += lineH;
+			}
+			g.drawString(I18n.t("dlg_pdf_page_footer", pageIndex + 1, totalPages), margin, topY + (int)pageFormat.getImageableHeight() - 4);
+			return java.awt.print.Printable.PAGE_EXISTS;
+		});
+		if (pj.printDialog()) {
+			try { pj.print(); }
+			catch (java.awt.print.PrinterException e) { new DialogoError(e).showErrorMessage(); }
+		}
+	}
+
+	private static String htmlEsc(String s) {
+		if (s == null) return "";
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+	}
+
+	private String jsonLlibre(Llibre l, ControladorDomini cd) {
+		StringBuilder sb = new StringBuilder("{");
+		sb.append("\"isbn\":").append(l.getISBN()).append(",");
+		sb.append("\"nom\":").append(jsonStr(l.getNom())).append(",");
+		sb.append("\"autor\":").append(jsonStr(l.getAutor())).append(",");
+		sb.append("\"any\":").append(l.getAny()).append(",");
+		sb.append("\"descripcio\":").append(jsonStr(l.getDescripcio())).append(",");
+		sb.append("\"valoracio\":").append(l.getValoracio()).append(",");
+		sb.append("\"preu\":").append(l.getPreu()).append(",");
+		sb.append("\"llegit\":").append(l.getLlegit()).append(",");
+		sb.append("\"desitjat\":").append(l.getDesitjat()).append(",");
+		sb.append("\"imatge\":").append(jsonStr(l.getImatge())).append(",");
+		sb.append("\"notes\":").append(jsonStr(l.getNotes())).append(",");
+		sb.append("\"pagines\":").append(l.getPagines()).append(",");
+		sb.append("\"paginesLlegides\":").append(l.getPaginesLlegides()).append(",");
+		sb.append("\"editorial\":").append(jsonStr(l.getEditorial())).append(",");
+		sb.append("\"serie\":").append(jsonStr(l.getSerie())).append(",");
+		sb.append("\"volum\":").append(l.getVolum()).append(",");
+		sb.append("\"dataCompra\":").append(jsonStr(l.getDataCompra())).append(",");
+		sb.append("\"dataLectura\":").append(jsonStr(l.getDataLectura())).append(",");
+		sb.append("\"idioma\":").append(jsonStr(l.getIdioma())).append(",");
+		sb.append("\"format\":").append(jsonStr(l.getFormat())).append(",");
+		sb.append("\"paisOrigen\":").append(jsonStr(l.getPaisOrigen())).append(",");
+		// shelf memberships
+		ArrayList<Llista> llistes = cd.getLlistesForLlibre(l.getISBN());
+		sb.append("\"llistes\":[");
+		for (int i = 0; i < llistes.size(); i++) {
+			Llista ll = llistes.get(i);
+			sb.append("{\"id\":").append(ll.getId())
+				.append(",\"valoracio\":").append(ll.getValoracioLlibre() != null ? ll.getValoracioLlibre() : 0.0)
+				.append(",\"llegit\":").append(Boolean.TRUE.equals(ll.getLlegitLlibre())).append("}");
+			if (i < llistes.size() - 1) sb.append(",");
+		}
+		sb.append("],");
+		// tags
+		ArrayList<Tag> tags = cd.getTagsForLlibre(l.getISBN());
+		sb.append("\"tags\":[");
+		for (int i = 0; i < tags.size(); i++) {
+			sb.append(tags.get(i).getId());
+			if (i < tags.size() - 1) sb.append(",");
+		}
+		sb.append("]}");
+		return sb.toString();
+	}
+
+	private static String jsonStr(String s) {
+		if (s == null) return "null";
+		return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "") + "\"";
+	}
+
+	private void importarJSON() {
+		javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+		fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("JSON files", "json"));
+		if (fc.showOpenDialog(this.vista) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+		int ok = 0, err = 0, skipped = 0;
+		ControladorDomini cd = ControladorDomini.getInstance();
+		try {
+			String json = new String(java.nio.file.Files.readAllBytes(fc.getSelectedFile().toPath()),
+				java.nio.charset.StandardCharsets.UTF_8);
+			// Use Gson for robust JSON parsing
+			com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+			// Build tag id→domain id map (create tags if missing)
+			java.util.Map<Integer,Integer> tagIdMap = new java.util.HashMap<>();
+			if (root.has("tags")) {
+				for (com.google.gson.JsonElement te : root.getAsJsonArray("tags")) {
+					com.google.gson.JsonObject to = te.getAsJsonObject();
+					int oldId = to.get("id").getAsInt();
+					String nom = to.get("nom").getAsString();
+					Tag existing = cd.getAllTags().stream().filter(t -> t.getNom().equals(nom)).findFirst().orElse(null);
+					if (existing != null) { tagIdMap.put(oldId, existing.getId()); }
+					else { Tag nt = cd.addTag(nom); tagIdMap.put(oldId, nt.getId()); }
+				}
+			}
+			// Build shelf id→domain id map
+			java.util.Map<Integer,Integer> llistaIdMap = new java.util.HashMap<>();
+			if (root.has("llistes")) {
+				for (com.google.gson.JsonElement le : root.getAsJsonArray("llistes")) {
+					com.google.gson.JsonObject lo = le.getAsJsonObject();
+					int oldId = lo.get("id").getAsInt();
+					String nom = lo.get("nom").getAsString();
+					Llista existing = cd.getAllLlistes().stream().filter(l -> l.getNom().equals(nom)).findFirst().orElse(null);
+					if (existing != null) { llistaIdMap.put(oldId, existing.getId()); }
+					else { Llista nl = cd.addLlista(nom); llistaIdMap.put(oldId, nl.getId()); }
+				}
+			}
+			// Import books
+			if (root.has("llibres")) {
+				for (com.google.gson.JsonElement be : root.getAsJsonArray("llibres")) {
+					try {
+						com.google.gson.JsonObject bo = be.getAsJsonObject();
+						long isbn = bo.get("isbn").getAsLong();
+						try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
+						String nom = bo.has("nom") && !bo.get("nom").isJsonNull() ? bo.get("nom").getAsString() : "";
+						String autor = bo.has("autor") && !bo.get("autor").isJsonNull() ? bo.get("autor").getAsString() : "";
+						int any = bo.has("any") ? bo.get("any").getAsInt() : 0;
+						String desc = jsonOptStr(bo, "descripcio");
+						double val = bo.has("valoracio") ? bo.get("valoracio").getAsDouble() : 0.0;
+						double preu = bo.has("preu") ? bo.get("preu").getAsDouble() : 0.0;
+						boolean llegit = bo.has("llegit") && bo.get("llegit").getAsBoolean();
+						String imatge = jsonOptStr(bo, "imatge");
+						Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, val, preu, llegit, imatge);
+						if (bo.has("notes") && !bo.get("notes").isJsonNull()) l.setNotes(bo.get("notes").getAsString());
+						if (bo.has("pagines")) l.setPagines(bo.get("pagines").getAsInt());
+						if (bo.has("paginesLlegides")) l.setPaginesLlegides(bo.get("paginesLlegides").getAsInt());
+						if (bo.has("editorial") && !bo.get("editorial").isJsonNull()) l.setEditorial(bo.get("editorial").getAsString());
+						if (bo.has("serie") && !bo.get("serie").isJsonNull()) l.setSerie(bo.get("serie").getAsString());
+						if (bo.has("volum")) l.setVolum(bo.get("volum").getAsInt());
+						if (bo.has("dataCompra") && !bo.get("dataCompra").isJsonNull()) l.setDataCompra(bo.get("dataCompra").getAsString());
+						if (bo.has("dataLectura") && !bo.get("dataLectura").isJsonNull()) l.setDataLectura(bo.get("dataLectura").getAsString());
+						if (bo.has("idioma") && !bo.get("idioma").isJsonNull()) l.setIdioma(bo.get("idioma").getAsString());
+						if (bo.has("format") && !bo.get("format").isJsonNull()) l.setFormat(bo.get("format").getAsString());
+						if (bo.has("desitjat")) l.setDesitjat(bo.get("desitjat").getAsBoolean());
+						if (bo.has("paisOrigen") && !bo.get("paisOrigen").isJsonNull()) l.setPaisOrigen(bo.get("paisOrigen").getAsString());
+						cd.addLlibre(l);
+						// shelf memberships
+						if (bo.has("llistes")) {
+							for (com.google.gson.JsonElement me : bo.getAsJsonArray("llistes")) {
+								com.google.gson.JsonObject mo = me.getAsJsonObject();
+								int oldLlistaId = mo.get("id").getAsInt();
+								Integer newId = llistaIdMap.get(oldLlistaId);
+								if (newId != null) {
+									double mVal = mo.has("valoracio") ? mo.get("valoracio").getAsDouble() : 0.0;
+									boolean mLlegit = mo.has("llegit") && mo.get("llegit").getAsBoolean();
+									cd.addLlibreToLlista(isbn, newId, mVal, mLlegit);
+								}
+							}
+						}
+						// tags
+						if (bo.has("tags")) {
+							for (com.google.gson.JsonElement te : bo.getAsJsonArray("tags")) {
+								Integer newTagId = tagIdMap.get(te.getAsInt());
+								if (newTagId != null) cd.addLlibreToTag(isbn, newTagId);
+							}
+						}
+						ok++;
+					} catch (Exception ex) { err++; }
+				}
+			}
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+			return;
+		}
+		String msg = I18n.t("dlg_import_json_msg", ok);
+		if (skipped > 0) msg += "\n" + I18n.t("dlg_import_json_skipped", skipped);
+		if (err > 0) msg += "\n" + I18n.t("dlg_import_json_errors", err);
+		JOptionPane.showMessageDialog(this.vista, msg, I18n.t("dlg_import_json_title"),
+			err > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+		quitarFiltros();
+	}
+
+	private static String jsonOptStr(com.google.gson.JsonObject o, String key) {
+		return (o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsString() : "";
 	}
 
 	private static String esc(String s) {
@@ -859,13 +1581,13 @@ public class MostrarBibliotecaControl {
 		ControladorDomini cd = ControladorDomini.getInstance();
 		ArrayList<Llibre> global = cd.getAllLlibres();
 		if (global.isEmpty()) {
-			JOptionPane.showMessageDialog(vista, "La biblioteca és buida.", "Estadístiques",
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_empty_library"), I18n.t("dlg_stats_title"),
 				JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
 
 		// ── Global summary ─────────────────────────────────────────────────────
-		String summary = buildStatsSummary(global, "Tota la biblioteca");
+		String summary = buildStatsSummary(global, I18n.t("lbl_all_library"));
 
 		javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
 		txtSummary.setEditable(false);
@@ -876,7 +1598,7 @@ public class MostrarBibliotecaControl {
 
 		// ── Per-shelf breakdown table ──────────────────────────────────────────
 		DefaultTableModel shelfModel = new DefaultTableModel(
-			new String[]{"Llista", "Llibres", "Llegits", "% Llegit", "Val. Mitjana"}, 0) {
+			new String[]{I18n.t("col_stats_llista"), I18n.t("col_stats_llibres"), I18n.t("col_stats_llegits"), I18n.t("col_stats_pct"), I18n.t("col_stats_val")}, 0) {
 			@Override public boolean isCellEditable(int r, int c) { return false; }
 		};
 		for (Llista ll : cd.getAllLlistes()) {
@@ -900,7 +1622,7 @@ public class MostrarBibliotecaControl {
 		shelfTable.getTableHeader().setFont(herramienta.UITheme.FONT_BOLD);
 		javax.swing.JScrollPane shelfScroll = new javax.swing.JScrollPane(shelfTable);
 		shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
-		shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder("Per llista"));
+		shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("lbl_per_list")));
 
 		// ── Reading goal ──────────────────────────────────────────────────────
 		int totalLlegits = (int) global.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
@@ -909,7 +1631,7 @@ public class MostrarBibliotecaControl {
 		goalPanel.setBackground(herramienta.UITheme.BG_PANEL);
 		goalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
 			javax.swing.BorderFactory.createLineBorder(herramienta.UITheme.BORDER_CLR),
-			"Objectiu de lectura", javax.swing.border.TitledBorder.LEFT,
+			I18n.t("lbl_reading_goal_section"), javax.swing.border.TitledBorder.LEFT,
 			javax.swing.border.TitledBorder.TOP, herramienta.UITheme.FONT_BOLD, herramienta.UITheme.TEXT_MID));
 
 		javax.swing.JProgressBar goalBar = new javax.swing.JProgressBar(0, Math.max(savedGoal, 1));
@@ -931,32 +1653,52 @@ public class MostrarBibliotecaControl {
 		goalBar.setMaximum(Math.max(savedGoal, 1));
 		goalBar.setString(totalLlegits + " / " + Math.max(savedGoal, 1));
 
-		javax.swing.JLabel lblGoal = new javax.swing.JLabel("Objectiu:");
+		javax.swing.JLabel lblGoal = new javax.swing.JLabel(I18n.t("lbl_goal"));
 		herramienta.UITheme.styleLabel(lblGoal);
 		javax.swing.JPanel goalControls = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
 		goalControls.setBackground(herramienta.UITheme.BG_PANEL);
 		goalControls.add(lblGoal);
 		goalControls.add(goalSpinner);
-		goalControls.add(new javax.swing.JLabel("llegits: " + totalLlegits));
+		goalControls.add(new javax.swing.JLabel(I18n.t("lbl_read_count", totalLlegits)));
 		goalPanel.add(goalControls, java.awt.BorderLayout.NORTH);
 		goalPanel.add(goalBar, java.awt.BorderLayout.CENTER);
 
-		// ── Layout ────────────────────────────────────────────────────────────
-		javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
-		panel.setBackground(herramienta.UITheme.BG_PANEL);
-		panel.add(goalPanel, java.awt.BorderLayout.NORTH);
+		// ── Tab 1: General ───────────────────────────────────────────────────
+		javax.swing.JPanel tab1 = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+		tab1.setBackground(herramienta.UITheme.BG_PANEL);
+		tab1.add(goalPanel, java.awt.BorderLayout.NORTH);
 		javax.swing.JPanel statsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
 		statsPanel.setBackground(herramienta.UITheme.BG_PANEL);
 		statsPanel.add(txtSummary, java.awt.BorderLayout.NORTH);
 		if (shelfModel.getRowCount() > 0) statsPanel.add(shelfScroll, java.awt.BorderLayout.CENTER);
-		panel.add(statsPanel, java.awt.BorderLayout.CENTER);
+		tab1.add(statsPanel, java.awt.BorderLayout.CENTER);
+
+		// ── Tab 2: Charts (reading per year + publisher breakdown) ────────────
+		javax.swing.JPanel tab2 = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 8));
+		tab2.setBackground(herramienta.UITheme.BG_PANEL);
+		tab2.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
+		tab2.add(buildReadingChart(global));
+		tab2.add(buildPublisherChart(global));
+
+		// ── Tab 3: Tag cloud ──────────────────────────────────────────────────
+		javax.swing.JPanel tab3 = buildTagCloud(global);
+
+		// ── Tab 4: Reading pace ───────────────────────────────────────────────
+		javax.swing.JPanel tab4 = buildReadingPacePanel(global);
+
+		javax.swing.JTabbedPane tabs = new javax.swing.JTabbedPane();
+		tabs.setBackground(herramienta.UITheme.BG_PANEL);
+		tabs.addTab(I18n.t("stats_tab_general"), tab1);
+		tabs.addTab(I18n.t("stats_tab_charts"), new javax.swing.JScrollPane(tab2));
+		tabs.addTab(I18n.t("stats_tab_tags"), new javax.swing.JScrollPane(tab3));
+		tabs.addTab(I18n.t("stats_tab_pace"), tab4);
 
 		javax.swing.JDialog dlg = new javax.swing.JDialog(SwingUtilities.getWindowAncestor(vista),
-			"Estadístiques", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+			I18n.t("dlg_stats_title"), java.awt.Dialog.ModalityType.APPLICATION_MODAL);
 		dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
 		dlg.getContentPane().setBackground(herramienta.UITheme.BG_PANEL);
-		dlg.add(panel);
-		javax.swing.JButton btnClose = new javax.swing.JButton("Tancar");
+		dlg.add(tabs);
+		javax.swing.JButton btnClose = new javax.swing.JButton(I18n.t("btn_close"));
 		herramienta.UITheme.styleSecondaryButton(btnClose);
 		btnClose.addActionListener(e -> dlg.dispose());
 		dlg.getRootPane().setDefaultButton(btnClose);
@@ -967,10 +1709,167 @@ public class MostrarBibliotecaControl {
 		btnPanel.setBackground(herramienta.UITheme.BG_PANEL);
 		btnPanel.add(btnClose);
 		dlg.add(btnPanel, java.awt.BorderLayout.SOUTH);
-		dlg.pack();
-		dlg.setMinimumSize(new java.awt.Dimension(500, 200));
+		dlg.setSize(600, 500);
+		dlg.setMinimumSize(new java.awt.Dimension(500, 400));
 		dlg.setLocationRelativeTo(vista);
 		dlg.setVisible(true);
+	}
+
+	private javax.swing.JPanel buildReadingChart(ArrayList<Llibre> books) {
+		// Count books finished per year (from data_lectura or llegit+any)
+		java.util.Map<Integer, Long> perYear = books.stream()
+			.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+			.filter(l -> {
+				if (l.getDataLectura() != null && !l.getDataLectura().isEmpty()) return true;
+				return l.getAny() != null && l.getAny() > 1900;
+			})
+			.collect(Collectors.groupingBy(l -> {
+				if (l.getDataLectura() != null && l.getDataLectura().length() >= 4) {
+					try { return Integer.parseInt(l.getDataLectura().substring(0, 4)); } catch (Exception e2) {}
+				}
+				return l.getAny() != null ? l.getAny() : 0;
+			}, Collectors.counting()));
+		return new javax.swing.JPanel() {
+			{ setPreferredSize(new java.awt.Dimension(560, 180)); setBackground(herramienta.UITheme.BG_PANEL); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_books_year"))); }
+			@Override protected void paintComponent(java.awt.Graphics g) {
+				super.paintComponent(g);
+				if (perYear.isEmpty()) { g.drawString(I18n.t("stats_no_data"), 20, 60); return; }
+				java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+				g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+				java.util.List<Integer> years = perYear.keySet().stream().filter(y -> y > 1900).sorted().collect(Collectors.toList());
+				if (years.isEmpty()) { g2.drawString(I18n.t("stats_no_data"), 20, 60); return; }
+				long maxVal = perYear.values().stream().mapToLong(v -> v).max().orElse(1);
+				int pad = 40, barW = Math.max(18, (getWidth() - pad * 2) / years.size() - 4);
+				int chartH = getHeight() - pad * 2;
+				g2.setColor(herramienta.UITheme.ACCENT);
+				for (int i = 0; i < years.size(); i++) {
+					int yr = years.get(i);
+					long cnt = perYear.getOrDefault(yr, 0L);
+					int bH = (int) (chartH * cnt / maxVal);
+					int x = pad + i * (barW + 4);
+					int y = pad + chartH - bH;
+					g2.fillRect(x, y, barW, bH);
+					g2.setColor(herramienta.UITheme.TEXT_DARK);
+					g2.setFont(herramienta.UITheme.FONT_BASE.deriveFont(9f));
+					g2.drawString(String.valueOf(yr), x, getHeight() - 5);
+					g2.drawString(String.valueOf(cnt), x + 2, y - 2);
+					g2.setColor(herramienta.UITheme.ACCENT);
+				}
+			}
+		};
+	}
+
+	private javax.swing.JPanel buildPublisherChart(ArrayList<Llibre> books) {
+		java.util.Map<String, Long> byPublisher = books.stream()
+			.filter(l -> l.getEditorial() != null && !l.getEditorial().isEmpty())
+			.collect(Collectors.groupingBy(l -> l.getEditorial(), Collectors.counting()));
+		java.util.List<java.util.Map.Entry<String, Long>> top = byPublisher.entrySet().stream()
+			.sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+			.limit(10).collect(Collectors.toList());
+		return new javax.swing.JPanel() {
+			{ setPreferredSize(new java.awt.Dimension(560, 200)); setBackground(herramienta.UITheme.BG_PANEL); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_publishers"))); }
+			@Override protected void paintComponent(java.awt.Graphics g) {
+				super.paintComponent(g);
+				if (top.isEmpty()) { g.drawString(I18n.t("stats_no_data"), 20, 60); return; }
+				java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+				g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+				long maxVal = top.get(0).getValue();
+				int pad = 8, lblW = 130, chartH = 22, gap = 4;
+				for (int i = 0; i < top.size(); i++) {
+					int y = pad + i * (chartH + gap);
+					String lbl = top.get(i).getKey();
+					long cnt = top.get(i).getValue();
+					int barW = (int) ((getWidth() - lblW - pad * 3 - 40) * cnt / maxVal);
+					g2.setColor(herramienta.UITheme.TEXT_MID);
+					g2.setFont(herramienta.UITheme.FONT_BASE.deriveFont(10f));
+					java.awt.FontMetrics fm = g2.getFontMetrics();
+					String lblTrunc = lbl.length() > 18 ? lbl.substring(0, 17) + "…" : lbl;
+					g2.drawString(lblTrunc, pad, y + chartH - 6);
+					g2.setColor(herramienta.UITheme.ACCENT);
+					g2.fillRect(lblW + pad, y + 2, barW, chartH - 4);
+					g2.setColor(herramienta.UITheme.TEXT_DARK);
+					g2.drawString(String.valueOf(cnt), lblW + pad + barW + 4, y + chartH - 6);
+				}
+			}
+		};
+	}
+
+	private javax.swing.JPanel buildTagCloud(ArrayList<Llibre> books) {
+		javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 8, 6));
+		panel.setBackground(herramienta.UITheme.BG_PANEL);
+		panel.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_tab_tags")));
+		ControladorDomini cd = ControladorDomini.getInstance();
+		java.util.Map<String, Long> tagCount = new java.util.HashMap<>();
+		for (Llibre l : books) {
+			try {
+				for (domini.Tag t : cd.getTagsForLlibre(l.getISBN()))
+					tagCount.merge(t.getNom(), 1L, Long::sum);
+			} catch (Exception ignored) {}
+		}
+		if (tagCount.isEmpty()) {
+			javax.swing.JLabel lbl = new javax.swing.JLabel(I18n.t("stats_no_tags"));
+			herramienta.UITheme.styleLabel(lbl);
+			panel.add(lbl);
+			return panel;
+		}
+		long maxCount = tagCount.values().stream().mapToLong(v -> v).max().orElse(1);
+		tagCount.entrySet().stream()
+			.sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+			.forEach(e -> {
+				float size = 11f + 14f * e.getValue() / maxCount;
+				javax.swing.JLabel lbl = new javax.swing.JLabel(e.getKey() + " (" + e.getValue() + ")");
+				lbl.setFont(herramienta.UITheme.FONT_BASE.deriveFont(size));
+				lbl.setForeground(herramienta.UITheme.ACCENT);
+				lbl.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+				lbl.setToolTipText(e.getValue() + " " + I18n.t("stats_books_with_tag"));
+				panel.add(lbl);
+			});
+		return panel;
+	}
+
+	private javax.swing.JPanel buildReadingPacePanel(ArrayList<Llibre> books) {
+		javax.swing.JPanel panel = new javax.swing.JPanel();
+		panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
+		panel.setBackground(herramienta.UITheme.BG_PANEL);
+		panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 16, 12, 16));
+
+		int currentYear = java.time.LocalDate.now().getYear();
+		int dayOfYear = java.time.LocalDate.now().getDayOfYear();
+
+		// Books finished this year
+		long finishedThisYear = books.stream()
+			.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+			.filter(l -> {
+				if (l.getDataLectura() != null && l.getDataLectura().length() >= 4) {
+					try { return Integer.parseInt(l.getDataLectura().substring(0, 4)) == currentYear; } catch (Exception e2) {}
+				}
+				return false;
+			}).count();
+		double booksPerDay = dayOfYear > 0 ? (double) finishedThisYear / dayOfYear : 0;
+		double booksPerMonth = booksPerDay * 30.44;
+		double projectedYear = booksPerDay * 365;
+
+		// Pages across all books with reading progress
+		long totalPages = books.stream().mapToLong(Llibre::getPaginesLlegides).sum();
+		int goal = herramienta.Config.getReadingGoal();
+
+		java.util.function.Consumer<String> addLine = text -> {
+			javax.swing.JLabel lbl = new javax.swing.JLabel(text);
+			herramienta.UITheme.styleLabel(lbl);
+			lbl.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+			panel.add(lbl);
+			panel.add(javax.swing.Box.createVerticalStrut(6));
+		};
+		addLine.accept(I18n.t("stats_pace_year", currentYear, finishedThisYear));
+		addLine.accept(I18n.t("stats_pace_per_month", String.format("%.1f", booksPerMonth)));
+		addLine.accept(I18n.t("stats_pace_projected", String.format("%.0f", projectedYear)));
+		if (goal > 0) {
+			double remaining = goal - finishedThisYear;
+			int daysLeft = 365 - dayOfYear;
+			addLine.accept(I18n.t("stats_pace_goal_remaining", goal, (int) remaining, daysLeft));
+		}
+		addLine.accept(I18n.t("stats_pace_total_pages", totalPages));
+		return panel;
 	}
 
 	private String buildStatsSummary(ArrayList<Llibre> llibres, String scope) {
@@ -984,20 +1883,20 @@ public class MostrarBibliotecaControl {
 			.entrySet().stream()
 			.sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
 			.limit(3)
-			.map(e -> "  " + e.getKey() + ": " + e.getValue() + " llibre" + (e.getValue() > 1 ? "s" : ""))
+			.map(e -> "  " + e.getKey() + ": " + e.getValue() + " " + (e.getValue() > 1 ? I18n.t("stats_book_plural") : I18n.t("stats_book_singular")))
 			.collect(Collectors.joining("\n"));
-		return String.format(
-			"%s%n" +
-			"Total: %d  ·  Llegits: %d (%.1f%%)  ·  No llegits: %d%n" +
-			"Valoració mitjana: %.2f / 10  ·  Preu mitjà: %.2f " + herramienta.Config.getCurrencySymbol() + "%n" +
-			"Anys top:%n%s",
-			scope, total, llegits, 100.0 * llegits / total, total - llegits,
-			avgVal, avgPreu, topAnys.isEmpty() ? "  (cap any registrat)" : topAnys);
+		return scope + "\n" +
+			I18n.t("stats_total") + " " + total + "  ·  " +
+			I18n.t("stats_llegits_colon") + " " + llegits + " (" + String.format("%.1f", 100.0 * llegits / total) + "%)  ·  " +
+			I18n.t("stats_no_llegits_colon") + " " + (total - llegits) + "\n" +
+			I18n.t("stats_avg_rating_colon") + " " + String.format("%.2f", avgVal) + " / 10  ·  " +
+			I18n.t("stats_avg_price_colon") + " " + String.format("%.2f", avgPreu) + " " + herramienta.Config.getCurrencySymbol() + "\n" +
+			I18n.t("stats_top_years") + "\n" + (topAnys.isEmpty() ? "  " + I18n.t("stats_no_years") : topAnys);
 	}
 
 	private void mostrarLlibreAleatori() {
 		if (biblio == null || biblio.isEmpty()) {
-			JOptionPane.showMessageDialog(vista, "No hi ha llibres a la vista actual.", "Llibre Aleatori",
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_no_books_view"), I18n.t("dlg_aleatori_title"),
 				JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
@@ -1005,7 +1904,7 @@ public class MostrarBibliotecaControl {
 			.filter(l -> !Boolean.TRUE.equals(l.getLlegit()))
 			.collect(Collectors.toList());
 		if (noLlegits.isEmpty()) {
-			JOptionPane.showMessageDialog(vista, "Tots els llibres de la vista actual ja estan llegits.", "Llibre Aleatori",
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_all_read"), I18n.t("dlg_aleatori_title"),
 				JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
@@ -1025,24 +1924,25 @@ public class MostrarBibliotecaControl {
 
 	private void prestarLlibre(long isbn) {
 		String nom = JOptionPane.showInputDialog(vista,
-			"Nom de la persona que s'enduu el llibre:", "Prestar", JOptionPane.QUESTION_MESSAGE);
+			I18n.t("dlg_loan_msg"), I18n.t("dlg_loan_dialog_title"), JOptionPane.QUESTION_MESSAGE);
 		if (nom == null || nom.isBlank()) return;
 		try {
 			ControladorDomini.getInstance().prestarLlibre(isbn, nom.trim());
 			loanedISBNs = ControladorDomini.getInstance().getLoanedISBNs();
 			vista.getjTableBilio().repaint();
-			JOptionPane.showMessageDialog(vista, "Llibre prestat a \"" + nom.trim() + "\".",
-				"Préstec registrat", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_loan_done", nom.trim()),
+				I18n.t("dlg_loan_done_title"), JOptionPane.INFORMATION_MESSAGE);
 		} catch (Exception e) { new DialogoError(e).showErrorMessage(); }
 	}
 
 	private void mostrarAfegitsRecentment() {
 		ArrayList<Llibre> recents = ControladorDomini.getInstance().getRecentlyAdded();
 		if (recents.isEmpty()) {
-			JOptionPane.showMessageDialog(vista, "No hi ha llibres.", "Afegits recentment", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(vista, I18n.t("dlg_no_books_recent"), I18n.t("dlg_recently_added_title"), JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
 		biblio = recents;
+		useDBPagination = false;
 		currentLlistaId = null;
 		currentPage = 0;
 		showPage(0);
@@ -1058,6 +1958,31 @@ public class MostrarBibliotecaControl {
 			return;
 		}
 		biblio = llegits;
+		useDBPagination = false;
+		currentLlistaId = null;
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void mostrarDesitjats() {
+		ArrayList<Llibre> desitjats = new ArrayList<>(
+			ControladorDomini.getInstance().getAllLlibres().stream()
+				.filter(l -> Boolean.TRUE.equals(l.getDesitjat()))
+				.collect(java.util.stream.Collectors.toList()));
+		biblio = desitjats;
+		useDBPagination = false;
+		currentLlistaId = null;
+		currentPage = 0;
+		showPage(0);
+	}
+
+	private void mostrarEnCurs() {
+		ArrayList<Llibre> enCurs = new ArrayList<>(
+			ControladorDomini.getInstance().getAllLlibres().stream()
+				.filter(l -> l.getPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.getLlegit()))
+				.collect(java.util.stream.Collectors.toList()));
+		biblio = enCurs;
+		useDBPagination = false;
 		currentLlistaId = null;
 		currentPage = 0;
 		showPage(0);
@@ -1086,12 +2011,12 @@ public class MostrarBibliotecaControl {
 			try { ISBN = Long.parseLong(isbnText); } catch (NumberFormatException ignored) {}
 		}
 
-		try { iniciAny = Integer.parseInt(this.vista.getAnyMin().getText().trim()); } catch (NumberFormatException e) {}
-		try { fiAny    = Integer.parseInt(this.vista.getAnyMax().getText().trim()); } catch (NumberFormatException e) {}
-		try { valoracioMin = Double.parseDouble(this.vista.getValoracioMin().getText().trim()); } catch (NumberFormatException e) {}
-		try { valoracioMax = Double.parseDouble(this.vista.getValoracioMax().getText().trim()); } catch (NumberFormatException e) {}
-		try { preuMin = Double.parseDouble(this.vista.getPreuMin().getText().trim()); } catch (NumberFormatException e) {}
-		try { preuMax = Double.parseDouble(this.vista.getPreuMax().getText().trim()); } catch (NumberFormatException e) {}
+		try { iniciAny = Integer.parseInt(this.vista.getAnyMin().getText().trim()); } catch (NumberFormatException ignored) {}
+		try { fiAny    = Integer.parseInt(this.vista.getAnyMax().getText().trim()); } catch (NumberFormatException ignored) {}
+		try { valoracioMin = Double.parseDouble(this.vista.getValoracioMin().getText().trim()); } catch (NumberFormatException ignored) {}
+		try { valoracioMax = Double.parseDouble(this.vista.getValoracioMax().getText().trim()); } catch (NumberFormatException ignored) {}
+		try { preuMin = Double.parseDouble(this.vista.getPreuMin().getText().trim()); } catch (NumberFormatException ignored) {}
+		try { preuMax = Double.parseDouble(this.vista.getPreuMax().getText().trim()); } catch (NumberFormatException ignored) {}
 
 		if (this.vista.getchckbxLlegit().isSelected())   llegit = true;
 		if (this.vista.getchckbxNoLlegit().isSelected())  llegit = false;
@@ -1146,6 +2071,25 @@ public class MostrarBibliotecaControl {
 			setTable(new ArrayList<>());
 			return;
 		}
+		if (useDBPagination && ControladorDomini.getInstance().isLargeLibrary()) {
+			int totalCount = ControladorDomini.getInstance().countLlibresDB();
+			if (totalCount <= PAGE_SIZE) {
+				paginatedMode = false;
+				vista.getPaginationPanel().setVisible(false);
+				setTable(ControladorDomini.getInstance().getLlibresPage(0, PAGE_SIZE));
+				return;
+			}
+			int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
+			page = Math.max(0, Math.min(page, totalPages - 1));
+			currentPage = page;
+			paginatedMode = true;
+			setTable(ControladorDomini.getInstance().getLlibresPage(page * PAGE_SIZE, PAGE_SIZE));
+			vista.getLblPagina().setText(I18n.t("page_info_java", page + 1, totalPages));
+			vista.getBtnPaginaAnterior().setEnabled(page > 0);
+			vista.getBtnPaginaSeguent().setEnabled(page < totalPages - 1);
+			vista.getPaginationPanel().setVisible(true);
+			return;
+		}
 		if (biblio.size() <= PAGE_SIZE) {
 			paginatedMode = false;
 			vista.getPaginationPanel().setVisible(false);
@@ -1161,7 +2105,7 @@ public class MostrarBibliotecaControl {
 		int to   = Math.min(from + PAGE_SIZE, biblio.size());
 		setTable(new ArrayList<>(biblio.subList(from, to)));
 
-		vista.getLblPagina().setText("Pàgina " + (page + 1) + " / " + totalPages);
+		vista.getLblPagina().setText(I18n.t("page_info_java", page + 1, totalPages));
 		vista.getBtnPaginaAnterior().setEnabled(page > 0);
 		vista.getBtnPaginaSeguent().setEnabled(page < totalPages - 1);
 		vista.getPaginationPanel().setVisible(true);
@@ -1418,9 +2362,9 @@ public class MostrarBibliotecaControl {
 		int[] rows = t.getSelectedRows();
 		if (rows.length == 0) return;
 		String msg = rows.length == 1
-			? "Eliminar \"" + t.getValueAt(rows[0], COLUMNA_NOM) + "\"?\nAquesta acció no es pot desfer."
-			: "Eliminar " + rows.length + " llibres seleccionats?\nAquesta acció no es pot desfer.";
-		if (JOptionPane.showConfirmDialog(vista, msg, "Confirmar eliminació",
+			? I18n.t("dlg_confirm_delete_one", t.getValueAt(rows[0], COLUMNA_NOM))
+			: I18n.t("dlg_confirm_delete_n", rows.length);
+		if (JOptionPane.showConfirmDialog(vista, msg, I18n.t("dlg_confirm_delete_title"),
 				JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
 		// collect ISBNs before rows shift during deletion
 		java.util.List<Long> isbns = new java.util.ArrayList<>();
@@ -1429,6 +2373,8 @@ public class MostrarBibliotecaControl {
 			try {
 				Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
 				if (l == null) continue;
+				undoBuffer.push(l);
+				if (undoBuffer.size() > UNDO_MAX) undoBuffer.removeLast();
 				ControladorDomini.getInstance().deleteLlibre(l);
 				eliminarFila(l);
 			} catch (Exception e) {
@@ -1455,8 +2401,10 @@ public class MostrarBibliotecaControl {
 		currentPage = 0;
 		if (currentLlistaId != null) {
 			biblio = ControladorDomini.getInstance().getLlibresInLlista(currentLlistaId);
+			useDBPagination = false;
 		} else {
 			biblio = ControladorDomini.getInstance().getAllLlibres();
+			useDBPagination = ControladorDomini.getInstance().isLargeLibrary();
 		}
 		quitarFiltros();
 	}
@@ -1521,8 +2469,10 @@ public class MostrarBibliotecaControl {
 		vista.rebuildSidebarShelves(cd.getAllLlistes(), counts);
 		if (currentLlistaId != null) {
 			biblio = cd.getLlibresInLlista(currentLlistaId);
+			useDBPagination = false;
 		} else {
 			biblio = cd.getAllLlibres();
+			useDBPagination = ControladorDomini.getInstance().isLargeLibrary();
 		}
 		currentPage = 0;
 		showPage(0);
@@ -1540,9 +2490,11 @@ public class MostrarBibliotecaControl {
 		if (sel instanceof Llista) {
 			currentLlistaId = ((Llista) sel).getId();
 			biblio = ControladorDomini.getInstance().getLlibresInLlista(currentLlistaId);
+			useDBPagination = false;
 		} else {
 			currentLlistaId = null;
 			biblio = ControladorDomini.getInstance().getAllLlibres();
+			useDBPagination = ControladorDomini.getInstance().isLargeLibrary();
 		}
 		currentPage = 0;
 		showPage(0);
@@ -1573,6 +2525,13 @@ public class MostrarBibliotecaControl {
 		itemAfegirLlista.addActionListener(ev -> afegirLlibresGaleriaALlista(selected));
 		menu.add(itemAfegirLlista);
 
+		if (selected.size() > 1) {
+			JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selected.size()));
+			java.util.List<Long> batchIsbns = selected.stream().map(Llibre::getISBN).collect(Collectors.toList());
+			itemBatchEdit.addActionListener(ev -> batchEdit(batchIsbns));
+			menu.add(itemBatchEdit);
+		}
+
 		menu.addSeparator();
 
 		JMenuItem itemCopiarISBN = new JMenuItem("Copiar ISBN");
@@ -1598,6 +2557,8 @@ public class MostrarBibliotecaControl {
 			try {
 				Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
 				if (l == null) continue;
+				undoBuffer.push(l);
+				if (undoBuffer.size() > UNDO_MAX) undoBuffer.removeLast();
 				ControladorDomini.getInstance().deleteLlibre(l);
 				eliminarFila(l);
 			} catch (Exception e) { new DialogoError(e).showErrorMessage(); }
@@ -1607,6 +2568,45 @@ public class MostrarBibliotecaControl {
 			? new ArrayList<>(biblio.subList(currentPage * PAGE_SIZE, Math.min((currentPage + 1) * PAGE_SIZE, biblio.size())))
 			: biblio;
 		vista.getGaleria().updateLlibres(toShow);
+	}
+
+	private void batchEdit(java.util.List<Long> isbns) {
+		String[] formatOpts = {"(sense canviar)", "Tapa dura", "Butxaca", "Ebook", "Audiollibre"};
+		String[] llegitOpts = {"(sense canviar)", "Llegit", "No llegit"};
+		javax.swing.JComboBox<String> comboFormat = new javax.swing.JComboBox<>(formatOpts);
+		javax.swing.JComboBox<String> comboLlegit = new javax.swing.JComboBox<>(llegitOpts);
+		java.util.List<Llista> llistes = ControladorDomini.getInstance().getAllLlistes();
+		String[] llistaOpts = new String[llistes.size() + 1];
+		llistaOpts[0] = "(no afegir a cap llista)";
+		for (int i = 0; i < llistes.size(); i++) llistaOpts[i + 1] = llistes.get(i).getNom();
+		javax.swing.JComboBox<String> comboLlista = new javax.swing.JComboBox<>(llistaOpts);
+		Object[] fields = {
+			"Format:", comboFormat,
+			"Llegit:", comboLlegit,
+			"Afegir a llista:", comboLlista
+		};
+		int result = JOptionPane.showConfirmDialog(vista, fields,
+			"Edició massiva de " + isbns.size() + " llibres", JOptionPane.OK_CANCEL_OPTION);
+		if (result != JOptionPane.OK_OPTION) return;
+		String selFormat = (String) comboFormat.getSelectedItem();
+		String selLlegit = (String) comboLlegit.getSelectedItem();
+		int selLlistaIdx = comboLlista.getSelectedIndex();
+		Llista selLlista = selLlistaIdx > 0 ? llistes.get(selLlistaIdx - 1) : null;
+		for (long isbn : isbns) {
+			try {
+				Llibre l = ControladorDomini.getInstance().getLlibre(isbn);
+				if (l == null) continue;
+				if (selFormat != null && !selFormat.startsWith("(")) l.setFormat(selFormat);
+				if ("Llegit".equals(selLlegit)) l.setLlegit(true);
+				else if ("No llegit".equals(selLlegit)) l.setLlegit(false);
+				ControladorDomini.getInstance().updateLlibre(l);
+				if (selLlista != null) {
+					try { ControladorDomini.getInstance().addLlibreToLlista(isbn, selLlista.getId(), 0.0, false); }
+					catch (Exception ignored) {}
+				}
+			} catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+		}
+		refresh();
 	}
 
 	private void afegirLlibresGaleriaALlista(List<Llibre> llibres) {
@@ -1619,9 +2619,9 @@ public class MostrarBibliotecaControl {
 				ok++;
 			} catch (Exception ignored) { skip++; }
 		}
-		String msg = ok + " llibres afegits a \"" + sel.getNom() + "\".";
-		if (skip > 0) msg += "\n" + skip + " ja existien a la llista.";
-		JOptionPane.showMessageDialog(vista, msg, "Afegit a llista", JOptionPane.INFORMATION_MESSAGE);
+		String msg = I18n.t("dlg_books_added_to_list", ok, sel.getNom());
+		if (skip > 0) msg += "\n" + I18n.t("dlg_books_existing_list", skip);
+		JOptionPane.showMessageDialog(vista, msg, I18n.t("dlg_added_to_list_title"), JOptionPane.INFORMATION_MESSAGE);
 		refreshComboLlistes();
 	}
 
@@ -1629,13 +2629,43 @@ public class MostrarBibliotecaControl {
 		if (!vista.isGaleriaMode()) {
 			vista.getGaleria().updateLlibres(biblio);
 			vista.showGaleria();
-			vista.getBtnToggleVista().setText("Taula");
+			vista.getBtnToggleVista().setText(I18n.t("btn_table_view"));
 			herramienta.Config.setViewMode("galeria");
 		} else {
 			vista.showTaula();
 			vista.getBtnToggleVista().setText("Galeria");
 			herramienta.Config.setViewMode("taula");
 		}
+	}
+
+	public void undoDelete() {
+		if (undoBuffer.isEmpty()) {
+			JOptionPane.showMessageDialog(vista, "No hi ha cap eliminació per desfer.", "Desfer", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		Llibre l = undoBuffer.pop();
+		try {
+			ControladorDomini.getInstance().addLlibre(l);
+			refreshLlibre(l, true);
+			JOptionPane.showMessageDialog(vista,
+				"\"" + l.getNom() + "\" restaurat.", "Desfer eliminació", JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
+	}
+
+	private void toggleGroupBySeries() {
+		groupBySeries = !groupBySeries;
+		vista.getBtnGroupSeries().setFont(groupBySeries
+			? vista.getBtnGroupSeries().getFont().deriveFont(java.awt.Font.BOLD)
+			: herramienta.UITheme.FONT_BOLD);
+		if (groupBySeries && biblio != null) {
+			biblio.sort(java.util.Comparator
+				.comparing((Llibre l) -> l.getSerie() == null || l.getSerie().isBlank() ? "￿" : l.getSerie())
+				.thenComparingInt(l -> l.getVolum()));
+		}
+		currentPage = 0;
+		showPage(0);
 	}
 
 	private void obrirGestioLlistes() {
@@ -1647,7 +2677,7 @@ public class MostrarBibliotecaControl {
 		new ConfiguracioDialog(
 			w instanceof java.awt.Frame ? (java.awt.Frame) w : null,
 			() -> vista.applyTheme(),
-			() -> { biblio = ControladorDomini.getInstance().getAllLlibres(); currentLlistaId = null; quitarFiltros(); refreshComboLlistes(); }
+			() -> { biblio = ControladorDomini.getInstance().getAllLlibres(); useDBPagination = ControladorDomini.getInstance().isLargeLibrary(); currentLlistaId = null; quitarFiltros(); refreshComboLlistes(); }
 		).setVisible(true);
 	}
 
