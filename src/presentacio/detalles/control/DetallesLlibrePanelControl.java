@@ -6,6 +6,7 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
+import herramienta.I18n;
 import herramienta.LlibreValidator;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
@@ -21,7 +22,6 @@ public class DetallesLlibrePanelControl {
 	private javax.swing.SwingWorker<byte[], Void> imatgeWorker;
 
 	private static final int IMG_W = 200;
-	private static final int IMG_H = 200;
 
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
 		this.vista = new DetallesLlibrePanel();
@@ -46,6 +46,8 @@ public class DetallesLlibrePanelControl {
 			new LlistesDelLlibreDialog(this.vista, l).setVisible(true));
 		this.vista.getBtnGestioTags().addActionListener(e ->
 			new TagsDelLlibreDialog(this.vista, l).setVisible(true));
+		this.vista.getBtnHistorialPrestecs().addActionListener(e -> mostrarHistorialPrestecs(l));
+		this.vista.getBtnImprimir().addActionListener(e -> imprimirFitxa(l));
 
 		this.vista.getTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
@@ -76,11 +78,14 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextIdioma().setText(l.getIdioma() != null ? l.getIdioma() : "");
 		this.vista.getTextPaisOrigen().setText(l.getPaisOrigen() != null ? l.getPaisOrigen() : "");
 		this.vista.getComboFormat().setSelectedItem(l.getFormat() != null ? l.getFormat() : "");
+		this.vista.getComboEstat().setSelectedItem(l.getEstat() != null ? l.getEstat() : "");
+		this.vista.getTextExemplars().setText(l.getExemplars() > 1 ? String.valueOf(l.getExemplars()) : "");
+		this.vista.getTextLlenguaOriginal().setText(l.getLlenguaOriginal() != null ? l.getLlenguaOriginal() : "");
 		this.vista.getChckDesitjat().setSelected(l.getDesitjat());
 		this.vista.getTextPagines().setText(l.getPagines() > 0 ? String.valueOf(l.getPagines()) : "");
 		this.vista.getTextPaginesLlegides().setText(l.getPaginesLlegides() > 0 ? String.valueOf(l.getPaginesLlegides()) : "");
 
-		this.vista.setTitle("Expedient del llibre " + l.getNom());
+		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.getNom()));
 
 		this.vista.getTextPaginesLlegides().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
@@ -104,8 +109,8 @@ public class DetallesLlibrePanelControl {
 	private void eliminar(Llibre llibre) {
 		int confirm = javax.swing.JOptionPane.showConfirmDialog(
 			this.vista,
-			"Eliminar \"" + llibre.getNom() + "\"?\nAquesta acció no es pot desfer.",
-			"Confirmar eliminació",
+			I18n.t("dlg_confirm_delete_one", llibre.getNom()),
+			I18n.t("dlg_confirm_delete_title"),
 			javax.swing.JOptionPane.YES_NO_OPTION,
 			javax.swing.JOptionPane.WARNING_MESSAGE);
 		if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
@@ -163,7 +168,7 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void editar(Llibre llibre) {
-		if (this.vista.getBtnEditar().getText().equals("Editar")) {
+		if (I18n.t("btn_edit_java").equals(this.vista.getBtnEditar().getText())) {
 			this.vista.getTextAny().setEnabled(true);
 			this.vista.getTextAutor().setEnabled(true);
 			this.vista.getTextISBN().setEnabled(true);
@@ -180,14 +185,17 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextIdioma().setEnabled(true);
 			this.vista.getTextPaisOrigen().setEnabled(true);
 			this.vista.getComboFormat().setEnabled(true);
+			this.vista.getComboEstat().setEnabled(true);
+			this.vista.getTextExemplars().setEnabled(true);
+			this.vista.getTextLlenguaOriginal().setEnabled(true);
 			this.vista.getChckDesitjat().setEnabled(true);
 			this.vista.getChckLlegit().setEnabled(true);
 			this.vista.getBtnSeleccionarImatge().setEnabled(true);
 			this.vista.getTextNotes().setEnabled(true);
 			this.vista.getTextPagines().setEnabled(true);
 			this.vista.getTextPaginesLlegides().setEnabled(true);
-			this.vista.getBtnEditar().setText("Guardar");
-		} else if (this.vista.getBtnEditar().getText().equals("Guardar")) {
+			this.vista.getBtnEditar().setText(I18n.t("btn_save_java"));
+		} else if (this.vista.getBtnEditar().getText().equals(I18n.t("btn_save_java"))) {
 			try {
 				Llibre a = LlibreValidator.checkLlibre(Long.parseLong(vista.getTextISBN().getText()),
 						vista.getTextNom().getText(), vista.getTextAutor().getText(),
@@ -204,6 +212,10 @@ public class DetallesLlibrePanelControl {
 				a.setPaisOrigen(vista.getTextPaisOrigen().getText().trim());
 				String fmt = (String) vista.getComboFormat().getSelectedItem();
 				a.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
+				String estat = (String) vista.getComboEstat().getSelectedItem();
+				a.setEstat(estat != null && !estat.isEmpty() ? estat : null);
+				try { a.setExemplars(Integer.parseInt(vista.getTextExemplars().getText().trim())); } catch (NumberFormatException ignored) {}
+				a.setLlenguaOriginal(vista.getTextLlenguaOriginal().getText().trim());
 				a.setDesitjat(vista.getChckDesitjat().isSelected());
 				java.util.List<String> autors = java.util.Arrays.stream(vista.getTextAutor().getText().split(","))
 					.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
@@ -216,10 +228,14 @@ public class DetallesLlibrePanelControl {
 					vista.getTextPaginesLlegides().setText(String.valueOf(a.getPagines()));
 				}
 				a.setImatgeBlob(pendingBlob);
-				if (a.getISBN() != llibre.getISBN() && cLlibres.existsLlibre(a.getISBN()))
-					throw new Exception("El llibre amb ISBN " + a.getISBN() + " ja existeix a la biblioteca");
-				cLlibres.deleteLlibre(llibre);
-				cLlibres.addLlibre(a);
+				if (a.getISBN().equals(llibre.getISBN())) {
+					cLlibres.updateLlibre(a);
+				} else {
+					if (cLlibres.existsLlibre(a.getISBN()))
+						throw new Exception(I18n.t("dlg_isbn_exists", a.getISBN()));
+					cLlibres.deleteLlibre(llibre);
+					cLlibres.addLlibre(a);
+				}
 				enActualizarBBDD.actualitzarLlibre(a, false);
 				// Only lock fields after successful save
 				this.vista.getTextAny().setEnabled(false);
@@ -238,16 +254,93 @@ public class DetallesLlibrePanelControl {
 				this.vista.getTextIdioma().setEnabled(false);
 				this.vista.getTextPaisOrigen().setEnabled(false);
 				this.vista.getComboFormat().setEnabled(false);
+				this.vista.getComboEstat().setEnabled(false);
+				this.vista.getTextExemplars().setEnabled(false);
+				this.vista.getTextLlenguaOriginal().setEnabled(false);
 				this.vista.getChckDesitjat().setEnabled(false);
 				this.vista.getChckLlegit().setEnabled(false);
 				this.vista.getBtnSeleccionarImatge().setEnabled(false);
 				this.vista.getTextNotes().setEnabled(false);
 				this.vista.getTextPagines().setEnabled(false);
 				this.vista.getTextPaginesLlegides().setEnabled(false);
-				this.vista.getBtnEditar().setText("Editar");
+				this.vista.getBtnEditar().setText(I18n.t("btn_edit_java"));
 			} catch (Exception e) {
 				new DialogoError(e).showErrorMessage();
 			}
+		}
+	}
+
+	private void mostrarHistorialPrestecs(Llibre l) {
+		java.util.List<Object[]> loans = ControladorDomini.getInstance().getLoansForIsbn(l.getISBN());
+		if (loans.isEmpty()) {
+			javax.swing.JOptionPane.showMessageDialog(this.vista,
+				"No hi ha préstecs registrats per a aquest llibre.",
+				"Historial de préstecs", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		String[] cols = {"Persona", "Data préstec", "Retornat"};
+		Object[][] data = new Object[loans.size()][3];
+		for (int i = 0; i < loans.size(); i++) {
+			data[i][0] = loans.get(i)[0];
+			data[i][1] = loans.get(i)[1];
+			data[i][2] = Boolean.TRUE.equals(loans.get(i)[2]) ? "Sí" : "No";
+		}
+		javax.swing.JTable tbl = new javax.swing.JTable(data, cols);
+		tbl.setEnabled(false);
+		javax.swing.JScrollPane sp = new javax.swing.JScrollPane(tbl);
+		sp.setPreferredSize(new java.awt.Dimension(400, Math.min(200, loans.size() * 25 + 40)));
+		javax.swing.JOptionPane.showMessageDialog(this.vista, sp,
+			"Historial de préstecs — " + l.getNom(), javax.swing.JOptionPane.PLAIN_MESSAGE);
+	}
+
+	private void imprimirFitxa(Llibre l) {
+		java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
+		job.setJobName(l.getNom().toString());
+		job.setPrintable((graphics, pageFormat, pageIndex) -> {
+			if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
+			java.awt.Graphics2D g2 = (java.awt.Graphics2D) graphics;
+			g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+			double w = pageFormat.getImageableWidth();
+			int x = 0, y = 0, lineH = 18;
+			g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 16));
+			g2.drawString(l.getNom().toString(), x, y += 20);
+			g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
+			g2.drawString(I18n.t("field_author") + ": " + l.getAutor(), x, y += lineH + 4);
+			g2.drawString("ISBN: " + l.getISBN(), x, y += lineH);
+			if (l.getAny() > 0) g2.drawString(I18n.t("field_year") + ": " + l.getAny(), x, y += lineH);
+			if (l.getEditorial() != null && !l.getEditorial().isEmpty())
+				g2.drawString(I18n.t("field_publisher") + ": " + l.getEditorial(), x, y += lineH);
+			if (l.getSerie() != null && !l.getSerie().isEmpty())
+				g2.drawString(I18n.t("field_series") + ": " + l.getSerie()
+					+ (l.getVolum() > 0 ? " #" + l.getVolum() : ""), x, y += lineH);
+			g2.drawString(I18n.t("field_rating") + ": " + l.getValoracio() + "/10", x, y += lineH);
+			g2.drawString(I18n.t("field_read") + ": " + (l.getLlegit() ? I18n.t("yes_lbl") : I18n.t("no_lbl")), x, y += lineH);
+			if (l.getPagines() > 0) g2.drawString(I18n.t("field_pages") + ": " + l.getPagines(), x, y += lineH);
+			if (pendingBlob != null) {
+				javax.swing.ImageIcon icon = herramienta.UITheme.scaledIcon(pendingBlob, 120);
+				if (icon != null) icon.paintIcon(null, g2, (int)(w - 130), 10);
+			}
+			if (l.getDescripcio() != null && !l.getDescripcio().toString().isEmpty()) {
+				y += lineH + 4;
+				g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.ITALIC, 11));
+				String desc = l.getDescripcio().toString();
+				int maxChars = 120;
+				if (desc.length() > maxChars) desc = desc.substring(0, maxChars) + "…";
+				g2.drawString(desc, x, y += lineH);
+			}
+			if (l.getNotes() != null && !l.getNotes().isEmpty()) {
+				y += 4;
+				g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11));
+				String notes = l.getNotes();
+				int maxChars = 200;
+				if (notes.length() > maxChars) notes = notes.substring(0, maxChars) + "…";
+				g2.drawString(I18n.t("field_notes") + ": " + notes, x, y += lineH);
+			}
+			return java.awt.print.Printable.PAGE_EXISTS;
+		});
+		if (job.printDialog()) {
+			try { job.print(); }
+			catch (java.awt.print.PrinterException e) { new DialogoError(e).showErrorMessage(); }
 		}
 	}
 

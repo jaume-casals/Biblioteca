@@ -1322,7 +1322,7 @@ public class MostrarBibliotecaControl {
 					byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
 					if (blob != null && blob.length > 0) {
 						cd.setLlibreBlob(l.getISBN(), blob);
-						fetched[0]++;
+						synchronized (done) { fetched[0]++; }
 					}
 				} catch (Exception ignored) {} finally {
 					synchronized (done) {
