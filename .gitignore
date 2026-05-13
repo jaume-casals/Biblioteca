@@ -35,6 +35,8 @@ install.exe
 install.sh
 Biblioteca.html
 components.jsx
+checkBiblio/
+audits/
 
 # IDE / editor configs
 .idea/
