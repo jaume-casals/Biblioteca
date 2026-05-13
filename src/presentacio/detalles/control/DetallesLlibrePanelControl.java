@@ -134,10 +134,6 @@ public class DetallesLlibrePanelControl {
 		startImatgeWorker(() -> java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path)));
 	}
 
-	private void carregarImatge(String path) {
-		carregarImatgeAsync(path);
-	}
-
 	private void startImatgeWorker(java.util.concurrent.Callable<byte[]> loader) {
 		if (imatgeWorker != null) imatgeWorker.cancel(true);
 		imatgeWorker = new javax.swing.SwingWorker<>() {
@@ -163,7 +159,7 @@ public class DetallesLlibrePanelControl {
 		File f = herramienta.UITheme.chooseImageFile(this.vista);
 		if (f != null) {
 			this.vista.getTextPortada().setText(f.getAbsolutePath());
-			carregarImatge(f.getAbsolutePath());
+			carregarImatgeAsync(f.getAbsolutePath());
 		}
 	}
 

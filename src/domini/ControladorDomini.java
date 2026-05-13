@@ -7,10 +7,9 @@ import java.util.Comparator;
 import herramienta.FiltreUtils;
 import persistencia.ControladorPersistencia;
 import java.util.Set;
-import java.util.HashSet;
 
 public class ControladorDomini {
-	private static ControladorDomini inst;
+	private static volatile ControladorDomini inst;
 	private ControladorPersistencia cp;
 	private ArrayList<Llibre> bib;
 	private ArrayList<Llista> llistes;
@@ -19,13 +18,22 @@ public class ControladorDomini {
 	private static final Comparator<Llibre> compararISBN =
 		(a, b) -> a.getISBN().compareTo(b.getISBN());
 
-	public static ControladorDomini getInstance() {
+	private static Llibre searchKey(long isbn) {
+		return new Llibre(isbn, "", "", 0, "", 0.0, 0.0, false, "");
+	}
+
+	public static synchronized ControladorDomini getInstance() {
 		if (ControladorDomini.inst == null)
 			ControladorDomini.inst = new ControladorDomini();
 		return ControladorDomini.inst;
 	}
 
 	public static void resetForTest() { inst = null; }
+
+	public static void resetForProfileSwitch() {
+		inst = null;
+		ControladorPersistencia.resetForProfileSwitch();
+	}
 
 	private ControladorDomini() {
 		cp = ControladorPersistencia.getInstance();
@@ -78,6 +86,12 @@ public class ControladorDomini {
 			Double valoracioMin, Double valoracioMax,
 			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
 			String editorial, String serie, String format, String idioma) {
+		// Use SQL-side filtering for large libraries when searching full bib (not a shelf subset)
+		if (font == bib && bib.size() >= SQL_FILTER_THRESHOLD) {
+			return searchLlibresSQL(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+				valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId,
+				editorial, serie, format, idioma, null);
+		}
 		Set<Long> tagISBNs = null;
 		if (tagId != null) tagISBNs = cp.getLlibresWithTag(tagId);
 		final Set<Long> tagFilter = tagISBNs;
@@ -103,6 +117,41 @@ public class ControladorDomini {
 		}
 		return resultat;
 	}
+
+	/** Threshold above which SQL-side search is used instead of in-memory scan. */
+	private static final int SQL_FILTER_THRESHOLD = 2000;
+
+	/**
+	 * SQL-backed filter for large libraries (> SQL_FILTER_THRESHOLD books).
+	 * Returns books matching all non-null criteria via a single SQL query.
+	 * llistaId null = search entire library.
+	 */
+	public ArrayList<Llibre> searchLlibresSQL(
+			String nomAutor, String nomLlibre, Long ISBN,
+			Integer iniciAny, Integer fiAny,
+			Double valoracioMin, Double valoracioMax,
+			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
+			String editorial, String serie, String format, String idioma,
+			Integer llistaId) {
+		return cp.searchLlibres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
+			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId,
+			editorial, serie, format, idioma, llistaId, 0, 0);
+	}
+
+	/**
+	 * Paginated SQL query: returns pageSize books starting at offset.
+	 * Bypasses the in-memory list — used when library > SQL_FILTER_THRESHOLD.
+	 */
+	public ArrayList<Llibre> getLlibresPage(int offset, int pageSize) {
+		return cp.searchLlibres(null, null, null, null, null, null, null, null, null,
+			null, null, null, null, null, null, null, offset, pageSize);
+	}
+
+	/** Total books in DB (used for DB-side pagination). */
+	public int countLlibresDB() { return cp.countLlibres(); }
+
+	/** True when the library is large enough to benefit from SQL-side operations. */
+	public boolean isLargeLibrary() { return bib.size() >= SQL_FILTER_THRESHOLD; }
 
 	public ArrayList<Llibre> getAllLlibres() {
 		return bib;
@@ -147,23 +196,26 @@ public class ControladorDomini {
 	public void deleteLlibre(Long ISBN) throws Exception {
 		cp.eliminarLlibre(ISBN);
 
-		int pos = Collections.binarySearch(bib,
-				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, ""), compararISBN);
+		int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 		if (pos < 0)
 			throw new Exception("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
 
 		bib.remove(pos);
 	}
 
+	public void updateLlibre(Llibre l) throws Exception {
+		cp.updateLlibre(l);
+		int pos = Collections.binarySearch(bib, l, compararISBN);
+		if (pos >= 0) bib.set(pos, l);
+	}
+
 	public boolean existsLlibre(long ISBN) {
-		return Collections.binarySearch(bib,
-			new Llibre(ISBN, "", "autor", 13, "", 1.0, 0.0, false, ""), compararISBN) >= 0;
+		return Collections.binarySearch(bib, searchKey(ISBN), compararISBN) >= 0;
 	}
 
 	public Llibre getLlibre(long ISBN) throws Exception {
 
-		int index = Collections.binarySearch(bib,
-				new Llibre(ISBN, "", "autor", 13, "descripcio", 1.0, 3.0, false, ""), compararISBN);
+		int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 
 		if (index < 0)
 			throw new Exception("No existeix el llibre amb ISBN " + ISBN);
@@ -370,8 +422,25 @@ public class ControladorDomini {
 		return cp.getLoanedISBNs();
 	}
 
+	public java.util.List<Object[]> getLoansForIsbn(long isbn) {
+		return cp.getLoansForIsbn(isbn);
+	}
+
+	public java.util.List<Object[]> getAllOverdueLoans(int daysThreshold) {
+		return cp.getAllOverdueLoans(daysThreshold);
+	}
+
 	public byte[] getLlibreBlob(long isbn) {
 		return cp.getLlibreBlob(isbn);
+	}
+
+	public void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException {
+		cp.setLlibreBlob(isbn, blob);
+		try {
+			Llibre l = getLlibre(isbn);
+			l.setImatgeBlob(blob);
+			if (blob != null) l.setHasBlob(true);
+		} catch (Exception ignored) {}
 	}
 
 	// ── Tag management ─────────────────────────────────────────────────────────

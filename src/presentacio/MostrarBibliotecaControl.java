@@ -2202,7 +2202,7 @@ public class MostrarBibliotecaControl {
 					.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 				String escapedQ = java.util.regex.Pattern.quote(query);
 				String highlighted = escaped.replaceAll(
-					"(?i)(" + escapedQ.replace("\\Q", "\\Q").replace("\\E", "\\E") + ")",
+					"(?i)(" + escapedQ + ")",
 					"<span style='background:#F39C12;color:#000'>$1</span>");
 				if (!highlighted.equals(escaped))
 					setText("<html>" + highlighted + "</html>");
@@ -2250,7 +2250,7 @@ public class MostrarBibliotecaControl {
 		@Override
 		public Component getTableCellRendererComponent(JTable t, Object val, boolean selected,
 				boolean focus, int row, int col) {
-			setSelected("Llegit".equals(val));
+			setSelected(I18n.t("filter_read").equals(val));
 			setBackground(selected ? UITheme.ACCENT : UITheme.BG_PANEL);
 			setForeground(selected ? Color.WHITE : UITheme.TEXT_DARK);
 			return this;
@@ -2276,10 +2276,9 @@ public class MostrarBibliotecaControl {
 						try {
 							Llibre l = MainFrameControl.getInstance().getLlibreIsbn(Long.parseLong(isbn));
 							if (l == null) return;
-							Llibre updated = new Llibre(l.getISBN(), l.getNom(), l.getAutor(), l.getAny(),
-								l.getDescripcio(), l.getValoracio(), l.getPreu(), newLlegit, l.getImatge());
-							ControladorDomini.getInstance().deleteLlibre(l);
-							ControladorDomini.getInstance().addLlibre(updated);
+							l.setLlegit(newLlegit);
+							ControladorDomini.getInstance().updateLlibre(l);
+							SwingUtilities.invokeLater(() -> actualizarfila(l));
 						} catch (Exception ex) {
 							SwingUtilities.invokeLater(() -> new DialogoError(ex).showErrorMessage());
 						}
@@ -2294,7 +2293,7 @@ public class MostrarBibliotecaControl {
 		public Component getTableCellEditorComponent(JTable table, Object value,
 				boolean isSelected, int row, int col) {
 			editingRow = row;
-			cb.setSelected("Llegit".equals(value));
+			cb.setSelected(I18n.t("filter_read").equals(value));
 			cb.setBackground(UITheme.ACCENT);
 			cb.setForeground(Color.WHITE);
 			return cb;
@@ -2302,7 +2301,7 @@ public class MostrarBibliotecaControl {
 
 		@Override
 		public Object getCellEditorValue() {
-			return cb.isSelected() ? "Llegit" : "No llegit";
+			return cb.isSelected() ? I18n.t("filter_read") : I18n.t("filter_unread");
 		}
 	}
 
