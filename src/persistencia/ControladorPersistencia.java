@@ -7,11 +7,17 @@ import java.util.ArrayList;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
+import herramienta.Config;
 
 public class ControladorPersistencia {
 
 	private static volatile ControladorPersistencia inst;
-	private ServerConect sc;
+	private final ServerConect sc;
+	private final LlibreDao libreDao;
+	private final LlistaDao llistaDao;
+	private final TagDao tagDao;
+	private final PrestecDao prestecDao;
+	private final AutorDao autorDao;
 
 	public static synchronized ControladorPersistencia getInstance() {
 		if (ControladorPersistencia.inst == null)
@@ -21,7 +27,7 @@ public class ControladorPersistencia {
 
 	public static void resetForTest() {
 		if (inst != null) {
-			try { inst.sc.clearAllData(); } catch (Exception ignored) {}
+			try { inst.libreDao.clearAllData(); } catch (Exception ignored) {}
 		}
 		inst = null;
 	}
@@ -34,80 +40,79 @@ public class ControladorPersistencia {
 	}
 
 	private ControladorPersistencia() {
+		String testUrl = System.getProperty("biblioteca.h2.url");
+		ConnectionConfig cfg = new ConnectionConfig(
+			testUrl != null ? "h2" : Config.getDbType(),
+			Config.getDbHost(),
+			Config.getDbUser(),
+			Config.getDbPassword(),
+			Config.getDbProfile(),
+			testUrl
+		);
 		sc = new ServerConect();
-		sc.createDatabase();
+		sc.createDatabase(cfg);
+		java.sql.Connection con = sc.getConnection();
+		libreDao  = new LlibreDao(con);
+		llistaDao = new LlistaDao(con);
+		tagDao    = new TagDao(con);
+		prestecDao = new PrestecDao(con);
+		autorDao  = new AutorDao(con);
 	}
 
-	public ArrayList<Llibre> getAllLlibres() {
-		return sc.getAllLlibres();
-	}
+	public ArrayList<Llibre> getAllLlibres() { return libreDao.getAll(); }
 
 	public void replaceAllLlibres(ArrayList<Llibre> llibres) throws java.sql.SQLException {
-		sc.resetDatabase();
-		for (Llibre l : llibres) sc.afegirLlibre(l);
+		libreDao.clearAllData();
+		for (Llibre l : llibres) libreDao.insert(l);
 	}
 
-	public void afegirLlibre(Llibre llibre) throws java.sql.SQLException {
-		sc.afegirLlibre(llibre);
-	}
+	public void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.insert(llibre); }
+	public void eliminarLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.delete(llibre); }
+	public void eliminarLlibre(long ISBN) throws java.sql.SQLException { libreDao.delete(ISBN); }
+	public void executeSQLFile(java.io.File file) throws Exception { libreDao.executeSQLFile(file); }
+	public void updateLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.update(llibre); }
+	public ArrayList<Llibre> getRecentlyAdded(int n) { return libreDao.getRecentlyAdded(n); }
+	public byte[] getLlibreBlob(long isbn) { return libreDao.getBlob(isbn); }
+	public void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreDao.setBlob(isbn, blob); }
+	public void clearAllData() throws java.sql.SQLException { libreDao.clearAllData(); }
+	public long getDbSizeBytes() { return libreDao.getDbSizeBytes(); }
+	public int countLlibres() { return libreDao.count(); }
 
-	public void eliminarLlibre(Llibre llibre) throws java.sql.SQLException {
-		sc.deleteLlibre(llibre);
-	}
+	public ArrayList<Llista> getAllLlistes() { return llistaDao.getAll(); }
+	public int createLlista(String nom) throws SQLException { return llistaDao.create(nom); }
+	public void deleteLlista(int id) throws SQLException { llistaDao.delete(id); }
+	public int getCountInLlista(int llistaId) { return llistaDao.getCount(llistaId); }
+	public java.util.List<Object[]> getAllLlibreLlista() { return llistaDao.getAllLlibreLlista(); }
+	public ArrayList<Llibre> getLlibresInLlista(int llistaId) { return llistaDao.getLlibres(llistaId); }
+	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { llistaDao.addLlibre(isbn, llistaId, valoracio, llegit); }
+	public void removeLlibreFromLlista(long isbn, int llistaId) throws SQLException { llistaDao.removeLlibre(isbn, llistaId); }
+	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { llistaDao.updateLlibre(isbn, llistaId, valoracio, llegit); }
+	public ArrayList<Llista> getLlistesForLlibre(long isbn) { return llistaDao.getLlistesForLlibre(isbn); }
+	public void updateLlistaOrdre(int id, int ordre) throws java.sql.SQLException { llistaDao.updateOrdre(id, ordre); }
+	public void updateLlistaColor(int id, String color) throws java.sql.SQLException { llistaDao.updateColor(id, color); }
 
-	public void eliminarLlibre(long ISBN) throws java.sql.SQLException {
-		sc.deleteLlibre(ISBN);
-	}
+	public ArrayList<Tag> getAllTags() { return tagDao.getAll(); }
+	public int createTag(String nom) throws java.sql.SQLException { return tagDao.create(nom); }
+	public void deleteTag(int id) throws java.sql.SQLException { tagDao.delete(id); }
+	public ArrayList<Tag> getTagsForLlibre(long isbn) { return tagDao.getForLlibre(isbn); }
+	public void addLlibreToTag(long isbn, int tagId) throws java.sql.SQLException { tagDao.addToLlibre(isbn, tagId); }
+	public void removeLlibreFromTag(long isbn, int tagId) throws java.sql.SQLException { tagDao.removeFromLlibre(isbn, tagId); }
+	public java.util.List<Object[]> getAllLlibreTag() { return tagDao.getAllLlibreTag(); }
+	public java.util.Set<Long> getLlibresWithTag(int tagId) { return tagDao.getLlibresWithTag(tagId); }
+	public java.util.List<String> getDistinctValues(String column) { return tagDao.getDistinctValues(column); }
+	public java.util.List<String> getDistinctAutorNames() { return tagDao.getDistinctAutorNames(); }
 
-	public void executeSQLFile(java.io.File file) throws Exception {
-		sc.executeSQLFile(file);
-	}
+	public java.util.List<Object[]> getAllPrestecs() { return prestecDao.getAll(); }
+	public java.util.List<Object[]> getLoansForIsbn(long isbn) { return prestecDao.getForIsbn(isbn); }
+	public java.util.List<Object[]> getAllOverdueLoans(int days) { return prestecDao.getOverdue(days); }
+	public void addPrestec(long isbn, String nom) throws java.sql.SQLException { prestecDao.add(isbn, nom); }
+	public void returnPrestec(long isbn) throws java.sql.SQLException { prestecDao.returnLoan(isbn); }
+	public java.util.Set<Long> getLoanedISBNs() { return prestecDao.getLoanedISBNs(); }
 
-	public ArrayList<Llista> getAllLlistes() { return sc.getAllLlistes(); }
-	public int createLlista(String nom) throws SQLException { return sc.createLlista(nom); }
-	public void deleteLlista(int id) throws SQLException { sc.deleteLlista(id); }
-	public int getCountInLlista(int llistaId) { return sc.getCountInLlista(llistaId); }
-	public java.util.List<Object[]> getAllLlibreLlista() { return sc.getAllLlibreLlista(); }
-	public java.util.List<Object[]> getAllPrestecs() { return sc.getAllPrestecs(); }
-	public java.util.List<Object[]> getLoansForIsbn(long isbn) { return sc.getLoansForIsbn(isbn); }
-	public java.util.List<Object[]> getAllOverdueLoans(int days) { return sc.getAllOverdueLoans(days); }
-	public ArrayList<Llibre> getLlibresInLlista(int llistaId) { return sc.getLlibresInLlista(llistaId); }
-	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { sc.addLlibreToLlista(isbn, llistaId, valoracio, llegit); }
-	public void removeLlibreFromLlista(long isbn, int llistaId) throws SQLException { sc.removeLlibreFromLlista(isbn, llistaId); }
-	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { sc.updateLlibreInLlista(isbn, llistaId, valoracio, llegit); }
-	public ArrayList<Llista> getLlistesForLlibre(long isbn) { return sc.getLlistesForLlibre(isbn); }
-	public void updateLlistaOrdre(int id, int ordre) throws java.sql.SQLException { sc.updateLlistaOrdre(id, ordre); }
-	public void updateLlistaColor(int id, String color) throws java.sql.SQLException { sc.updateLlistaColor(id, color); }
-	public ArrayList<Llibre> getRecentlyAdded(int n) { return sc.getRecentlyAdded(n); }
-	public void updateLlibre(Llibre llibre) throws java.sql.SQLException { sc.updateLlibre(llibre); }
-	public byte[] getLlibreBlob(long isbn) { return sc.getLlibreBlob(isbn); }
-	public void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { sc.setLlibreBlob(isbn, blob); }
-	public void addPrestec(long isbn, String nom) throws java.sql.SQLException { sc.addPrestec(isbn, nom); }
-	public void returnPrestec(long isbn) throws java.sql.SQLException { sc.returnPrestec(isbn); }
-	public java.util.Set<Long> getLoanedISBNs() { return sc.getLoanedISBNs(); }
-	public void clearAllData() throws java.sql.SQLException { sc.clearAllData(); }
-	public long getDbSizeBytes() { return sc.getDbSizeBytes(); }
+	public java.util.List<Object[]> getAllAutors() { return autorDao.getAll(); }
+	public java.util.List<Object[]> getAllLlibreAutor() { return autorDao.getAllLlibreAutor(); }
 
-	public ArrayList<Tag> getAllTags() { return sc.getAllTags(); }
-	public int createTag(String nom) throws java.sql.SQLException { return sc.createTag(nom); }
-	public void deleteTag(int id) throws java.sql.SQLException { sc.deleteTag(id); }
-	public ArrayList<Tag> getTagsForLlibre(long isbn) { return sc.getTagsForLlibre(isbn); }
-	public void addLlibreToTag(long isbn, int tagId) throws java.sql.SQLException { sc.addLlibreToTag(isbn, tagId); }
-	public void removeLlibreFromTag(long isbn, int tagId) throws java.sql.SQLException { sc.removeLlibreFromTag(isbn, tagId); }
-	public java.util.List<Object[]> getAllLlibreTag() { return sc.getAllLlibreTag(); }
-	public java.util.Set<Long> getLlibresWithTag(int tagId) { return sc.getLlibresWithTag(tagId); }
-	public java.util.List<Object[]> getAllAutors() { return sc.getAllAutors(); }
-	public java.util.List<Object[]> getAllLlibreAutor() { return sc.getAllLlibreAutor(); }
-	public java.util.List<String> getDistinctValues(String column) { return sc.getDistinctValues(column); }
-	public java.util.List<String> getDistinctAutorNames() { return sc.getDistinctAutorNames(); }
-	public ArrayList<Llibre> searchLlibres(
-			String nomAutor, String nomLlibre, Long ISBN, Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax, Double preuMin, Double preuMax,
-			Boolean llegit, Integer tagId, String editorial, String serie, String format,
-			String idioma, Integer llistaId, int offset, int pageSize) {
-		return sc.searchLlibres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId,
-			editorial, serie, format, idioma, llistaId, offset, pageSize);
+	public ArrayList<Llibre> searchLlibres(domini.LlibreFilter f, int offset, int pageSize) {
+		return libreDao.search(f, offset, pageSize);
 	}
-	public int countLlibres() { return sc.countLlibres(); }
 }

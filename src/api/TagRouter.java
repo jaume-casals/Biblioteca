@@ -1,7 +1,7 @@
 package api;
 
 import com.google.gson.JsonObject;
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 import domini.Tag;
 
 import java.util.ArrayList;
@@ -9,9 +9,10 @@ import java.util.Map;
 
 public class TagRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public TagRouter(HttpRouter app) {
+    public TagRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.get("/api/tags",                          ctx -> getAll(ctx));
         app.post("/api/tags",                         ctx -> create(ctx));
         app.delete("/api/tags/{id}",                  ctx -> delete(ctx));

@@ -19,8 +19,8 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
-import domini.ControladorDomini;
 import domini.Llibre;
+import interficie.BibliotecaWriter;
 import domini.Tag;
 import herramienta.DialogoError;
 import herramienta.I18n;
@@ -33,10 +33,16 @@ public class TagsDelLlibreDialog extends JDialog {
     private final JTable table;
     private ArrayList<Tag> tagsCache = new ArrayList<>();
     private JComboBox<Tag> comboAdd;
+    private final BibliotecaWriter cd;
 
     public TagsDelLlibreDialog(Window owner, Llibre llibre) {
+        this(owner, llibre, null);
+    }
+
+    public TagsDelLlibreDialog(Window owner, Llibre llibre, BibliotecaWriter cd) {
         super(owner, I18n.t("dlg_tags_for_book", llibre.getNom()), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
+        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
         setSize(400, 380);
         setLocationRelativeTo(owner);
         setResizable(false);
@@ -112,7 +118,7 @@ public class TagsDelLlibreDialog extends JDialog {
             String nom = txtNovaEtiqueta.getText().trim();
             if (nom.isEmpty()) return;
             try {
-                ControladorDomini.getInstance().addTag(nom);
+                cd.addTag(nom);
                 txtNovaEtiqueta.setText("");
                 reloadComboAdd();
             } catch (Exception ex) {
@@ -137,7 +143,7 @@ public class TagsDelLlibreDialog extends JDialog {
                 return;
             }
             try {
-                ControladorDomini.getInstance().addLlibreToTag(llibre.getISBN(), tag.getId());
+                cd.addLlibreToTag(llibre.getISBN(), tag.getId());
                 reload();
             } catch (Exception ex) {
                 new DialogoError(ex).showErrorMessage();
@@ -149,7 +155,7 @@ public class TagsDelLlibreDialog extends JDialog {
             if (row < 0) return;
             Tag target = tagsCache.get(row);
             try {
-                ControladorDomini.getInstance().removeLlibreFromTag(llibre.getISBN(), target.getId());
+                cd.removeLlibreFromTag(llibre.getISBN(), target.getId());
                 reload();
             } catch (Exception ex) {
                 new DialogoError(ex).showErrorMessage();
@@ -162,7 +168,7 @@ public class TagsDelLlibreDialog extends JDialog {
     private void reloadComboAdd() {
         Tag prev = (Tag) comboAdd.getSelectedItem();
         comboAdd.removeAllItems();
-        for (Tag t : ControladorDomini.getInstance().getAllTags()) comboAdd.addItem(t);
+        for (Tag t : cd.getAllTags()) comboAdd.addItem(t);
         if (prev != null) {
             for (int i = 0; i < comboAdd.getItemCount(); i++) {
                 if (comboAdd.getItemAt(i).getId() == prev.getId()) {
@@ -174,7 +180,7 @@ public class TagsDelLlibreDialog extends JDialog {
     }
 
     private void reload() {
-        tagsCache = ControladorDomini.getInstance().getTagsForLlibre(llibre.getISBN());
+        tagsCache = cd.getTagsForLlibre(llibre.getISBN());
         tableModel.setRowCount(0);
         for (Tag t : tagsCache) tableModel.addRow(new Object[]{ t.getNom() });
     }

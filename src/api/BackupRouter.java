@@ -1,6 +1,6 @@
 package api;
 
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -9,9 +9,10 @@ import java.util.Map;
 
 public class BackupRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public BackupRouter(HttpRouter app) {
+    public BackupRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.post("/api/backup",  ctx -> backup(ctx));
         app.post("/api/restore", ctx -> restore(ctx));
         app.post("/api/clear",   ctx -> clear(ctx));

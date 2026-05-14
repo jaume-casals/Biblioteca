@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
+import herramienta.BackupService;
 import herramienta.FiltreUtils;
+import interficie.BibliotecaWriter;
 import persistencia.ControladorPersistencia;
 import java.util.Set;
 
-public class ControladorDomini {
+public class ControladorDomini implements BibliotecaWriter {
 	private static volatile ControladorDomini inst;
 	private ControladorPersistencia cp;
 	private ArrayList<Llibre> bib;
@@ -24,7 +26,7 @@ public class ControladorDomini {
 
 	public static synchronized ControladorDomini getInstance() {
 		if (ControladorDomini.inst == null)
-			ControladorDomini.inst = new ControladorDomini();
+			ControladorDomini.inst = new ControladorDomini(ControladorPersistencia.getInstance());
 		return ControladorDomini.inst;
 	}
 
@@ -35,83 +37,43 @@ public class ControladorDomini {
 		ControladorPersistencia.resetForProfileSwitch();
 	}
 
-	private ControladorDomini() {
-		cp = ControladorPersistencia.getInstance();
+	private ControladorDomini(ControladorPersistencia cp) {
+		this.cp = cp;
 		bib = new ArrayList<Llibre>(cp.getAllLlibres());
 		Collections.sort(bib, compararISBN);
 		llistes = new ArrayList<>(cp.getAllLlistes());
 		tags = new ArrayList<>(cp.getAllTags());
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
-			Thread t = new Thread(this::autoBackup);
-			t.setDaemon(true);
-			t.start();
+			new BackupService(cp).scheduleAutoBackup(bib, llistes, tags);
 		}
 	}
 
-	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit) {
-		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, null, null, null, null, null);
+	public ArrayList<Llibre> aplicarFiltres(LlibreFilter f) {
+		return aplicarFiltres(bib, f);
 	}
 
-	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
-		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, null, null, null, null);
-	}
-
-	public ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
-			String editorial, String serie, String format, String idioma) {
-		return aplicarFiltres(bib, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, editorial, serie, format, idioma);
-	}
-
-	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
-		return aplicarFiltres(font, nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, null, null, null, null);
-	}
-
-	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
-			String editorial, String serie, String format, String idioma) {
-		// Use SQL-side filtering for large libraries when searching full bib (not a shelf subset)
+	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, LlibreFilter f) {
 		if (font == bib && bib.size() >= SQL_FILTER_THRESHOLD) {
-			return searchLlibresSQL(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-				valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId,
-				editorial, serie, format, idioma, null);
+			return searchLlibresSQL(f);
 		}
-		Set<Long> tagISBNs = null;
-		if (tagId != null) tagISBNs = cp.getLlibresWithTag(tagId);
-		final Set<Long> tagFilter = tagISBNs;
-		ArrayList<Llibre> resultat = new ArrayList<Llibre>();
+		Set<Long> tagISBNs = f.tagId != null ? cp.getLlibresWithTag(f.tagId) : null;
+		ArrayList<Llibre> resultat = new ArrayList<>();
 		for (Llibre l : font) {
-			if ((nomAutor == null || FiltreUtils.matchString(nomAutor, l.getAutor()))
-					&& (nomLlibre == null || FiltreUtils.matchString(nomLlibre, l.getNom()))
-					&& (ISBN == null || FiltreUtils.matchISBN(ISBN, l.getISBN()))
-					&& (iniciAny == null || l.getAny() >= iniciAny)
-					&& (fiAny == null || l.getAny() <= fiAny)
-					&& (valoracioMin == null || l.getValoracio() >= valoracioMin)
-					&& (valoracioMax == null || l.getValoracio() <= valoracioMax)
-					&& (preuMin == null || l.getPreu() >= preuMin)
-					&& (preuMax == null || l.getPreu() <= preuMax)
-					&& (llegit == null || l.getLlegit().equals(llegit))
-					&& (tagFilter == null || tagFilter.contains(l.getISBN()))
-					&& (editorial == null || FiltreUtils.matchString(editorial, l.getEditorial()))
-					&& (serie == null || FiltreUtils.matchString(serie, l.getSerie()))
-					&& (format == null || format.equalsIgnoreCase(l.getFormat()))
-					&& (idioma == null || FiltreUtils.matchString(idioma, l.getIdioma()))) {
+			if ((f.autor == null || FiltreUtils.matchString(f.autor, l.getAutor()))
+					&& (f.nom == null || FiltreUtils.matchString(f.nom, l.getNom()))
+					&& (f.isbn == null || FiltreUtils.matchISBN(f.isbn, l.getISBN()))
+					&& (f.anyMin == null || (l.getAny() != null && l.getAny() >= f.anyMin))
+					&& (f.anyMax == null || (l.getAny() != null && l.getAny() <= f.anyMax))
+					&& (f.valoracioMin == null || (l.getValoracio() != null && l.getValoracio() >= f.valoracioMin))
+					&& (f.valoracioMax == null || (l.getValoracio() != null && l.getValoracio() <= f.valoracioMax))
+					&& (f.preuMin == null || (l.getPreu() != null && l.getPreu() >= f.preuMin))
+					&& (f.preuMax == null || (l.getPreu() != null && l.getPreu() <= f.preuMax))
+					&& (f.llegit == null || f.llegit.equals(l.getLlegit()))
+					&& (tagISBNs == null || tagISBNs.contains(l.getISBN()))
+					&& (f.editorial == null || FiltreUtils.matchString(f.editorial, l.getEditorial()))
+					&& (f.serie == null || FiltreUtils.matchString(f.serie, l.getSerie()))
+					&& (f.format == null || f.format.equalsIgnoreCase(l.getFormat()))
+					&& (f.idioma == null || FiltreUtils.matchString(f.idioma, l.getIdioma()))) {
 				resultat.add(l);
 			}
 		}
@@ -121,30 +83,14 @@ public class ControladorDomini {
 	/** Threshold above which SQL-side search is used instead of in-memory scan. */
 	private static final int SQL_FILTER_THRESHOLD = 2000;
 
-	/**
-	 * SQL-backed filter for large libraries (> SQL_FILTER_THRESHOLD books).
-	 * Returns books matching all non-null criteria via a single SQL query.
-	 * llistaId null = search entire library.
-	 */
-	public ArrayList<Llibre> searchLlibresSQL(
-			String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
-			String editorial, String serie, String format, String idioma,
-			Integer llistaId) {
-		return cp.searchLlibres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId,
-			editorial, serie, format, idioma, llistaId, 0, 0);
+	/** SQL-backed filter for large libraries (> SQL_FILTER_THRESHOLD books). */
+	public ArrayList<Llibre> searchLlibresSQL(LlibreFilter f) {
+		return cp.searchLlibres(f, 0, 0);
 	}
 
-	/**
-	 * Paginated SQL query: returns pageSize books starting at offset.
-	 * Bypasses the in-memory list — used when library > SQL_FILTER_THRESHOLD.
-	 */
+	/** Paginated SQL query: returns pageSize books starting at offset. */
 	public ArrayList<Llibre> getLlibresPage(int offset, int pageSize) {
-		return cp.searchLlibres(null, null, null, null, null, null, null, null, null,
-			null, null, null, null, null, null, null, offset, pageSize);
+		return cp.searchLlibres(LlibreFilter.empty(), offset, pageSize);
 	}
 
 	/** Total books in DB (used for DB-side pagination). */
@@ -154,7 +100,7 @@ public class ControladorDomini {
 	public boolean isLargeLibrary() { return bib.size() >= SQL_FILTER_THRESHOLD; }
 
 	public ArrayList<Llibre> getAllLlibres() {
-		return bib;
+		return new ArrayList<>(bib);
 	}
 
 	public ArrayList<Llibre> get10Llibres() {
@@ -223,91 +169,8 @@ public class ControladorDomini {
 		return bib.get(index);
 	}
 
-	private void autoBackup() {
-		if (bib.isEmpty()) return;
-		try {
-			java.io.File dir = new java.io.File(
-				System.getProperty("user.home") + "/.biblioteca/backups");
-			dir.mkdirs();
-			String ts = java.time.LocalDateTime.now()
-				.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-			backupToSQL(new java.io.File(dir, "biblioteca_" + ts + ".sql"));
-			java.io.File[] backups = dir.listFiles(
-				(d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
-			if (backups != null && backups.length > 5) {
-				java.util.Arrays.sort(backups);
-				for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
-			}
-		} catch (Exception ignored) {}
-	}
-
 	public void backupToSQL(java.io.File file) throws Exception {
-		try (java.io.PrintWriter pw = new java.io.PrintWriter(
-				new java.io.FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
-			pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
-			pw.println("DELETE FROM prestec;");
-			pw.println("DELETE FROM llibre_llista;");
-			pw.println("DELETE FROM llista;");
-			pw.println("DELETE FROM llibre_autor;");
-			pw.println("DELETE FROM llibre_tag;");
-			pw.println("DELETE FROM tag;");
-			pw.println("DELETE FROM autor;");
-			pw.println("DELETE FROM llibre;");
-			for (Llibre l : bib) {
-				pw.printf(
-					"INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`,`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`,`desitjat`,`pais_origen`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s','%s',%d,%d,'%s','%s',%d,%s,%s,%s,%s,%b,%s);%n",
-					l.getISBN(),
-					sqlEsc(l.getNom()),
-					sqlEsc(l.getAutor() != null ? l.getAutor() : ""),
-					l.getAny() != null ? l.getAny() : 0,
-					sqlEsc(l.getDescripcio() != null ? l.getDescripcio() : ""),
-					l.getValoracio() != null ? l.getValoracio() : 0.0,
-					l.getPreu() != null ? l.getPreu() : 0.0,
-					Boolean.TRUE.equals(l.getLlegit()),
-					sqlEsc(l.getImatge() != null ? l.getImatge() : ""),
-					sqlEsc(l.getNotes()),
-					l.getPagines(),
-					l.getPaginesLlegides(),
-					sqlEsc(l.getEditorial()),
-					sqlEsc(l.getSerie()),
-					l.getVolum(),
-					l.getDataCompra() != null ? "'" + sqlEsc(l.getDataCompra()) + "'" : "NULL",
-					l.getDataLectura() != null ? "'" + sqlEsc(l.getDataLectura()) + "'" : "NULL",
-					l.getIdioma() != null ? "'" + sqlEsc(l.getIdioma()) + "'" : "NULL",
-					l.getFormat() != null ? "'" + sqlEsc(l.getFormat()) + "'" : "NULL",
-					l.getDesitjat(),
-					l.getPaisOrigen() != null ? "'" + sqlEsc(l.getPaisOrigen()) + "'" : "NULL");
-			}
-			for (Object[] row : cp.getAllAutors()) {
-				pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,'%s');%n",
-					(Integer) row[0], sqlEsc((String) row[1]));
-			}
-			for (Object[] row : cp.getAllLlibreAutor()) {
-				pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
-					(Long) row[0], (Integer) row[1]);
-			}
-			for (Llista ll : llistes) {
-				pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,'%s',%d,%s);%n",
-					ll.getId(), sqlEsc(ll.getNom()), ll.getOrdre(),
-					ll.getColor() != null ? "'" + sqlEsc(ll.getColor()) + "'" : "NULL");
-			}
-			for (Object[] row : cp.getAllLlibreLlista()) {
-				pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
-					(Long) row[0], (Integer) row[1], (Double) row[2], (Boolean) row[3]);
-			}
-			for (Tag t : tags) {
-				pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,'%s');%n",
-					t.getId(), sqlEsc(t.getNom()));
-			}
-			for (Object[] row : cp.getAllLlibreTag()) {
-				pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
-					(Long) row[0], (Integer) row[1]);
-			}
-			for (Object[] row : cp.getAllPrestecs()) {
-				pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,'%s','%s',%b);%n",
-					(Long) row[0], sqlEsc((String) row[1]), row[2], (Boolean) row[3]);
-			}
-		}
+		new BackupService(cp).backupToSQL(file, bib, llistes, tags);
 	}
 
 	public void restoreFromSQL(java.io.File file) throws Exception {
@@ -326,10 +189,6 @@ public class ControladorDomini {
 	}
 
 	public long getDbSizeBytes() { return cp.getDbSizeBytes(); }
-
-	private static String sqlEsc(String s) {
-		return s == null ? "" : s.replace("'", "''");
-	}
 
 	// ── Llista (shelf) management ──────────────────────────────────────────────
 

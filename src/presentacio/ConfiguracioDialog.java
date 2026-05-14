@@ -14,15 +14,23 @@ import javax.swing.JTextField;
 import herramienta.Config;
 import herramienta.I18n;
 import herramienta.UITheme;
+import interficie.BibliotecaWriter;
 
 import static herramienta.I18n.t;
 
 public class ConfiguracioDialog extends JDialog {
 
-	public ConfiguracioDialog(Frame parent) { this(parent, null, null); }
+	private final BibliotecaWriter cd;
+
+	public ConfiguracioDialog(Frame parent) { this(parent, null, null, null); }
 
 	public ConfiguracioDialog(Frame parent, Runnable onReapply, Runnable onRefreshData) {
+		this(parent, onReapply, onRefreshData, null);
+	}
+
+	public ConfiguracioDialog(Frame parent, Runnable onReapply, Runnable onRefreshData, BibliotecaWriter cd) {
 		super(parent, t("modal_settings"), true);
+		this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
 		setResizable(false);
 		setBounds(0, 0, 490, 776);
 		setLocationRelativeTo(parent);
@@ -204,7 +212,7 @@ public class ConfiguracioDialog extends JDialog {
 		lblDbSize.setBounds(lx, 576, 155, lh);
 		getContentPane().add(lblDbSize);
 
-		long dbBytes = domini.ControladorDomini.getInstance().getDbSizeBytes();
+		long dbBytes = cd.getDbSizeBytes();
 		String dbSizeStr = dbBytes < 0 ? "N/D" :
 			dbBytes < 1024 * 1024 ? String.format("%.1f KB", dbBytes / 1024.0) :
 			String.format("%.2f MB", dbBytes / (1024.0 * 1024.0));
@@ -234,7 +242,7 @@ public class ConfiguracioDialog extends JDialog {
 				t("dlg_confirm_clear_2_title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
 			if (r2 != JOptionPane.YES_OPTION) return;
 			try {
-				domini.ControladorDomini.getInstance().clearAll();
+				cd.clearAll();
 				if (onRefreshData != null) onRefreshData.run();
 				JOptionPane.showMessageDialog(this, t("dlg_clear_done"),
 					t("dlg_clear_done_title"), JOptionPane.INFORMATION_MESSAGE);

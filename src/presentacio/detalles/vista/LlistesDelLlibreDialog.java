@@ -20,8 +20,8 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
-import domini.ControladorDomini;
 import domini.Llibre;
+import interficie.BibliotecaWriter;
 import domini.Llista;
 import herramienta.DialogoError;
 import herramienta.UITheme;
@@ -37,10 +37,16 @@ public class LlistesDelLlibreDialog extends JDialog {
     private final JTable table;
     private ArrayList<Llista> llistesCache = new ArrayList<>();
     private JComboBox<Llista> comboAdd;
+    private final BibliotecaWriter cd;
 
     public LlistesDelLlibreDialog(Window owner, Llibre llibre) {
+        this(owner, llibre, null);
+    }
+
+    public LlistesDelLlibreDialog(Window owner, Llibre llibre, BibliotecaWriter cd) {
         super(owner, "Llistes de: " + llibre.getNom(), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
+        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
         setSize(520, 460);
         setLocationRelativeTo(owner);
         setResizable(false);
@@ -127,7 +133,7 @@ public class LlistesDelLlibreDialog extends JDialog {
             try { val = Double.parseDouble(txtVal.getText().trim()); } catch (NumberFormatException ignored) {}
             boolean llegit = chkLlegit.isSelected();
             try {
-                ControladorDomini.getInstance().addLlibreToLlista(llibre.getISBN(), llista.getId(), val, llegit);
+                cd.addLlibreToLlista(llibre.getISBN(), llista.getId(), val, llegit);
                 reload();
             } catch (Exception ex) {
                 new DialogoError(ex).showErrorMessage();
@@ -141,7 +147,7 @@ public class LlistesDelLlibreDialog extends JDialog {
             Llista target = findLlistaByNom(llistaNom);
             if (target == null) return;
             try {
-                ControladorDomini.getInstance().removeLlibreFromLlista(llibre.getISBN(), target.getId());
+                cd.removeLlibreFromLlista(llibre.getISBN(), target.getId());
                 reload();
             } catch (Exception ex) {
                 new DialogoError(ex).showErrorMessage();
@@ -158,7 +164,7 @@ public class LlistesDelLlibreDialog extends JDialog {
                 try { val = Double.parseDouble(tableModel.getValueAt(r, COL_VAL).toString()); } catch (NumberFormatException ignored) {}
                 boolean llegit = Boolean.TRUE.equals(tableModel.getValueAt(r, COL_LLEGIT));
                 try {
-                    ControladorDomini.getInstance().updateLlibreInLlista(llibre.getISBN(), target.getId(), val, llegit);
+                    cd.updateLlibreInLlista(llibre.getISBN(), target.getId(), val, llegit);
                 } catch (Exception ex) {
                     new DialogoError(ex).showErrorMessage();
                     return;
@@ -173,7 +179,7 @@ public class LlistesDelLlibreDialog extends JDialog {
     private void reloadComboAdd() {
         Llista prev = (Llista) comboAdd.getSelectedItem();
         comboAdd.removeAllItems();
-        for (Llista l : ControladorDomini.getInstance().getAllLlistes()) comboAdd.addItem(l);
+        for (Llista l : cd.getAllLlistes()) comboAdd.addItem(l);
         if (prev != null) {
             for (int i = 0; i < comboAdd.getItemCount(); i++) {
                 if (comboAdd.getItemAt(i).getId() == prev.getId()) {
@@ -185,7 +191,7 @@ public class LlistesDelLlibreDialog extends JDialog {
     }
 
     private void reload() {
-        llistesCache = ControladorDomini.getInstance().getLlistesForLlibre(llibre.getISBN());
+        llistesCache = cd.getLlistesForLlibre(llibre.getISBN());
         tableModel.setRowCount(0);
         for (Llista l : llistesCache) {
             tableModel.addRow(new Object[]{

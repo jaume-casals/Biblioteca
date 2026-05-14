@@ -2,7 +2,4 @@ package interficie;
 
 import domini.Llibre;
 
-public interface EnActualizarBBDD {
-	void actualitzarLlibre(Llibre l, boolean nuevo);
-	void eliminarLlibre(Llibre l);
-}
+public interface EnActualizarBBDD extends OnLlibreUpdate, OnLlibreDelete {}

@@ -14,6 +14,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import domini.Llibre;
 import herramienta.UITheme;
+import interficie.BibliotecaWriter;
 
 public class GaleriaCobertesPanel extends JPanel {
 
@@ -57,10 +58,13 @@ public class GaleriaCobertesPanel extends JPanel {
     private final Set<Long> selectedISBNs = new java.util.LinkedHashSet<>();
     private java.util.function.BiConsumer<java.awt.event.MouseEvent, List<Llibre>> onRightClick;
     private java.util.function.Consumer<List<Llibre>> onDeleteSelected;
+    private BibliotecaWriter cd;
     private int lastClickedIdx = -1;
     private int keyboardIdx = -1;
     private JWindow zoomPopup;
     private javax.swing.Timer zoomTimer;
+
+    public void setCd(BibliotecaWriter cd) { this.cd = cd; }
 
     public GaleriaCobertesPanel() {
         setLayout(new BorderLayout());
@@ -537,16 +541,16 @@ public class GaleriaCobertesPanel extends JPanel {
     // ── Image loading ─────────────────────────────────────────────────────────
 
     /** Load raw image bytes from blob/path, then crop-scale to exact card dimensions. */
-    private static BufferedImage loadAndScale(Llibre l, int w, int h) {
+    private BufferedImage loadAndScale(Llibre l, int w, int h) {
         BufferedImage raw = loadRaw(l);
         if (raw == null) return null;
         return cropScale(raw, w, h);
     }
 
-    private static BufferedImage loadRaw(Llibre l) {
+    private BufferedImage loadRaw(Llibre l) {
         byte[] blob = l.getImatgeBlob();
         if (blob == null && l.hasBlob())
-            blob = domini.ControladorDomini.getInstance().getLlibreBlob(l.getISBN());
+            blob = cd != null ? cd.getLlibreBlob(l.getISBN()) : domini.ControladorDomini.getInstance().getLlibreBlob(l.getISBN());
         if (blob != null) {
             try {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(blob));

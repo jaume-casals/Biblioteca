@@ -1,6 +1,6 @@
 package api;
 
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
@@ -16,9 +16,10 @@ import java.util.*;
 
 public class ImportExportRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public ImportExportRouter(HttpRouter app) {
+    public ImportExportRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.get("/api/export/json",         ctx -> exportJson(ctx));
         app.get("/api/export/csv/goodreads",ctx -> exportGoodreadsCSV(ctx));
         app.post("/api/import/json",        ctx -> importJson(ctx));
@@ -118,7 +119,7 @@ public class ImportExportRouter {
         int rowId = 1;
         for (Llibre l : cd.getAllLlibres()) {
             List<Llista> llistes = cd.getLlistesForLlibre(l.getISBN());
-            String shelf = l.getLlegit() ? "read" : (!llistes.isEmpty() ? llistes.get(0).getNom() : "to-read");
+            String shelf = Boolean.TRUE.equals(l.getLlegit()) ? "read" : (!llistes.isEmpty() ? llistes.get(0).getNom() : "to-read");
             String bookshelves = llistes.stream().map(Llista::getNom)
                 .collect(java.util.stream.Collectors.joining(", "));
             sb.append(rowId++).append(',')

@@ -1,14 +1,15 @@
 package api;
 
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 
 import java.util.Map;
 
 public class MetaRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public MetaRouter(HttpRouter app) {
+    public MetaRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.get("/api/meta/distinct/{column}", ctx -> distinct(ctx));
         app.get("/api/meta/authors",           ctx -> authors(ctx));
         app.get("/api/meta/dbsize",            ctx -> dbsize(ctx));

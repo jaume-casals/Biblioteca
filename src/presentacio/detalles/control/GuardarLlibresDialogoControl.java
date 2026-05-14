@@ -12,8 +12,8 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
-import domini.ControladorDomini;
 import domini.Llibre;
+import interficie.BibliotecaWriter;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
@@ -25,16 +25,20 @@ import presentacio.detalles.vista.GuardarLlibresDialogo;
 public class GuardarLlibresDialogoControl implements WindowListener {
 
 	private GuardarLlibresDialogo vista;
-	private ControladorDomini cLlibres;
+	private BibliotecaWriter cLlibres;
 	private byte[] selectedBlob;
 	private EnActualizarBBDD callback;
 	private volatile Thread searchThread;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
-		this(vista, null);
+		this(vista, null, null);
 	}
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista, EnActualizarBBDD callback) {
+		this(vista, callback, null);
+	}
+
+	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista, EnActualizarBBDD callback, BibliotecaWriter cd) {
 		this.callback = callback;
 		this.vista = vista;
 		this.vista.setFocusable(true);
@@ -49,7 +53,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnCercaInternet().addActionListener(e -> cercaInternet());
 		this.vista.addWindowListener(this);
-		cLlibres = ControladorDomini.getInstance();
+		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
 
 		double defVal = herramienta.Config.getDefaultValoracio();
 		if (defVal > 0.0) this.vista.getTextValoracio().setText(String.valueOf(defVal));

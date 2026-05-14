@@ -2,165 +2,165 @@ package domini;
 
 public class Llibre {
 
-	private Long ISBN;
-	private String Nom;
-	private String Autor;
-	private Integer Any;
-	private String Descripcio;
-	private Double Valoracio;
-	private Double Preu;
-	private Boolean Llegit;
-	private String Imatge;
-	private byte[] ImatgeBlob;
-	private String Notes = "";
-	private int Pagines = 0;
-	private int PaginesLlegides = 0;
+	private Long isbn;
+	private String nom;
+	private String autor;
+	private Integer any;
+	private String descripcio;
+	private Double valoracio;
+	private Double preu;
+	private Boolean llegit;
+	private String imatge;
+	private byte[] imatgeBlob;
+	private String notes = "";
+	private int pagines = 0;
+	private int paginesLlegides = 0;
 	private boolean hasBlob = false;
-	private String Editorial = "";
-	private String Serie = "";
-	private int Volum = 0;
-	private String DataCompra = null;
-	private String DataLectura = null;
-	private String Idioma = null;
-	private String Format = null;
-	private boolean Desitjat = false;
-	private String PaisOrigen = null;
-	private String Estat = null;
-	private int Exemplars = 1;
-	private String LlenguaOriginal = null;
-	private java.util.List<String> Autors = new java.util.ArrayList<>();
+	private String editorial = "";
+	private String serie = "";
+	private int volum = 0;
+	private String dataCompra = null;
+	private String dataLectura = null;
+	private String idioma = null;
+	private String format = null;
+	private boolean desitjat = false;
+	private String paisOrigen = null;
+	private String estat = null;
+	private int exemplars = 1;
+	private String llenguaOriginal = null;
+	private java.util.List<String> autors = new java.util.ArrayList<>();
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
-		this.ISBN = isbn;
-		this.Nom = nom;
-		this.Autor = autor;
-		this.Any = any;
-		this.Descripcio = descripcio;
-		this.Valoracio = valoracio;
-		this.Preu = preu;
-		this.Llegit = llegit;
-		this.Imatge = imatge;
+		this.isbn = isbn;
+		this.nom = nom;
+		this.autor = autor;
+		this.any = any;
+		this.descripcio = descripcio;
+		this.valoracio = valoracio;
+		this.preu = preu;
+		this.llegit = llegit;
+		this.imatge = imatge;
 	}
 
 	public Long getISBN() {
-		return ISBN;
+		return isbn;
 	}
 
-	public void setISBN(Long iSBN) {
-		ISBN = iSBN;
+	public void setISBN(Long isbn) {
+		this.isbn = isbn;
 	}
 
 	public String getNom() {
-		return Nom;
+		return nom;
 	}
 
 	public void setNom(String nom) {
-		Nom = nom;
+		this.nom = nom;
 	}
 
 	public String getAutor() {
-		if (!Autors.isEmpty()) return String.join(", ", Autors);
-		return Autor;
+		if (!autors.isEmpty()) return String.join(", ", autors);
+		return autor;
 	}
 
 	public void setAutor(String autor) {
-		Autor = autor;
+		this.autor = autor;
 	}
 
-	public java.util.List<String> getAutors() { return Autors; }
+	public java.util.List<String> getAutors() { return autors; }
 	public void setAutors(java.util.List<String> autors) {
-		Autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
-		if (!Autors.isEmpty()) Autor = String.join(", ", Autors);
+		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
+		if (!this.autors.isEmpty()) this.autor = String.join(", ", this.autors);
 	}
 
 	public Integer getAny() {
-		return Any;
+		return any;
 	}
 
 	public void setAny(Integer any) {
-		Any = any;
+		this.any = any;
 	}
 
 	public String getDescripcio() {
-		return Descripcio;
+		return descripcio;
 	}
 
 	public void setDescripcio(String descripcio) {
-		Descripcio = descripcio;
+		this.descripcio = descripcio;
 	}
 
 	public Double getValoracio() {
-		return Valoracio;
+		return valoracio;
 	}
 
 	public void setValoracio(Double valoracio) {
-		Valoracio = valoracio;
+		this.valoracio = valoracio;
 	}
 
 	public Double getPreu() {
-		return Preu;
+		return preu;
 	}
 
 	public void setPreu(Double preu) {
-		Preu = preu;
+		this.preu = preu;
 	}
 
 	public Boolean getLlegit() {
-		return Llegit;
+		return llegit;
 	}
 
 	public void setLlegit(Boolean llegit) {
-		Llegit = llegit;
+		this.llegit = llegit;
 	}
 
 	public String getImatge() {
-		return Imatge;
+		return imatge;
 	}
 
 	public void setImatge(String imatge) {
-		Imatge = imatge;
+		this.imatge = imatge;
 	}
 
-	public byte[] getImatgeBlob() { return ImatgeBlob; }
-	public void setImatgeBlob(byte[] blob) { ImatgeBlob = blob; }
+	public byte[] getImatgeBlob() { return imatgeBlob; }
+	public void setImatgeBlob(byte[] blob) { imatgeBlob = blob; }
 	public boolean hasBlob() { return hasBlob; }
-	public void setHasBlob(boolean v) { hasBlob = v; }
+	public void setHasBlob(boolean hasBlob) { this.hasBlob = hasBlob; }
 
-	public String getNotes() { return Notes != null ? Notes : ""; }
-	public void setNotes(String notes) { Notes = notes != null ? notes : ""; }
-	public int getPagines() { return Pagines; }
-	public void setPagines(int p) { Pagines = Math.max(0, p); }
-	public int getPaginesLlegides() { return PaginesLlegides; }
-	public void setPaginesLlegides(int p) { PaginesLlegides = Math.max(0, p); }
-	public String getEditorial() { return Editorial != null ? Editorial : ""; }
-	public void setEditorial(String editorial) { Editorial = editorial != null ? editorial : ""; }
-	public String getSerie() { return Serie != null ? Serie : ""; }
-	public void setSerie(String serie) { Serie = serie != null ? serie : ""; }
-	public int getVolum() { return Volum; }
-	public void setVolum(int volum) { Volum = Math.max(0, volum); }
-	public String getDataCompra() { return DataCompra; }
-	public void setDataCompra(String d) { DataCompra = (d != null && !d.trim().isEmpty()) ? d.trim() : null; }
-	public String getDataLectura() { return DataLectura; }
-	public void setDataLectura(String d) { DataLectura = (d != null && !d.trim().isEmpty()) ? d.trim() : null; }
-	public String getIdioma() { return Idioma; }
-	public void setIdioma(String i) { Idioma = (i != null && !i.trim().isEmpty()) ? i.trim() : null; }
-	public String getFormat() { return Format; }
-	public void setFormat(String f) { Format = (f != null && !f.trim().isEmpty()) ? f.trim() : null; }
-	public String getPaisOrigen() { return PaisOrigen; }
-	public void setPaisOrigen(String p) { PaisOrigen = (p != null && !p.trim().isEmpty()) ? p.trim() : null; }
-	public boolean getDesitjat() { return Desitjat; }
-	public void setDesitjat(boolean d) { Desitjat = d; }
-	public String getEstat() { return Estat; }
-	public void setEstat(String e) { Estat = (e != null && !e.trim().isEmpty()) ? e.trim() : null; }
-	public int getExemplars() { return Exemplars; }
-	public void setExemplars(int n) { Exemplars = Math.max(0, n); }
-	public String getLlenguaOriginal() { return LlenguaOriginal; }
-	public void setLlenguaOriginal(String l) { LlenguaOriginal = (l != null && !l.trim().isEmpty()) ? l.trim() : null; }
+	public String getNotes() { return notes != null ? notes : ""; }
+	public void setNotes(String notes) { this.notes = notes != null ? notes : ""; }
+	public int getPagines() { return pagines; }
+	public void setPagines(int pagines) { this.pagines = Math.max(0, pagines); }
+	public int getPaginesLlegides() { return paginesLlegides; }
+	public void setPaginesLlegides(int paginesLlegides) { this.paginesLlegides = Math.max(0, paginesLlegides); }
+	public String getEditorial() { return editorial != null ? editorial : ""; }
+	public void setEditorial(String editorial) { this.editorial = editorial != null ? editorial : ""; }
+	public String getSerie() { return serie != null ? serie : ""; }
+	public void setSerie(String serie) { this.serie = serie != null ? serie : ""; }
+	public int getVolum() { return volum; }
+	public void setVolum(int volum) { this.volum = Math.max(0, volum); }
+	public String getDataCompra() { return dataCompra; }
+	public void setDataCompra(String dataCompra) { this.dataCompra = (dataCompra != null && !dataCompra.trim().isEmpty()) ? dataCompra.trim() : null; }
+	public String getDataLectura() { return dataLectura; }
+	public void setDataLectura(String dataLectura) { this.dataLectura = (dataLectura != null && !dataLectura.trim().isEmpty()) ? dataLectura.trim() : null; }
+	public String getIdioma() { return idioma; }
+	public void setIdioma(String idioma) { this.idioma = (idioma != null && !idioma.trim().isEmpty()) ? idioma.trim() : null; }
+	public String getFormat() { return format; }
+	public void setFormat(String format) { this.format = (format != null && !format.trim().isEmpty()) ? format.trim() : null; }
+	public String getPaisOrigen() { return paisOrigen; }
+	public void setPaisOrigen(String paisOrigen) { this.paisOrigen = (paisOrigen != null && !paisOrigen.trim().isEmpty()) ? paisOrigen.trim() : null; }
+	public boolean getDesitjat() { return desitjat; }
+	public void setDesitjat(boolean desitjat) { this.desitjat = desitjat; }
+	public String getEstat() { return estat; }
+	public void setEstat(String estat) { this.estat = (estat != null && !estat.trim().isEmpty()) ? estat.trim() : null; }
+	public int getExemplars() { return exemplars; }
+	public void setExemplars(int exemplars) { this.exemplars = Math.max(0, exemplars); }
+	public String getLlenguaOriginal() { return llenguaOriginal; }
+	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = (llengua != null && !llengua.trim().isEmpty()) ? llengua.trim() : null; }
 
 	@Override
 	public String toString() {
-		return this.ISBN + " " + this.Nom + " " + this.Autor + " " + this.Any + " " + this.Descripcio + " "
-				+ this.Valoracio + " " + this.Preu + " " + this.Llegit + " " + this.Imatge;
+		return this.isbn + " " + this.nom + " " + this.autor + " " + this.any + " " + this.descripcio + " "
+				+ this.valoracio + " " + this.preu + " " + this.llegit + " " + this.imatge;
 	}
 }

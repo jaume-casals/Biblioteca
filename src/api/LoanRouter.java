@@ -1,15 +1,16 @@
 package api;
 
 import com.google.gson.JsonObject;
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 
 import java.util.Map;
 
 public class LoanRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public LoanRouter(HttpRouter app) {
+    public LoanRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.get("/api/loans",            ctx -> getAll(ctx));
         app.post("/api/loans/{isbn}",    ctx -> loan(ctx));
         app.delete("/api/loans/{isbn}",  ctx -> returnBook(ctx));

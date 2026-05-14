@@ -1,7 +1,7 @@
 package api;
 
 import com.google.gson.JsonObject;
-import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 import domini.Llista;
 
 import java.util.ArrayList;
@@ -9,9 +9,10 @@ import java.util.Map;
 
 public class LlistaRouter {
 
-    private final ControladorDomini cd = ControladorDomini.getInstance();
+    private final BibliotecaWriter cd;
 
-    public LlistaRouter(HttpRouter app) {
+    public LlistaRouter(HttpRouter app, BibliotecaWriter cd) {
+        this.cd = cd;
         app.get("/api/shelves",                          ctx -> getAll(ctx));
         app.post("/api/shelves",                         ctx -> create(ctx));
         app.delete("/api/shelves/{id}",                  ctx -> delete(ctx));

@@ -71,6 +71,7 @@ public class StressTest {
             closeReport();
             System.out.printf("%n[STRESS] Done. PASS=%d FAIL=%d WARN=%d%n", passCount, failCount, warnCount);
             System.out.println("[STRESS] Report: checkBiblio/stress_report.txt");
+            System.exit(failCount > 0 ? 1 : 0);
         }
     }
 
@@ -304,7 +305,7 @@ public class StressTest {
         clickSave(dlg); sleep(800);
         JDialog after = getTopDialog();
         if (after != null && looksLikeError(after)) {
-            warn("500-char title → validation dialog (may be by design)");
+            pass("500-char title → validation rejected (by design)");
             dismissAllDialogs();
         } else {
             pass("500-char title saved without crash");
@@ -590,9 +591,9 @@ public class StressTest {
     }
 
     private static void testDetails_llistesDialog(JFrame main) throws Exception {
-        openRow(main, 0);
-        JDialog details = waitForDialog(2000); if (details == null) { warn("Details dialog missing"); return; }
-        AbstractButton btn = findBtnIn((Container)details, "Llistes");
+        goAllBooks(main);
+        JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Llistes)"); return; }
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Llistes");
         if (btn == null) { warn("Llistes button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(700);
         JDialog sub = getTopDialogExcept(details);
@@ -602,9 +603,9 @@ public class StressTest {
     }
 
     private static void testDetails_etiquetesDialog(JFrame main) throws Exception {
-        openRow(main, 0);
-        JDialog details = waitForDialog(2000); if (details == null) { warn("Details dialog missing"); return; }
-        AbstractButton btn = findBtnIn((Container)details, "Etiquetes");
+        goAllBooks(main);
+        JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Etiquetes)"); return; }
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Etiquetes");
         if (btn == null) { warn("Etiquetes button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(700);
         JDialog sub = getTopDialogExcept(details);
@@ -614,9 +615,9 @@ public class StressTest {
     }
 
     private static void testDetails_historial(JFrame main) throws Exception {
-        openRow(main, 0);
-        JDialog details = waitForDialog(2000); if (details == null) { warn("Details dialog missing"); return; }
-        AbstractButton btn = findBtnIn((Container)details, "Historial");
+        goAllBooks(main);
+        JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Historial)"); return; }
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Historial");
         if (btn == null) { warn("Historial préstecs button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(700);
         JDialog sub = getTopDialogExcept(details);
@@ -626,9 +627,9 @@ public class StressTest {
     }
 
     private static void testDetails_imprimir(JFrame main) throws Exception {
-        openRow(main, 0);
-        JDialog details = waitForDialog(2000); if (details == null) { warn("Details dialog missing"); return; }
-        AbstractButton btn = findBtnIn((Container)details, "Imprimir", "Print");
+        goAllBooks(main);
+        JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Imprimir)"); return; }
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Imprimir", "Print");
         if (btn == null) { warn("Imprimir button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(800);
         // May open print dialog — just cancel/escape
@@ -688,14 +689,25 @@ public class StressTest {
         }
         if (!created.isEmpty()) pass("Created " + created.size() + " test lists");
 
-        // Reorder
+        // Reorder (ensure selection first)
         if (upBtn != null && downBtn != null) {
-            doClick(downBtn); sleep(200); doClick(upBtn); sleep(200);
+            @SuppressWarnings("unchecked")
+            JList<Object> listForReorder = (JList<Object>) findComponent((Container)dlg, JList.class);
+            if (listForReorder != null && listForReorder.getModel().getSize() > 0)
+                SwingUtilities.invokeAndWait(() -> listForReorder.setSelectedIndex(0));
+            doClick(downBtn); sleep(200);
+            if (listForReorder != null && listForReorder.getModel().getSize() > 0)
+                SwingUtilities.invokeAndWait(() -> listForReorder.setSelectedIndex(0));
+            doClick(upBtn); sleep(200);
             pass("Reorder buttons: up/down work");
         }
 
-        // Color button
+        // Color button — ensure an item is selected first
         if (colorBtn != null) {
+            @SuppressWarnings("unchecked")
+            JList<Object> listForColor = (JList<Object>) findComponent((Container)dlg, JList.class);
+            if (listForColor != null && listForColor.getModel().getSize() > 0)
+                SwingUtilities.invokeAndWait(() -> listForColor.setSelectedIndex(0));
             doClick(colorBtn); sleep(700);
             JDialog colorDlg = getTopDialogExcept(dlg);
             if (colorDlg != null) {
@@ -779,28 +791,26 @@ public class StressTest {
     private static void testExport(JFrame main) throws Exception {
         ensureFilterOpen(main);
         sleep(300);
-        // Try each export submenu item via keyboard navigation
         AbstractButton exportBtn = findBtnIn(main, "Exportar");
         if (exportBtn == null) { warn("Export button not found (need filter open)"); closeFilter(main); return; }
 
-        String[] exports = {"CSV", "JSON", "HTML"};
-        for (int i = 0; i < exports.length; i++) {
+        String[][] exports = {{"CSV", "Export CSV", "Exportar CSV"},
+                               {"JSON", "Export JSON", "Exportar JSON"},
+                               {"HTML", "Export HTML", "Exportar HTML"}};
+        for (String[] exp : exports) {
             doClick(exportBtn); sleep(400);
-            // Navigate popup: Down (i+1) times, then Enter
-            for (int j = 0; j <= i; j++) {
-                robot.keyPress(KeyEvent.VK_DOWN); robot.keyRelease(KeyEvent.VK_DOWN); sleep(80);
-            }
-            robot.keyPress(KeyEvent.VK_ENTER); robot.keyRelease(KeyEvent.VK_ENTER);
-            sleep(700);
+            AbstractButton item = findBtnIn(main, exp[1], exp[2]);
+            if (item != null) { doClick(item); sleep(700); }
             JDialog fc = getTopDialog();
             if (fc != null) {
-                pass("Export " + exports[i] + " → dialog appeared");
-                screenshot("export_" + exports[i].toLowerCase());
+                pass("Export " + exp[0] + " → dialog appeared");
+                screenshot("export_" + exp[0].toLowerCase());
+                focusMain(main);
                 robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
                 sleep(400); dismissAllDialogs();
             } else {
-                warn("Export " + exports[i] + " → no dialog (may have cancelled or auto-saved)");
-                // Dismiss any popup still open
+                warn("Export " + exp[0] + " → no dialog (may have cancelled or auto-saved)");
+                focusMain(main);
                 robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
                 sleep(200);
             }
@@ -833,8 +843,8 @@ public class StressTest {
     private static void testKbd_ctrlA(JFrame main) throws Exception {
         JTable table = findComponent((Container)main, JTable.class);
         if (table == null) { warn("No table for Ctrl+A test"); return; }
-        SwingUtilities.invokeAndWait(() -> table.requestFocusInWindow());
-        sleep(150);
+        goAllBooks(main); sleep(300);
+        focusMain(main);
         robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_A);
         robot.keyRelease(KeyEvent.VK_A); robot.keyRelease(KeyEvent.VK_CONTROL);
         sleep(400);
@@ -845,8 +855,7 @@ public class StressTest {
     }
 
     private static void testKbd_ctrlF(JFrame main) throws Exception {
-        SwingUtilities.invokeAndWait(() -> main.requestFocusInWindow());
-        sleep(100);
+        focusMain(main);
         robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_F);
         robot.keyRelease(KeyEvent.VK_F); robot.keyRelease(KeyEvent.VK_CONTROL);
         sleep(400);
@@ -856,8 +865,7 @@ public class StressTest {
     }
 
     private static void testKbd_ctrlN(JFrame main) throws Exception {
-        SwingUtilities.invokeAndWait(() -> main.requestFocusInWindow());
-        sleep(100);
+        focusMain(main);
         robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_N);
         robot.keyRelease(KeyEvent.VK_N); robot.keyRelease(KeyEvent.VK_CONTROL);
         sleep(800);
@@ -906,6 +914,7 @@ public class StressTest {
     private static void testCleanup(JFrame main) throws Exception {
         if (createdISBNs.isEmpty()) { warn("No test ISBNs to clean up"); return; }
         log("Cleaning " + createdISBNs.size() + " test books...");
+        goAllBooks(main); sleep(500);
         JTextField sf = findSearchField(main);
         int deleted = 0;
         for (long isbn : createdISBNs) {
@@ -916,7 +925,7 @@ public class StressTest {
                 continue;
             }
             SwingUtilities.invokeAndWait(() -> table.setRowSelectionInterval(0, 0));
-            sleep(100);
+            focusMain(main);
             robot.keyPress(KeyEvent.VK_DELETE); robot.keyRelease(KeyEvent.VK_DELETE);
             sleep(600);
             JDialog confirm = getTopDialog();
@@ -972,13 +981,43 @@ public class StressTest {
         JTable table = findComponent((Container)main, JTable.class);
         if (table == null || row >= table.getRowCount()) return;
         SwingUtilities.invokeAndWait(() -> {
+            main.toFront();
             table.setRowSelectionInterval(row, row);
             table.scrollRectToVisible(table.getCellRect(row, 0, true));
-            table.requestFocusInWindow();
+            // Fire Enter action directly — avoids Robot OS-focus dependency
+            javax.swing.Action act = table.getActionMap().get("obrirDetalls");
+            if (act != null) act.actionPerformed(new java.awt.event.ActionEvent(table, 0, "obrirDetalls"));
         });
-        sleep(100);
-        robot.keyPress(KeyEvent.VK_ENTER); robot.keyRelease(KeyEvent.VK_ENTER);
         sleep(700);
+    }
+
+    /** Brings the main frame to the front and requests OS-level focus. */
+    private static void focusMain(JFrame main) throws Exception {
+        SwingUtilities.invokeAndWait(() -> { main.toFront(); main.requestFocus(); });
+        sleep(120);
+    }
+
+    /** Opens row, flushes EDT, waits longer for the details JDialog, and verifies it is a book-details dialog. */
+    private static JDialog openDetailsAndWait(JFrame main, int row) throws Exception {
+        dismissAllDialogs();
+        sleep(200);
+        openRow(main, row);
+        // Flush any pending EDT events so the dialog content is fully laid out
+        SwingUtilities.invokeAndWait(() -> {});
+        sleep(400);
+        JDialog d = waitForDialog(3000);
+        if (d == null) return null;
+        // Make sure it's the details dialog, not an error dialog
+        if (looksLikeError(d)) {
+            log("  [openDetailsAndWait] got error dialog: \"" + d.getTitle() + "\" — dismissing and retrying");
+            dismissAllDialogs();
+            sleep(300);
+            openRow(main, row);
+            SwingUtilities.invokeAndWait(() -> {});
+            sleep(400);
+            d = waitForDialog(3000);
+        }
+        return d;
     }
 
     private static void goAllBooks(JFrame main) {
@@ -1013,7 +1052,8 @@ public class StressTest {
         if (d == null) return false;
         String t = norm(d.getTitle());
         return t.contains("error") || t.contains("avis") || t.contains("warn")
-            || t.contains("invalid") || t.contains("validac") || t.contains("incorrecte")
+            || t.contains("invalid") || t.contains("valid") || t.contains("validac")
+            || t.contains("incorrecte") || t.contains("camp")
             || t.isBlank(); // JOptionPane often has blank title
     }
 

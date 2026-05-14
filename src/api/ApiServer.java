@@ -1,5 +1,7 @@
 package api;
 
+import interficie.BibliotecaWriter;
+
 import java.util.Map;
 
 public class ApiServer {
@@ -7,7 +9,7 @@ public class ApiServer {
     private final HttpRouter router;
     private final int port;
 
-    public ApiServer(int port) throws Exception {
+    public ApiServer(int port, BibliotecaWriter cd) throws Exception {
         this.port = port;
         this.router = new HttpRouter();
 
@@ -17,14 +19,14 @@ public class ApiServer {
             ctx.status(400).json(Map.of("error", msg));
         });
 
-        new LlibreRouter(router);
-        new LlistaRouter(router);
-        new TagRouter(router);
-        new LoanRouter(router);
-        new BackupRouter(router);
+        new LlibreRouter(router, cd);
+        new LlistaRouter(router, cd);
+        new TagRouter(router, cd);
+        new LoanRouter(router, cd);
+        new BackupRouter(router, cd);
         new ConfigRouter(router);
-        new MetaRouter(router);
-        new ImportExportRouter(router);
+        new MetaRouter(router, cd);
+        new ImportExportRouter(router, cd);
     }
 
     public void start() throws Exception {

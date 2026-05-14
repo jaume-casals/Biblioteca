@@ -2,8 +2,8 @@ package presentacio.detalles.control;
 
 import java.io.File;
 
-import domini.ControladorDomini;
 import domini.Llibre;
+import interficie.BibliotecaWriter;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
@@ -16,7 +16,7 @@ import presentacio.detalles.vista.TagsDelLlibreDialog;
 public class DetallesLlibrePanelControl {
 
 	private DetallesLlibrePanel vista;
-	private ControladorDomini cLlibres;
+	private BibliotecaWriter cLlibres;
 	private EnActualizarBBDD enActualizarBBDD;
 	private byte[] pendingBlob;
 	private javax.swing.SwingWorker<byte[], Void> imatgeWorker;
@@ -24,10 +24,14 @@ public class DetallesLlibrePanelControl {
 	private static final int IMG_W = 200;
 
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD) {
+		this(l, enActualizarBBDD, null);
+	}
+
+	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
 		this.vista = new DetallesLlibrePanel();
 
 		this.enActualizarBBDD = enActualizarBBDD;
-		cLlibres = ControladorDomini.getInstance();
+		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
 
 		pendingBlob = l.getImatgeBlob();
 		if (pendingBlob != null) {
@@ -43,9 +47,9 @@ public class DetallesLlibrePanelControl {
 		this.vista.getBtnEditar().addActionListener(e -> editar(l));
 		this.vista.getBtnEliminar().addActionListener(e -> eliminar(l));
 		this.vista.getBtnGestioLlistes().addActionListener(e ->
-			new LlistesDelLlibreDialog(this.vista, l).setVisible(true));
+			new LlistesDelLlibreDialog(this.vista, l, cLlibres).setVisible(true));
 		this.vista.getBtnGestioTags().addActionListener(e ->
-			new TagsDelLlibreDialog(this.vista, l).setVisible(true));
+			new TagsDelLlibreDialog(this.vista, l, cLlibres).setVisible(true));
 		this.vista.getBtnHistorialPrestecs().addActionListener(e -> mostrarHistorialPrestecs(l));
 		this.vista.getBtnImprimir().addActionListener(e -> imprimirFitxa(l));
 
@@ -267,7 +271,7 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void mostrarHistorialPrestecs(Llibre l) {
-		java.util.List<Object[]> loans = ControladorDomini.getInstance().getLoansForIsbn(l.getISBN());
+		java.util.List<Object[]> loans = cLlibres.getLoansForIsbn(l.getISBN());
 		if (loans.isEmpty()) {
 			javax.swing.JOptionPane.showMessageDialog(this.vista,
 				"No hi ha préstecs registrats per a aquest llibre.",

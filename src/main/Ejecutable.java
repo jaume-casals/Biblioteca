@@ -2,11 +2,13 @@ package main;
 
 import api.ApiServer;
 import domini.ControladorDomini;
+import interficie.BibliotecaWriter;
 import herramienta.Config;
 import herramienta.UITheme;
 import presentacio.MainFrameControl;
 import presentacio.MainFramePanel;
 import presentacio.ModeSelectorDialog;
+import presentacio.SplashScreen;
 
 import java.awt.Color;
 import java.awt.Desktop;
@@ -42,7 +44,8 @@ public class Ejecutable {
 
     private static void startWeb() throws Exception {
         int port = 7070;
-        ApiServer server = new ApiServer(port);
+        BibliotecaWriter cd = ControladorDomini.getInstance();
+        ApiServer server = new ApiServer(port, cd);
         server.start();
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
         System.out.println("Biblioteca running at http://localhost:" + port);
@@ -68,40 +71,23 @@ public class Ejecutable {
                 UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
                 UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
 
-                // Splash with indeterminate progress bar
-                javax.swing.JDialog splash = new javax.swing.JDialog();
-                splash.setUndecorated(true);
-                splash.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
-                javax.swing.JPanel sp = new javax.swing.JPanel(new java.awt.BorderLayout(12, 12));
-                sp.setBackground(UITheme.BG_PANEL);
-                sp.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                    javax.swing.BorderFactory.createLineBorder(UITheme.ACCENT, 2),
-                    javax.swing.BorderFactory.createEmptyBorder(20, 30, 20, 30)));
-                javax.swing.JLabel lbl = new javax.swing.JLabel("Carregant biblioteca...", javax.swing.SwingConstants.CENTER);
-                lbl.setFont(UITheme.FONT_TITLE);
-                lbl.setForeground(UITheme.ACCENT);
-                javax.swing.JProgressBar bar = new javax.swing.JProgressBar();
-                bar.setIndeterminate(true);
-                sp.add(lbl, java.awt.BorderLayout.CENTER);
-                sp.add(bar, java.awt.BorderLayout.SOUTH);
-                splash.setContentPane(sp);
-                splash.pack();
-                splash.setSize(360, 100);
-                splash.setLocationRelativeTo(null);
-                splash.setVisible(true);
+                SplashScreen splash = new SplashScreen();
+                splash.show();
 
                 // Load DB in background, then open main window
                 Thread loader = new Thread(() -> {
+                    final BibliotecaWriter[] cdBox = {null};
                     try {
-                        ControladorDomini.getInstance();
+                        cdBox[0] = ControladorDomini.getInstance();
                     } catch (Exception e) {
                         e.printStackTrace();
+                        return;
                     }
                     EventQueue.invokeLater(() -> {
-                        splash.dispose();
+                        splash.hide();
                         try {
                             MainFramePanel vista = new MainFramePanel();
-                            MainFrameControl.getInstance(vista).setVisible(true);
+                            MainFrameControl.getInstance(vista, cdBox[0]).setVisible(true);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

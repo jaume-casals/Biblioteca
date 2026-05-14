@@ -13,8 +13,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
-import domini.ControladorDomini;
 import domini.Llista;
+import interficie.BibliotecaWriter;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
@@ -24,10 +24,16 @@ public class GestioLlistesDialog extends JDialog {
     private final MostrarBibliotecaControl mainControl;
     private final DefaultListModel<Llista> listModel = new DefaultListModel<>();
     private final JList<Llista> jList = new JList<>(listModel);
+    private final BibliotecaWriter cd;
 
     public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl) {
+        this(owner, mainControl, null);
+    }
+
+    public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl, BibliotecaWriter cd) {
         super(owner, I18n.t("dlg_gestio_llistes_title"), ModalityType.APPLICATION_MODAL);
         this.mainControl = mainControl;
+        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
         setSize(340, 400);
         setLocationRelativeTo(owner);
         setResizable(false);
@@ -53,9 +59,14 @@ public class GestioLlistesDialog extends JDialog {
         UITheme.styleAccentButton(btnAfegir);
         btnAfegir.addActionListener(e -> {
             String nom = txtNom.getText().trim();
-            if (nom.isEmpty()) return;
+            if (nom.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    I18n.t("err_nom_llista_buit"), I18n.t("dlg_validacio_title"),
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             try {
-                ControladorDomini.getInstance().addLlista(nom);
+                cd.addLlista(nom);
                 txtNom.setText("");
                 reload();
                 mainControl.refreshComboLlistes();
@@ -75,7 +86,7 @@ public class GestioLlistesDialog extends JDialog {
                 I18n.t("dlg_confirm_delete_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (confirm != JOptionPane.YES_OPTION) return;
             try {
-                ControladorDomini.getInstance().deleteLlista(sel);
+                cd.deleteLlista(sel);
                 reload();
                 mainControl.refreshComboLlistes();
             } catch (Exception ex) {
@@ -95,7 +106,7 @@ public class GestioLlistesDialog extends JDialog {
             if (chosen == null) return;
             String hex = String.format("#%02X%02X%02X", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
             try {
-                ControladorDomini.getInstance().setLlistaColor(sel.getId(), hex);
+                cd.setLlistaColor(sel.getId(), hex);
                 reload();
                 mainControl.refreshComboLlistes();
             } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
@@ -108,7 +119,7 @@ public class GestioLlistesDialog extends JDialog {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;
             try {
-                ControladorDomini.getInstance().moveLlistaUp(sel.getId());
+                cd.moveLlistaUp(sel.getId());
                 reload();
                 mainControl.refreshComboLlistes();
                 for (int i = 0; i < listModel.size(); i++)
@@ -123,7 +134,7 @@ public class GestioLlistesDialog extends JDialog {
             Llista sel = jList.getSelectedValue();
             if (sel == null) return;
             try {
-                ControladorDomini.getInstance().moveLlistaDown(sel.getId());
+                cd.moveLlistaDown(sel.getId());
                 reload();
                 mainControl.refreshComboLlistes();
                 for (int i = 0; i < listModel.size(); i++)
@@ -152,7 +163,7 @@ public class GestioLlistesDialog extends JDialog {
 
     private void reload() {
         listModel.clear();
-        for (Llista l : ControladorDomini.getInstance().getAllLlistes()) listModel.addElement(l);
+        for (Llista l : cd.getAllLlistes()) listModel.addElement(l);
         jList.setCellRenderer(new javax.swing.DefaultListCellRenderer() {
             @Override
             public java.awt.Component getListCellRendererComponent(

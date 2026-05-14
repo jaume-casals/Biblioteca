@@ -7,8 +7,9 @@ import javax.swing.JComponent;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 
-import domini.ControladorDomini;
 import domini.Llibre;
+import domini.LlibreFilter;
+import interficie.BibliotecaWriter;
 import herramienta.Config;
 import herramienta.DialogoError;
 import herramienta.I18n;
@@ -18,14 +19,14 @@ import presentacio.detalles.vista.GuardarLlibresDialogo;
 
 public class MainFrameControl implements EnActualizarBBDD {
 
-	private ControladorDomini cLlibres;
+	private BibliotecaWriter cLlibres;
 	private MostrarBibliotecaControl mostrarControl;
 	private MainFramePanel vista;
 	private static MainFrameControl instance;
 
-	private MainFrameControl(MainFramePanel vista) {
+	private MainFrameControl(MainFramePanel vista, BibliotecaWriter cd) {
 		this.vista = vista;
-		cLlibres = ControladorDomini.getInstance();
+		cLlibres = cd;
 
 		int ctrl = java.awt.event.InputEvent.CTRL_DOWN_MASK;
 		javax.swing.InputMap  im = this.vista.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
@@ -117,7 +118,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 				});
 
 		mostrarControl = new MostrarBibliotecaControl(
-				this.vista.getMostrarBibliotecaPanel(), cLlibres.getAllLlibres(), this);
+				this.vista.getMostrarBibliotecaPanel(), cLlibres.getAllLlibres(), this, cLlibres);
 
 		// Track normal (non-maximized) bounds so we can save them on close
 		final java.awt.Rectangle[] normalBounds = {
@@ -146,8 +147,13 @@ public class MainFrameControl implements EnActualizarBBDD {
 		});
 	}
 
+	public static MainFrameControl getInstance(MainFramePanel vista, BibliotecaWriter cd) {
+		if (instance == null && vista != null) instance = new MainFrameControl(vista, cd);
+		return instance;
+	}
+
 	public static MainFrameControl getInstance(MainFramePanel vista) {
-		if (instance == null && vista != null) instance = new MainFrameControl(vista);
+		if (instance == null && vista != null) throw new IllegalStateException("MainFrameControl not yet initialized — use getInstance(vista, cd)");
 		return instance;
 	}
 
@@ -156,43 +162,21 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	private void obrirNouLlibreDialeg() {
-		GuardarLlibresDialogoControl ctrl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo(), this);
+		GuardarLlibresDialogoControl ctrl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo(), this, cLlibres);
 		ctrl.getVista().setLocationRelativeTo(this.vista);
 		ctrl.getVista().setVisible(true);
 	}
 
-	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit) {
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, null);
-	}
-
-	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId) {
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId);
-	}
-
-	protected ArrayList<Llibre> aplicarFiltres(String nomAutor, String nomLlibre, Long ISBN,
-			Integer iniciAny, Integer fiAny,
-			Double valoracioMin, Double valoracioMax,
-			Double preuMin, Double preuMax, Boolean llegit, Integer tagId,
-			String editorial, String serie, String format, String idioma) {
-		return cLlibres.aplicarFiltres(nomAutor, nomLlibre, ISBN, iniciAny, fiAny,
-			valoracioMin, valoracioMax, preuMin, preuMax, llegit, tagId, editorial, serie, format, idioma);
+	protected ArrayList<Llibre> aplicarFiltres(LlibreFilter f) {
+		return cLlibres.aplicarFiltres(f);
 	}
 
 	protected Llibre getLlibreIsbn(long ISBN) {
 		try {
 			return cLlibres.getLlibre(ISBN);
 		} catch (Exception e) {
-			new DialogoError(e).showErrorMessage();
+			return null;
 		}
-		return null;
 	}
 
 	public void setVisible(boolean b) {
@@ -205,7 +189,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 	private void mostrarAlertes() {
 		// Overdue loan alert: retornat=false and data_prestec > 30 days ago
 		try {
-			java.util.List<Object[]> loans = ControladorDomini.getInstance().getAllOverdueLoans(30);
+			java.util.List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
 			if (!loans.isEmpty()) {
 				StringBuilder sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
 				for (Object[] row : loans) {
@@ -220,7 +204,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		try {
 			int goal = herramienta.Config.getReadingGoal();
 			if (goal > 0) {
-				java.util.ArrayList<domini.Llibre> all = ControladorDomini.getInstance().getAllLlibres();
+				java.util.ArrayList<domini.Llibre> all = cLlibres.getAllLlibres();
 				int currentYear = java.time.LocalDate.now().getYear();
 				int dayOfYear = java.time.LocalDate.now().getDayOfYear();
 				long readThisYear = all.stream()

@@ -237,6 +237,8 @@ public class I18n {
         T("dlg_confirm_delete_one", "Eliminar \"{0}\"?\\nAquesta acció no es pot desfer.", "¿Eliminar \"{0}\"?\\nEsta acción no se puede deshacer.", "Delete \"{0}\"?\\nThis action cannot be undone.");
         T("dlg_confirm_delete_n", "Eliminar {0} llibres seleccionats?\\nAquesta acció no es pot desfer.", "¿Eliminar {0} libros seleccionados?\\nEsta acción no se puede deshacer.", "Delete {0} selected books?\\nThis action cannot be undone.");
         T("dlg_confirm_delete_title", "Confirmar eliminació", "Confirmar eliminación", "Confirm deletion");
+        T("dlg_validacio_title", "Camp no vàlid", "Campo no válido", "Invalid field");
+        T("err_nom_llista_buit", "El nom de la llista no pot estar buit.", "El nombre de la lista no puede estar vacío.", "List name cannot be empty.");
         T("dlg_backup_done", "Backup guardat a:\\n{0}", "Backup guardado en:\\n{0}", "Backup saved to:\\n{0}");
         T("dlg_backup_done_title", "Backup complet", "Backup completo", "Backup complete");
         T("dlg_confirm_restore_msg", "Restaurar la base de dades des d'un fitxer SQL?\\nATENCIÓ: Tots els llibres actuals seran eliminats i substituïts.", "¿Restaurar la base de datos desde un fichero SQL?\\nATENCIÓN: Todos los libros actuales serán eliminados y sustituidos.", "Restore the database from a SQL file?\\nWARNING: All current books will be deleted and replaced.");
