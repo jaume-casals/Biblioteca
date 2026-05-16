@@ -86,6 +86,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		btn.setEnabled(false);
 		btn.setText(I18n.t("btn_searching"));
 		vista.getProgressBar().setVisible(true);
+		if (!isbn.isEmpty()) vista.getTextISBN().setEditable(false);
 
 		Thread t = new Thread(() -> {
 			Map<String, String> meta;
@@ -114,6 +115,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 				btn.setText(I18n.t("btn_cerca_internet"));
 				btn.setBackground(UITheme.GREEN);
 				vista.getProgressBar().setVisible(false);
+				vista.getTextISBN().setEditable(true);
 
 				if (meta.containsKey("error")) {
 					JOptionPane.showMessageDialog(vista,
@@ -197,6 +199,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			l.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
 			l.setDesitjat(vista.getChckDesitjat().isSelected());
 			l.setImatgeBlob(selectedBlob);
+			herramienta.LlibreValidator.validateExtrasAll(l.getEditorial(), l.getSerie(), l.getIdioma(), l.getFormat(), l.getPaisOrigen(), l.getEstat());
 			cLlibres.addLlibre(l);
 			vista.dispose();
 			if (callback != null) callback.actualitzarLlibre(l, true);

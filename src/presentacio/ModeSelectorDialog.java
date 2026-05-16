@@ -137,6 +137,13 @@ public class ModeSelectorDialog extends JDialog {
         return btn;
     }
 
+    /** Display the dialog and return the chosen mode. defaultMode: "swing" or "web" to pre-select, or null. */
+    public static Mode prompt(String defaultMode) {
+        if ("swing".equals(defaultMode)) return Mode.SWING;
+        if ("web".equals(defaultMode))   return Mode.WEB;
+        return prompt();
+    }
+
     /** Display the dialog and return the chosen mode. */
     public static Mode prompt() {
         if (EventQueue.isDispatchThread()) {

@@ -26,11 +26,12 @@ public class GaleriaCobertesPanel extends JPanel {
     private static final int   SDY    = 5;
     private static final int   GAP    = 14;
 
-    // Cached Color constants — never allocate in paint path
-    private static final Color SHADOW_A   = new Color(0, 0, 0, 14);
-    private static final Color SHADOW_B   = new Color(0, 0, 0, 6);
-    private static final Color SHADOW_HA  = new Color(0, 0, 0, 30);
-    private static final Color SHADOW_HB  = new Color(0, 0, 0, 14);
+    // Cached Color constants — never allocate in paint path.
+    // A = outer shadow, B = inner shadow; H prefix = hover (stronger alpha).
+    private static final Color SHADOW_A   = new Color(0, 0, 0, 14);  // outer, normal
+    private static final Color SHADOW_B   = new Color(0, 0, 0, 6);   // inner, normal
+    private static final Color SHADOW_HA  = new Color(0, 0, 0, 30);  // outer, hover
+    private static final Color SHADOW_HB  = new Color(0, 0, 0, 14);  // inner, hover
     private static final Color DOT_READ   = new Color(0x2D9E6B);
     private static final Color DOT_UNREAD = new Color(0xBBBBBB);
     private static final Color DOT_RIM    = new Color(255, 255, 255, 200);
@@ -293,7 +294,7 @@ public class GaleriaCobertesPanel extends JPanel {
                 // Cover (clipped to top rounded section)
                 Shape oldClip = g2.getClip();
                 g2.clip(new RoundRectangle2D.Float(0, 0, capW, capH + ARC, ARC, ARC));
-                paintCover(g2, imgRef[0], hue, l.getNom(), l.getAutor(), capW, capH);
+                paintCover(g2, imgRef[0], hue, l.getDisplayNom(herramienta.Config.getLang()), l.getAutor(), capW, capH);
                 g2.setClip(oldClip);
 
                 // Read/unread dot
@@ -467,7 +468,7 @@ public class GaleriaCobertesPanel extends JPanel {
         f.setBorder(BorderFactory.createEmptyBorder(8, 10, 6, 10));
 
         JLabel lblT = new JLabel("<html><body style='width:" + (cardW - 22) + "px; margin:0; padding:0;'><b>"
-            + htmlEsc(l.getNom() != null ? l.getNom() : "") + "</b></body></html>");
+            + htmlEsc(l.getDisplayNom(herramienta.Config.getLang())) + "</b></body></html>");
         lblT.setFont(UITheme.FONT_SMALL.deriveFont(Font.BOLD));
         lblT.setForeground(UITheme.TEXT_DARK);
         lblT.setAlignmentX(0f);
@@ -508,7 +509,7 @@ public class GaleriaCobertesPanel extends JPanel {
         for (int i = 0; i < 5; i++) {
             boolean on = stars >= i + 0.5;
             sb.append("<font color='")
-              .append(on ? "#c8920a" : (UITheme.isDark ? "#555555" : "#dddddd"))
+              .append(on ? "#c8920a" : (UITheme.isDark() ? "#555555" : "#dddddd"))
               .append("'>&#9733;</font>");
         }
         sb.append("</html>");
@@ -523,7 +524,7 @@ public class GaleriaCobertesPanel extends JPanel {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(UITheme.isDark ? new Color(0x555555) : new Color(0xEEEEEE));
+                g2.setColor(UITheme.isDark() ? new Color(0x555555) : new Color(0xEEEEEE));
                 g2.fillRoundRect(0, 0, getWidth(), 3, 2, 2);
                 if (p > 0) {
                     g2.setColor(UITheme.ACCENT);

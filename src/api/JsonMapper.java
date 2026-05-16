@@ -43,6 +43,9 @@ public class JsonMapper {
         m.put("format", l.getFormat());
         m.put("desitjat", l.getDesitjat());
         m.put("paisOrigen", l.getPaisOrigen());
+        m.put("nomCa", l.getNomCa());
+        m.put("nomEs", l.getNomEs());
+        m.put("nomEn", l.getNomEn());
         // ImatgeBlob excluded — served via /api/books/:isbn/image
         return m;
     }
@@ -53,47 +56,39 @@ public class JsonMapper {
         return out;
     }
 
-    public static Map<String, Object> llistaToMap(Llista l) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", l.getId());
-        m.put("nom", l.getNom());
-        m.put("ordre", l.getOrdre());
-        m.put("color", l.getColor());
-        return m;
-    }
+    public static Map<String, Object> llistaToMap(Llista l) { return l.toMap(); }
 
-    public static Map<String, Object> tagToMap(Tag t) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", t.getId());
-        m.put("nom", t.getNom());
-        return m;
-    }
+    public static Map<String, Object> tagToMap(Tag t) { return t.toMap(); }
 
     public static Llibre jsonToLlibre(JsonObject j) {
         long isbn = j.has("isbn") ? j.get("isbn").getAsLong() : 0L;
-        String nom = j.has("nom") ? j.get("nom").getAsString() : "";
-        String autor = j.has("autor") ? j.get("autor").getAsString() : "";
-        int any = j.has("any") && !j.get("any").isJsonNull() ? j.get("any").getAsInt() : 0;
-        String descripcio = j.has("descripcio") && !j.get("descripcio").isJsonNull() ? j.get("descripcio").getAsString() : "";
-        double valoracio = j.has("valoracio") && !j.get("valoracio").isJsonNull() ? j.get("valoracio").getAsDouble() : 0.0;
-        double preu = j.has("preu") && !j.get("preu").isJsonNull() ? j.get("preu").getAsDouble() : 0.0;
-        boolean llegit = j.has("llegit") && !j.get("llegit").isJsonNull() && j.get("llegit").getAsBoolean();
-        String imatge = j.has("imatge") && !j.get("imatge").isJsonNull() ? j.get("imatge").getAsString() : "";
+        Llibre l = new Llibre(
+            isbn,
+            optStr(j, "nom", ""),
+            optStr(j, "autor", ""),
+            optInt(j, "any", 0),
+            optStr(j, "descripcio", ""),
+            optDbl(j, "valoracio", 0.0),
+            optDbl(j, "preu", 0.0),
+            has(j, "llegit") && j.get("llegit").getAsBoolean(),
+            optStr(j, "imatge", "")
+        );
 
-        Llibre l = new Llibre(isbn, nom, autor, any, descripcio, valoracio, preu, llegit, imatge);
-
-        if (j.has("notes") && !j.get("notes").isJsonNull()) l.setNotes(j.get("notes").getAsString());
-        if (j.has("pagines") && !j.get("pagines").isJsonNull()) l.setPagines(j.get("pagines").getAsInt());
-        if (j.has("paginesLlegides") && !j.get("paginesLlegides").isJsonNull()) l.setPaginesLlegides(j.get("paginesLlegides").getAsInt());
-        if (j.has("editorial") && !j.get("editorial").isJsonNull()) l.setEditorial(j.get("editorial").getAsString());
-        if (j.has("serie") && !j.get("serie").isJsonNull()) l.setSerie(j.get("serie").getAsString());
-        if (j.has("volum") && !j.get("volum").isJsonNull()) l.setVolum(j.get("volum").getAsInt());
-        if (j.has("dataCompra") && !j.get("dataCompra").isJsonNull()) l.setDataCompra(j.get("dataCompra").getAsString());
-        if (j.has("dataLectura") && !j.get("dataLectura").isJsonNull()) l.setDataLectura(j.get("dataLectura").getAsString());
-        if (j.has("idioma") && !j.get("idioma").isJsonNull()) l.setIdioma(j.get("idioma").getAsString());
-        if (j.has("format") && !j.get("format").isJsonNull()) l.setFormat(j.get("format").getAsString());
-        if (j.has("desitjat") && !j.get("desitjat").isJsonNull()) l.setDesitjat(j.get("desitjat").getAsBoolean());
-        if (j.has("paisOrigen") && !j.get("paisOrigen").isJsonNull()) l.setPaisOrigen(j.get("paisOrigen").getAsString());
+        String notes = optStr(j, "notes", null); if (notes != null) l.setNotes(notes);
+        int pagines = optInt(j, "pagines", -1); if (pagines >= 0) l.setPagines(pagines);
+        int pagLleg = optInt(j, "paginesLlegides", -1); if (pagLleg >= 0) l.setPaginesLlegides(pagLleg);
+        String ed = optStr(j, "editorial", null); if (ed != null) l.setEditorial(ed);
+        String serie = optStr(j, "serie", null); if (serie != null) l.setSerie(serie);
+        int volum = optInt(j, "volum", -1); if (volum >= 0) l.setVolum(volum);
+        l.setDataCompra(optStr(j, "dataCompra", null));
+        l.setDataLectura(optStr(j, "dataLectura", null));
+        l.setIdioma(optStr(j, "idioma", null));
+        l.setFormat(optStr(j, "format", null));
+        if (has(j, "desitjat")) l.setDesitjat(j.get("desitjat").getAsBoolean());
+        l.setPaisOrigen(optStr(j, "paisOrigen", null));
+        l.setNomCa(optStr(j, "nomCa", null));
+        l.setNomEs(optStr(j, "nomEs", null));
+        l.setNomEn(optStr(j, "nomEn", null));
 
         if (j.has("autors") && j.get("autors").isJsonArray()) {
             List<String> autors = new ArrayList<>();
@@ -102,5 +97,21 @@ public class JsonMapper {
         }
 
         return l;
+    }
+
+    private static boolean has(JsonObject j, String key) {
+        return j.has(key) && !j.get(key).isJsonNull();
+    }
+
+    private static String optStr(JsonObject j, String key, String def) {
+        return has(j, key) ? j.get(key).getAsString() : def;
+    }
+
+    private static int optInt(JsonObject j, String key, int def) {
+        return has(j, key) ? j.get(key).getAsInt() : def;
+    }
+
+    private static double optDbl(JsonObject j, String key, double def) {
+        return has(j, key) ? j.get(key).getAsDouble() : def;
     }
 }

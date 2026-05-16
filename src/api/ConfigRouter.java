@@ -1,10 +1,13 @@
 package api;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import herramienta.Config;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 
 public class ConfigRouter {
 
@@ -15,10 +18,12 @@ public class ConfigRouter {
 
     private void getConfig(HttpCtx ctx) {
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("theme",           Config.getTheme().key());
         m.put("darkMode",        Config.isDarkMode());
         m.put("dbType",          Config.getDbType());
         m.put("dbHost",          Config.getDbHost());
         m.put("dbUser",          Config.getDbUser());
+        m.put("dbPassword",      Config.getDbPassword().isEmpty() ? "" : "***");
         m.put("fontSize",        Config.getFontSize());
         m.put("currencySymbol",  Config.getCurrencySymbol());
         m.put("defaultValoracio",Config.getDefaultValoracio());
@@ -29,20 +34,32 @@ public class ConfigRouter {
         ctx.json(m);
     }
 
+    private static final Map<String, Consumer<JsonElement>> CONFIG_SETTERS = new LinkedHashMap<>();
+    static {
+        CONFIG_SETTERS.put("theme",            e -> Config.setTheme(herramienta.UITheme.Theme.fromKey(e.getAsString())));
+        CONFIG_SETTERS.put("darkMode",         e -> Config.setDarkMode(e.getAsBoolean()));
+        CONFIG_SETTERS.put("dbType",           e -> Config.setDbType(e.getAsString()));
+        CONFIG_SETTERS.put("dbHost",           e -> Config.setDbHost(e.getAsString()));
+        CONFIG_SETTERS.put("dbUser",           e -> Config.setDbUser(e.getAsString()));
+        CONFIG_SETTERS.put("dbPassword",       e -> Config.setDbPassword(e.getAsString()));
+        CONFIG_SETTERS.put("fontSize",         e -> {
+            String v = e.getAsString();
+            if (!Set.of("small", "medium", "large", "xlarge").contains(v))
+                throw new IllegalArgumentException("Invalid fontSize: " + v);
+            Config.setFontSize(v);
+        });
+        CONFIG_SETTERS.put("currencySymbol",   e -> Config.setCurrencySymbol(e.getAsString()));
+        CONFIG_SETTERS.put("defaultValoracio", e -> Config.setDefaultValoracio(e.getAsDouble()));
+        CONFIG_SETTERS.put("readingGoal",      e -> Config.setReadingGoal(e.getAsInt()));
+        CONFIG_SETTERS.put("viewMode",         e -> Config.setViewMode(e.getAsString()));
+        CONFIG_SETTERS.put("galleryZoom",      e -> Config.setGalleryZoom(e.getAsInt()));
+        CONFIG_SETTERS.put("defaultImgDir",    e -> Config.setDefaultImgDir(e.getAsString()));
+    }
+
     private void setConfig(HttpCtx ctx) {
+        // Note: theme/font changes here do NOT trigger UI refresh — web mode has no Swing UI.
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        if (j.has("darkMode"))         Config.setDarkMode(j.get("darkMode").getAsBoolean());
-        if (j.has("dbType"))           Config.setDbType(j.get("dbType").getAsString());
-        if (j.has("dbHost"))           Config.setDbHost(j.get("dbHost").getAsString());
-        if (j.has("dbUser"))           Config.setDbUser(j.get("dbUser").getAsString());
-        if (j.has("dbPassword"))       Config.setDbPassword(j.get("dbPassword").getAsString());
-        if (j.has("fontSize"))         Config.setFontSize(j.get("fontSize").getAsString());
-        if (j.has("currencySymbol"))   Config.setCurrencySymbol(j.get("currencySymbol").getAsString());
-        if (j.has("defaultValoracio")) Config.setDefaultValoracio(j.get("defaultValoracio").getAsDouble());
-        if (j.has("readingGoal"))      Config.setReadingGoal(j.get("readingGoal").getAsInt());
-        if (j.has("viewMode"))         Config.setViewMode(j.get("viewMode").getAsString());
-        if (j.has("galleryZoom"))      Config.setGalleryZoom(j.get("galleryZoom").getAsInt());
-        if (j.has("defaultImgDir"))    Config.setDefaultImgDir(j.get("defaultImgDir").getAsString());
+        CONFIG_SETTERS.forEach((key, setter) -> { if (j.has(key)) setter.accept(j.get(key)); });
         ctx.json(Map.of("ok", true));
     }
 }

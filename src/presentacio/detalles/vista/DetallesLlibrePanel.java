@@ -59,6 +59,9 @@ public class DetallesLlibrePanel extends JDialog {
 	private JCheckBox  chckDesitjat;
 	private JTextField textPagines;
 	private JTextField textPaginesLlegides;
+	private JTextField textNomCa;
+	private JTextField textNomEs;
+	private JTextField textNomEn;
 	private JCheckBox  chckLlegit;
 	private JTextArea  textNotes;
 	private JButton    btnEditar;
@@ -174,6 +177,9 @@ public class DetallesLlibrePanel extends JDialog {
 		textPortada         = addFieldEntry(grid, I18n.t("col_cover"));
 		textPagines         = addFieldEntry(grid, I18n.t("field_pages"));
 		textPaginesLlegides = addFieldEntry(grid, I18n.t("field_pages_read"));
+		textNomCa           = addFieldEntry(grid, I18n.t("field_title_ca"));
+		textNomEs           = addFieldEntry(grid, I18n.t("field_title_es"));
+		textNomEn           = addFieldEntry(grid, I18n.t("field_title_en"));
 
 		// Notes: full-width panel pinned to SOUTH
 		JPanel notesRow = new JPanel(new BorderLayout(4, 0));
@@ -309,6 +315,9 @@ public class DetallesLlibrePanel extends JDialog {
 	public JCheckBox  getChckDesitjat()         { return chckDesitjat; }
 	public JTextField getTextPagines()          { return textPagines; }
 	public JTextField getTextPaginesLlegides()  { return textPaginesLlegides; }
+	public JTextField getTextNomCa()            { return textNomCa; }
+	public JTextField getTextNomEs()            { return textNomEs; }
+	public JTextField getTextNomEn()            { return textNomEn; }
 	public JCheckBox  getChckLlegit()           { return chckLlegit; }
 	public JTextArea  getTextNotes()            { return textNotes; }
 	public JButton    getBtnGestioLlistes()      { return btnGestioLlistes; }

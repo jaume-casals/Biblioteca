@@ -11,6 +11,8 @@ import java.util.concurrent.Executors;
 
 public class HttpRouter {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(HttpRouter.class.getName());
+
     @FunctionalInterface
     public interface Handler {
         void handle(HttpCtx ctx) throws Exception;
@@ -28,7 +30,7 @@ public class HttpRouter {
         }
 
         boolean matches(String method, String[] pathParts) {
-            if (!this.method.equalsIgnoreCase(method)) return false;
+            if (!this.method.equals(method)) return false;
             if (parts.length != pathParts.length) return false;
             for (int i = 0; i < parts.length; i++) {
                 if (!parts[i].startsWith("{") && !parts[i].equals(pathParts[i])) return false;
@@ -54,13 +56,14 @@ public class HttpRouter {
     public void get(String path, Handler h)    { routes.add(new Route("GET",    path, h)); }
     public void post(String path, Handler h)   { routes.add(new Route("POST",   path, h)); }
     public void put(String path, Handler h)    { routes.add(new Route("PUT",    path, h)); }
+    public void patch(String path, Handler h)  { routes.add(new Route("PATCH",  path, h)); }
     public void delete(String path, Handler h) { routes.add(new Route("DELETE", path, h)); }
 
     public void exception(Handler h) { this.exceptionHandler = h; }
 
     public void start(int port) throws IOException {
-        server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.setExecutor(Executors.newCachedThreadPool());
+        server = HttpServer.create(new InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), port), 0);
+        server.setExecutor(Executors.newFixedThreadPool(32));
         server.createContext("/", this::dispatch);
         server.start();
         System.out.println("Server started on http://localhost:" + port);
@@ -72,11 +75,13 @@ public class HttpRouter {
         String rawPath = ex.getRequestURI().getPath();
         String method  = ex.getRequestMethod();
 
-        // CORS preflight
+        // CORS preflight — allow only loopback origins
+        String origin = ex.getRequestHeaders().getFirst("Origin");
+        boolean allowedOrigin = origin != null && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
         if ("OPTIONS".equalsIgnoreCase(method)) {
             try {
-                ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-                ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+                if (allowedOrigin) ex.getResponseHeaders().set("Access-Control-Allow-Origin", origin);
+                ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
                 ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
                 ex.sendResponseHeaders(204, -1);
                 ex.close();
@@ -85,20 +90,21 @@ public class HttpRouter {
         }
 
         // Try API routes first
+        String upperMethod = method.toUpperCase(java.util.Locale.ROOT);
         String[] pathParts = rawPath.split("/", -1);
         for (Route route : routes) {
-            if (route.matches(method, pathParts)) {
+            if (route.matches(upperMethod, pathParts)) {
                 HttpCtx ctx = new HttpCtx(ex, route.extractParams(pathParts));
+                if (allowedOrigin) ctx.responseHeader("Access-Control-Allow-Origin", origin);
                 try {
                     route.handler.handle(ctx);
                     ctx.commit();
                 } catch (Exception e) {
-                    System.err.println("[dispatch ERROR] " + method + " " + rawPath + ": " + e);
-                    e.printStackTrace();
+                    LOG.warning("[dispatch] " + method + " " + rawPath + ": " + e);
                     try {
                         if (exceptionHandler != null) {
                             HttpCtx errCtx = new HttpCtx(ex, Collections.emptyMap());
-                            errCtx._setException(e);
+                            errCtx.setException(e);
                             errCtx.status(400);
                             exceptionHandler.handle(errCtx);
                             errCtx.commit();
@@ -112,7 +118,11 @@ public class HttpRouter {
             }
         }
 
-        // Static file fallback — serve from classpath /web/
+        // Static file fallback — serve from classpath /web/ (never catch /api/* 404s)
+        if (rawPath.startsWith("/api/")) {
+            try { ex.sendResponseHeaders(404, 0); ex.close(); } catch (IOException ignored) {}
+            return;
+        }
         try {
             serveStatic(ex, rawPath);
         } catch (IOException ignored) {}
@@ -138,14 +148,25 @@ public class HttpRouter {
         try (var os = ex.getResponseBody()) { os.write(data); }
     }
 
-    private String guessMime(String path) {
-        if (path.endsWith(".html")) return "text/html; charset=utf-8";
-        if (path.endsWith(".css"))  return "text/css; charset=utf-8";
-        if (path.endsWith(".js"))   return "application/javascript; charset=utf-8";
-        if (path.endsWith(".png"))  return "image/png";
-        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
-        if (path.endsWith(".svg"))  return "image/svg+xml";
-        if (path.endsWith(".ico"))  return "image/x-icon";
+    private static final Map<String, String> MIME_MAP = Map.of(
+        ".html", "text/html; charset=utf-8",
+        ".css",  "text/css; charset=utf-8",
+        ".js",   "application/javascript; charset=utf-8",
+        ".png",  "image/png",
+        ".jpg",  "image/jpeg",
+        ".jpeg", "image/jpeg",
+        ".svg",  "image/svg+xml",
+        ".ico",  "image/x-icon",
+        ".woff2","font/woff2"
+    );
+
+    private static String guessMime(String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot >= 0) {
+            String ext = path.substring(dot).toLowerCase(java.util.Locale.ROOT);
+            String mime = MIME_MAP.get(ext);
+            if (mime != null) return mime;
+        }
         return "application/octet-stream";
     }
 }

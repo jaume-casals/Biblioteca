@@ -12,7 +12,7 @@ public class TagDao {
     private final Connection con;
 
     private static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
-        Arrays.asList("editorial", "serie", "idioma", "pais_origen"));
+        Arrays.asList("editorial", "serie", "idioma", "pais_origen", "format", "llengua_original"));
 
     TagDao(Connection con) { this.con = con; }
 
@@ -48,6 +48,14 @@ public class TagDao {
         }
     }
 
+    public synchronized void rename(int id, String newNom) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement("UPDATE tag SET nom = ? WHERE id = ?")) {
+            ps.setString(1, newNom);
+            ps.setInt(2, id);
+            ps.execute();
+        }
+    }
+
     public synchronized ArrayList<Tag> getForLlibre(long isbn) {
         ArrayList<Tag> tags = new ArrayList<>();
         try {
@@ -66,7 +74,7 @@ public class TagDao {
 
     public synchronized void addToLlibre(long isbn, int tagId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO llibre_tag (isbn, tag_id) VALUES (?, ?)")) {
+                "INSERT IGNORE INTO llibre_tag (isbn, tag_id) VALUES (?, ?)")) {
             ps.setLong(1, isbn);
             ps.setInt(2, tagId);
             ps.execute();
@@ -98,14 +106,14 @@ public class TagDao {
         return isbns;
     }
 
-    public synchronized java.util.List<Object[]> getAllLlibreTag() {
-        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+    public synchronized java.util.List<domini.LlibreTagRow> getAllLlibreTag() {
+        java.util.List<domini.LlibreTagRow> rows = new java.util.ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery(
                     "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn")) {
                 while (rs.next())
-                    rows.add(new Object[]{ rs.getLong(1), rs.getInt(2) });
+                    rows.add(new domini.LlibreTagRow(rs.getLong(1), rs.getInt(2)));
             }
         } catch (SQLException e) {
             System.err.println("Error carregant les dades d'etiquetes: " + e.getMessage());
@@ -129,16 +137,4 @@ public class TagDao {
         return vals;
     }
 
-    public synchronized java.util.List<String> getDistinctAutorNames() {
-        java.util.List<String> vals = new java.util.ArrayList<>();
-        try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery("SELECT nom FROM autor ORDER BY nom")) {
-                while (rs.next()) vals.add(rs.getString(1));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error carregant autors: " + e.getMessage());
-        }
-        return vals;
-    }
 }

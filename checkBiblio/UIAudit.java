@@ -96,6 +96,7 @@ public class UIAudit {
             runInteractive(mainFrame);
         }
         closeReport();
+        System.exit(0);
     }
 
     // ── Interactive console ───────────────────────────────────────────────────
@@ -280,23 +281,22 @@ public class UIAudit {
         });
         sleep(200);
 
-        Rectangle cellRect = table.getCellRect(rowIndex, 0, true);
-        Point loc = table.getLocationOnScreen();
-        int cx = loc.x + cellRect.x + cellRect.width / 2;
-        int cy = loc.y + cellRect.y + cellRect.height / 2;
-        robot.mouseMove(cx, cy);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK); robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        sleep(80);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK); robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        // Fire the registered "obrirDetalls" action directly — avoids Robot entirely (works on Xvfb).
+        // Must use invokeLater (not invokeAndWait): modal dialogs block the EDT inside setVisible(true),
+        // so invokeAndWait would deadlock waiting for the EDT to finish.
+        SwingUtilities.invokeLater(() -> {
+            javax.swing.Action act = table.getActionMap().get("obrirDetalls");
+            if (act != null) {
+                act.actionPerformed(new java.awt.event.ActionEvent(
+                    table, java.awt.event.ActionEvent.ACTION_PERFORMED, "obrirDetalls"));
+            } else {
+                table.dispatchEvent(new KeyEvent(table, KeyEvent.KEY_PRESSED,
+                    System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED));
+            }
+        });
         sleep(800);
 
         JDialog dlg = getTopDialog();
-        if (dlg == null) {
-            // Fallback: press Enter on the selected row
-            robot.keyPress(KeyEvent.VK_ENTER); robot.keyRelease(KeyEvent.VK_ENTER);
-            sleep(600);
-            dlg = getTopDialog();
-        }
         if (dlg != null) {
             print("Opened dialog: \"" + dlg.getTitle() + "\"");
             log("OPEN-ROW " + rowIndex + " -> dialog \"" + dlg.getTitle() + "\"");

@@ -29,6 +29,9 @@ public class Llibre {
 	private int exemplars = 1;
 	private String llenguaOriginal = null;
 	private java.util.List<String> autors = new java.util.ArrayList<>();
+	private String nomCa = null;
+	private String nomEs = null;
+	private String nomEn = null;
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
@@ -59,6 +62,22 @@ public class Llibre {
 		this.nom = nom;
 	}
 
+	public String getNomCa() { return nomCa; }
+	public void setNomCa(String v) { this.nomCa = v; }
+	public String getNomEs() { return nomEs; }
+	public void setNomEs(String v) { this.nomEs = v; }
+	public String getNomEn() { return nomEn; }
+	public void setNomEn(String v) { this.nomEn = v; }
+
+	/** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
+	public String getDisplayNom(String lang) {
+		String alt = null;
+		if ("ca".equals(lang)) alt = nomCa;
+		else if ("es".equals(lang)) alt = nomEs;
+		else if ("en".equals(lang)) alt = nomEn;
+		return (alt != null && !alt.isBlank()) ? alt : nom;
+	}
+
 	public String getAutor() {
 		if (!autors.isEmpty()) return String.join(", ", autors);
 		return autor;
@@ -66,6 +85,7 @@ public class Llibre {
 
 	public void setAutor(String autor) {
 		this.autor = autor;
+		this.autors.clear();
 	}
 
 	public java.util.List<String> getAutors() { return autors; }
@@ -154,13 +174,35 @@ public class Llibre {
 	public String getEstat() { return estat; }
 	public void setEstat(String estat) { this.estat = (estat != null && !estat.trim().isEmpty()) ? estat.trim() : null; }
 	public int getExemplars() { return exemplars; }
-	public void setExemplars(int exemplars) { this.exemplars = Math.max(0, exemplars); }
+	public void setExemplars(int exemplars) { this.exemplars = Math.max(1, exemplars); }
 	public String getLlenguaOriginal() { return llenguaOriginal; }
 	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = (llengua != null && !llengua.trim().isEmpty()) ? llengua.trim() : null; }
 
+	public static Llibre copyOf(Llibre src) {
+		Llibre c = new Llibre(src.isbn, src.nom, src.autor, src.any, src.descripcio,
+			src.valoracio, src.preu, src.llegit, src.imatge);
+		c.notes = src.notes; c.pagines = src.pagines; c.paginesLlegides = src.paginesLlegides;
+		c.editorial = src.editorial; c.serie = src.serie; c.volum = src.volum;
+		c.dataCompra = src.dataCompra; c.dataLectura = src.dataLectura;
+		c.idioma = src.idioma; c.format = src.format; c.paisOrigen = src.paisOrigen;
+		c.desitjat = src.desitjat; c.estat = src.estat;
+		c.exemplars = src.exemplars; c.llenguaOriginal = src.llenguaOriginal;
+		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : null;
+		c.nomCa = src.nomCa; c.nomEs = src.nomEs; c.nomEn = src.nomEn;
+		c.hasBlob = src.hasBlob;
+		return c;
+	}
+
 	@Override
 	public String toString() {
-		return this.isbn + " " + this.nom + " " + this.autor + " " + this.any + " " + this.descripcio + " "
-				+ this.valoracio + " " + this.preu + " " + this.llegit + " " + this.imatge;
+		return "Llibre{isbn=" + isbn + ", nom=" + nom + ", autor=" + getAutor()
+			+ ", autors=" + autors + ", any=" + any
+			+ ", valoracio=" + valoracio + ", preu=" + preu + ", llegit=" + llegit
+			+ ", pagines=" + pagines + ", paginesLlegides=" + paginesLlegides
+			+ ", editorial=" + editorial + ", serie=" + serie + ", volum=" + volum
+			+ ", idioma=" + idioma + ", format=" + format + ", estat=" + estat
+			+ ", exemplars=" + exemplars + ", desitjat=" + desitjat
+			+ ", nomCa=" + nomCa + ", nomEs=" + nomEs + ", nomEn=" + nomEn
+			+ ", hasBlob=" + (imatgeBlob != null) + "}";
 	}
 }

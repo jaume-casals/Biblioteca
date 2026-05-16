@@ -1,7 +1,10 @@
 package herramienta;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -14,11 +17,9 @@ public class OpenLibraryClient {
 
 	private OpenLibraryClient() {}
 
-	/** Override base URL in tests to simulate network errors (e.g. "http://localhost:1"). */
+	// @VisibleForTesting
 	public static String testBaseUrl = null;
-	/** Override retry count in tests (default 3). Set to 1 to disable retries. */
 	public static int testMaxRetries = -1;
-	/** Override retry base delay ms in tests (default 500). Set to 0 for instant retries. */
 	public static long testRetryBaseMs = -1;
 
 	private static final int   MAX_RETRIES    = 3;
@@ -33,23 +34,34 @@ public class OpenLibraryClient {
 		Map<String, String> r = new HashMap<>();
 		try {
 			String json = fetchWithRetry(base() + "/api/books?bibkeys=ISBN:" + isbn + "&format=json&jscmd=data");
-			put(r, "title",      extractString(json, "title"));
-			put(r, "autor",      extractString(json, "name"));
-			put(r, "descripcio", extractString(json, "description"));
-			String date = extractString(json, "publish_date");
-			if (date != null) {
-				Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
-				if (m.find()) r.put("any", m.group(1));
+			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+			JsonObject book = null;
+			for (Map.Entry<String, JsonElement> e : root.entrySet()) {
+				if (e.getValue().isJsonObject()) { book = e.getValue().getAsJsonObject(); break; }
 			}
-			Matcher pages = Pattern.compile("\"number_of_pages\"\\s*:\\s*(\\d+)").matcher(json);
-			if (pages.find()) r.put("pagines", pages.group(1));
-			put(r, "editorial", extractArrayFirstObject(json, "publishers", "name"));
-			Matcher lang = Pattern.compile("\"/languages/([a-z]+)\"").matcher(json);
-			if (lang.find()) r.put("idioma", lang.group(1));
+			if (book != null) {
+				put(r, "title",      jsonStr(book, "title"));
+				put(r, "descripcio", jsonStrNested(book, "description", "value"));
+				if (r.get("descripcio") == null) put(r, "descripcio", jsonStr(book, "description"));
+				String date = jsonStr(book, "publish_date");
+				if (date != null) {
+					Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
+					if (m.find()) r.put("any", m.group(1));
+				}
+				if (book.has("number_of_pages")) r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
+				put(r, "editorial", jsonArrayFirstField(book, "publishers", "name"));
+				put(r, "autor",     jsonArrayFirstField(book, "authors",    "name"));
+				if (book.has("languages")) {
+					JsonArray langs = book.getAsJsonArray("languages");
+					if (langs.size() > 0) {
+						String key = jsonStr(langs.get(0).getAsJsonObject(), "key");
+						if (key != null) r.put("idioma", key.replaceAll(".*/", ""));
+					}
+				}
+			}
 		} catch (java.io.IOException e) {
 			r.put("error", e.getMessage());
 		}
-		// Google Books fallback if OpenLibrary returned nothing useful
 		if (!r.containsKey("title") && !r.containsKey("error")) {
 			try { mergeGoogleBooks(isbn, r); } catch (Exception ignored) {}
 		}
@@ -59,67 +71,59 @@ public class OpenLibraryClient {
 	private static void mergeGoogleBooks(String isbn, Map<String, String> r) throws java.io.IOException {
 		String encoded = java.net.URLEncoder.encode("isbn:" + isbn, StandardCharsets.UTF_8);
 		String json = fetch("https://www.googleapis.com/books/v1/volumes?q=" + encoded + "&maxResults=1");
-		Matcher total = Pattern.compile("\"totalItems\"\\s*:\\s*(\\d+)").matcher(json);
-		if (!total.find() || "0".equals(total.group(1))) return;
-		put(r, "title",      extractString(json, "title"));
-		// authors is an array in Google Books
-		Matcher auth = Pattern.compile("\"authors\"\\s*:\\s*\\[\\s*\"([^\"]+)\"").matcher(json);
-		if (auth.find()) r.put("autor", auth.group(1));
-		put(r, "editorial", extractString(json, "publisher"));
-		put(r, "descripcio", extractString(json, "description"));
-		Matcher pg = Pattern.compile("\"pageCount\"\\s*:\\s*(\\d+)").matcher(json);
-		if (pg.find()) r.put("pagines", pg.group(1));
-		Matcher yr = Pattern.compile("\"publishedDate\"\\s*:\\s*\"(\\d{4})").matcher(json);
-		if (yr.find()) r.put("any", yr.group(1));
-		put(r, "idioma", extractString(json, "language"));
-		// thumbnail URL stored so callers can download it
-		Matcher thumb = Pattern.compile("\"thumbnail\"\\s*:\\s*\"([^\"]+)\"").matcher(json);
-		if (thumb.find()) r.put("thumbnailUrl", thumb.group(1));
+		JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+		if (!root.has("totalItems") || root.get("totalItems").getAsInt() == 0) return;
+		if (!root.has("items")) return;
+		JsonObject info = root.getAsJsonArray("items").get(0).getAsJsonObject()
+			.getAsJsonObject("volumeInfo");
+		put(r, "title",      jsonStr(info, "title"));
+		put(r, "editorial",  jsonStr(info, "publisher"));
+		put(r, "descripcio", jsonStr(info, "description"));
+		put(r, "idioma",     jsonStr(info, "language"));
+		if (info.has("authors") && info.getAsJsonArray("authors").size() > 0)
+			r.put("autor", info.getAsJsonArray("authors").get(0).getAsString());
+		if (info.has("pageCount")) r.put("pagines", String.valueOf(info.get("pageCount").getAsInt()));
+		if (info.has("publishedDate")) {
+			Matcher yr = Pattern.compile("^(\\d{4})").matcher(info.get("publishedDate").getAsString());
+			if (yr.find()) r.put("any", yr.group(1));
+		}
+		if (info.has("imageLinks")) {
+			String thumb = jsonStr(info.getAsJsonObject("imageLinks"), "thumbnail");
+			put(r, "thumbnailUrl", thumb);
+		}
 	}
 
-	/**
-	 * Search by title (or author). Returns first result with keys:
-	 * title, autor, any, isbn. On network/HTTP error adds "error" key.
-	 */
+	/** Search by title. Returns first result with keys: title, autor, any, isbn. On network/HTTP error adds "error" key. */
 	public static Map<String, String> lookupByTitle(String title) {
-		Map<String, String> r = new HashMap<>();
-		try {
-			String encoded = java.net.URLEncoder.encode(title, StandardCharsets.UTF_8);
-			String json = fetchWithRetry(base() + "/search.json?title=" + encoded
-				+ "&limit=1&fields=title,author_name,first_publish_year,isbn");
-			put(r, "title", extractString(json, "title"));
-			put(r, "autor", extractArrayFirst(json, "author_name"));
-			put(r, "isbn",  extractArrayFirst(json, "isbn"));
-			Matcher m = Pattern.compile("\"first_publish_year\"\\s*:\\s*(\\d{4})").matcher(json);
-			if (m.find()) r.put("any", m.group(1));
-		} catch (Exception e) {
-			r.put("error", e.getMessage());
-		}
-		return r;
+		return lookupBySearch("title=" + encode(title));
 	}
 
 	/** Search by author name. Same return shape as lookupByTitle. On network/HTTP error adds "error" key. */
 	public static Map<String, String> lookupByAutor(String autor) {
+		return lookupBySearch("author=" + encode(autor));
+	}
+
+	private static Map<String, String> lookupBySearch(String param) {
 		Map<String, String> r = new HashMap<>();
 		try {
-			String encoded = java.net.URLEncoder.encode(autor, StandardCharsets.UTF_8);
-			String json = fetchWithRetry(base() + "/search.json?author=" + encoded
+			String json = fetchWithRetry(base() + "/search.json?" + param
 				+ "&limit=1&fields=title,author_name,first_publish_year,isbn");
-			put(r, "title", extractString(json, "title"));
-			put(r, "autor", extractArrayFirst(json, "author_name"));
-			put(r, "isbn",  extractArrayFirst(json, "isbn"));
-			Matcher m = Pattern.compile("\"first_publish_year\"\\s*:\\s*(\\d{4})").matcher(json);
-			if (m.find()) r.put("any", m.group(1));
+			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+			if (!root.has("docs") || root.getAsJsonArray("docs").isEmpty()) return r;
+			JsonObject doc = root.getAsJsonArray("docs").get(0).getAsJsonObject();
+			put(r, "title", jsonStr(doc, "title"));
+			if (doc.has("author_name") && doc.getAsJsonArray("author_name").size() > 0)
+				r.put("autor", doc.getAsJsonArray("author_name").get(0).getAsString());
+			if (doc.has("isbn") && doc.getAsJsonArray("isbn").size() > 0)
+				r.put("isbn", doc.getAsJsonArray("isbn").get(0).getAsString());
+			if (doc.has("first_publish_year"))
+				r.put("any", String.valueOf(doc.get("first_publish_year").getAsInt()));
 		} catch (Exception e) {
 			r.put("error", e.getMessage());
 		}
 		return r;
 	}
 
-	/**
-	 * Fetch cover image bytes for the given ISBN from OpenLibrary.
-	 * Returns null if no cover found or on network error.
-	 */
 	public static byte[] fetchCoverByISBN(String isbn) {
 		String coverBase = testBaseUrl != null ? testBaseUrl : "https://covers.openlibrary.org";
 		String url = coverBase + "/b/isbn/" + isbn + "-L.jpg";
@@ -129,15 +133,16 @@ public class OpenLibraryClient {
 			conn.setReadTimeout(10000);
 			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 			if (conn.getResponseCode() == 200) {
-				try (java.io.InputStream is = conn.getInputStream()) {
-					byte[] data = is.readAllBytes();
-					// OpenLibrary returns a 1×1 GIF for missing covers — treat as not found
-					if (data.length > 1000) return data;
+				String ct = conn.getContentType();
+				boolean isGif = ct != null && ct.startsWith("image/gif");
+				if (!isGif) {
+					try (java.io.InputStream is = conn.getInputStream()) {
+						return is.readAllBytes();
+					}
 				}
 			}
 		} catch (Exception ignored) {}
-		// Google Books fallback
-		if (testBaseUrl != null) return null; // skip remote fallback in tests
+		if (testBaseUrl != null) return null;
 		try {
 			String encoded = java.net.URLEncoder.encode("isbn:" + isbn, StandardCharsets.UTF_8);
 			String meta = fetch("https://www.googleapis.com/books/v1/volumes?q=" + encoded + "&maxResults=1");
@@ -172,38 +177,44 @@ public class OpenLibraryClient {
 	}
 
 	private static String fetch(String url) throws java.io.IOException {
-		HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+		HttpURLConnection conn;
+		try {
+			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+		} catch (IllegalArgumentException e) {
+			throw new java.io.IOException("Malformed URL: " + url, e);
+		}
 		conn.setConnectTimeout(6000);
 		conn.setReadTimeout(6000);
 		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 		int code = conn.getResponseCode();
 		if (code != 200) throw new java.io.IOException("HTTP " + code);
-		StringBuilder sb = new StringBuilder();
-		try (BufferedReader br = new BufferedReader(
-				new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-			String line;
-			while ((line = br.readLine()) != null) sb.append(line);
+		try (java.io.InputStream is = conn.getInputStream()) {
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
-		return sb.toString();
 	}
 
-	private static String extractString(String json, String key) {
-		Matcher m = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
-		if (m.find()) return m.group(1).replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
-		return null;
+	private static String jsonStr(JsonObject obj, String key) {
+		if (!obj.has(key) || obj.get(key).isJsonNull()) return null;
+		JsonElement e = obj.get(key);
+		return e.isJsonPrimitive() ? e.getAsString() : null;
 	}
 
-	private static String extractArrayFirst(String json, String key) {
-		Matcher m = Pattern.compile("\"" + key + "\"\\s*:\\s*\\[\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
-		if (m.find()) return m.group(1);
-		return null;
+	private static String jsonStrNested(JsonObject obj, String key, String subKey) {
+		if (!obj.has(key) || !obj.get(key).isJsonObject()) return null;
+		return jsonStr(obj.getAsJsonObject(key), subKey);
 	}
 
-	private static String extractArrayFirstObject(String json, String arrayKey, String fieldKey) {
-		Matcher arr = Pattern.compile("\"" + arrayKey + "\"\\s*:\\s*\\[\\s*\\{([^}]+)\\}").matcher(json);
-		if (!arr.find()) return null;
-		Matcher field = Pattern.compile("\"" + fieldKey + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(arr.group(1));
-		return field.find() ? field.group(1) : null;
+	private static String jsonArrayFirstField(JsonObject obj, String arrayKey, String fieldKey) {
+		if (!obj.has(arrayKey) || !obj.get(arrayKey).isJsonArray()) return null;
+		JsonArray arr = obj.getAsJsonArray(arrayKey);
+		if (arr.isEmpty()) return null;
+		JsonElement first = arr.get(0);
+		if (!first.isJsonObject()) return null;
+		return jsonStr(first.getAsJsonObject(), fieldKey);
+	}
+
+	private static String encode(String s) {
+		return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
 	}
 
 	private static void put(Map<String, String> map, String key, String val) {

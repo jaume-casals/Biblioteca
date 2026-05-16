@@ -31,7 +31,7 @@ public class LlistaDao {
 
     public synchronized int create(String nom) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO llista (nom) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
+                "INSERT INTO llista (nom, ordre) VALUES (?, (SELECT COALESCE(MAX(ordre),0)+1 FROM llista AS sub))", Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, nom);
             ps.execute();
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -45,6 +45,14 @@ public class LlistaDao {
         try (PreparedStatement ps = con.prepareStatement("DELETE FROM llista WHERE id = ?")) {
             ps.setInt(1, id);
             ps.execute();
+        }
+    }
+
+    public synchronized void updateNom(int id, String newNom) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement("UPDATE llista SET nom = ? WHERE id = ?")) {
+            ps.setString(1, newNom);
+            ps.setInt(2, id);
+            ps.executeUpdate();
         }
     }
 
@@ -63,13 +71,30 @@ public class LlistaDao {
         return 0;
     }
 
+    public synchronized java.util.Map<Integer, Integer> getAllCounts() {
+        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
+        try {
+            try (Statement s = con.createStatement();
+                 ResultSet rs = s.executeQuery(
+                    "SELECT llista_id, COUNT(*) FROM llibre_llista GROUP BY llista_id")) {
+                while (rs.next()) counts.put(rs.getInt(1), rs.getInt(2));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error comptant els llibres de les llistes: " + e.getMessage());
+        }
+        return counts;
+    }
+
     public synchronized ArrayList<Llibre> getLlibres(int llistaId) {
         ArrayList<Llibre> llibres = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT l.ISBN, l.nom, l.autor, l.`any`, l.descripcio, ll.valoracio, l.preu, ll.llegit, l.imatge, " +
+                    "SELECT l.ISBN, l.nom, " +
+                    "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, " +
+                    "l.`any`, l.descripcio, ll.valoracio, l.preu, ll.llegit, l.imatge, " +
                     "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
-                    "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original " +
+                    "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
+                    "l.nom_ca, l.nom_es, l.nom_en " +
                     "FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ?")) {
                 ps.setInt(1, llistaId);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -82,9 +107,25 @@ public class LlistaDao {
         return llibres;
     }
 
+    public synchronized java.util.Set<Long> getISBNsInLlista(int llistaId) {
+        java.util.Set<Long> set = new java.util.HashSet<>();
+        try {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT isbn FROM llibre_llista WHERE llista_id = ?")) {
+                ps.setInt(1, llistaId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) set.add(rs.getLong(1));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error carregant ISBNs de llista: " + e.getMessage());
+        }
+        return set;
+    }
+
     public synchronized void addLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO llibre_llista (isbn, llista_id, valoracio, llegit) VALUES (?, ?, ?, ?)")) {
+                "INSERT IGNORE INTO llibre_llista (isbn, llista_id, valoracio, llegit) VALUES (?, ?, ?, ?)")) {
             ps.setLong(1, isbn);
             ps.setInt(2, llistaId);
             ps.setDouble(3, valoracio);
@@ -117,14 +158,16 @@ public class LlistaDao {
         ArrayList<Llista> llistes = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT l.id, l.nom, ll.valoracio, ll.llegit FROM llista l " +
-                    "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.nom")) {
+                    "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
+                    "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.ordre, l.nom")) {
                 ps.setLong(1, isbn);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         Llista llista = new Llista(rs.getInt(1), rs.getString(2));
                         llista.setValoracioLlibre(rs.getDouble(3));
                         llista.setLlegitLlibre(rs.getBoolean(4));
+                        llista.setOrdre(rs.getInt(5));
+                        llista.setColor(rs.getString(6));
                         llistes.add(llista);
                     }
                 }
@@ -151,14 +194,14 @@ public class LlistaDao {
         }
     }
 
-    public synchronized java.util.List<Object[]> getAllLlibreLlista() {
-        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+    public synchronized java.util.List<domini.LlibreLlistaRow> getAllLlibreLlista() {
+        java.util.List<domini.LlibreLlistaRow> rows = new java.util.ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery(
                     "SELECT isbn, llista_id, valoracio, llegit FROM llibre_llista ORDER BY llista_id, isbn")) {
                 while (rs.next())
-                    rows.add(new Object[]{ rs.getLong(1), rs.getInt(2), rs.getDouble(3), rs.getBoolean(4) });
+                    rows.add(new domini.LlibreLlistaRow(rs.getLong(1), rs.getInt(2), rs.getDouble(3), rs.getBoolean(4)));
             }
         } catch (SQLException e) {
             System.err.println("Error carregant les dades de llista: " + e.getMessage());

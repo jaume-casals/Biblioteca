@@ -88,8 +88,11 @@ public class DetallesLlibrePanelControl {
 		this.vista.getChckDesitjat().setSelected(l.getDesitjat());
 		this.vista.getTextPagines().setText(l.getPagines() > 0 ? String.valueOf(l.getPagines()) : "");
 		this.vista.getTextPaginesLlegides().setText(l.getPaginesLlegides() > 0 ? String.valueOf(l.getPaginesLlegides()) : "");
+		this.vista.getTextNomCa().setText(l.getNomCa() != null ? l.getNomCa() : "");
+		this.vista.getTextNomEs().setText(l.getNomEs() != null ? l.getNomEs() : "");
+		this.vista.getTextNomEn().setText(l.getNomEn() != null ? l.getNomEn() : "");
 
-		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.getNom()));
+		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.getDisplayNom(herramienta.Config.getLang())));
 
 		this.vista.getTextPaginesLlegides().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
@@ -171,7 +174,7 @@ public class DetallesLlibrePanelControl {
 		if (I18n.t("btn_edit_java").equals(this.vista.getBtnEditar().getText())) {
 			this.vista.getTextAny().setEnabled(true);
 			this.vista.getTextAutor().setEnabled(true);
-			this.vista.getTextISBN().setEnabled(true);
+			this.vista.getTextISBN().setEnabled(false); // ISBN must not change in edit mode
 			this.vista.getTextDescripcio().setEnabled(true);
 			this.vista.getTextNom().setEnabled(true);
 			this.vista.getTextPortada().setEnabled(true);
@@ -216,6 +219,9 @@ public class DetallesLlibrePanelControl {
 				a.setEstat(estat != null && !estat.isEmpty() ? estat : null);
 				try { a.setExemplars(Integer.parseInt(vista.getTextExemplars().getText().trim())); } catch (NumberFormatException ignored) {}
 				a.setLlenguaOriginal(vista.getTextLlenguaOriginal().getText().trim());
+				String nc = vista.getTextNomCa().getText().trim(); a.setNomCa(nc.isEmpty() ? null : nc);
+				String nse = vista.getTextNomEs().getText().trim(); a.setNomEs(nse.isEmpty() ? null : nse);
+				String nen = vista.getTextNomEn().getText().trim(); a.setNomEn(nen.isEmpty() ? null : nen);
 				a.setDesitjat(vista.getChckDesitjat().isSelected());
 				java.util.List<String> autors = java.util.Arrays.stream(vista.getTextAutor().getText().split(","))
 					.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
@@ -228,6 +234,7 @@ public class DetallesLlibrePanelControl {
 					vista.getTextPaginesLlegides().setText(String.valueOf(a.getPagines()));
 				}
 				a.setImatgeBlob(pendingBlob);
+				LlibreValidator.validateExtrasAll(a.getEditorial(), a.getSerie(), a.getIdioma(), a.getFormat(), a.getPaisOrigen(), a.getEstat());
 				if (a.getISBN().equals(llibre.getISBN())) {
 					cLlibres.updateLlibre(a);
 				} else {
@@ -264,6 +271,7 @@ public class DetallesLlibrePanelControl {
 				this.vista.getTextPagines().setEnabled(false);
 				this.vista.getTextPaginesLlegides().setEnabled(false);
 				this.vista.getBtnEditar().setText(I18n.t("btn_edit_java"));
+				this.vista.setTitle(I18n.t("dlg_book_detail_title", a.getDisplayNom(herramienta.Config.getLang())));
 			} catch (Exception e) {
 				new DialogoError(e).showErrorMessage();
 			}
@@ -271,26 +279,26 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void mostrarHistorialPrestecs(Llibre l) {
-		java.util.List<Object[]> loans = cLlibres.getLoansForIsbn(l.getISBN());
+		java.util.List<domini.PrestecRow> loans = cLlibres.getLoansForIsbn(l.getISBN());
 		if (loans.isEmpty()) {
 			javax.swing.JOptionPane.showMessageDialog(this.vista,
-				"No hi ha préstecs registrats per a aquest llibre.",
-				"Historial de préstecs", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+				I18n.t("dlg_no_prestecs_msg"),
+				I18n.t("dlg_historial_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
-		String[] cols = {"Persona", "Data préstec", "Retornat"};
+		String[] cols = {I18n.t("col_persona"), I18n.t("col_data_prestec"), I18n.t("col_retornat")};
 		Object[][] data = new Object[loans.size()][3];
 		for (int i = 0; i < loans.size(); i++) {
-			data[i][0] = loans.get(i)[0];
-			data[i][1] = loans.get(i)[1];
-			data[i][2] = Boolean.TRUE.equals(loans.get(i)[2]) ? "Sí" : "No";
+			data[i][0] = loans.get(i).nomPersona();
+			data[i][1] = loans.get(i).dataPrestec();
+			data[i][2] = loans.get(i).retornat() ? I18n.t("yes_lbl") : I18n.t("no_lbl");
 		}
 		javax.swing.JTable tbl = new javax.swing.JTable(data, cols);
 		tbl.setEnabled(false);
 		javax.swing.JScrollPane sp = new javax.swing.JScrollPane(tbl);
 		sp.setPreferredSize(new java.awt.Dimension(400, Math.min(200, loans.size() * 25 + 40)));
 		javax.swing.JOptionPane.showMessageDialog(this.vista, sp,
-			"Historial de préstecs — " + l.getNom(), javax.swing.JOptionPane.PLAIN_MESSAGE);
+			I18n.t("dlg_historial_title") + " — " + l.getDisplayNom(herramienta.Config.getLang()), javax.swing.JOptionPane.PLAIN_MESSAGE);
 	}
 
 	private void imprimirFitxa(Llibre l) {

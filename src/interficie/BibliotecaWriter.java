@@ -7,31 +7,33 @@ import java.io.File;
 
 public interface BibliotecaWriter extends BibliotecaReader {
 
-    void addLlibre(Llibre l) throws Exception;
-    void deleteLlibre(Llibre l) throws Exception;
-    void deleteLlibre(Long isbn) throws Exception;
-    void updateLlibre(Llibre l) throws Exception;
+    void addLlibre(Llibre l);
+    void deleteLlibre(Llibre l);
+    void deleteLlibre(Long isbn);
+    void updateLlibre(Llibre l);
 
-    Llista addLlista(String nom) throws Exception;
-    void deleteLlista(Llista llista) throws Exception;
-    void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws Exception;
-    void removeLlibreFromLlista(long isbn, int llistaId) throws Exception;
-    void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws Exception;
-    void moveLlistaUp(int id) throws Exception;
-    void moveLlistaDown(int id) throws Exception;
-    void setLlistaColor(int id, String color) throws Exception;
+    Llista addLlista(String nom);
+    void deleteLlista(Llista llista);
+    void renameLlista(int id, String newNom);
+    void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit);
+    void removeLlibreFromLlista(long isbn, int llistaId);
+    void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit);
+    void moveLlistaUp(int id);
+    void moveLlistaDown(int id);
+    void setLlistaColor(int id, String color);
 
-    Tag addTag(String nom) throws Exception;
-    void deleteTag(Tag tag) throws Exception;
-    void addLlibreToTag(long isbn, int tagId) throws Exception;
-    void removeLlibreFromTag(long isbn, int tagId) throws Exception;
+    Tag addTag(String nom);
+    void deleteTag(Tag tag);
+    void renameTag(int id, String newNom);
+    void addLlibreToTag(long isbn, int tagId);
+    void removeLlibreFromTag(long isbn, int tagId);
 
-    void prestarLlibre(long isbn, String nom) throws Exception;
-    void retornarLlibre(long isbn) throws Exception;
+    void prestarLlibre(long isbn, String nom);
+    void retornarLlibre(long isbn);
 
-    void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException;
+    void setLlibreBlob(long isbn, byte[] blob);
 
-    void clearAll() throws Exception;
-    void backupToSQL(File file) throws Exception;
-    void restoreFromSQL(File file) throws Exception;
+    void clearAll();
+    void backupToSQL(File file);
+    void restoreFromSQL(File file);
 }

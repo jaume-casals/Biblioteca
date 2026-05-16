@@ -9,7 +9,8 @@ public class ApiServer {
     private final HttpRouter router;
     private final int port;
 
-    public ApiServer(int port, BibliotecaWriter cd) throws Exception {
+    // All routes are registered eagerly at construction time. Call start() after construction.
+    public ApiServer(int port, BibliotecaWriter cd) {
         this.port = port;
         this.router = new HttpRouter();
 

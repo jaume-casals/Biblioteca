@@ -1,6 +1,7 @@
 package herramienta.csv;
 
 import domini.Llibre;
+import herramienta.I18n;
 import herramienta.LlibreValidator;
 import interficie.BibliotecaWriter;
 
@@ -14,10 +15,10 @@ public class NativeCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public void parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
-        if (c.length < 4) throw new IllegalArgumentException("CSV row has fewer than 4 required columns");
+    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
+        if (c.length < 4) throw new IllegalArgumentException(I18n.t("csv_row_too_short"));
         long isbn = Long.parseLong(c[0].trim());
-        try { cd.getLlibre(isbn); return; } catch (Exception ignored) {} // skip duplicates
+        if (CsvUtils.existsInLibrary(cd, isbn)) return false;
         int any = 0;
         try { any = Integer.parseInt(c[3].trim()); } catch (NumberFormatException ignored) {}
         Llibre l = LlibreValidator.checkLlibre(
@@ -42,5 +43,6 @@ public class NativeCsvStrategy implements CsvImportStrategy {
                 cd.addLlibreToLlista(isbn, llista.getId(), val, llegitLl);
             }
         }
+        return true;
     }
 }

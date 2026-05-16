@@ -9,50 +9,70 @@ public class LlibreDao {
     private final Connection con;
 
     static final String LLIBRE_SELECT =
-        "SELECT ISBN, nom, autor, `any`, descripcio, valoracio, preu, llegit, imatge, " +
+        "SELECT ISBN, nom, " +
+        "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = ISBN) AS autor, " +
+        "`any`, descripcio, valoracio, preu, llegit, imatge, " +
         "(imatge_blob IS NOT NULL) AS has_blob, notes, pagines, pagines_llegides, editorial, serie, " +
-        "volum, data_compra, data_lectura, idioma, format, desitjat, pais_origen, estat, exemplars, llengua_original ";
+        "volum, data_compra, data_lectura, idioma, format, desitjat, pais_origen, estat, exemplars, llengua_original, " +
+        "nom_ca, nom_es, nom_en ";
 
     LlibreDao(Connection con) { this.con = con; }
 
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
-        Llibre l = new Llibre(rs.getLong(1), rs.getString(2), rs.getString(3),
-            rs.getInt(4), rs.getString(5), rs.getDouble(6),
-            rs.getDouble(7), rs.getBoolean(8), rs.getString(9));
-        l.setHasBlob(rs.getBoolean(10));
-        l.setNotes(rs.getString(11));
-        l.setPagines(rs.getInt(12));
-        l.setPaginesLlegides(rs.getInt(13));
-        l.setEditorial(rs.getString(14));
-        l.setSerie(rs.getString(15));
-        l.setVolum(rs.getInt(16));
-        l.setDataCompra(rs.getString(17));
-        l.setDataLectura(rs.getString(18));
-        l.setIdioma(rs.getString(19));
-        l.setFormat(rs.getString(20));
-        l.setDesitjat(rs.getBoolean(21));
-        l.setPaisOrigen(rs.getString(22));
-        l.setEstat(rs.getString(23));
-        l.setExemplars(rs.getInt(24) > 0 ? rs.getInt(24) : 1);
-        l.setLlenguaOriginal(rs.getString(25));
+        Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
+            rs.getInt("any"), rs.getString("descripcio"), rs.getDouble("valoracio"),
+            rs.getDouble("preu"), rs.getBoolean("llegit"), rs.getString("imatge"));
+        l.setHasBlob(rs.getBoolean("has_blob"));
+        l.setNotes(rs.getString("notes"));
+        l.setPagines(rs.getInt("pagines"));
+        l.setPaginesLlegides(rs.getInt("pagines_llegides"));
+        l.setEditorial(rs.getString("editorial"));
+        l.setSerie(rs.getString("serie"));
+        l.setVolum(rs.getInt("volum"));
+        l.setDataCompra(rs.getString("data_compra"));
+        l.setDataLectura(rs.getString("data_lectura"));
+        l.setIdioma(rs.getString("idioma"));
+        l.setFormat(rs.getString("format"));
+        l.setDesitjat(rs.getBoolean("desitjat"));
+        l.setPaisOrigen(rs.getString("pais_origen"));
+        l.setEstat(rs.getString("estat"));
+        int exemplars = rs.getInt("exemplars");
+        l.setExemplars(exemplars > 0 ? exemplars : 1);
+        l.setLlenguaOriginal(rs.getString("llengua_original"));
+        l.setNomCa(rs.getString("nom_ca"));
+        l.setNomEs(rs.getString("nom_es"));
+        l.setNomEn(rs.getString("nom_en"));
         return l;
     }
 
+    private static final String LLIBRE_SELECT_L =
+        "SELECT l.ISBN, l.nom, " +
+        "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, " +
+        "l.`any`, l.descripcio, l.valoracio, l.preu, l.llegit, l.imatge, " +
+        "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
+        "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
+        "l.nom_ca, l.nom_es, l.nom_en ";
+
     public synchronized ArrayList<Llibre> getAll() {
         ArrayList<Llibre> biblio = new ArrayList<>();
+        java.util.LinkedHashMap<Long, Llibre> byISBN = new java.util.LinkedHashMap<>();
         try {
             try (Statement stmt = con.createStatement();
-                 ResultSet rs = stmt.executeQuery(LLIBRE_SELECT + "FROM llibre")) {
-                while (rs.next()) biblio.add(buildLlibre(rs));
-            }
-            java.util.Map<Long, Llibre> byISBN = new java.util.HashMap<>();
-            for (Llibre l : biblio) byISBN.put(l.getISBN(), l);
-            try (Statement aSt = con.createStatement();
-                 ResultSet ars = aSt.executeQuery(
-                    "SELECT la.isbn, a.nom FROM llibre_autor la JOIN autor a ON la.autor_id = a.id ORDER BY la.isbn, a.nom")) {
-                while (ars.next()) {
-                    Llibre l = byISBN.get(ars.getLong(1));
-                    if (l != null) l.getAutors().add(ars.getString(2));
+                 ResultSet rs = stmt.executeQuery(
+                    LLIBRE_SELECT_L + ", a.nom AS autor_nom FROM llibre l" +
+                    " LEFT JOIN llibre_autor la ON l.ISBN = la.isbn" +
+                    " LEFT JOIN autor a ON la.autor_id = a.id" +
+                    " ORDER BY l.ISBN, a.nom")) {
+                while (rs.next()) {
+                    long isbn = rs.getLong("ISBN");
+                    Llibre l = byISBN.get(isbn);
+                    if (l == null) {
+                        l = buildLlibre(rs);
+                        byISBN.put(isbn, l);
+                        biblio.add(l);
+                    }
+                    String autorNom = rs.getString("autor_nom");
+                    if (autorNom != null) l.getAutors().add(autorNom);
                 }
             }
         } catch (SQLException e) {
@@ -63,81 +83,95 @@ public class LlibreDao {
 
     public synchronized void insert(Llibre ll) throws SQLException {
         if (ll == null) return;
-        try (PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`imatge_blob`," +
-                "`notes`,`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`," +
-                "`idioma`,`format`,`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`) " +
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")) {
-            ps.setLong(1, ll.getISBN());
-            ps.setString(2, ll.getNom());
-            ps.setString(3, ll.getAutor() != null ? ll.getAutor() : "");
-            ps.setInt(4, ll.getAny() != null ? ll.getAny() : 0);
-            ps.setString(5, ll.getDescripcio() != null ? ll.getDescripcio() : "");
-            ps.setDouble(6, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
-            ps.setDouble(7, ll.getPreu() != null ? ll.getPreu() : 0.0);
-            ps.setBoolean(8, Boolean.TRUE.equals(ll.getLlegit()));
-            ps.setString(9, ll.getImatge() != null ? ll.getImatge() : "");
-            ps.setBytes(10, ll.getImatgeBlob());
-            ps.setString(11, ll.getNotes());
-            ps.setInt(12, ll.getPagines());
-            ps.setInt(13, ll.getPaginesLlegides());
-            ps.setString(14, ll.getEditorial());
-            ps.setString(15, ll.getSerie());
-            ps.setInt(16, ll.getVolum());
-            String dc = ll.getDataCompra(), dl = ll.getDataLectura();
-            if (dc != null) { try { ps.setDate(17, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(17, java.sql.Types.DATE); } }
-            else ps.setNull(17, java.sql.Types.DATE);
-            if (dl != null) { try { ps.setDate(18, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(18, java.sql.Types.DATE); } }
-            else ps.setNull(18, java.sql.Types.DATE);
-            if (ll.getIdioma() != null) ps.setString(19, ll.getIdioma()); else ps.setNull(19, java.sql.Types.VARCHAR);
-            if (ll.getFormat() != null) ps.setString(20, ll.getFormat()); else ps.setNull(20, java.sql.Types.VARCHAR);
-            ps.setBoolean(21, ll.getDesitjat());
-            if (ll.getPaisOrigen() != null) ps.setString(22, ll.getPaisOrigen()); else ps.setNull(22, java.sql.Types.VARCHAR);
-            if (ll.getEstat() != null) ps.setString(23, ll.getEstat()); else ps.setNull(23, java.sql.Types.VARCHAR);
-            ps.setInt(24, Math.max(1, ll.getExemplars()));
-            if (ll.getLlenguaOriginal() != null) ps.setString(25, ll.getLlenguaOriginal()); else ps.setNull(25, java.sql.Types.VARCHAR);
-            ps.execute();
-        }
-        if (!ll.getAutors().isEmpty()) syncAutors(ll.getISBN(), ll.getAutors());
+        withTransaction(() -> {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`imatge_blob`," +
+                    "`notes`,`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`," +
+                    "`idioma`,`format`,`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`," +
+                    "`nom_ca`,`nom_es`,`nom_en`) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")) {
+                ps.setLong(1, ll.getISBN());
+                ps.setString(2, ll.getNom());
+                ps.setInt(3, ll.getAny() != null ? ll.getAny() : 0);
+                ps.setString(4, ll.getDescripcio() != null ? ll.getDescripcio() : "");
+                ps.setDouble(5, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
+                ps.setDouble(6, ll.getPreu() != null ? ll.getPreu() : 0.0);
+                ps.setBoolean(7, Boolean.TRUE.equals(ll.getLlegit()));
+                ps.setString(8, ll.getImatge() != null ? ll.getImatge() : "");
+                ps.setBytes(9, ll.getImatgeBlob());
+                ps.setString(10, ll.getNotes());
+                ps.setInt(11, ll.getPagines());
+                ps.setInt(12, ll.getPaginesLlegides());
+                ps.setString(13, ll.getEditorial());
+                ps.setString(14, ll.getSerie());
+                ps.setInt(15, ll.getVolum());
+                String dc = ll.getDataCompra(), dl = ll.getDataLectura();
+                if (dc != null) { try { ps.setDate(16, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(16, java.sql.Types.DATE); } }
+                else ps.setNull(16, java.sql.Types.DATE);
+                if (dl != null) { try { ps.setDate(17, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(17, java.sql.Types.DATE); } }
+                else ps.setNull(17, java.sql.Types.DATE);
+                if (ll.getIdioma() != null) ps.setString(18, ll.getIdioma()); else ps.setNull(18, java.sql.Types.VARCHAR);
+                if (ll.getFormat() != null) ps.setString(19, ll.getFormat()); else ps.setNull(19, java.sql.Types.VARCHAR);
+                ps.setBoolean(20, ll.getDesitjat());
+                if (ll.getPaisOrigen() != null) ps.setString(21, ll.getPaisOrigen()); else ps.setNull(21, java.sql.Types.VARCHAR);
+                if (ll.getEstat() != null) ps.setString(22, ll.getEstat()); else ps.setNull(22, java.sql.Types.VARCHAR);
+                ps.setInt(23, Math.max(1, ll.getExemplars()));
+                if (ll.getLlenguaOriginal() != null) ps.setString(24, ll.getLlenguaOriginal()); else ps.setNull(24, java.sql.Types.VARCHAR);
+                if (ll.getNomCa() != null && !ll.getNomCa().isBlank()) ps.setString(25, ll.getNomCa()); else ps.setNull(25, java.sql.Types.VARCHAR);
+                if (ll.getNomEs() != null && !ll.getNomEs().isBlank()) ps.setString(26, ll.getNomEs()); else ps.setNull(26, java.sql.Types.VARCHAR);
+                if (ll.getNomEn() != null && !ll.getNomEn().isBlank()) ps.setString(27, ll.getNomEn()); else ps.setNull(27, java.sql.Types.VARCHAR);
+                ps.execute();
+            }
+            java.util.List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()
+                ? java.util.List.of(ll.getAutor()) : ll.getAutors();
+            if (!autorsSync.isEmpty()) syncAutors(ll.getISBN(), autorsSync);
+        });
     }
 
     public synchronized void update(Llibre ll) throws SQLException {
         if (ll == null) return;
-        try (PreparedStatement ps = con.prepareStatement(
-                "UPDATE llibre SET `nom`=?,`autor`=?,`any`=?,`descripcio`=?,`valoracio`=?,`preu`=?,`llegit`=?,`imatge`=?," +
-                "`notes`=?,`pagines`=?,`pagines_llegides`=?,`editorial`=?,`serie`=?,`volum`=?," +
-                "`data_compra`=?,`data_lectura`=?,`idioma`=?,`format`=?,`desitjat`=?,`pais_origen`=?," +
-                "`estat`=?,`exemplars`=?,`llengua_original`=? WHERE `ISBN`=?")) {
-            ps.setString(1, ll.getNom());
-            ps.setString(2, ll.getAutor() != null ? ll.getAutor() : "");
-            ps.setInt(3, ll.getAny() != null ? ll.getAny() : 0);
-            ps.setString(4, ll.getDescripcio() != null ? ll.getDescripcio() : "");
-            ps.setDouble(5, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
-            ps.setDouble(6, ll.getPreu() != null ? ll.getPreu() : 0.0);
-            ps.setBoolean(7, Boolean.TRUE.equals(ll.getLlegit()));
-            ps.setString(8, ll.getImatge() != null ? ll.getImatge() : "");
-            ps.setString(9, ll.getNotes());
-            ps.setInt(10, ll.getPagines());
-            ps.setInt(11, ll.getPaginesLlegides());
-            ps.setString(12, ll.getEditorial());
-            ps.setString(13, ll.getSerie());
-            ps.setInt(14, ll.getVolum());
-            String dc = ll.getDataCompra(), dl = ll.getDataLectura();
-            if (dc != null) { try { ps.setDate(15, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(15, java.sql.Types.DATE); } }
-            else ps.setNull(15, java.sql.Types.DATE);
-            if (dl != null) { try { ps.setDate(16, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(16, java.sql.Types.DATE); } }
-            else ps.setNull(16, java.sql.Types.DATE);
-            if (ll.getIdioma() != null) ps.setString(17, ll.getIdioma()); else ps.setNull(17, java.sql.Types.VARCHAR);
-            if (ll.getFormat() != null) ps.setString(18, ll.getFormat()); else ps.setNull(18, java.sql.Types.VARCHAR);
-            ps.setBoolean(19, ll.getDesitjat());
-            if (ll.getPaisOrigen() != null) ps.setString(20, ll.getPaisOrigen()); else ps.setNull(20, java.sql.Types.VARCHAR);
-            if (ll.getEstat() != null) ps.setString(21, ll.getEstat()); else ps.setNull(21, java.sql.Types.VARCHAR);
-            ps.setInt(22, Math.max(1, ll.getExemplars()));
-            if (ll.getLlenguaOriginal() != null) ps.setString(23, ll.getLlenguaOriginal()); else ps.setNull(23, java.sql.Types.VARCHAR);
-            ps.setLong(24, ll.getISBN());
-            ps.execute();
-        }
-        if (!ll.getAutors().isEmpty()) syncAutors(ll.getISBN(), ll.getAutors());
+        withTransaction(() -> {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "UPDATE llibre SET `nom`=?,`any`=?,`descripcio`=?,`valoracio`=?,`preu`=?,`llegit`=?,`imatge`=?," +
+                    "`notes`=?,`pagines`=?,`pagines_llegides`=?,`editorial`=?,`serie`=?,`volum`=?," +
+                    "`data_compra`=?,`data_lectura`=?,`idioma`=?,`format`=?,`desitjat`=?,`pais_origen`=?," +
+                    "`estat`=?,`exemplars`=?,`llengua_original`=?," +
+                    "`nom_ca`=?,`nom_es`=?,`nom_en`=? WHERE `ISBN`=?")) {
+                ps.setString(1, ll.getNom());
+                ps.setInt(2, ll.getAny() != null ? ll.getAny() : 0);
+                ps.setString(3, ll.getDescripcio() != null ? ll.getDescripcio() : "");
+                ps.setDouble(4, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
+                ps.setDouble(5, ll.getPreu() != null ? ll.getPreu() : 0.0);
+                ps.setBoolean(6, Boolean.TRUE.equals(ll.getLlegit()));
+                ps.setString(7, ll.getImatge() != null ? ll.getImatge() : "");
+                ps.setString(8, ll.getNotes());
+                ps.setInt(9, ll.getPagines());
+                ps.setInt(10, ll.getPaginesLlegides());
+                ps.setString(11, ll.getEditorial());
+                ps.setString(12, ll.getSerie());
+                ps.setInt(13, ll.getVolum());
+                String dc = ll.getDataCompra(), dl = ll.getDataLectura();
+                if (dc != null) { try { ps.setDate(14, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(14, java.sql.Types.DATE); } }
+                else ps.setNull(14, java.sql.Types.DATE);
+                if (dl != null) { try { ps.setDate(15, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(15, java.sql.Types.DATE); } }
+                else ps.setNull(15, java.sql.Types.DATE);
+                if (ll.getIdioma() != null) ps.setString(16, ll.getIdioma()); else ps.setNull(16, java.sql.Types.VARCHAR);
+                if (ll.getFormat() != null) ps.setString(17, ll.getFormat()); else ps.setNull(17, java.sql.Types.VARCHAR);
+                ps.setBoolean(18, ll.getDesitjat());
+                if (ll.getPaisOrigen() != null) ps.setString(19, ll.getPaisOrigen()); else ps.setNull(19, java.sql.Types.VARCHAR);
+                if (ll.getEstat() != null) ps.setString(20, ll.getEstat()); else ps.setNull(20, java.sql.Types.VARCHAR);
+                ps.setInt(21, Math.max(1, ll.getExemplars()));
+                if (ll.getLlenguaOriginal() != null) ps.setString(22, ll.getLlenguaOriginal()); else ps.setNull(22, java.sql.Types.VARCHAR);
+                if (ll.getNomCa() != null && !ll.getNomCa().isBlank()) ps.setString(23, ll.getNomCa()); else ps.setNull(23, java.sql.Types.VARCHAR);
+                if (ll.getNomEs() != null && !ll.getNomEs().isBlank()) ps.setString(24, ll.getNomEs()); else ps.setNull(24, java.sql.Types.VARCHAR);
+                if (ll.getNomEn() != null && !ll.getNomEn().isBlank()) ps.setString(25, ll.getNomEn()); else ps.setNull(25, java.sql.Types.VARCHAR);
+                ps.setLong(26, ll.getISBN());
+                ps.execute();
+            }
+            java.util.List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()
+                ? java.util.List.of(ll.getAutor()) : ll.getAutors();
+            syncAutors(ll.getISBN(), autorsSync);
+        });
     }
 
     public synchronized void delete(long isbn) throws SQLException {
@@ -192,15 +226,20 @@ public class LlibreDao {
     public synchronized ArrayList<Llibre> search(domini.LlibreFilter f, int offset, int pageSize) {
         ArrayList<Llibre> result = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT DISTINCT l.ISBN, l.nom, l.autor, l.`any`, l.descripcio, l.valoracio, l.preu, l.llegit, l.imatge, " +
+            "SELECT DISTINCT l.ISBN, l.nom, " +
+            "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, " +
+            "l.`any`, l.descripcio, l.valoracio, l.preu, l.llegit, l.imatge, " +
             "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
-            "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original FROM llibre l");
-        if (f.llistaId != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ").append(f.llistaId);
-        if (f.tagId    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ").append(f.tagId);
+            "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
+            "l.nom_ca, l.nom_es, l.nom_en FROM llibre l");
+        if (f.llistaId != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
+        if (f.tagId    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
         sql.append(" WHERE 1=1");
         java.util.List<Object> params = new java.util.ArrayList<>();
-        if (f.nom          != null) { sql.append(" AND l.nom LIKE ?");        params.add("%" + f.nom + "%"); }
-        if (f.autor        != null) { sql.append(" AND l.autor LIKE ?");      params.add("%" + f.autor + "%"); }
+        if (f.llistaId != null) params.add(f.llistaId);
+        if (f.tagId    != null) params.add(f.tagId);
+        if (f.nom          != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.nom + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
+        if (f.autor        != null) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.autor + "%"); }
         if (f.isbn         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.isbn); }
         if (f.anyMin       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.anyMin); }
         if (f.anyMax       != null) { sql.append(" AND l.`any` <= ?");        params.add(f.anyMax); }
@@ -213,7 +252,12 @@ public class LlibreDao {
         if (f.serie        != null) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.serie + "%"); }
         if (f.format       != null) { sql.append(" AND l.format = ?");        params.add(f.format); }
         if (f.idioma       != null) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.idioma + "%"); }
-        sql.append(" ORDER BY l.ISBN");
+        java.util.Map<String, String> SORT_COLS = java.util.Map.of(
+            "ISBN", "l.`ISBN`", "nom", "l.`nom`", "any", "l.`any`",
+            "valoracio", "l.`valoracio`", "preu", "l.`preu`");
+        String sc = (f.sortColumn != null && SORT_COLS.containsKey(f.sortColumn))
+            ? SORT_COLS.get(f.sortColumn) : "l.`ISBN`";
+        sql.append(" ORDER BY ").append(sc).append(f.sortAsc ? " ASC" : " DESC");
         if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
@@ -234,8 +278,8 @@ public class LlibreDao {
     }
 
     public synchronized int count() {
-        try (Statement s = con.createStatement();
-             ResultSet rs = s.executeQuery("SELECT COUNT(*) FROM llibre")) {
+        try (PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM llibre");
+             ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) {
             System.err.println("Error comptant llibres: " + e.getMessage());
@@ -243,17 +287,33 @@ public class LlibreDao {
         return 0;
     }
 
-    public synchronized void clearAllData() throws SQLException {
-        try (Statement s = con.createStatement()) {
-            s.executeUpdate("DELETE FROM prestec");
-            s.executeUpdate("DELETE FROM llibre_llista");
-            s.executeUpdate("DELETE FROM llista");
-            s.executeUpdate("DELETE FROM llibre_autor");
-            s.executeUpdate("DELETE FROM llibre_tag");
-            s.executeUpdate("DELETE FROM tag");
-            s.executeUpdate("DELETE FROM autor");
-            s.executeUpdate("DELETE FROM llibre");
+    public synchronized java.util.List<LecturaRow> getAllLectures() {
+        java.util.List<LecturaRow> rows = new java.util.ArrayList<>();
+        try (Statement s = con.createStatement();
+             ResultSet rs = s.executeQuery(
+                "SELECT isbn, data_inici, data_fi, pagines_llegides FROM lectura ORDER BY id")) {
+            while (rs.next())
+                rows.add(new LecturaRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)));
+        } catch (SQLException e) {
+            System.err.println("Error carregant les lectures: " + e.getMessage());
         }
+        return rows;
+    }
+
+    public synchronized void clearAllData() throws SQLException {
+        withTransaction(() -> {
+            try (Statement s = con.createStatement()) {
+                s.executeUpdate("DELETE FROM lectura");
+                s.executeUpdate("DELETE FROM prestec");
+                s.executeUpdate("DELETE FROM llibre_llista");
+                s.executeUpdate("DELETE FROM llista");
+                s.executeUpdate("DELETE FROM llibre_autor");
+                s.executeUpdate("DELETE FROM llibre_tag");
+                s.executeUpdate("DELETE FROM tag");
+                s.executeUpdate("DELETE FROM autor");
+                s.executeUpdate("DELETE FROM llibre");
+            }
+        });
     }
 
     public synchronized long getDbSizeBytes() {
@@ -261,6 +321,9 @@ public class LlibreDao {
             String url = con.getMetaData().getURL();
             if (url != null && url.startsWith("jdbc:h2:")) {
                 String path = url.replaceFirst("jdbc:h2:", "").replaceAll(";.*", "");
+                if (path.startsWith("mem:") || path.startsWith("mem/")) return -1;
+                if (path.startsWith("file:")) path = path.substring(5);
+                if (path.startsWith("~")) path = System.getProperty("user.home") + path.substring(1);
                 java.io.File f = new java.io.File(path + ".mv.db");
                 return f.exists() ? f.length() : -1;
             }
@@ -268,7 +331,7 @@ public class LlibreDao {
         return -1;
     }
 
-    public synchronized void executeSQLFile(java.io.File file) throws Exception {
+    public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         try (java.io.BufferedReader br = new java.io.BufferedReader(
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
              Statement st = con.createStatement()) {
@@ -277,6 +340,9 @@ public class LlibreDao {
             while ((line = br.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("--")) continue;
+                // Strip inline comment (outside of quotes)
+                int dashIdx = line.indexOf(" --");
+                if (dashIdx > 0) line = line.substring(0, dashIdx).trim();
                 String upper = line.toUpperCase();
                 if (upper.startsWith("USE ") || upper.startsWith("CREATE DATABASE")
                         || upper.startsWith("DROP DATABASE")) continue;
@@ -286,6 +352,22 @@ public class LlibreDao {
                     stmt = new StringBuilder();
                 }
             }
+        }
+    }
+
+    @FunctionalInterface private interface SqlWork { void run() throws SQLException; }
+
+    private void withTransaction(SqlWork work) throws SQLException {
+        boolean prev = con.getAutoCommit();
+        con.setAutoCommit(false);
+        try {
+            work.run();
+            con.commit();
+        } catch (SQLException e) {
+            con.rollback();
+            throw e;
+        } finally {
+            con.setAutoCommit(prev);
         }
     }
 
@@ -300,18 +382,11 @@ public class LlibreDao {
                 ins.setString(1, nom);
                 ins.execute();
             }
-            try (PreparedStatement sel = con.prepareStatement("SELECT id FROM autor WHERE nom = ?")) {
-                sel.setString(1, nom);
-                try (ResultSet rs = sel.executeQuery()) {
-                    if (rs.next()) {
-                        try (PreparedStatement link = con.prepareStatement(
-                                "INSERT IGNORE INTO llibre_autor (isbn, autor_id) VALUES (?, ?)")) {
-                            link.setLong(1, isbn);
-                            link.setInt(2, rs.getInt(1));
-                            link.execute();
-                        }
-                    }
-                }
+            try (PreparedStatement link = con.prepareStatement(
+                    "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?")) {
+                link.setLong(1, isbn);
+                link.setString(2, nom);
+                link.execute();
             }
         }
     }

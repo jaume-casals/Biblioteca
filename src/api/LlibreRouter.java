@@ -44,25 +44,7 @@ public class LlibreRouter {
     private void list(HttpCtx ctx) throws Exception {
         String pageStr = ctx.queryParam("page");
 
-        LlibreFilter f = LlibreFilter.empty();
-        String isbnStr = ctx.queryParam("isbn");
-        if (isbnStr != null && !isbnStr.isBlank()) {
-            try { f.isbn = Long.parseLong(isbnStr); } catch (NumberFormatException ignored) {}
-        }
-        f.autor        = blankToNull(ctx.queryParam("author"));
-        f.nom          = blankToNull(ctx.queryParam("title"));
-        f.anyMin       = parseInt(ctx.queryParam("yearMin"));
-        f.anyMax       = parseInt(ctx.queryParam("yearMax"));
-        f.valoracioMin = parseDbl(ctx.queryParam("ratingMin"));
-        f.valoracioMax = parseDbl(ctx.queryParam("ratingMax"));
-        f.preuMin      = parseDbl(ctx.queryParam("priceMin"));
-        f.preuMax      = parseDbl(ctx.queryParam("priceMax"));
-        f.llegit       = parseBool(ctx.queryParam("read"));
-        f.tagId        = parseInt(ctx.queryParam("tagId"));
-        f.editorial    = blankToNull(ctx.queryParam("editorial"));
-        f.serie        = blankToNull(ctx.queryParam("serie"));
-        f.format       = blankToNull(ctx.queryParam("format"));
-        f.idioma       = blankToNull(ctx.queryParam("idioma"));
+        LlibreFilter f = buildFilter(ctx);
 
         ArrayList<Llibre> result;
         if (f.hasAnyFilter()) {
@@ -74,12 +56,11 @@ public class LlibreRouter {
         } else {
             result = cd.getAllLlibres();
         }
-        System.out.println("[/books] hasFilter=" + f.hasAnyFilter() + " page=" + pageStr + " result.size=" + result.size());
         ctx.json(JsonMapper.llibresToList(result));
     }
 
     private void getOne(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         ctx.json(JsonMapper.llibreToMap(cd.getLlibre(isbn)));
     }
 
@@ -92,24 +73,26 @@ public class LlibreRouter {
     }
 
     private void update(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
-        Llibre existing = cd.getLlibre(isbn);
+        long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         Llibre updated = JsonMapper.jsonToLlibre(j);
         updated.setISBN(isbn);
-        updated.setHasBlob(existing.hasBlob());
-        synchronized (cd) { cd.updateLlibre(updated); }
+        synchronized (cd) {
+            Llibre existing = cd.getLlibre(isbn);
+            updated.setHasBlob(existing.hasBlob());
+            cd.updateLlibre(updated);
+        }
         ctx.json(JsonMapper.llibreToMap(updated));
     }
 
     private void delete(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) { cd.deleteLlibre(isbn); }
         ctx.status(204);
     }
 
     private void image(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         byte[] blob = cd.getLlibreBlob(isbn);
         if (blob == null || blob.length == 0) {
             try (var stream = getClass().getResourceAsStream("/web/img/default-cover.png")) {
@@ -127,7 +110,7 @@ public class LlibreRouter {
     }
 
     private void uploadImage(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         byte[] bytes = ctx.bodyBytes();
         if (bytes.length == 0) throw new Exception("Empty image body");
         cd.setLlibreBlob(isbn, bytes);
@@ -136,7 +119,7 @@ public class LlibreRouter {
     }
 
     private void shelvesForBook(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         var llistes = cd.getLlistesForLlibre(isbn);
         var out = new java.util.ArrayList<Map<String, Object>>();
         for (var l : llistes) {
@@ -149,13 +132,14 @@ public class LlibreRouter {
     }
 
     private void tagsForBook(HttpCtx ctx) throws Exception {
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        long isbn = ctx.pathParamLong("isbn");
         var tags = cd.getTagsForLlibre(isbn);
         var out = new java.util.ArrayList<Map<String, Object>>();
         for (var t : tags) out.add(JsonMapper.tagToMap(t));
         ctx.json(out);
     }
 
+    // TODO: if OpenLibrary lookup grows to more endpoints, extract to a dedicated OpenLibraryRouter
     private void openLibraryIsbn(HttpCtx ctx) throws Exception {
         ctx.json(OpenLibraryClient.lookupByISBN(ctx.pathParam("isbn")));
     }
@@ -165,22 +149,38 @@ public class LlibreRouter {
     }
 
     private static Llibre validate(Llibre l) {
-        Llibre v = LlibreValidator.checkLlibre(
+        // validates required fields (throws IllegalArgumentException on error)
+        // copyOf() carries all fields, so adding new fields to Llibre doesn't silently drop them here
+        LlibreValidator.checkLlibre(
             l.getISBN(), l.getNom(), l.getAutor(), l.getAny(), l.getDescripcio(),
             l.getValoracio(), l.getPreu(), l.getLlegit(), l.getImatge());
-        v.setNotes(l.getNotes()); v.setPagines(l.getPagines());
-        v.setPaginesLlegides(l.getPaginesLlegides()); v.setEditorial(l.getEditorial());
-        v.setSerie(l.getSerie()); v.setVolum(l.getVolum());
-        v.setDataCompra(l.getDataCompra()); v.setDataLectura(l.getDataLectura());
-        v.setIdioma(l.getIdioma()); v.setFormat(l.getFormat());
-        v.setDesitjat(l.getDesitjat()); v.setPaisOrigen(l.getPaisOrigen());
-        if (!l.getAutors().isEmpty()) v.setAutors(l.getAutors());
-        return v;
+        return domini.Llibre.copyOf(l);
+    }
+
+    private static LlibreFilter buildFilter(HttpCtx ctx) {
+        LlibreFilter f = LlibreFilter.empty();
+        String isbnStr = ctx.queryParamOrNull("isbn");
+        if (isbnStr != null) { try { f.isbn = Long.parseLong(isbnStr); } catch (NumberFormatException ignored) {} }
+        f.autor        = ctx.queryParamOrNull("author");
+        f.nom          = ctx.queryParamOrNull("title");
+        f.anyMin       = ctx.queryParamInt("yearMin");
+        f.anyMax       = ctx.queryParamInt("yearMax");
+        f.valoracioMin = ctx.queryParamDbl("ratingMin");
+        f.valoracioMax = ctx.queryParamDbl("ratingMax");
+        f.preuMin      = ctx.queryParamDbl("priceMin");
+        f.preuMax      = ctx.queryParamDbl("priceMax");
+        f.llegit       = ctx.queryParamBool("read");
+        f.tagId        = ctx.queryParamInt("tagId");
+        f.llistaId     = ctx.queryParamInt("llistaId");
+        f.editorial    = ctx.queryParamOrNull("editorial");
+        f.serie        = ctx.queryParamOrNull("serie");
+        f.format       = ctx.queryParamOrNull("format");
+        f.idioma       = ctx.queryParamOrNull("idioma");
+        f.sortColumn   = ctx.queryParamOrNull("sort");
+        String sortDir = ctx.queryParam("sortDir");
+        if (sortDir != null) f.sortAsc = !"desc".equalsIgnoreCase(sortDir);
+        return f;
     }
 
     private static boolean notBlank(String s) { return s != null && !s.isBlank(); }
-    private static String  blankToNull(String s) { return notBlank(s) ? s : null; }
-    private static Integer parseInt(String s) { if (!notBlank(s)) return null; try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; } }
-    private static Double  parseDbl(String s)  { if (!notBlank(s)) return null; try { return Double.parseDouble(s); } catch (NumberFormatException e) { return null; } }
-    private static Boolean parseBool(String s) { if (!notBlank(s)) return null; return Boolean.parseBoolean(s); }
 }

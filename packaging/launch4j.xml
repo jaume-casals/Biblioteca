@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Launch4j config: wraps biblioteca-fat.jar as a native Windows EXE.
+  Paths are relative to this file (packaging/).
+  Run from project root: launch4j packaging/launch4j.xml
+  Output: packaging/Biblioteca.exe  (with icon embedded)
+-->
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>../biblioteca-fat.jar</jar>
+  <outfile>Biblioteca.exe</outfile>
+  <errTitle>Biblioteca</errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl>https://adoptium.net/temurin/releases/?version=21</downloadUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <icon>Biblioteca.ico</icon>
+  <jre>
+    <path></path>
+    <bundledJre64Bit>false</bundledJre64Bit>
+    <bundledJreAsFallback>false</bundledJreAsFallback>
+    <minVersion>21</minVersion>
+    <maxVersion></maxVersion>
+    <jdkPreference>preferJre</jdkPreference>
+    <runtimeBits>64/32</runtimeBits>
+  </jre>
+  <versionInfo>
+    <fileVersion>1.0.0.0</fileVersion>
+    <txtFileVersion>1.0.0</txtFileVersion>
+    <fileDescription>Biblioteca — Gestio Personal de Llibres</fileDescription>
+    <copyright>GPL v3</copyright>
+    <productVersion>1.0.0.0</productVersion>
+    <txtProductVersion>1.0.0</txtProductVersion>
+    <productName>Biblioteca</productName>
+    <companyName></companyName>
+    <internalName>Biblioteca</internalName>
+    <originalFilename>Biblioteca.exe</originalFilename>
+  </versionInfo>
+</launch4jConfig>

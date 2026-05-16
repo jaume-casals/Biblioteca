@@ -16,6 +16,7 @@ public class LlistaRouter {
         app.get("/api/shelves",                          ctx -> getAll(ctx));
         app.post("/api/shelves",                         ctx -> create(ctx));
         app.delete("/api/shelves/{id}",                  ctx -> delete(ctx));
+        app.put("/api/shelves/{id}",                     ctx -> rename(ctx));
         app.put("/api/shelves/{id}/color",               ctx -> setColor(ctx));
         app.post("/api/shelves/{id}/up",                 ctx -> moveUp(ctx));
         app.post("/api/shelves/{id}/down",               ctx -> moveDown(ctx));
@@ -27,10 +28,11 @@ public class LlistaRouter {
 
     private void getAll(HttpCtx ctx) {
         var llistes = cd.getAllLlistes();
+        var counts = cd.getAllCountsInLlistes();
         var out = new ArrayList<Map<String, Object>>();
         for (var l : llistes) {
             var m = JsonMapper.llistaToMap(l);
-            m.put("count", cd.getCountInLlista(l.getId()));
+            m.put("count", counts.getOrDefault(l.getId(), 0));
             out.add(m);
         }
         ctx.json(out);
@@ -38,6 +40,7 @@ public class LlistaRouter {
 
     private void create(HttpCtx ctx) throws Exception {
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         Llista created;
         synchronized (cd) { created = cd.addLlista(nom); }
@@ -45,13 +48,22 @@ public class LlistaRouter {
     }
 
     private void delete(HttpCtx ctx) throws Exception {
-        int id = Integer.parseInt(ctx.pathParam("id"));
+        int id = ctx.pathParamInt("id");
         synchronized (cd) { cd.deleteLlista(findById(id)); }
         ctx.status(204);
     }
 
+    private void rename(HttpCtx ctx) throws Exception {
+        int id = ctx.pathParamInt("id");
+        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
+        String nom = j.get("nom").getAsString();
+        synchronized (cd) { cd.renameLlista(id, nom); }
+        ctx.json(JsonMapper.llistaToMap(findById(id)));
+    }
+
     private void setColor(HttpCtx ctx) throws Exception {
-        int id = Integer.parseInt(ctx.pathParam("id"));
+        int id = ctx.pathParamInt("id");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         String color = j.has("color") && !j.get("color").isJsonNull() ? j.get("color").getAsString() : null;
         synchronized (cd) { cd.setLlistaColor(id, color); }
@@ -59,22 +71,26 @@ public class LlistaRouter {
     }
 
     private void moveUp(HttpCtx ctx) throws Exception {
-        synchronized (cd) { cd.moveLlistaUp(Integer.parseInt(ctx.pathParam("id"))); }
+        int id = ctx.pathParamInt("id");
+        findById(id);
+        synchronized (cd) { cd.moveLlistaUp(id); }
         ctx.json(Map.of("ok", true));
     }
 
     private void moveDown(HttpCtx ctx) throws Exception {
-        synchronized (cd) { cd.moveLlistaDown(Integer.parseInt(ctx.pathParam("id"))); }
+        int id = ctx.pathParamInt("id");
+        findById(id);
+        synchronized (cd) { cd.moveLlistaDown(id); }
         ctx.json(Map.of("ok", true));
     }
 
-    private void books(HttpCtx ctx) {
-        ctx.json(JsonMapper.llibresToList(cd.getLlibresInLlista(Integer.parseInt(ctx.pathParam("id")))));
+    private void books(HttpCtx ctx) throws Exception {
+        ctx.json(JsonMapper.llibresToList(cd.getLlibresInLlista(ctx.pathParamInt("id"))));
     }
 
     private void addBook(HttpCtx ctx) throws Exception {
-        int id    = Integer.parseInt(ctx.pathParam("id"));
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        int id    = ctx.pathParamInt("id");
+        long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         double valoracio = j.has("valoracio") ? j.get("valoracio").getAsDouble() : 0.0;
         boolean llegit   = j.has("llegit") && j.get("llegit").getAsBoolean();
@@ -83,8 +99,8 @@ public class LlistaRouter {
     }
 
     private void updateBook(HttpCtx ctx) throws Exception {
-        int id    = Integer.parseInt(ctx.pathParam("id"));
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        int id    = ctx.pathParamInt("id");
+        long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         double valoracio = j.has("valoracio") ? j.get("valoracio").getAsDouble() : 0.0;
         boolean llegit   = j.has("llegit") && j.get("llegit").getAsBoolean();
@@ -93,8 +109,8 @@ public class LlistaRouter {
     }
 
     private void removeBook(HttpCtx ctx) throws Exception {
-        int id    = Integer.parseInt(ctx.pathParam("id"));
-        long isbn = Long.parseLong(ctx.pathParam("isbn"));
+        int id    = ctx.pathParamInt("id");
+        long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) { cd.removeLlibreFromLlista(isbn, id); }
         ctx.status(204);
     }

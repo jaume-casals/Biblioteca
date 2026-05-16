@@ -94,6 +94,23 @@ public class GestioLlistesDialog extends JDialog {
             }
         });
 
+        JButton btnRename = new JButton(I18n.t("btn_rename_llista"));
+        UITheme.styleSecondaryButton(btnRename);
+        btnRename.setToolTipText(I18n.t("tip_rename_llista"));
+        btnRename.addActionListener(e -> {
+            Llista sel = jList.getSelectedValue();
+            if (sel == null) return;
+            String newNom = (String) JOptionPane.showInputDialog(this,
+                I18n.t("dlg_rename_llista_prompt", sel.getNom()),
+                I18n.t("dlg_rename_llista_title"), JOptionPane.PLAIN_MESSAGE, null, null, sel.getNom());
+            if (newNom == null || newNom.isBlank()) return;
+            try {
+                cd.renameLlista(sel.getId(), newNom.trim());
+                reload();
+                mainControl.refreshComboLlistes();
+            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+        });
+
         JButton btnColor = new JButton(I18n.t("btn_color_llista"));
         UITheme.styleSecondaryButton(btnColor);
         btnColor.setToolTipText(I18n.t("tip_color_llista"));
@@ -146,6 +163,7 @@ public class GestioLlistesDialog extends JDialog {
         reorderRow.setBackground(UITheme.BG_PANEL);
         reorderRow.add(btnUp);
         reorderRow.add(btnDown);
+        reorderRow.add(btnRename);
         reorderRow.add(btnColor);
 
         JPanel inputRow = new JPanel(new BorderLayout(4, 0));

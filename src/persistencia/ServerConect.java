@@ -11,6 +11,10 @@ import herramienta.Config;
 
 public class ServerConect {
 
+	// Base schema. All extra columns are added by MIGRATIONS. The `autor` column exists here but
+	// is dropped by migration 34 after data is migrated to the `autor` table (migrations 32-33).
+	// A fresh install applies CREATE_TABLE + all MIGRATIONS and reaches the same schema as an
+	// old install that migrated forward — both paths are exercised by BibliotecaTest (H2 in-memory).
 	private static final String CREATE_TABLE =
 		"CREATE TABLE IF NOT EXISTS llibre(" +
 		"ISBN BIGINT PRIMARY KEY, " +
@@ -28,61 +32,71 @@ public class ServerConect {
 	private static final String CREATE_SCHEMA_VERSION =
 		"CREATE TABLE IF NOT EXISTS schema_version (version INT NOT NULL);";
 
-	// Each entry: [version_number, sql_to_apply]
-	private static final String[][] MIGRATIONS = {
-		{"1", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS imatge_blob BLOB"},
-		{"2", "CREATE TABLE IF NOT EXISTS llista (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL)"},
-		{"3", "CREATE TABLE IF NOT EXISTS llibre_llista (" +
+	private record Migration(int version, String sql) {}
+
+	private static final Migration[] MIGRATIONS = {
+		new Migration(1,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS imatge_blob BLOB"),
+		new Migration(2,  "CREATE TABLE IF NOT EXISTS llista (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL)"),
+		new Migration(3,  "CREATE TABLE IF NOT EXISTS llibre_llista (" +
 			"isbn BIGINT NOT NULL, llista_id INT NOT NULL, " +
 			"valoracio FLOAT DEFAULT 0.0, llegit BOOLEAN DEFAULT FALSE, " +
 			"PRIMARY KEY (isbn, llista_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
-			"FOREIGN KEY (llista_id) REFERENCES llista(id) ON DELETE CASCADE)"},
-		{"4", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS notes VARCHAR(2048) DEFAULT ''"},
-		{"5", "ALTER TABLE llista ADD COLUMN IF NOT EXISTS ordre INT DEFAULT 0"},
-		{"6", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_afegit TIMESTAMP DEFAULT CURRENT_TIMESTAMP"},
-		{"7", "ALTER TABLE llista ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT NULL"},
-		{"8", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines INT DEFAULT 0"},
-		{"9", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines_llegides INT DEFAULT 0"},
-		{"10", "CREATE TABLE IF NOT EXISTS prestec (" +
+			"FOREIGN KEY (llista_id) REFERENCES llista(id) ON DELETE CASCADE)"),
+		new Migration(4,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS notes VARCHAR(2048) DEFAULT ''"),
+		new Migration(5,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS ordre INT DEFAULT 0"),
+		new Migration(6,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_afegit TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+		new Migration(7,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT NULL"),
+		new Migration(8,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines INT DEFAULT 0"),
+		new Migration(9,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines_llegides INT DEFAULT 0"),
+		new Migration(10, "CREATE TABLE IF NOT EXISTS prestec (" +
 			"id INT AUTO_INCREMENT PRIMARY KEY, " +
 			"isbn BIGINT NOT NULL, " +
 			"nom_persona VARCHAR(255) NOT NULL, " +
 			"data_prestec DATE NOT NULL, " +
 			"retornat BOOLEAN DEFAULT FALSE, " +
-			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"},
-		{"11", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS editorial VARCHAR(255) DEFAULT ''"},
-		{"12", "CREATE TABLE IF NOT EXISTS tag (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)"},
-		{"14", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS serie VARCHAR(255) DEFAULT ''"},
-		{"15", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS volum INT DEFAULT 0"},
-		{"16", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_compra DATE DEFAULT NULL"},
-		{"17", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_lectura DATE DEFAULT NULL"},
-		{"18", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS idioma VARCHAR(100) DEFAULT NULL"},
-		{"19", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS format VARCHAR(50) DEFAULT NULL"},
-		{"20", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS desitjat BOOLEAN DEFAULT FALSE"},
-		{"13", "CREATE TABLE IF NOT EXISTS llibre_tag (" +
+			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"),
+		new Migration(11, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS editorial VARCHAR(255) DEFAULT ''"),
+		new Migration(12, "CREATE TABLE IF NOT EXISTS tag (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)"),
+		new Migration(13, "CREATE TABLE IF NOT EXISTS llibre_tag (" +
 			"isbn BIGINT NOT NULL, tag_id INT NOT NULL, " +
 			"PRIMARY KEY (isbn, tag_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
-			"FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE)"},
-		{"21", "CREATE TABLE IF NOT EXISTS autor (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(500) NOT NULL UNIQUE)"},
-		{"22", "CREATE TABLE IF NOT EXISTS llibre_autor (" +
+			"FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE)"),
+		new Migration(14, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS serie VARCHAR(255) DEFAULT ''"),
+		new Migration(15, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS volum INT DEFAULT 0"),
+		new Migration(16, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_compra DATE DEFAULT NULL"),
+		new Migration(17, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_lectura DATE DEFAULT NULL"),
+		new Migration(18, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS idioma VARCHAR(100) DEFAULT NULL"),
+		new Migration(19, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS format VARCHAR(50) DEFAULT NULL"),
+		new Migration(20, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS desitjat BOOLEAN DEFAULT FALSE"),
+		new Migration(21, "CREATE TABLE IF NOT EXISTS autor (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(500) NOT NULL UNIQUE)"),
+		new Migration(22, "CREATE TABLE IF NOT EXISTS llibre_autor (" +
 			"isbn BIGINT NOT NULL, autor_id INT NOT NULL, " +
 			"PRIMARY KEY (isbn, autor_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
-			"FOREIGN KEY (autor_id) REFERENCES autor(id))"},
-		{"23", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pais_origen VARCHAR(100) DEFAULT NULL"},
-		{"24", "ALTER TABLE llibre MODIFY COLUMN notes TEXT"},
-		{"25", "CREATE TABLE IF NOT EXISTS lectura (" +
+			"FOREIGN KEY (autor_id) REFERENCES autor(id))"),
+		new Migration(23, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pais_origen VARCHAR(100) DEFAULT NULL"),
+		new Migration(24, "ALTER TABLE llibre MODIFY COLUMN notes TEXT"),
+		new Migration(25, "CREATE TABLE IF NOT EXISTS lectura (" +
 			"id INT AUTO_INCREMENT PRIMARY KEY, " +
 			"isbn BIGINT NOT NULL, " +
 			"data_inici DATE DEFAULT NULL, " +
 			"data_fi DATE DEFAULT NULL, " +
 			"pagines_llegides INT DEFAULT 0, " +
-			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"},
-		{"26", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS estat VARCHAR(20) DEFAULT NULL"},
-		{"27", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS exemplars INT DEFAULT 1"},
-		{"28", "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS llengua_original VARCHAR(100) DEFAULT NULL"},
+			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"),
+		new Migration(26, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS estat VARCHAR(20) DEFAULT NULL"),
+		new Migration(27, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS exemplars INT DEFAULT 1"),
+		new Migration(28, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS llengua_original VARCHAR(100) DEFAULT NULL"),
+		new Migration(29, "ALTER TABLE llibre MODIFY COLUMN valoracio DOUBLE"),
+		new Migration(30, "ALTER TABLE llibre MODIFY COLUMN preu DOUBLE"),
+		new Migration(31, "ALTER TABLE llibre_llista MODIFY COLUMN valoracio DOUBLE"),
+		new Migration(32, "INSERT IGNORE INTO autor (nom) SELECT DISTINCT TRIM(autor) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != '' AND ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
+		new Migration(33, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT l.ISBN, a.id FROM llibre l JOIN autor a ON a.nom = TRIM(l.autor) WHERE TRIM(l.autor) IS NOT NULL AND TRIM(l.autor) != '' AND l.ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
+		new Migration(34, "ALTER TABLE llibre DROP COLUMN autor"),
+		new Migration(35, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_ca VARCHAR(500) DEFAULT NULL"),
+		new Migration(36, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_es VARCHAR(500) DEFAULT NULL"),
+		new Migration(37, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_en VARCHAR(500) DEFAULT NULL"),
 	};
 
 	private Connection con;
@@ -109,7 +123,7 @@ public class ServerConect {
 				String url = "jdbc:h2:" + dir + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 			} else {
-				String url = "jdbc:mariadb://" + cfg.host() + "/";
+				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
 				con = connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
 					url, cfg.user(), cfg.password());
 				try (Statement s = con.createStatement()) {
@@ -122,34 +136,38 @@ public class ServerConect {
 			}
 			runMigrations();
 		} catch (Exception e) {
-			if (Boolean.getBoolean("biblioteca.test")) throw new RuntimeException(e);
 			String hint = "h2".equals(cfg.dbType())
 				? "Error inicialitzant la base de dades integrada."
-				: "Comprova que MariaDB/MySQL estigui en execució i que l'usuari '"
-					+ cfg.user() + "' tingui permisos.";
-			System.err.println("No s'ha pogut connectar a la base de dades.\n" + hint + ": " + e.getMessage());
-			System.exit(1);
+				: "Comprova que MariaDB/MySQL estigui en execució...";
+			throw new RuntimeException("No s'ha pogut connectar a la base de dades.\n" + hint, e);
 		}
 	}
 
 	private void runMigrations() throws SQLException {
+		boolean prevAutoCommit = con.getAutoCommit();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
 			java.util.Set<Integer> applied = new java.util.HashSet<>();
 			try (ResultSet rs = st.executeQuery("SELECT version FROM schema_version")) {
 				while (rs.next()) applied.add(rs.getInt(1));
 			}
+			con.setAutoCommit(false);
 			try (PreparedStatement ins = con.prepareStatement("INSERT INTO schema_version VALUES (?)")) {
-				for (String[] m : MIGRATIONS) {
-					int v = Integer.parseInt(m[0]);
-					if (!applied.contains(v)) {
-						st.executeUpdate(m[1]);
-						ins.setInt(1, v);
+				for (Migration m : MIGRATIONS) {
+					if (!applied.contains(m.version())) {
+						st.executeUpdate(m.sql());
+						ins.setInt(1, m.version());
 						ins.execute();
-						applied.add(v);
+						applied.add(m.version());
 					}
 				}
 			}
+			con.commit();
+		} catch (SQLException e) {
+			try { con.rollback(); } catch (SQLException ignored) {}
+			throw e;
+		} finally {
+			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}
 		}
 	}
 
@@ -157,6 +175,10 @@ public class ServerConect {
 	 * Loads JDBC driver and connects. Falls back to dynamic JAR loading from lib/
 	 * if the driver class is not on the classpath (e.g. running from VSCode without
 	 * the library configured in the project's runtime classpath).
+	 *
+	 * Uses driver.connect() directly instead of DriverManager.getConnection() so that
+	 * a dynamically loaded driver (via URLClassLoader) is not required to register with
+	 * DriverManager — which only sees drivers loaded by the system classloader.
 	 */
 	private Connection connectViaDriver(String driverClass, String jarNameHint,
 			String url, String user, String password) throws Exception {

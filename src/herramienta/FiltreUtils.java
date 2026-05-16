@@ -6,11 +6,16 @@ public class FiltreUtils {
 
     public static boolean matchISBN(Long prefix, Long isbn) {
         if (prefix == null || isbn == null) return false;
-        return isbn.toString().startsWith(prefix.toString());
+        return String.valueOf(isbn).startsWith(String.valueOf(prefix));
     }
 
     public static boolean matchString(String needle, String haystack) {
         if (needle == null || haystack == null) return false;
-        return haystack.toLowerCase().contains(needle.toLowerCase());
+        return normalize(haystack).contains(normalize(needle));
+    }
+
+    private static String normalize(String s) {
+        String nfd = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").toLowerCase(java.util.Locale.ROOT);
     }
 }

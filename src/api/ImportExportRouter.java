@@ -1,11 +1,13 @@
 package api;
 
 import interficie.BibliotecaWriter;
+import domini.ControladorDomini;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import herramienta.LlibreValidator;
 import herramienta.OpenLibraryClient;
+import herramienta.csv.CsvUtils;
+import herramienta.csv.GoodreadsCsvStrategy;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -28,16 +30,24 @@ public class ImportExportRouter {
     }
 
     private void exportJson(HttpCtx ctx) throws Exception {
+        // Build isbn→llistes and isbn→tags maps with bulk queries to avoid N+1
+        Map<Long, List<Map<String, Object>>> llistaMap = new HashMap<>();
+        Map<Long, List<Map<String, Object>>> tagMap = new HashMap<>();
+        if (cd instanceof ControladorDomini dom) {
+            for (domini.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
+                llistaMap.computeIfAbsent(row.isbn(), k -> new ArrayList<>())
+                    .add(Map.of("id", row.llistaId(), "valoracio", row.valoracio(), "llegit", row.llegit()));
+            }
+            for (domini.LlibreTagRow row : dom.getAllLlibreTagRows()) {
+                tagMap.computeIfAbsent(row.isbn(), k -> new ArrayList<>())
+                    .add(Map.of("id", row.tagId()));
+            }
+        }
         List<Map<String, Object>> llibres = new ArrayList<>();
         for (Llibre l : cd.getAllLlibres()) {
             Map<String, Object> m = JsonMapper.llibreToMap(l);
-            m.put("llistes", cd.getLlistesForLlibre(l.getISBN()).stream()
-                .map(ll -> Map.of("id", ll.getId(), "valoracio", ll.getValoracioLlibre(),
-                    "llegit", Boolean.TRUE.equals(ll.getLlegitLlibre())))
-                .collect(java.util.stream.Collectors.toList()));
-            m.put("tags", cd.getTagsForLlibre(l.getISBN()).stream()
-                .map(t -> Map.of("id", t.getId()))
-                .collect(java.util.stream.Collectors.toList()));
+            m.put("llistes", llistaMap.getOrDefault(l.getISBN(), List.of()));
+            m.put("tags", tagMap.getOrDefault(l.getISBN(), List.of()));
             llibres.add(m);
         }
         Map<String, Object> root = new LinkedHashMap<>();
@@ -56,6 +66,7 @@ public class ImportExportRouter {
         if (body == null || body.isBlank()) throw new Exception("Empty body");
         JsonObject root = JsonParser.parseString(body).getAsJsonObject();
         int ok = 0, skipped = 0, err = 0;
+        List<String> errDetails = new ArrayList<>();
 
         Map<Integer, Integer> tagIdMap = new HashMap<>();
         if (root.has("tags")) {
@@ -103,10 +114,10 @@ public class ImportExportRouter {
                         }
                     }
                     ok++;
-                } catch (Exception e) { err++; }
+                } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
             }
         }
-        ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err));
+        ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err, "errorDetails", errDetails));
     }
 
     private void exportGoodreadsCSV(HttpCtx ctx) throws Exception {
@@ -116,31 +127,39 @@ public class ImportExportRouter {
           .append("Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,")
           .append("Read Count,Recommended For,Recommended By,Owned Copies,Original Purchase Date,")
           .append("Condition,Condition Description,BCID\n");
+        // Build isbn→llistes map in bulk to avoid N+1 queries
+        Map<Integer, Llista> llistaById = new HashMap<>();
+        for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
+        Map<Long, List<Llista>> llibLlistes = new HashMap<>();
+        for (domini.LlibreLlistaRow row : cd.getAllLlibreLlistaRows()) {
+            Llista ll = llistaById.get(row.llistaId());
+            if (ll != null) llibLlistes.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(ll);
+        }
         int rowId = 1;
         for (Llibre l : cd.getAllLlibres()) {
-            List<Llista> llistes = cd.getLlistesForLlibre(l.getISBN());
+            List<Llista> llistes = llibLlistes.getOrDefault(l.getISBN(), Collections.emptyList());
             String shelf = Boolean.TRUE.equals(l.getLlegit()) ? "read" : (!llistes.isEmpty() ? llistes.get(0).getNom() : "to-read");
             String bookshelves = llistes.stream().map(Llista::getNom)
                 .collect(java.util.stream.Collectors.joining(", "));
             sb.append(rowId++).append(',')
-              .append(csvQ(l.getNom())).append(',')
-              .append(csvQ(l.getAutor().toString())).append(',')
-              .append(csvQ(l.getAutor().toString())).append(',')
+              .append(CsvUtils.csvQ(l.getNom())).append(',')
+              .append(CsvUtils.csvQ(l.getAutor().toString())).append(',')
+              .append(CsvUtils.csvQ(l.getAutor().toString())).append(',')
               .append(',') // Additional Authors
-              .append(csvQ("=\"" + l.getISBN() + "\"")).append(',')
-              .append(csvQ("=\"" + l.getISBN() + "\"")).append(',')
+              .append(CsvUtils.csvQ("=\"" + l.getISBN() + "\"")).append(',')
+              .append(CsvUtils.csvQ("=\"" + l.getISBN() + "\"")).append(',')
               .append(l.getValoracio() > 0 ? (int) Math.round(l.getValoracio() / 2.0) : 0).append(',')
               .append(',') // Average Rating
-              .append(csvQ(l.getEditorial() != null ? l.getEditorial() : "")).append(',')
-              .append(csvQ(l.getFormat() != null ? l.getFormat() : "")).append(',')
+              .append(CsvUtils.csvQ(l.getEditorial() != null ? l.getEditorial() : "")).append(',')
+              .append(CsvUtils.csvQ(l.getFormat() != null ? l.getFormat() : "")).append(',')
               .append(l.getPagines() > 0 ? l.getPagines() : "").append(',')
               .append(l.getAny() > 0 ? l.getAny() : "").append(',')
               .append(l.getAny() > 0 ? l.getAny() : "").append(',')
-              .append(csvQ(l.getDataLectura() != null ? l.getDataLectura() : "")).append(',')
-              .append(csvQ(l.getDataCompra() != null ? l.getDataCompra() : "")).append(',')
-              .append(csvQ(bookshelves)).append(',')
-              .append(csvQ(shelf)).append(',')
-              .append(csvQ(l.getNotes() != null ? l.getNotes() : "")).append(',')
+              .append(CsvUtils.csvQ(l.getDataLectura() != null ? l.getDataLectura() : "")).append(',')
+              .append(CsvUtils.csvQ(l.getDataCompra() != null ? l.getDataCompra() : "")).append(',')
+              .append(CsvUtils.csvQ(bookshelves)).append(',')
+              .append(CsvUtils.csvQ(shelf)).append(',')
+              .append(CsvUtils.csvQ(l.getNotes() != null ? l.getNotes() : "")).append(',')
               .append(",,,,,,,,,\n"); // remaining empty columns
         }
         ctx.responseHeader("Content-Disposition", "attachment; filename=\"goodreads_export.csv\"");
@@ -148,138 +167,31 @@ public class ImportExportRouter {
         ctx.result(sb.toString().getBytes(StandardCharsets.UTF_8));
     }
 
-    private static String csvQ(String s) {
-        if (s == null) return "";
-        return "\"" + s.replace("\"", "\"\"") + "\"";
-    }
-
     private void importCsv(HttpCtx ctx) throws Exception {
         String body = ctx.body();
         if (body == null || body.isBlank()) throw new Exception("Empty body");
         String[] lines = body.split("\r?\n", -1);
         if (lines.length < 2) throw new Exception("CSV has no data rows");
-        String[] headers = parseCsvLine(lines[0]);
+        String headerLine = lines[0];
+        String[] headers = CsvUtils.parseLine(headerLine);
         Map<String, Integer> hMap = new HashMap<>();
         for (int i = 0; i < headers.length; i++) hMap.put(headers[i].trim(), i);
-        boolean isLibraryThing = hMap.containsKey("BCID");
-        boolean isGoodreads = !isLibraryThing &&
-            (hMap.containsKey("Book Id") || hMap.containsKey("Exclusive Shelf"));
+        List<herramienta.csv.CsvImportStrategy> strategies = List.of(
+            new herramienta.csv.LibraryThingCsvStrategy(),
+            new GoodreadsCsvStrategy(),
+            new herramienta.csv.NativeCsvStrategy());
+        herramienta.csv.CsvImportStrategy strategy = strategies.stream()
+            .filter(s -> s.canHandle(headerLine)).findFirst().get();
         int ok = 0, skipped = 0, err = 0;
+        List<String> errDetails = new ArrayList<>();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isBlank()) continue;
             try {
-                String[] c = parseCsvLine(lines[i]);
-                if (isLibraryThing) {
-                    if (importLibraryThingRow(c, hMap)) ok++; else skipped++;
-                } else if (isGoodreads) {
-                    if (importGoodreadsRow(c, hMap)) ok++; else skipped++;
-                } else {
-                    long isbn = Long.parseLong(c[0].trim());
-                    try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
-                    Llibre l = LlibreValidator.checkLlibre(isbn, c[1], c[2],
-                        Integer.parseInt(c[3].trim()),
-                        c.length > 4 ? c[4] : "",
-                        c.length > 5 ? parseDoubleOr(c[5], 0.0) : 0.0,
-                        c.length > 6 ? parseDoubleOr(c[6], 0.0) : 0.0,
-                        c.length > 7 && Boolean.parseBoolean(c[7].trim()),
-                        c.length > 8 ? c[8] : "");
-                    cd.addLlibre(l);
-                    ok++;
-                }
-            } catch (Exception e) { err++; }
+                if (strategy.parseLine(CsvUtils.parseLine(lines[i]), hMap, cd)) ok++;
+                else skipped++;
+            } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
         }
-        ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err));
-    }
-
-    private boolean importLibraryThingRow(String[] c, Map<String, Integer> hMap) throws Exception {
-        String isbnRaw = colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = colVal(hMap, c, "ISBN");
-        isbnRaw = isbnRaw.replaceAll("[^0-9]", "");
-        if (isbnRaw.isEmpty()) return false;
-        long isbn;
-        try { isbn = Long.parseLong(isbnRaw); } catch (NumberFormatException e) { return false; }
-        try { cd.getLlibre(isbn); return false; } catch (Exception ignored) {}
-        String nom    = colVal(hMap, c, "Title");
-        String autor  = colVal(hMap, c, "Authors");
-        // LibraryThing stores "Last, First" — convert to "First Last" if single author
-        if (autor.contains(",") && !autor.contains(";")) {
-            String[] parts = autor.split(",", 2);
-            autor = parts[1].trim() + " " + parts[0].trim();
-        }
-        int any = 0;
-        String yearStr = colVal(hMap, c, "Original Publication Year");
-        if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
-        double valoracio = parseDoubleOr(colVal(hMap, c, "Rating"), 0.0) * 2.0; // LT uses 0.5–5 stars → 0–10
-        String desc    = colVal(hMap, c, "Summary");
-        String notes   = colVal(hMap, c, "Comments");
-        if (notes.isEmpty()) notes = colVal(hMap, c, "Review");
-        Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, valoracio, 0.0, false, "");
-        if (!notes.isEmpty()) l.setNotes(notes);
-        cd.addLlibre(l);
-        String collections = colVal(hMap, c, "Collections");
-        if (!collections.isEmpty()) {
-            for (String s : collections.split(",")) {
-                String nomLlista = s.trim();
-                if (nomLlista.isEmpty()) continue;
-                Llista llista = cd.getAllLlistes().stream()
-                    .filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
-                if (llista == null) llista = cd.addLlista(nomLlista);
-                cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
-            }
-        }
-        String tags = colVal(hMap, c, "Tags");
-        if (!tags.isEmpty()) {
-            for (String t : tags.split(",")) {
-                String nomTag = t.trim();
-                if (nomTag.isEmpty()) continue;
-                Tag tag = cd.getAllTags().stream()
-                    .filter(tg -> tg.getNom().equals(nomTag)).findFirst().orElse(null);
-                if (tag == null) tag = cd.addTag(nomTag);
-                cd.addLlibreToTag(isbn, tag.getId());
-            }
-        }
-        return true;
-    }
-
-    private boolean importGoodreadsRow(String[] c, Map<String, Integer> hMap) throws Exception {
-        String isbnRaw = colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = colVal(hMap, c, "ISBN");
-        isbnRaw = isbnRaw.replaceAll("[^0-9]", "");
-        if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
-        long isbn = Long.parseLong(isbnRaw);
-        try { cd.getLlibre(isbn); return false; } catch (Exception ignored) {}
-        String nom       = colVal(hMap, c, "Title");
-        String autor     = colVal(hMap, c, "Author");
-        String editorial = colVal(hMap, c, "Publisher");
-        String pagesStr  = colVal(hMap, c, "Number of Pages");
-        int pagines = pagesStr.isEmpty() ? 0 : (int) parseDoubleOr(pagesStr, 0.0);
-        int any = 0;
-        String yearStr = colVal(hMap, c, "Year Published");
-        if (yearStr.isEmpty()) yearStr = colVal(hMap, c, "Original Publication Year");
-        if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
-        double valoracio = parseDoubleOr(colVal(hMap, c, "My Rating"), 0.0);
-        String shelf    = colVal(hMap, c, "Exclusive Shelf");
-        boolean llegit  = "read".equalsIgnoreCase(shelf);
-        String notes    = colVal(hMap, c, "My Review");
-        String dataLect = colVal(hMap, c, "Date Read");
-        Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, "", valoracio, 0.0, llegit, "");
-        l.setEditorial(editorial);
-        l.setPagines(pagines);
-        l.setNotes(notes);
-        if (!dataLect.isEmpty()) l.setDataLectura(dataLect);
-        cd.addLlibre(l);
-        String bookshelves = colVal(hMap, c, "Bookshelves");
-        if (!bookshelves.isEmpty()) {
-            for (String s : bookshelves.split(",")) {
-                String nomLlista = s.trim();
-                if (nomLlista.isEmpty()) continue;
-                Llista llista = cd.getAllLlistes().stream()
-                    .filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
-                if (llista == null) llista = cd.addLlista(nomLlista);
-                cd.addLlibreToLlista(isbn, llista.getId(), valoracio, llegit);
-            }
-        }
-        return true;
+        ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err, "errorDetails", errDetails));
     }
 
     private void fetchCovers(HttpCtx ctx) throws Exception {
@@ -288,43 +200,17 @@ public class ImportExportRouter {
             .collect(java.util.stream.Collectors.toList());
         int total = missing.size();
         ctx.json(Map.of("queued", total));
-        Thread worker = new Thread(() -> {
-            for (Llibre l : missing) {
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(4,
+            r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
+        for (Llibre l : missing) {
+            pool.submit(() -> {
                 try {
                     byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
                     if (blob != null && blob.length > 0) cd.setLlibreBlob(l.getISBN(), blob);
                 } catch (Exception ignored) {}
-            }
-        });
-        worker.setDaemon(true);
-        worker.start();
-    }
-
-    private static String colVal(Map<String, Integer> hMap, String[] c, String col) {
-        Integer idx = hMap.get(col);
-        if (idx == null || idx >= c.length) return "";
-        return c[idx].trim();
-    }
-
-    private static double parseDoubleOr(String s, double def) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return def; }
-    }
-
-    private static String[] parseCsvLine(String line) {
-        List<String> fields = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-        boolean inQuote = false;
-        for (int i = 0; i < line.length(); i++) {
-            char ch = line.charAt(i);
-            if (ch == '"') {
-                if (inQuote && i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                    sb.append('"'); i++;
-                } else { inQuote = !inQuote; }
-            } else if (ch == ',' && !inQuote) {
-                fields.add(sb.toString()); sb.setLength(0);
-            } else { sb.append(ch); }
+            });
         }
-        fields.add(sb.toString());
-        return fields.toArray(new String[0]);
+        pool.shutdown();
     }
+
 }

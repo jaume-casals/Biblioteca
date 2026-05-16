@@ -3,6 +3,7 @@ package herramienta;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
+import herramienta.csv.CsvUtils;
 import interficie.BibliotecaWriter;
 
 public class BookImporter {
@@ -10,7 +11,7 @@ public class BookImporter {
     public record ImportResult(int imported, int skipped, int errors, String errorDetails) {}
 
     public static ImportResult importCSV(java.io.File file, BibliotecaWriter cd) {
-        int ok = 0, err = 0;
+        int ok = 0, skipped = 0, err = 0;
         StringBuilder errors = new StringBuilder();
         java.util.List<herramienta.csv.CsvImportStrategy> strategies = java.util.List.of(
             new herramienta.csv.LibraryThingCsvStrategy(),
@@ -29,21 +30,22 @@ public class BookImporter {
             while ((line = br.readLine()) != null) {
                 if (line.isBlank()) continue;
                 try {
-                    strategy.parseLine(herramienta.csv.CsvUtils.parseLine(line), hMap, cd);
-                    ok++;
+                    if (strategy.parseLine(herramienta.csv.CsvUtils.parseLine(line), hMap, cd)) ok++;
+                    else skipped++;
                 } catch (Exception ex) {
                     err++;
                     if (errors.length() < 400) errors.append("\n• ").append(ex.getMessage());
                 }
             }
         } catch (Exception e) {
-            return new ImportResult(ok, 0, err + 1, e.getMessage());
+            return new ImportResult(ok, skipped, err + 1, e.getMessage());
         }
-        return new ImportResult(ok, 0, err, errors.toString());
+        return new ImportResult(ok, skipped, err, errors.toString());
     }
 
     public static ImportResult importJSON(java.io.File file, BibliotecaWriter cd) throws Exception {
         int ok = 0, err = 0, skipped = 0;
+        StringBuilder errors = new StringBuilder();
         String json = new String(java.nio.file.Files.readAllBytes(file.toPath()),
             java.nio.charset.StandardCharsets.UTF_8);
         com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
@@ -121,10 +123,13 @@ public class BookImporter {
                         }
                     }
                     ok++;
-                } catch (Exception ex) { err++; }
+                } catch (Exception ex) {
+                    err++;
+                    if (errors.length() < 400) errors.append("\n• ").append(ex.getMessage());
+                }
             }
         }
-        return new ImportResult(ok, skipped, err, "");
+        return new ImportResult(ok, skipped, err, errors.toString());
     }
 
     public static ImportResult importCalibre(java.io.File dbFile, String sqlite3, BibliotecaWriter cd) throws Exception {
@@ -138,6 +143,7 @@ public class BookImporter {
         stderrDrain.setDaemon(true);
         stderrDrain.start();
         int ok = 0, skipped = 0, err = 0;
+        StringBuilder errors = new StringBuilder();
         try (java.io.BufferedReader br = new java.io.BufferedReader(
                 new java.io.InputStreamReader(proc.getInputStream()))) {
             String line;
@@ -153,8 +159,8 @@ public class BookImporter {
                     String autor = c.length > 2 ? c[2].trim() : "";
                     String editorial = c.length > 4 ? c[4].trim() : "";
                     int any = 0;
-                    if (c.length > 5 && !c[5].isBlank()) { try { any = Integer.parseInt(c[5].substring(0, 4)); } catch (Exception ignored) {} }
-                    double valoracio = c.length > 6 ? parseDoubleOrZero(c[6]) * 2.0 : 0.0;
+                    if (c.length > 5 && !c[5].isBlank()) any = DateUtils.parseYear(c[5]);
+                    double valoracio = c.length > 6 ? CsvUtils.parseDoubleOrZero(c[6]) * 2.0 : 0.0;
                     String notes = c.length > 7 ? c[7].trim() : "";
                     String serie = c.length > 9 ? c[9].trim() : "";
                     int volum = 0;
@@ -165,25 +171,27 @@ public class BookImporter {
                     if (!serie.isEmpty()) { l.setSerie(serie); l.setVolum(volum); }
                     cd.addLlibre(l);
                     ok++;
-                } catch (Exception ex) { err++; }
+                } catch (Exception ex) {
+                    err++;
+                    if (errors.length() < 400) errors.append("\n• ").append(ex.getMessage());
+                }
             }
         }
-        proc.waitFor();
-        return new ImportResult(ok, skipped, err, "");
+        if (!proc.waitFor(30, java.util.concurrent.TimeUnit.SECONDS)) {
+            proc.destroyForcibly();
+            throw new Exception("sqlite3 process timed out after 30 seconds");
+        }
+        return new ImportResult(ok, skipped, err, errors.toString());
     }
 
     public static String findSqlite3() {
-        for (String candidate : new String[]{"sqlite3", "/usr/bin/sqlite3", "/usr/local/bin/sqlite3"}) {
+        for (String candidate : new String[]{"sqlite3", "/usr/bin/sqlite3", "/usr/local/bin/sqlite3", "/opt/homebrew/bin/sqlite3"}) {
             try {
                 Process p = Runtime.getRuntime().exec(new String[]{candidate, "--version"});
                 if (p.waitFor() == 0) return candidate;
             } catch (Exception ignored) {}
         }
         return null;
-    }
-
-    private static double parseDoubleOrZero(String s) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
     }
 
     private static String jsonOptStr(com.google.gson.JsonObject o, String key) {

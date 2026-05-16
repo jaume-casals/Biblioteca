@@ -1,5 +1,6 @@
 package presentacio;
 
+import herramienta.I18n;
 import herramienta.UITheme;
 import javax.swing.*;
 import java.awt.*;
@@ -7,11 +8,14 @@ import java.awt.*;
 public class SplashScreen {
 
     private final JDialog dialog;
+    private long showTime = 0;
+    private static final long MIN_DISPLAY_MS = 500;
 
     public SplashScreen() {
         dialog = new JDialog();
         dialog.setUndecorated(true);
         dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        dialog.setAlwaysOnTop(true);
 
         JPanel panel = new JPanel(new BorderLayout(12, 12));
         panel.setBackground(UITheme.BG_PANEL);
@@ -19,7 +23,7 @@ public class SplashScreen {
             BorderFactory.createLineBorder(UITheme.ACCENT, 2),
             BorderFactory.createEmptyBorder(20, 30, 20, 30)));
 
-        JLabel lbl = new JLabel("Carregant biblioteca...", SwingConstants.CENTER);
+        JLabel lbl = new JLabel(I18n.t("splash_loading"), SwingConstants.CENTER);
         lbl.setFont(UITheme.FONT_TITLE);
         lbl.setForeground(UITheme.ACCENT);
 
@@ -35,6 +39,21 @@ public class SplashScreen {
         dialog.setLocationRelativeTo(null);
     }
 
-    public void show() { dialog.setVisible(true); }
-    public void hide() { dialog.dispose(); }
+    public void show() {
+        if (dialog.isVisible()) return;
+        showTime = System.currentTimeMillis();
+        dialog.setVisible(true);
+    }
+
+    public void hide() {
+        if (!dialog.isVisible()) return;
+        long remaining = MIN_DISPLAY_MS - (System.currentTimeMillis() - showTime);
+        if (remaining > 0) {
+            javax.swing.Timer t = new javax.swing.Timer((int) remaining, e -> dialog.dispose());
+            t.setRepeats(false);
+            t.start();
+        } else {
+            dialog.dispose();
+        }
+    }
 }

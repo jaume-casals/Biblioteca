@@ -17,32 +17,42 @@ public class BackupService {
         this.cp = cp;
     }
 
-    public void scheduleAutoBackup(List<Llibre> bib, List<Llista> llistes, List<Tag> tags) {
-        Thread t = new Thread(() -> autoBackup(bib, llistes, tags));
+    public void scheduleAutoBackup() {
+        Thread t = new Thread(this::autoBackup);
         t.setDaemon(true);
         t.start();
     }
 
-    private void autoBackup(List<Llibre> bib, List<Llista> llistes, List<Tag> tags) {
+    private void autoBackup() {
+        try { Thread.sleep(30_000); } catch (InterruptedException e) { return; }
+        List<Llibre> bib = cp.getAllLlibres();
         if (bib.isEmpty()) return;
         try {
-            File dir = new File(System.getProperty("user.home") + "/.biblioteca/backups");
+            File dir = Config.getBackupDir();
             dir.mkdirs();
+            String today = java.time.LocalDate.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            File[] existing = dir.listFiles((d, n) -> n.startsWith("biblioteca_" + today) && n.endsWith(".sql"));
+            if (existing != null && existing.length > 0) return;
             String ts = java.time.LocalDateTime.now()
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-            backupToSQL(new File(dir, "biblioteca_" + ts + ".sql"), bib, llistes, tags);
+            backupToSQL(new File(dir, "biblioteca_" + ts + ".sql"),
+                bib, cp.getAllLlistes(), cp.getAllTags());
             File[] backups = dir.listFiles((d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
             if (backups != null && backups.length > 5) {
-                java.util.Arrays.sort(backups);
+                java.util.Arrays.sort(backups, java.util.Comparator.comparingLong(File::lastModified));
                 for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Backup automàtic fallat: " + e.getMessage());
+        }
     }
 
     public void backupToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws Exception {
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
+            pw.println("DELETE FROM lectura;");
             pw.println("DELETE FROM prestec;");
             pw.println("DELETE FROM llibre_llista;");
             pw.println("DELETE FROM llista;");
@@ -53,10 +63,12 @@ public class BackupService {
             pw.println("DELETE FROM llibre;");
             for (Llibre l : bib) {
                 pw.printf(
-                    "INSERT INTO llibre (`ISBN`,`nom`,`autor`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`,`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`,`desitjat`,`pais_origen`) VALUES (%d,'%s','%s',%d,'%s',%.4f,%.4f,%b,'%s','%s',%d,%d,'%s','%s',%d,%s,%s,%s,%s,%b,%s);%n",
+                    "INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`," +
+                    "`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`," +
+                    "`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) " +
+                    "VALUES (%d,'%s',%d,'%s',%.4f,%.4f,%b,'%s','%s',%d,%d,'%s','%s',%d,%s,%s,%s,%s,%b,%s,%s,%d,%s,%s,%s,%s);%n",
                     l.getISBN(),
                     sqlEsc(l.getNom()),
-                    sqlEsc(l.getAutor() != null ? l.getAutor() : ""),
                     l.getAny() != null ? l.getAny() : 0,
                     sqlEsc(l.getDescripcio() != null ? l.getDescripcio() : ""),
                     l.getValoracio() != null ? l.getValoracio() : 0.0,
@@ -74,41 +86,55 @@ public class BackupService {
                     l.getIdioma() != null ? "'" + sqlEsc(l.getIdioma()) + "'" : "NULL",
                     l.getFormat() != null ? "'" + sqlEsc(l.getFormat()) + "'" : "NULL",
                     l.getDesitjat(),
-                    l.getPaisOrigen() != null ? "'" + sqlEsc(l.getPaisOrigen()) + "'" : "NULL");
+                    l.getPaisOrigen() != null ? "'" + sqlEsc(l.getPaisOrigen()) + "'" : "NULL",
+                    l.getEstat() != null ? "'" + sqlEsc(l.getEstat()) + "'" : "NULL",
+                    l.getExemplars(),
+                    l.getLlenguaOriginal() != null ? "'" + sqlEsc(l.getLlenguaOriginal()) + "'" : "NULL",
+                    l.getNomCa() != null ? "'" + sqlEsc(l.getNomCa()) + "'" : "NULL",
+                    l.getNomEs() != null ? "'" + sqlEsc(l.getNomEs()) + "'" : "NULL",
+                    l.getNomEn() != null ? "'" + sqlEsc(l.getNomEn()) + "'" : "NULL");
             }
-            for (Object[] row : cp.getAllAutors()) {
+            for (persistencia.AutorRow row : cp.getAllAutors()) {
                 pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,'%s');%n",
-                    (Integer) row[0], sqlEsc((String) row[1]));
+                    row.id(), sqlEsc(row.nom()));
             }
-            for (Object[] row : cp.getAllLlibreAutor()) {
+            for (persistencia.LlibreAutorRow row : cp.getAllLlibreAutor()) {
                 pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
-                    (Long) row[0], (Integer) row[1]);
+                    row.isbn(), row.autorId());
             }
             for (Llista ll : llistes) {
                 pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,'%s',%d,%s);%n",
                     ll.getId(), sqlEsc(ll.getNom()), ll.getOrdre(),
                     ll.getColor() != null ? "'" + sqlEsc(ll.getColor()) + "'" : "NULL");
             }
-            for (Object[] row : cp.getAllLlibreLlista()) {
+            for (domini.LlibreLlistaRow row : cp.getAllLlibreLlista()) {
                 pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
-                    (Long) row[0], (Integer) row[1], (Double) row[2], (Boolean) row[3]);
+                    row.isbn(), row.llistaId(), row.valoracio(), row.llegit());
             }
             for (Tag t : tags) {
                 pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,'%s');%n",
                     t.getId(), sqlEsc(t.getNom()));
             }
-            for (Object[] row : cp.getAllLlibreTag()) {
+            for (domini.LlibreTagRow row : cp.getAllLlibreTag()) {
                 pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
-                    (Long) row[0], (Integer) row[1]);
+                    row.isbn(), row.tagId());
             }
-            for (Object[] row : cp.getAllPrestecs()) {
+            for (domini.PrestecRow row : cp.getAllPrestecs()) {
                 pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,'%s','%s',%b);%n",
-                    (Long) row[0], sqlEsc((String) row[1]), sqlEsc(row[2] != null ? row[2].toString() : ""), (Boolean) row[3]);
+                    row.isbn(), sqlEsc(row.nomPersona()), sqlEsc(row.dataPrestec() != null ? row.dataPrestec() : ""), row.retornat());
+            }
+            for (persistencia.LecturaRow row : cp.getAllLectures()) {
+                pw.printf("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (%d,%s,%s,%d);%n",
+                    row.isbn(),
+                    row.dataInici() != null ? "'" + sqlEsc(row.dataInici()) + "'" : "NULL",
+                    row.dataFi() != null ? "'" + sqlEsc(row.dataFi()) + "'" : "NULL",
+                    row.paginesLlegides());
             }
         }
     }
 
     private static String sqlEsc(String s) {
-        return s == null ? "" : s.replace("'", "''");
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("'", "''");
     }
 }

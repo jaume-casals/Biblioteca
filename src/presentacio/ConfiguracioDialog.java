@@ -32,7 +32,7 @@ public class ConfiguracioDialog extends JDialog {
 		super(parent, t("modal_settings"), true);
 		this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
 		setResizable(false);
-		setBounds(0, 0, 490, 776);
+		setBounds(0, 0, 490, 818);
 		setLocationRelativeTo(parent);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(UITheme.BG_PANEL);
@@ -140,9 +140,25 @@ public class ConfiguracioDialog extends JDialog {
 		lblSeccioFont.setBounds(lx, 334, 300, lh);
 		getContentPane().add(lblSeccioFont);
 
+		JLabel lblTheme = new JLabel(t("lbl_theme"));
+		UITheme.styleLabel(lblTheme);
+		lblTheme.setBounds(lx, 366, 155, lh);
+		getContentPane().add(lblTheme);
+
+		herramienta.UITheme.Theme[] themeValues = herramienta.UITheme.Theme.values();
+		String[] themeLabels = new String[themeValues.length];
+		for (int i = 0; i < themeValues.length; i++) themeLabels[i] = themeValues[i].displayName();
+		JComboBox<String> cmbTheme = new JComboBox<>(themeLabels);
+		herramienta.UITheme.Theme curTheme = Config.getTheme();
+		for (int i = 0; i < themeValues.length; i++)
+			if (themeValues[i] == curTheme) { cmbTheme.setSelectedIndex(i); break; }
+		cmbTheme.setFont(UITheme.FONT_BASE);
+		cmbTheme.setBounds(fx, 364, 200, fh);
+		getContentPane().add(cmbTheme);
+
 		JLabel lblFont = new JLabel(t("lbl_font_size"));
 		UITheme.styleLabel(lblFont);
-		lblFont.setBounds(lx, 366, 155, lh);
+		lblFont.setBounds(lx, 408, 155, lh);
 		getContentPane().add(lblFont);
 
 		String[] fontSizeLabels = {t("opt_small"), t("opt_medium"), t("opt_large")};
@@ -152,12 +168,12 @@ public class ConfiguracioDialog extends JDialog {
 		for (int i = 0; i < fontSizeKeys.length; i++)
 			if (fontSizeKeys[i].equals(curSize)) { cmbFont.setSelectedIndex(i); break; }
 		cmbFont.setFont(UITheme.FONT_BASE);
-		cmbFont.setBounds(fx, 366, 140, fh);
+		cmbFont.setBounds(fx, 408, 140, fh);
 		getContentPane().add(cmbFont);
 
 		JLabel lblCurrency = new JLabel(t("lbl_currency_symbol"));
 		UITheme.styleLabel(lblCurrency);
-		lblCurrency.setBounds(lx, 408, 160, lh);
+		lblCurrency.setBounds(lx, 450, 160, lh);
 		getContentPane().add(lblCurrency);
 
 		String[] currencySymbols = {"€", "$", "£", "¥", "CHF"};
@@ -166,28 +182,28 @@ public class ConfiguracioDialog extends JDialog {
 		String curCurrency = Config.getCurrencySymbol();
 		for (int i = 0; i < currencySymbols.length; i++)
 			if (currencySymbols[i].equals(curCurrency)) { cmbCurrency.setSelectedIndex(i); break; }
-		cmbCurrency.setBounds(fx, 406, 80, fh);
+		cmbCurrency.setBounds(fx, 448, 80, fh);
 		getContentPane().add(cmbCurrency);
 
 		JLabel lblDefVal = new JLabel(t("lbl_default_rating"));
 		UITheme.styleLabel(lblDefVal);
-		lblDefVal.setBounds(lx, 448, 160, lh);
+		lblDefVal.setBounds(lx, 490, 160, lh);
 		getContentPane().add(lblDefVal);
 
 		JTextField txtDefVal = new JTextField(String.valueOf(Config.getDefaultValoracio()));
 		UITheme.styleField(txtDefVal);
-		txtDefVal.setBounds(fx, 446, 80, fh);
+		txtDefVal.setBounds(fx, 488, 80, fh);
 		getContentPane().add(txtDefVal);
 
 		JLabel lblDefValHint = new JLabel("(0.0 – 10.0)");
 		UITheme.styleLabel(lblDefValHint);
-		lblDefValHint.setBounds(fx + 86, 448, 100, lh);
+		lblDefValHint.setBounds(fx + 86, 490, 100, lh);
 		getContentPane().add(lblDefValHint);
 
 		// ── Language ─────────────────────────────────────────────────────────
 		JLabel lblLang = new JLabel(t("lbl_language_setting"));
 		UITheme.styleLabel(lblLang);
-		lblLang.setBounds(lx, 490, 160, lh);
+		lblLang.setBounds(lx, 532, 160, lh);
 		getContentPane().add(lblLang);
 
 		String[] langLabels = {t("opt_lang_ca"), t("opt_lang_es"), t("opt_lang_en")};
@@ -197,19 +213,19 @@ public class ConfiguracioDialog extends JDialog {
 		for (int i = 0; i < langKeys.length; i++)
 			if (langKeys[i].equals(curLang)) { cmbLang.setSelectedIndex(i); break; }
 		cmbLang.setFont(UITheme.FONT_BASE);
-		cmbLang.setBounds(fx, 488, 160, fh);
+		cmbLang.setBounds(fx, 530, 160, fh);
 		getContentPane().add(cmbLang);
 
 		// ── Dades ────────────────────────────────────────────────────────────
 		JLabel lblSeccioDades = new JLabel(t("lbl_data"));
 		lblSeccioDades.setFont(UITheme.FONT_BOLD);
 		lblSeccioDades.setForeground(UITheme.ACCENT);
-		lblSeccioDades.setBounds(lx, 544, 300, lh);
+		lblSeccioDades.setBounds(lx, 586, 300, lh);
 		getContentPane().add(lblSeccioDades);
 
 		JLabel lblDbSize = new JLabel(t("lbl_db_size"));
 		UITheme.styleLabel(lblDbSize);
-		lblDbSize.setBounds(lx, 576, 155, lh);
+		lblDbSize.setBounds(lx, 618, 155, lh);
 		getContentPane().add(lblDbSize);
 
 		long dbBytes = cd.getDbSizeBytes();
@@ -219,7 +235,7 @@ public class ConfiguracioDialog extends JDialog {
 		JLabel lblDbSizeVal = new JLabel(dbSizeStr);
 		lblDbSizeVal.setFont(UITheme.FONT_BASE);
 		lblDbSizeVal.setForeground(UITheme.TEXT_DARK);
-		lblDbSizeVal.setBounds(fx, 576, 180, lh);
+		lblDbSizeVal.setBounds(fx, 618, 180, lh);
 		getContentPane().add(lblDbSizeVal);
 
 		JButton btnBuidar = new JButton(t("btn_clear_library"));
@@ -231,7 +247,7 @@ public class ConfiguracioDialog extends JDialog {
 		btnBuidar.setBorderPainted(false);
 		btnBuidar.setOpaque(true);
 		btnBuidar.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-		btnBuidar.setBounds(lx, 610, fw + fx - lx, 36);
+		btnBuidar.setBounds(lx, 652, fw + fx - lx, 36);
 		btnBuidar.addActionListener(e -> {
 			int r1 = JOptionPane.showConfirmDialog(this,
 				t("dlg_confirm_clear_1"),
@@ -256,7 +272,7 @@ public class ConfiguracioDialog extends JDialog {
 		// ── DB Profiles ──────────────────────────────────────────────────────
 		JButton btnPerfils = new JButton(t("btn_gestio_perfils"));
 		UITheme.styleSecondaryButton(btnPerfils);
-		btnPerfils.setBounds(lx, 655, fw + fx - lx, 32);
+		btnPerfils.setBounds(lx, 697, fw + fx - lx, 32);
 		btnPerfils.setToolTipText(t("tip_gestio_perfils"));
 		btnPerfils.addActionListener(e -> {
 			if (!"h2".equals(Config.getDbType())) {
@@ -274,6 +290,10 @@ public class ConfiguracioDialog extends JDialog {
 			if (chosen == null) return;
 			chosen = chosen.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
 			if (chosen.isEmpty() || chosen.equals(current)) return;
+			int confirm = JOptionPane.showConfirmDialog(this,
+				t("dlg_perfil_confirmar", chosen), t("dlg_perfil_confirmar_title"),
+				JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			if (confirm != JOptionPane.YES_OPTION) return;
 			Config.setDbProfile(chosen);
 			String finalChosen = chosen;
 			JOptionPane.showMessageDialog(this,
@@ -285,7 +305,7 @@ public class ConfiguracioDialog extends JDialog {
 		// ── Buttons ──────────────────────────────────────────────────────────
 		JButton btnGuardar = new JButton(t("btn_save"));
 		UITheme.styleAccentButton(btnGuardar);
-		btnGuardar.setBounds(lx, 701, 215, 42);
+		btnGuardar.setBounds(lx, 743, 215, 42);
 		btnGuardar.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			if (external) {
@@ -304,6 +324,9 @@ public class ConfiguracioDialog extends JDialog {
 			Config.setDbType(external ? "mariadb" : "h2");
 			String imgDir = txtImgDir.getText().trim();
 			if (!imgDir.isEmpty()) Config.setDefaultImgDir(imgDir);
+			herramienta.UITheme.Theme selTheme = themeValues[Math.max(0, cmbTheme.getSelectedIndex())];
+			UITheme.setTheme(selTheme);
+			Config.setTheme(selTheme);
 			Config.setFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
 			Config.setCurrencySymbol((String) cmbCurrency.getSelectedItem());
 			Config.setLang(langKeys[Math.max(0, cmbLang.getSelectedIndex())]);
@@ -319,7 +342,7 @@ public class ConfiguracioDialog extends JDialog {
 
 		JButton btnCancel = new JButton(t("btn_cancel"));
 		UITheme.styleSecondaryButton(btnCancel);
-		btnCancel.setBounds(255, 701, 215, 42);
+		btnCancel.setBounds(255, 743, 215, 42);
 		btnCancel.addActionListener(e -> dispose());
 		getContentPane().add(btnCancel);
 

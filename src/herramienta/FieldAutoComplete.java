@@ -14,6 +14,9 @@ public class FieldAutoComplete {
 
     private static final int MAX_SUGGESTIONS = 8;
 
+    // Note: the DocumentListener added here is never explicitly removed.
+    // This is intentional — attach() is called once per field (at dialog construction), so the field
+    // and popup share the same lifetime and the listener does not leak.
     public static void attach(JTextField field, List<String> suggestions) {
         JPopupMenu popup = new JPopupMenu();
         popup.setFocusable(false);
@@ -31,7 +34,7 @@ public class FieldAutoComplete {
                     String lower = text.toLowerCase();
                     int count = 0;
                     for (String s : suggestions) {
-                        if (s.toLowerCase().startsWith(lower) && !s.equalsIgnoreCase(text)) {
+                        if (s.toLowerCase().contains(lower) && !s.equalsIgnoreCase(text)) {
                             JMenuItem item = new JMenuItem(s);
                             item.addMouseListener(new MouseAdapter() {
                                 @Override public void mousePressed(MouseEvent e) {
@@ -45,7 +48,16 @@ public class FieldAutoComplete {
                     }
                     if (count == 0) { popup.setVisible(false); return; }
                     if (!popup.isVisible()) {
-                        popup.show(field, 0, field.getHeight());
+                        java.awt.Dimension popupSize = popup.getPreferredSize();
+                        try {
+                            java.awt.Point loc = field.getLocationOnScreen();
+                            int screenH = java.awt.Toolkit.getDefaultToolkit().getScreenSize().height;
+                            int y = (loc.y + field.getHeight() + popupSize.height <= screenH)
+                                ? field.getHeight() : -popupSize.height;
+                            popup.show(field, 0, y);
+                        } catch (java.awt.IllegalComponentStateException ex) {
+                            popup.show(field, 0, field.getHeight());
+                        }
                     }
                     popup.revalidate();
                     popup.repaint();
@@ -55,7 +67,7 @@ public class FieldAutoComplete {
 
         field.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_DOWN && popup.isVisible()) {
+                if (e.getKeyCode() == KeyEvent.VK_DOWN && popup.isVisible() && popup.getComponentCount() > 0) {
                     popup.getComponent(0).requestFocusInWindow();
                 } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     popup.setVisible(false);

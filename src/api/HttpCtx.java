@@ -1,12 +1,8 @@
 package api;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
 import java.util.*;
 
 public class HttpCtx {
@@ -14,6 +10,7 @@ public class HttpCtx {
     private final HttpExchange ex;
     private final Map<String, String> pathParams;
     private final Map<String, String> queryParams;
+    private byte[] cachedBodyBytes;
     private String cachedBody;
     private int status = 200;
     private byte[] responseBytes;
@@ -31,18 +28,53 @@ public class HttpCtx {
 
     public String pathParam(String key) { return pathParams.getOrDefault(key, ""); }
 
+    public long pathParamLong(String key) throws Exception {
+        String s = pathParams.getOrDefault(key, "");
+        try { return Long.parseLong(s); }
+        catch (NumberFormatException e) { throw new Exception("Invalid path param '" + key + "': " + s); }
+    }
+
+    public int pathParamInt(String key) throws Exception {
+        String s = pathParams.getOrDefault(key, "");
+        try { return Integer.parseInt(s); }
+        catch (NumberFormatException e) { throw new Exception("Invalid path param '" + key + "': " + s); }
+    }
+
     public String queryParam(String key) { return queryParams.get(key); }
 
-    public String body() {
-        if (cachedBody != null) return cachedBody;
-        try {
-            cachedBody = new String(ex.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (IOException e) { cachedBody = ""; }
-        return cachedBody;
+    public String queryParamOrNull(String key) {
+        String v = queryParams.get(key);
+        return (v != null && !v.isBlank()) ? v : null;
+    }
+
+    public Integer queryParamInt(String key) {
+        String v = queryParamOrNull(key);
+        if (v == null) return null;
+        try { return Integer.parseInt(v); } catch (NumberFormatException e) { return null; }
+    }
+
+    public Double queryParamDbl(String key) {
+        String v = queryParamOrNull(key);
+        if (v == null) return null;
+        try { return Double.parseDouble(v); } catch (NumberFormatException e) { return null; }
+    }
+
+    public Boolean queryParamBool(String key) {
+        String v = queryParamOrNull(key);
+        return v == null ? null : Boolean.parseBoolean(v);
     }
 
     public byte[] bodyBytes() {
-        try { return ex.getRequestBody().readAllBytes(); } catch (IOException e) { return new byte[0]; }
+        if (cachedBodyBytes != null) return cachedBodyBytes;
+        try { cachedBodyBytes = ex.getRequestBody().readAllBytes(); }
+        catch (IOException e) { cachedBodyBytes = new byte[0]; }
+        return cachedBodyBytes;
+    }
+
+    public String body() {
+        if (cachedBody != null) return cachedBody;
+        cachedBody = new String(bodyBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        return cachedBody;
     }
 
     public String header(String name) { return ex.getRequestHeaders().getFirst(name); }
@@ -58,11 +90,11 @@ public class HttpCtx {
 
     public HttpCtx contentType(String ct) { this.contentType = ct; return this; }
 
-    public void responseHeader(String name, String value) { responseHeaders.put(name, value); }
+    public HttpCtx responseHeader(String name, String value) { responseHeaders.put(name, value); return this; }
 
-    private Exception ex_stored;
-    void _setException(Exception e) { this.ex_stored = e; }
-    public Exception getException() { return ex_stored; }
+    private Exception storedEx;
+    void setException(Exception e) { this.storedEx = e; }
+    public Exception getException() { return storedEx; }
 
     void commit() throws IOException {
         if (committed) return;
@@ -76,6 +108,7 @@ public class HttpCtx {
         }
     }
 
+    // Duplicate query keys: last value wins. Multi-value params (checkboxes) are not supported.
     private static Map<String, String> parseQuery(String raw) {
         Map<String, String> m = new LinkedHashMap<>();
         if (raw == null || raw.isBlank()) return m;

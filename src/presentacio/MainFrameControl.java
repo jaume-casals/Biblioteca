@@ -87,7 +87,9 @@ public class MainFrameControl implements EnActualizarBBDD {
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme");
 		am.put("toggleTheme", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				herramienta.UITheme.setDark(!herramienta.UITheme.isDark);
+				herramienta.UITheme.Theme[] themes = herramienta.UITheme.Theme.values();
+				herramienta.UITheme.Theme next = themes[(herramienta.UITheme.getTheme().ordinal() + 1) % themes.length];
+				herramienta.UITheme.setTheme(next);
 				vista.getMostrarBibliotecaPanel().applyTheme();
 			}
 		});
@@ -147,6 +149,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		});
 	}
 
+	// Singleton — call order: getInstance(vista, cd) first, then getInstance() anywhere else.
 	public static MainFrameControl getInstance(MainFramePanel vista, BibliotecaWriter cd) {
 		if (instance == null && vista != null) instance = new MainFrameControl(vista, cd);
 		return instance;
@@ -171,7 +174,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 		return cLlibres.aplicarFiltres(f);
 	}
 
-	protected Llibre getLlibreIsbn(long ISBN) {
+	public Llibre getLlibreIsbn(long ISBN) {
 		try {
 			return cLlibres.getLlibre(ISBN);
 		} catch (Exception e) {
@@ -205,18 +208,15 @@ public class MainFrameControl implements EnActualizarBBDD {
 			int goal = herramienta.Config.getReadingGoal();
 			if (goal > 0) {
 				java.util.ArrayList<domini.Llibre> all = cLlibres.getAllLlibres();
-				int currentYear = java.time.LocalDate.now().getYear();
-				int dayOfYear = java.time.LocalDate.now().getDayOfYear();
+				java.time.LocalDate today = java.time.LocalDate.now();
+				int currentYear = today.getYear();
+				int dayOfYear = today.getDayOfYear();
+				int daysInYear = today.isLeapYear() ? 366 : 365;
 				long readThisYear = all.stream()
 					.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-					.filter(l -> {
-						if (l.getDataLectura() != null && l.getDataLectura().length() >= 4) {
-							try { return Integer.parseInt(l.getDataLectura().substring(0, 4)) == currentYear; }
-							catch (Exception e2) {}
-						}
-						return false;
-					}).count();
-				int daysLeft = 365 - dayOfYear;
+					.filter(l -> l.getDataLectura() != null && herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
+					.count();
+				int daysLeft = daysInYear - dayOfYear;
 				double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;
 				double actualPerDay = dayOfYear > 0 ? (double) readThisYear / dayOfYear : 0;
 				if (readThisYear < goal && neededPerDay > actualPerDay * 1.5 && daysLeft < 90) {
@@ -231,6 +231,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 	@Override
 	public void actualitzarLlibre(Llibre l, boolean nuevo) {
 		if (nuevo) {
+			// Auto-assign the new book to the currently selected shelf (if any)
 			Integer llistaId = mostrarControl.getCurrentLlistaId();
 			if (llistaId != null) {
 				try {
@@ -249,20 +250,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	private void mostrarAjudaDreceres() {
-		String msg =
-			"Ctrl+N          Nou llibre\n" +
-			"Ctrl+F          Cerca\n" +
-			"Ctrl+E          Editar llibre seleccionat\n" +
-			"Ctrl+A          Seleccionar tots\n" +
-			"Enter           Obrir detalls\n" +
-			"Delete          Eliminar seleccionat\n" +
-			"Ctrl+Shift+D    Alternar tema fosc/clar\n" +
-			"Ctrl++/-        Zoom galeria\n" +
-			"Ctrl+Roda       Zoom galeria\n" +
-			"Fletxes         Navegar galeria\n" +
-			"Ctrl+Clic autor Filtrar per autor\n" +
-			"Ctrl+Z          Desfer última eliminació\n" +
-			"F1 / Ctrl+?     Aquesta ajuda";
-		javax.swing.JOptionPane.showMessageDialog(vista, msg, "Dreceres de teclat", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+		javax.swing.JOptionPane.showMessageDialog(vista, I18n.t("dlg_shortcuts_content"),
+			I18n.t("dlg_shortcuts_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
 	}
 }

@@ -2,12 +2,18 @@ package interficie;
 
 import domini.Llibre;
 import domini.LlibreFilter;
+import domini.LlibreLlistaRow;
+import domini.LlibreTagRow;
 import domini.Llista;
+import domini.PrestecRow;
 import domini.Tag;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+// Note: several methods return ArrayList<> (implementation type) instead of List<>.
+// Changing to List<> would require updating all callers — deferred to avoid a large refactor.
 public interface BibliotecaReader {
 
     ArrayList<Llibre> getAllLlibres();
@@ -28,14 +34,19 @@ public interface BibliotecaReader {
 
     ArrayList<Llista> getAllLlistes();
     int getCountInLlista(int llistaId);
+    Map<Integer, Integer> getAllCountsInLlistes();
     ArrayList<Llibre> getLlibresInLlista(int llistaId);
+    List<LlibreLlistaRow> getAllLlibreLlistaRows();
     ArrayList<Llista> getLlistesForLlibre(long isbn);
 
     ArrayList<Tag> getAllTags();
     ArrayList<Tag> getTagsForLlibre(long isbn);
+    List<LlibreTagRow> getAllLlibreTagRows();
+    Set<Long> getLlibresWithTag(int tagId);
 
     Set<Long> getLoanedISBNs();
-    List<Object[]> getLoansForIsbn(long isbn);
+    List<PrestecRow> getAllActiveLoans();
+    List<PrestecRow> getLoansForIsbn(long isbn);
     List<Object[]> getAllOverdueLoans(int daysThreshold);
 
     byte[] getLlibreBlob(long isbn);

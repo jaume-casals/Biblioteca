@@ -1,15 +1,11 @@
 package herramienta;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
 import javax.swing.ComboBoxEditor;
 import javax.swing.ComboBoxModel;
@@ -26,33 +22,26 @@ import javax.swing.text.PlainDocument;
 
 public class AutoCompletion extends PlainDocument {
 
-	JComboBox<String> comboBox;
-	ComboBoxModel<String> model;
-	JTextComponent editor;
-	boolean selecting = false;
-	boolean hidePopupOnFocusLoss;
-	boolean hitBackspace = false;
-	boolean hitBackspaceOnSelection;
+	private JComboBox<String> comboBox;
+	private ComboBoxModel<String> model;
+	private JTextComponent editor;
+	private boolean selecting = false;
+	private boolean hidePopupOnFocusLoss;
+	private boolean hitBackspace = false;
+	private boolean hitBackspaceOnSelection;
 
-	KeyListener editorKeyListener;
-	FocusListener editorFocusListener;
+	private KeyListener editorKeyListener;
+	private FocusListener editorFocusListener;
 
 	public AutoCompletion(final JComboBox<String> comboBox) {
 		this.comboBox = comboBox;
 		model = comboBox.getModel();
-		comboBox.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				if (!selecting)
-					highlightCompletedText(0);
-			}
-		});
-		comboBox.addPropertyChangeListener(new PropertyChangeListener() {
-			public void propertyChange(PropertyChangeEvent e) {
-				if ("editor".equals(e.getPropertyName()))
-					configureEditor((ComboBoxEditor) e.getNewValue());
-				if ("model".equals(e.getPropertyName()))
-					model = (ComboBoxModel<String>) e.getNewValue();
-			}
+		comboBox.addActionListener(e -> { if (!selecting) highlightCompletedText(0); });
+		comboBox.addPropertyChangeListener(e -> {
+			if ("editor".equals(e.getPropertyName()))
+				configureEditor((ComboBoxEditor) e.getNewValue());
+			if ("model".equals(e.getPropertyName()))
+				model = (ComboBoxModel<String>) e.getNewValue();
 		});
 		editorKeyListener = new KeyAdapter() {
 			public void keyPressed(KeyEvent e) {
@@ -63,11 +52,6 @@ public class AutoCompletion extends PlainDocument {
 				case KeyEvent.VK_BACK_SPACE:
 					hitBackspace = true;
 					hitBackspaceOnSelection = editor.getSelectionStart() != editor.getSelectionEnd();
-					break;
-				// ignore delete key
-				case KeyEvent.VK_DELETE:
-					e.consume();
-					comboBox.getToolkit().beep();
 					break;
 				}
 			}
@@ -129,6 +113,19 @@ public class AutoCompletion extends PlainDocument {
 		if (selecting)
 			return;
 		super.insertString(offs, str, a);
+		String prefix = getText(0, getLength());
+		// Find first model item that starts with the typed prefix (case-insensitive)
+		String lowerPrefix = prefix.toLowerCase(java.util.Locale.ROOT);
+		for (int i = 0, n = model.getSize(); i < n; i++) {
+			Object item = model.getElementAt(i);
+			if (item != null && item.toString().toLowerCase(java.util.Locale.ROOT).startsWith(lowerPrefix)) {
+				selecting = true;
+				setText(item.toString());
+				comboBox.setSelectedItem(item);
+				selecting = false;
+				break;
+			}
+		}
 		highlightCompletedText(offs + str.length());
 	}
 
@@ -146,9 +143,5 @@ public class AutoCompletion extends PlainDocument {
 		editor.moveCaretPosition(start);
 	}
 
-
-	private boolean startsWithIgnoreCase(String str1, String str2) {
-		return str1.toUpperCase().startsWith(str2.toUpperCase());
-	}
 
 }

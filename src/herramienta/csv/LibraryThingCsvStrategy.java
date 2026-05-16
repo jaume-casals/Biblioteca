@@ -14,22 +14,25 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public void parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
+    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
         String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
         if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
-        isbnRaw = isbnRaw.replaceAll("[^0-9]", "");
+        isbnRaw = CsvUtils.parseIsbn(isbnRaw);
         if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
         long isbn = Long.parseLong(isbnRaw);
-        try { cd.getLlibre(isbn); return; } catch (Exception ignored) {}
+        if (CsvUtils.existsInLibrary(cd, isbn)) return false;
 
         String nom   = CsvUtils.colVal(hMap, c, "Title");
         String autor = CsvUtils.colVal(hMap, c, "Authors");
+        // Invert "Lastname, Firstname" → "Firstname Lastname". Only works for a single comma;
+        // multi-word lastnames (e.g. "van der Berg, Jan") are handled incorrectly.
         if (autor.contains(",") && !autor.contains(";")) {
             String[] parts = autor.split(",", 2);
             autor = parts[1].trim() + " " + parts[0].trim();
         }
         int any = 0;
         String yearStr = CsvUtils.colVal(hMap, c, "Original Publication Year");
+        if (yearStr.isEmpty()) yearStr = CsvUtils.colVal(hMap, c, "Publication Year");
         if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
         double valoracio = CsvUtils.parseDoubleOrZero(CsvUtils.colVal(hMap, c, "Rating")) * 2.0;
         String desc  = CsvUtils.colVal(hMap, c, "Summary");
@@ -41,26 +44,29 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
         String collections = CsvUtils.colVal(hMap, c, "Collections");
         if (!collections.isEmpty()) {
+            java.util.Map<String, domini.Llista> shelfMap = new java.util.HashMap<>();
+            for (domini.Llista ll : cd.getAllLlistes()) shelfMap.put(ll.getNom(), ll);
             for (String s : collections.split(",")) {
                 String nomLlista = s.trim();
                 if (nomLlista.isEmpty()) continue;
-                domini.Llista llista = cd.getAllLlistes().stream()
-                    .filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
-                if (llista == null) llista = cd.addLlista(nomLlista);
+                domini.Llista llista = shelfMap.get(nomLlista);
+                if (llista == null) { llista = cd.addLlista(nomLlista); shelfMap.put(nomLlista, llista); }
                 cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
             }
         }
 
         String tags = CsvUtils.colVal(hMap, c, "Tags");
         if (!tags.isEmpty()) {
+            java.util.Map<String, domini.Tag> tagMap = new java.util.HashMap<>();
+            for (domini.Tag tg : cd.getAllTags()) tagMap.put(tg.getNom(), tg);
             for (String t : tags.split(",")) {
                 String nomTag = t.trim();
                 if (nomTag.isEmpty()) continue;
-                domini.Tag tag = cd.getAllTags().stream()
-                    .filter(tg -> tg.getNom().equals(nomTag)).findFirst().orElse(null);
-                if (tag == null) tag = cd.addTag(nomTag);
+                domini.Tag tag = tagMap.get(nomTag);
+                if (tag == null) { tag = cd.addTag(nomTag); tagMap.put(nomTag, tag); }
                 cd.addLlibreToTag(isbn, tag.getId());
             }
         }
+        return true;
     }
 }

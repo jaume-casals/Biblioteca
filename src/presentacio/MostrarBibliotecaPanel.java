@@ -47,6 +47,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	// ── Table ─────────────────────────────────────────────────────────────────
 	private JTable jTableBilio;
 	private JScrollPane scrollPaneJTable;
+	private JScrollPane shelvesScroll;
 	private JPanel paginationPanel;
 	private JButton btnPaginaAnterior;
 	private JButton btnPaginaSeguent;
@@ -247,7 +248,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		sidebarShelvesPanel.setLayout(new BoxLayout(sidebarShelvesPanel, BoxLayout.Y_AXIS));
 		sidebarShelvesPanel.setBackground(UITheme.SIDEBAR_BG);
 
-		JScrollPane shelvesScroll = new JScrollPane(sidebarShelvesPanel);
+		shelvesScroll = new JScrollPane(sidebarShelvesPanel);
 		shelvesScroll.setBorder(null);
 		shelvesScroll.getVerticalScrollBar().setUnitIncrement(12);
 		shelvesScroll.setBackground(UITheme.SIDEBAR_BG);
@@ -281,10 +282,12 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		bottom.add(makeSidebarSep());
 
-		btnThemeToggle = makeSidebarBtn(I18n.t("btn_mode_fosc"));
+		btnThemeToggle = makeSidebarBtn(I18n.t("btn_theme"));
 		btnThemeToggle.setToolTipText(I18n.t("tip_mode_fosc"));
 		btnThemeToggle.addActionListener(e -> {
-			UITheme.setDark(!UITheme.isDark);
+			herramienta.UITheme.Theme[] themes = herramienta.UITheme.Theme.values();
+			herramienta.UITheme.Theme next = themes[(UITheme.getTheme().ordinal() + 1) % themes.length];
+			UITheme.setTheme(next);
 			applyTheme();
 		});
 		sidebarBtns.add(btnThemeToggle);
@@ -608,9 +611,9 @@ public class MostrarBibliotecaPanel extends JPanel {
 		jTableBilio.setIntercellSpacing(new Dimension(0, 1));
 		jTableBilio.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
-		String[] headerTips = {"Portada del llibre", "Numero ISBN del llibre", "Titol del llibre", "Nom de l'autor",
-			"Any de publicacio", "Valoracio de 0 a 10", "Preu (" + herramienta.Config.getCurrencySymbol() + ")",
-			"Estat de lectura (clic per canviar)", "Progres de lectura", "Obrir detalls"};
+		String[] headerTips = {I18n.t("tip_col_cover"), I18n.t("tip_col_isbn"), I18n.t("tip_col_title"), I18n.t("tip_col_author"),
+			I18n.t("tip_col_year"), I18n.t("tip_col_rating"), I18n.t("tip_col_price") + " (" + herramienta.Config.getCurrencySymbol() + ")",
+			I18n.t("tip_col_read"), I18n.t("tip_col_progress"), I18n.t("tip_col_details")};
 
 		jTableBilio.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
 			@Override
@@ -770,6 +773,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		for (domini.Llista l : llistes) {
 			String label = l.getNom() + " (" + counts.getOrDefault(l.getId(), 0) + ")";
 			JButton btn = makeSidebarBtn("  " + label);
+			btn.getAccessibleContext().setAccessibleName(label);
 			if (l.getColor() != null) {
 				try {
 					Color c = Color.decode(l.getColor());
@@ -841,7 +845,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	public void applyTheme() {
 		UITheme.rebuildFonts(herramienta.Config.getFontSize());
-		herramienta.Config.setDarkMode(UITheme.isDark);
+		herramienta.Config.setTheme(UITheme.getTheme());
 
 		setBackground(UITheme.BG_MAIN);
 
@@ -853,7 +857,11 @@ public class MostrarBibliotecaPanel extends JPanel {
 			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 		}
 		btnSortir.setForeground(new Color(0xFF8080));
-		btnThemeToggle.setText(UITheme.isDark ? "Mode clar" : "Mode fosc");
+		for (JButton btn : sidebarShelfBtnMap.values()) {
+			UITheme.styleSidebarButton(btn);
+			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
+		}
 
 		// Table
 		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
@@ -934,6 +942,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 			UITheme.applyUIManager();
 		} catch (Exception ignored) {}
 		if (w != null) SwingUtilities.updateComponentTreeUI(w);
+		SwingUtilities.invokeLater(this::nameScrollBarButtons);
 
 		// Re-apply custom styles after L&F reinstall
 		applyBgToNonButtons(sidebar, UITheme.SIDEBAR_BG);
@@ -962,6 +971,19 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.styleSecondaryButton(btnPaginaSeguent);
 
 		repaint();
+	}
+
+	private void nameScrollBarButtons() {
+		nameScrollBar(scrollPaneJTable.getVerticalScrollBar());
+		if (shelvesScroll != null) nameScrollBar(shelvesScroll.getVerticalScrollBar());
+	}
+
+	private void nameScrollBar(javax.swing.JScrollBar sb) {
+		Component[] comps = sb.getComponents();
+		for (int i = 0; i < comps.length; i++) {
+			comps[i].getAccessibleContext().setAccessibleName(
+				i == 0 ? I18n.t("acc_scroll_up") : I18n.t("acc_scroll_down"));
+		}
 	}
 
 	private void applyBgToNonButtons(Component comp, Color bg) {

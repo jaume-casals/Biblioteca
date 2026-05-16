@@ -21,7 +21,7 @@ public class DialogoError {
 
     public DialogoError(String titol, Exception e) {
         this.isValidation = e instanceof IllegalArgumentException;
-        this.titol = isValidation ? "Camp no vàlid" : titol;
+        this.titol = isValidation ? I18n.t("dlg_validacio_title") : titol;
 
         this.missatge = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
 
@@ -47,11 +47,19 @@ public class DialogoError {
 
     private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    private static final long MAX_LOG_BYTES = 1024 * 1024; // 1 MB
+
     private static void writeToLog(String titol, String missatge, String detalls) {
         try {
             Path logFile = Path.of(System.getProperty("user.home"), ".biblioteca", "errors.log");
             logFile.getParent().toFile().mkdirs();
-            try (FileWriter fw = new FileWriter(logFile.toFile(), true)) {
+            java.io.File f = logFile.toFile();
+            if (f.exists() && f.length() > MAX_LOG_BYTES) {
+                Path old = logFile.resolveSibling("errors.log.1");
+                java.nio.file.Files.move(logFile, old,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            try (FileWriter fw = new FileWriter(f, true)) {
                 fw.write("[" + LocalDateTime.now().format(LOG_FMT) + "] " + titol + ": " + missatge + "\n");
                 if (!detalls.isBlank()) fw.write(detalls + "\n");
                 fw.write("---\n");
@@ -95,7 +103,7 @@ public class DialogoError {
         msgLbl.setForeground(UITheme.TEXT_DARK);
         msgLbl.setBorder(BorderFactory.createEmptyBorder(18, 22, 10, 22));
 
-        JButton btnOk = new JButton("D'acord");
+        JButton btnOk = new JButton(I18n.t("btn_ok"));
         btnOk.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnOk.setBackground(accent);
         btnOk.setForeground(Color.WHITE);
@@ -161,7 +169,7 @@ public class DialogoError {
         scroll.setPreferredSize(new Dimension(520, 220));
         scroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
 
-        JButton btnTancar = new JButton("Tancar");
+        JButton btnTancar = new JButton(I18n.t("btn_close"));
         UITheme.styleSecondaryButton(btnTancar);
 
         JPanel btnPanel = new JPanel();
@@ -191,6 +199,6 @@ public class DialogoError {
     private static String escHtml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                .replace("\n", "<br>");
+                .replace("\"", "&quot;").replace("\n", "<br>");
     }
 }

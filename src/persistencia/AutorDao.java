@@ -10,12 +10,12 @@ public class AutorDao {
 
     AutorDao(Connection con) { this.con = con; }
 
-    public synchronized List<Object[]> getAll() {
-        List<Object[]> rows = new ArrayList<>();
+    public synchronized List<AutorRow> getAll() {
+        List<AutorRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery("SELECT id, nom FROM autor ORDER BY id")) {
-                while (rs.next()) rows.add(new Object[]{ rs.getInt(1), rs.getString(2) });
+                 ResultSet rs = s.executeQuery("SELECT id, nom FROM autor ORDER BY nom")) {
+                while (rs.next()) rows.add(new AutorRow(rs.getInt(1), rs.getString(2)));
             }
         } catch (SQLException e) {
             System.err.println("Error carregant els autors: " + e.getMessage());
@@ -23,13 +23,26 @@ public class AutorDao {
         return rows;
     }
 
-    public synchronized List<Object[]> getAllLlibreAutor() {
-        List<Object[]> rows = new ArrayList<>();
+    public synchronized List<String> getDistinctAutorNames() {
+        List<String> vals = new ArrayList<>();
+        try {
+            try (Statement s = con.createStatement();
+                 ResultSet rs = s.executeQuery("SELECT nom FROM autor ORDER BY nom")) {
+                while (rs.next()) vals.add(rs.getString(1));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error carregant autors: " + e.getMessage());
+        }
+        return vals;
+    }
+
+    public synchronized List<LlibreAutorRow> getAllLlibreAutor() {
+        List<LlibreAutorRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery(
                     "SELECT isbn, autor_id FROM llibre_autor ORDER BY isbn, autor_id")) {
-                while (rs.next()) rows.add(new Object[]{ rs.getLong(1), rs.getInt(2) });
+                while (rs.next()) rows.add(new LlibreAutorRow(rs.getLong(1), rs.getInt(2)));
             }
         } catch (SQLException e) {
             System.err.println("Error carregant els autors dels llibres: " + e.getMessage());

@@ -13,18 +13,26 @@ import java.util.stream.Collectors;
 public class BookExporter {
 
     public static void exportCSV(File f, List<Llibre> view, BibliotecaWriter cd) throws Exception {
+        // Build isbn→rows bulk map to avoid N+1 queries
+        java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
+        for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
+        java.util.Map<Long, List<domini.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (domini.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
+            llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
+
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("ISBN,Nom,Autor,Any,Descripcio,Valoracio,Preu,Llegit,Portada,Llistes");
             for (Llibre l : view) {
                 try {
-                    ArrayList<Llista> llistes = cd.getLlistesForLlibre(l.getISBN());
+                    List<domini.LlibreLlistaRow> rows = llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList());
                     StringBuilder llistesStr = new StringBuilder();
-                    for (Llista ll : llistes) {
+                    for (domini.LlibreLlistaRow row : rows) {
+                        Llista ll = llistaById.get(row.llistaId());
+                        if (ll == null) continue;
                         if (llistesStr.length() > 0) llistesStr.append(';');
                         llistesStr.append(esc(ll.getNom())).append('|')
-                            .append(ll.getValoracioLlibre() != null ? ll.getValoracioLlibre() : 0.0).append('|')
-                            .append(Boolean.TRUE.equals(ll.getLlegitLlibre()));
+                            .append(row.valoracio()).append('|').append(row.llegit());
                     }
                     pw.printf("\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
                         l.getISBN(), esc(l.getNom()), esc(l.getAutor()), l.getAny(),
@@ -36,6 +44,14 @@ public class BookExporter {
     }
 
     public static void exportJSON(File f, BibliotecaWriter cd) throws Exception {
+        // Bulk-load relational data to avoid N+1
+        java.util.Map<Long, List<domini.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (domini.LlibreLlistaRow r : cd.getAllLlibreLlistaRows())
+            llistaRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
+        java.util.Map<Long, List<domini.LlibreTagRow>> tagRows = new java.util.HashMap<>();
+        for (domini.LlibreTagRow r : cd.getAllLlibreTagRows())
+            tagRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
+
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("{");
@@ -45,7 +61,8 @@ public class BookExporter {
             pw.print("\"llibres\":[");
             for (int i = 0; i < tots.size(); i++) {
                 Llibre l = tots.get(i);
-                pw.print(jsonLlibre(l, cd));
+                pw.print(jsonLlibre(l, llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList()),
+                                       tagRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList())));
                 if (i < tots.size() - 1) pw.print(",");
             }
             pw.println("],");
@@ -96,10 +113,14 @@ public class BookExporter {
 
             if (groupByShelf) {
                 List<Llista> llistes = cd.getAllLlistes();
+                // Build isbn→set<llistaId> map in bulk to avoid N+1 queries
+                java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
+                for (domini.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
+                    isbnToLlistes.computeIfAbsent(row.isbn(), k -> new java.util.HashSet<>()).add(row.llistaId());
                 java.util.Set<Long> printed = new java.util.HashSet<>();
                 for (Llista llista : llistes) {
                     List<Llibre> shelfBooks = view.stream()
-                        .filter(l -> { try { return cd.getLlistesForLlibre(l.getISBN()).stream().anyMatch(ll -> ll.getId() == llista.getId()); } catch (Exception e2) { return false; } })
+                        .filter(l -> { java.util.Set<Integer> s = isbnToLlistes.get(l.getISBN()); return s != null && s.contains(llista.getId()); })
                         .collect(Collectors.toList());
                     if (shelfBooks.isEmpty()) continue;
                     pw.println("<h2>" + htmlEsc(llista.getNom()) + " (" + shelfBooks.size() + ")</h2>");
@@ -235,7 +256,8 @@ public class BookExporter {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
-    private static String jsonLlibre(Llibre l, BibliotecaWriter cd) {
+    private static String jsonLlibre(Llibre l,
+            List<domini.LlibreLlistaRow> llistaRows, List<domini.LlibreTagRow> tagRows) {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"isbn\":").append(l.getISBN()).append(",");
         sb.append("\"nom\":").append(jsonStr(l.getNom())).append(",");
@@ -258,23 +280,21 @@ public class BookExporter {
         sb.append("\"idioma\":").append(jsonStr(l.getIdioma())).append(",");
         sb.append("\"format\":").append(jsonStr(l.getFormat())).append(",");
         sb.append("\"paisOrigen\":").append(jsonStr(l.getPaisOrigen())).append(",");
-        // shelf memberships
-        ArrayList<Llista> llistes = cd.getLlistesForLlibre(l.getISBN());
+        // shelf memberships (pre-fetched)
         sb.append("\"llistes\":[");
-        for (int i = 0; i < llistes.size(); i++) {
-            Llista ll = llistes.get(i);
-            sb.append("{\"id\":").append(ll.getId())
-                .append(",\"valoracio\":").append(ll.getValoracioLlibre() != null ? ll.getValoracioLlibre() : 0.0)
-                .append(",\"llegit\":").append(Boolean.TRUE.equals(ll.getLlegitLlibre())).append("}");
-            if (i < llistes.size() - 1) sb.append(",");
+        for (int i = 0; i < llistaRows.size(); i++) {
+            domini.LlibreLlistaRow row = llistaRows.get(i);
+            sb.append("{\"id\":").append(row.llistaId())
+                .append(",\"valoracio\":").append(row.valoracio())
+                .append(",\"llegit\":").append(row.llegit()).append("}");
+            if (i < llistaRows.size() - 1) sb.append(",");
         }
         sb.append("],");
-        // tags
-        ArrayList<Tag> tags = cd.getTagsForLlibre(l.getISBN());
+        // tags (pre-fetched)
         sb.append("\"tags\":[");
-        for (int i = 0; i < tags.size(); i++) {
-            sb.append(tags.get(i).getId());
-            if (i < tags.size() - 1) sb.append(",");
+        for (int i = 0; i < tagRows.size(); i++) {
+            sb.append(tagRows.get(i).tagId());
+            if (i < tagRows.size() - 1) sb.append(",");
         }
         sb.append("]}");
         return sb.toString();
@@ -282,7 +302,9 @@ public class BookExporter {
 
     private static String jsonStr(String s) {
         if (s == null) return "null";
-        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "") + "\"";
+        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+                       .replace("\n", "\\n").replace("\r", "")
+                       .replace("\t", "\\t").replace("\b", "\\b").replace("\f", "\\f") + "\"";
     }
 
     private static String esc(String s) {

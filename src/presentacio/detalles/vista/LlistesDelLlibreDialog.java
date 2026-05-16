@@ -24,6 +24,7 @@ import domini.Llibre;
 import interficie.BibliotecaWriter;
 import domini.Llista;
 import herramienta.DialogoError;
+import herramienta.I18n;
 import herramienta.UITheme;
 
 public class LlistesDelLlibreDialog extends JDialog {
@@ -44,7 +45,7 @@ public class LlistesDelLlibreDialog extends JDialog {
     }
 
     public LlistesDelLlibreDialog(Window owner, Llibre llibre, BibliotecaWriter cd) {
-        super(owner, "Llistes de: " + llibre.getNom(), ModalityType.APPLICATION_MODAL);
+        super(owner, I18n.t("dlg_llistes_title", llibre.getNom()), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
         setSize(520, 460);
@@ -56,7 +57,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
 
-        tableModel = new DefaultTableModel(new String[]{"Llista", "Valoració", "Llegit"}, 0) {
+        tableModel = new DefaultTableModel(new String[]{I18n.t("col_list"), I18n.t("col_rating"), I18n.t("col_read")}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return c == COL_VAL || c == COL_LLEGIT; }
             @Override public Class<?> getColumnClass(int c) { return c == COL_LLEGIT ? Boolean.class : String.class; }
         };
@@ -83,19 +84,19 @@ public class LlistesDelLlibreDialog extends JDialog {
         JTextField txtVal = new JTextField("0.0");
         UITheme.styleField(txtVal);
         txtVal.setPreferredSize(new Dimension(60, 30));
-        txtVal.setToolTipText("Valoració (0–10)");
+        txtVal.setToolTipText(I18n.t("lbl_valoracio_tip"));
 
-        JCheckBox chkLlegit = new JCheckBox("Llegit");
+        JCheckBox chkLlegit = new JCheckBox(I18n.t("col_read"));
         chkLlegit.setBackground(UITheme.BG_PANEL);
         chkLlegit.setForeground(UITheme.TEXT_DARK);
         chkLlegit.setFont(UITheme.FONT_BASE);
 
-        JButton btnAfegir = new JButton("Afegir a llista");
+        JButton btnAfegir = new JButton(I18n.t("btn_afegir_llista"));
         UITheme.styleAccentButton(btnAfegir);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         addRow.setBackground(UITheme.BG_PANEL);
-        JLabel lblLlista = new JLabel("Llista:");
+        JLabel lblLlista = new JLabel(I18n.t("lbl_llista_colon"));
         UITheme.styleLabel(lblLlista);
         addRow.add(lblLlista);
         addRow.add(comboAdd);
@@ -103,11 +104,11 @@ public class LlistesDelLlibreDialog extends JDialog {
         addRow.add(chkLlegit);
         addRow.add(btnAfegir);
 
-        JButton btnTreure = new JButton("Treure seleccionada");
+        JButton btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
         UITheme.styleSecondaryButton(btnTreure);
         btnTreure.setBackground(UITheme.DANGER);
 
-        JButton btnGuardar = new JButton("Guardar canvis");
+        JButton btnGuardar = new JButton(I18n.t("btn_guardar_canvis"));
         UITheme.styleAccentButton(btnGuardar);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
@@ -124,8 +125,8 @@ public class LlistesDelLlibreDialog extends JDialog {
             reloadComboAdd();
             if (comboAdd.getItemCount() == 0) {
                 JOptionPane.showMessageDialog(this,
-                    "No hi ha cap llista. Crea'n una primer des de \"Gestionar llistes\".",
-                    "Sense llistes", JOptionPane.INFORMATION_MESSAGE);
+                    I18n.t("dlg_no_llistes_msg"),
+                    I18n.t("dlg_no_llistes_title"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
             Llista llista = (Llista) comboAdd.getSelectedItem();
@@ -170,7 +171,7 @@ public class LlistesDelLlibreDialog extends JDialog {
                     return;
                 }
             }
-            JOptionPane.showMessageDialog(this, "Canvis guardats.", "Guardat", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.t("dlg_canvis_guardats"), I18n.t("dlg_config_saved_title"), JOptionPane.INFORMATION_MESSAGE);
         });
 
         reload();

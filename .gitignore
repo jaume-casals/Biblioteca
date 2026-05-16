@@ -38,6 +38,12 @@ components.jsx
 checkBiblio/
 audits/
 
+# Generated packaging artifacts (source files in packaging/ ARE tracked)
+packaging/Biblioteca.ico
+packaging/Biblioteca.exe
+packaging/icon-256.png
+biblioteca-fat.jar
+
 # IDE / editor configs
 .idea/
 .vscode/
