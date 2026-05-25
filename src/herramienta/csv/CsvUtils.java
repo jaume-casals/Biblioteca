@@ -12,7 +12,8 @@ public final class CsvUtils {
 
     public static String[] parseLine(String line) {
         if (line != null && line.indexOf('\r') >= 0) line = line.replace("\r", "");
-        List<String> fields = new ArrayList<>();
+        String[] fields = new String[16];
+        int count = 0;
         StringBuilder sb = new StringBuilder();
         boolean inQuote = false;
         for (int i = 0; i < line.length(); i++) {
@@ -28,15 +29,25 @@ public final class CsvUtils {
             } else if (ch == '"') {
                 inQuote = true;
             } else if (ch == ',') {
-                fields.add(sb.toString()); sb.setLength(0);
+                if (count == fields.length) fields = java.util.Arrays.copyOf(fields, fields.length * 2);
+                fields[count++] = sb.toString(); sb.setLength(0);
             } else {
                 sb.append(ch);
             }
         }
-        fields.add(sb.toString());
-        return fields.toArray(new String[0]);
+        if (count == fields.length) fields = java.util.Arrays.copyOf(fields, fields.length + 1);
+        fields[count] = sb.toString().trim();
+        // Trim all parsed fields to avoid "Author " != "Author" mismatches
+        for (int j = 0; j < count; j++) {
+            if (fields[j] != null) fields[j] = fields[j].trim();
+        }
+        return count + 1 == fields.length ? fields : java.util.Arrays.copyOf(fields, count + 1);
     }
 
+    /** Returns the trimmed value for the given column name, or "" if the column is absent
+     *  or its index exceeds the row length. Note: callers cannot distinguish a missing column
+     *  from a column whose value is actually empty — both yield "". For column-presence checks,
+     *  use hMap.containsKey(col) first. */
     public static String colVal(Map<String, Integer> hMap, String[] c, String col) {
         Integer idx = hMap.get(col);
         if (idx == null || idx >= c.length) return "";

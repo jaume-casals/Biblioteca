@@ -23,4 +23,20 @@ public class DateUtils {
     public static String normalizeDate(String date) {
         return date == null ? null : date.replace('/', '-');
     }
+
+    /** Parse an ISO-8601 date string (yyyy-MM-dd). Returns null if input is null, blank, or unparseable. */
+    public static java.time.LocalDate parseIsoDate(String date) {
+        if (date == null || date.isBlank()) return null;
+        try { return java.time.LocalDate.parse(date.trim()); }
+        catch (java.time.format.DateTimeParseException e) { return null; }
+    }
+
+    /** Format an ISO date string for display. Converts "2023-05-10" to a locale-friendly format.
+     *  Returns the original string if parsing fails. */
+    public static String formatDateForDisplay(String isoDate) {
+        if (isoDate == null || isoDate.isBlank()) return "";
+        java.time.LocalDate d = parseIsoDate(isoDate);
+        if (d == null) return isoDate;
+        return d.format(java.time.format.DateTimeFormatter.ofPattern("d/M/yyyy"));
+    }
 }

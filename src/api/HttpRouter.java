@@ -18,7 +18,7 @@ public class HttpRouter {
         void handle(HttpCtx ctx) throws Exception;
     }
 
-    private static class Route {
+    public static class Route {
         final String method;
         final String[] parts;
         final Handler handler;
@@ -49,7 +49,7 @@ public class HttpRouter {
         }
     }
 
-    private final List<Route> routes = new ArrayList<>();
+    private final List<Route> routes = new java.util.concurrent.CopyOnWriteArrayList<>();
     private Handler exceptionHandler;
     private HttpServer server;
 
@@ -70,6 +70,15 @@ public class HttpRouter {
     }
 
     public void stop() { if (server != null) server.stop(0); }
+
+    /** Test helper: returns the matched route or null if no route matches. */
+    public Route findRoute(String method, String path) {
+        String[] pathParts = path.split("/", -1);
+        for (Route route : routes) {
+            if (route.matches(method.toUpperCase(java.util.Locale.ROOT), pathParts)) return route;
+        }
+        return null;
+    }
 
     private void dispatch(HttpExchange ex) {
         String rawPath = ex.getRequestURI().getPath();
@@ -95,7 +104,7 @@ public class HttpRouter {
         for (Route route : routes) {
             if (route.matches(upperMethod, pathParts)) {
                 HttpCtx ctx = new HttpCtx(ex, route.extractParams(pathParts));
-                if (allowedOrigin) ctx.responseHeader("Access-Control-Allow-Origin", origin);
+                ctx.corsOrigin = allowedOrigin ? origin : null;
                 try {
                     route.handler.handle(ctx);
                     ctx.commit();
@@ -104,6 +113,7 @@ public class HttpRouter {
                     try {
                         if (exceptionHandler != null) {
                             HttpCtx errCtx = new HttpCtx(ex, Collections.emptyMap());
+                            errCtx.corsOrigin = allowedOrigin ? origin : null;
                             errCtx.setException(e);
                             errCtx.status(400);
                             exceptionHandler.handle(errCtx);

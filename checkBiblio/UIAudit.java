@@ -53,11 +53,20 @@ public class UIAudit {
     private static Robot robot;
     private static PrintWriter reportFile;
     private static int screenshotSeq = 0;
+    private static int warnCount = 0;
+    private static int failCount = 0;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     // ── Entry point ───────────────────────────────────────────────────────────
     public static void main(String[] args) throws Exception {
         boolean autoMode = Arrays.asList(args).contains("--auto");
+
+        System.setProperty("biblioteca.test", "true");
+        if (autoMode) {
+            System.setProperty("biblioteca.h2.url",
+                System.getProperty("biblioteca.h2.url",
+                    "jdbc:h2:mem:audit;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"));
+        }
 
         Files.createDirectories(Path.of("checkBiblio/screenshots"));
         reportFile = new PrintWriter(new FileWriter("checkBiblio/audit_report.txt", false), true);
@@ -96,7 +105,7 @@ public class UIAudit {
             runInteractive(mainFrame);
         }
         closeReport();
-        System.exit(0);
+        System.exit(failCount > 0 ? 1 : 0);
     }
 
     // ── Interactive console ───────────────────────────────────────────────────
@@ -320,10 +329,13 @@ public class UIAudit {
             {"Tots els",   "Tots els Llibres"},
             {"Afegits r",  "Afegits Recentment"},
             {"Llegits",    "Llegits"},
-            {"Estad",      "Estadistiques"},      // accent-normalized match
+            {"desitjos",   "Llista de desitjos"},
+            {"En curs",    "En curs"},
+            {"Estad",      "Estadistiques"},
             {"aleatori",   "Aleatori"},
-            {"llistes",    "Gestio de Llistes"},  // accent-normalized match
-            {"Configur",   "Configuracio"},       // accent-normalized match
+            {"llistes",    "Gestio de Llistes"},
+            {"Tema",       "Tema"},
+            {"Configur",   "Configuracio"},
             {"Sobre",      "Sobre"},
         };
         for (String[] entry : sidebar) {
@@ -344,9 +356,13 @@ public class UIAudit {
                     cmdScreenshot("sidebar_" + entry[0]);
                 }
             } else {
-                log("WARN: sidebar button not found for hint \"" + entry[0] + "\"");
+                warn("sidebar button not found for hint \"" + entry[0] + "\"");
             }
         }
+
+        // --- Top bar: search, gallery, series ---
+        log("\n--- TOP BAR ---");
+        testTopBar(mainFrame);
 
         // --- Filter drawer ---
         log("\n--- FILTER DRAWER ---");
@@ -358,8 +374,17 @@ public class UIAudit {
             collectAndLog((Container)mainFrame);
             SwingUtilities.invokeLater(tog::doClick); sleep(300);
         } else {
-            log("WARN: filter toggle button not found");
+            warn("filter toggle button not found");
         }
+
+        testFilterActions(mainFrame);
+
+        testPagination(mainFrame);
+
+        testIoButtons(mainFrame);
+
+        // Seed library for isolated audit DB, then exercise table/details
+        testCreateBook(mainFrame);
 
         // Reset to all books before table inspection
         AbstractButton allBtn = findButtonContaining((Container)mainFrame, "Tots els");
@@ -375,7 +400,7 @@ public class UIAudit {
             for (int c = 0; c < m.getColumnCount(); c++) header.append("[").append(m.getColumnName(c)).append("] ");
             log(header.toString());
         } else {
-            log("WARN: No JTable found in main frame");
+            warn("No JTable found in main frame");
         }
 
         // --- Open first book ---
@@ -397,41 +422,179 @@ public class UIAudit {
                     robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
                     sleep(300);
                 } else {
-                    log("WARN: Edit button not found in details dialog");
+                    warn("Edit button not found in details dialog");
                 }
 
-                // Tags button
-                AbstractButton tagsBtn = findButtonContaining((Container)detailsDlg, "Etiqueta", "Tag");
-                if (tagsBtn != null) {
-                    log("Clicking Tags...");
-                    SwingUtilities.invokeLater(tagsBtn::doClick); sleep(600);
-                    JDialog tagsDlg = getTopDialog();
-                    if (tagsDlg != null) {
-                        log("  -> Tags dialog: \"" + tagsDlg.getTitle() + "\"");
-                        cmdScreenshot("book_tags");
-                        SwingUtilities.invokeLater(tagsDlg::dispose); sleep(300);
-                    }
-                }
+                clickSubDialogButton(detailsDlg, "Llistes", "book_llistes");
+                clickSubDialogButton(detailsDlg, "Etiquetes", "book_tags");
+                clickSubDialogButton(detailsDlg, "Historial", "book_historial");
+                clickSubDialogButton(detailsDlg, "Imprimir", "book_imprimir");
 
                 SwingUtilities.invokeLater(detailsDlg::dispose); sleep(400);
             } else {
-                log("WARN: No dialog appeared after opening row 0");
+                warn("No dialog appeared after opening row 0");
             }
         } else {
-            log("WARN: Table empty, skipping book detail test");
+            warn("Table empty, skipping book detail test");
         }
-
-        // --- Create new book with random data ---
-        testCreateBook(mainFrame);
 
         // --- Edit first book, change all fields ---
         testEditBook(mainFrame);
 
         cmdScreenshot("99_final");
+        log("\n--- I18n static audit ---");
+        I18nAudit.run(reportFile, new int[]{failCount}, new int[]{warnCount});
         log("\n=== AUTOMATED AUDIT COMPLETE ===");
+        log("FAIL: " + failCount + "  WARN: " + warnCount);
         log("Report: checkBiblio/audit_report.txt");
+        writeJsonReport();
         log("Screenshots: checkBiblio/screenshots/");
-        print("\n[AUTO] Audit complete. Check checkBiblio/audit_report.txt");
+        print("\n[AUTO] Audit complete. FAIL=" + failCount + " WARN=" + warnCount
+            + " — see checkBiblio/audit_report.txt");
+    }
+
+    private static void warn(String msg) {
+        warnCount++;
+        log("WARN: " + msg);
+    }
+
+    private static void fail(String msg) {
+        failCount++;
+        log("FAIL: " + msg);
+    }
+
+    private static void clickSubDialogButton(JDialog detailsDlg, String btnHint, String shotName) throws Exception {
+        AbstractButton btn = findButtonContaining((Container)detailsDlg, btnHint);
+        if (btn == null) { warn("Details button not found: \"" + btnHint + "\""); return; }
+        log("Clicking \"" + btn.getText() + "\"...");
+        SwingUtilities.invokeLater(btn::doClick);
+        sleep(700);
+        JDialog sub = getTopDialog();
+        if (sub != null && sub != detailsDlg) {
+            log("  -> Sub-dialog: \"" + sub.getTitle() + "\"");
+            cmdScreenshot(shotName);
+            dismissDialog(sub);
+        } else {
+            log("  -> No sub-dialog for \"" + btnHint + "\"");
+        }
+    }
+
+    private static void dismissDialog(JDialog d) {
+        AbstractButton close = findButtonContaining((Container)d, "Tancar", "OK", "Cancel");
+        if (close != null) SwingUtilities.invokeLater(close::doClick);
+        else SwingUtilities.invokeLater(d::dispose);
+        sleep(350);
+    }
+
+    private static void dismissAllDialogs() {
+        for (int i = 0; i < 8; i++) {
+            JDialog d = getTopDialog();
+            if (d == null) break;
+            dismissDialog(d);
+        }
+    }
+
+    private static void testTopBar(JFrame main) throws Exception {
+        JTextField search = findTextFieldNear(main, "ISBN");
+        if (search == null) {
+            List<Component> flat = new ArrayList<>();
+            flattenVisible(main, flat);
+            for (Component c : flat) {
+                if (c instanceof JTextField tf && tf.getToolTipText() != null
+                        && norm(tf.getToolTipText()).contains("cerca")) {
+                    search = tf;
+                    break;
+                }
+            }
+        }
+        if (search != null) {
+            final JTextField searchField = search;
+            SwingUtilities.invokeAndWait(() -> searchField.setText("test"));
+            sleep(200);
+            log("Search bar set to \"test\"");
+            SwingUtilities.invokeAndWait(() -> searchField.setText(""));
+            sleep(200);
+        } else {
+            warn("Search bar not found");
+        }
+
+        AbstractButton galeria = findButtonContaining(main, "Galeria");
+        if (galeria != null) {
+            SwingUtilities.invokeLater(galeria::doClick); sleep(700);
+            cmdScreenshot("top_galeria");
+            log("Gallery mode toggled on");
+            SwingUtilities.invokeLater(galeria::doClick); sleep(700);
+            log("Gallery mode toggled off");
+        } else {
+            warn("Galeria button not found");
+        }
+
+        AbstractButton series = findButtonContaining(main, "Sèrie", "Series");
+        if (series != null) {
+            SwingUtilities.invokeLater(series::doClick); sleep(500);
+            SwingUtilities.invokeLater(series::doClick); sleep(500);
+            log("Series grouping toggled x2");
+        } else {
+            warn("Series button not found");
+        }
+    }
+
+    private static void testPagination(JFrame main) throws Exception {
+        AbstractButton next = findButtonContaining(main, "Seguent", "Next");
+        AbstractButton prev = findButtonContaining(main, "Anterior", "Previous");
+        if (next != null) {
+            SwingUtilities.invokeLater(next::doClick); sleep(600);
+            cmdScreenshot("pagination_next");
+            log("Pagination: next page");
+        } else {
+            warn("Next page button not found");
+        }
+        if (prev != null) {
+            SwingUtilities.invokeLater(prev::doClick); sleep(600);
+            log("Pagination: previous page");
+        }
+    }
+
+    private static void testFilterActions(JFrame main) throws Exception {
+        AbstractButton tog = findButtonContaining(main, "Filtre", "Filter");
+        if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
+            SwingUtilities.invokeLater(tog::doClick); sleep(400);
+        }
+        fillField(main, "Nom", "audit");
+        AbstractButton filtrar = findButtonContaining(main, "Filtrar");
+        if (filtrar != null) {
+            SwingUtilities.invokeLater(filtrar::doClick); sleep(700);
+            log("Filter applied (nom=audit)");
+            cmdScreenshot("filter_applied");
+        }
+        AbstractButton clear = findButtonContaining(main, "Treure", "Quitar");
+        if (clear != null) {
+            SwingUtilities.invokeLater(clear::doClick); sleep(600);
+            log("Filters cleared");
+        }
+    }
+
+    private static void testIoButtons(JFrame main) throws Exception {
+        AbstractButton tog = findButtonContaining(main, "Filtre", "Filter");
+        if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
+            SwingUtilities.invokeLater(tog::doClick); sleep(400);
+        }
+        String[] safe = {"Exportar", "Importar", "Fetch", "Escanejar", "Backup", "Restaurar"};
+        for (String hint : safe) {
+            AbstractButton btn = findButtonContaining(main, hint);
+            if (btn == null) { warn("I/O button not found: " + hint); continue; }
+            log("CLICK I/O: \"" + btn.getText() + "\"");
+            if (norm(btn.getText()).contains("export") || norm(btn.getText()).contains("import")) {
+                SwingUtilities.invokeLater(btn::doClick); sleep(400);
+                AbstractButton item = findButtonContaining(main, "CSV", "JSON", "HTML");
+                if (item != null) { SwingUtilities.invokeLater(item::doClick); sleep(500); }
+            } else {
+                SwingUtilities.invokeLater(btn::doClick); sleep(600);
+            }
+            dismissAllDialogs();
+            robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
+            sleep(250);
+        }
     }
 
     private static final java.util.Random RNG = new java.util.Random();
@@ -782,8 +945,18 @@ public class UIAudit {
             """);
     }
 
+    private static void writeJsonReport() {
+        try (PrintWriter jw = new PrintWriter(new FileWriter("checkBiblio/audit_report.json", false), true)) {
+            jw.printf("{\"fail\":%d,\"warn\":%d,\"timestamp\":\"%s\"}%n",
+                failCount, warnCount, LocalDateTime.now());
+        } catch (IOException e) {
+            log("WARN: could not write audit_report.json: " + e.getMessage());
+        }
+    }
+
     private static void closeReport() {
         log("=== UIAudit finished ===");
+        writeJsonReport();
         reportFile.close();
     }
 

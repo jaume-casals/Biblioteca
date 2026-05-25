@@ -21,10 +21,12 @@ public class BookImporter {
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
             String headerLine = br.readLine();
             if (headerLine == null) return new ImportResult(0, 0, 0, "");
+            if (headerLine.startsWith("\uFEFF")) headerLine = headerLine.substring(1);
+            final String header = headerLine;
             herramienta.csv.CsvImportStrategy strategy = strategies.stream()
-                .filter(s -> s.canHandle(headerLine)).findFirst()
+                .filter(s -> s.canHandle(header)).findFirst()
                 .orElse(new herramienta.csv.NativeCsvStrategy());
-            String[] headerCols = herramienta.csv.CsvUtils.parseLine(headerLine);
+            String[] headerCols = herramienta.csv.CsvUtils.parseLine(header);
             java.util.Map<String, Integer> hMap = herramienta.csv.CsvUtils.buildHeaderMap(headerCols);
             String line;
             while ((line = br.readLine()) != null) {

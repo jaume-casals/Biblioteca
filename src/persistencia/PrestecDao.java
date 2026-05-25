@@ -30,17 +30,32 @@ public class PrestecDao {
         }
     }
 
-    public synchronized List<domini.PrestecRow> getAll() {
-        List<domini.PrestecRow> rows = new ArrayList<>();
+    public synchronized List<persistencia.PrestecRow> getAll() {
+        List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery(
                     "SELECT isbn, nom_persona, data_prestec, retornat FROM prestec ORDER BY id")) {
                 while (rs.next())
-                    rows.add(new domini.PrestecRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
+                    rows.add(persistencia.PrestecRow.fromStrings(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els préstecs: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant els préstecs: " + e.getMessage(), e);
+        }
+        return rows;
+    }
+
+    public synchronized List<persistencia.PrestecRow> getActiveLoans() {
+        List<persistencia.PrestecRow> rows = new ArrayList<>();
+        try {
+            try (Statement s = con.createStatement();
+                 ResultSet rs = s.executeQuery(
+                    "SELECT isbn, nom_persona, data_prestec, retornat FROM prestec WHERE retornat = FALSE ORDER BY id")) {
+                while (rs.next())
+                    rows.add(persistencia.PrestecRow.fromStrings(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
+            }
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error carregant els préstecs actius: " + e.getMessage(), e);
         }
         return rows;
     }
@@ -54,26 +69,41 @@ public class PrestecDao {
                 while (rs.next()) set.add(rs.getLong(1));
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els préstecs: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant els préstecs: " + e.getMessage(), e);
         }
         return set;
     }
 
-    public synchronized List<domini.PrestecRow> getForIsbn(long isbn) {
-        List<domini.PrestecRow> rows = new ArrayList<>();
+    public synchronized List<persistencia.PrestecRow> getForIsbn(long isbn) {
+        List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT nom_persona, data_prestec, retornat FROM prestec WHERE isbn = ? ORDER BY id")) {
                 ps.setLong(1, isbn);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next())
-                        rows.add(new domini.PrestecRow(isbn, rs.getString(1), rs.getString(2), rs.getBoolean(3)));
+                        rows.add(persistencia.PrestecRow.fromStrings(isbn, rs.getString(1), rs.getString(2), rs.getBoolean(3)));
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els préstecs per ISBN: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant els préstecs per ISBN: " + e.getMessage(), e);
         }
         return rows;
+    }
+
+    public synchronized int count(long isbn) {
+        try {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT COUNT(*) FROM prestec WHERE isbn = ?")) {
+                ps.setLong(1, isbn);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error comptant els préstecs per ISBN: " + e.getMessage(), e);
+        }
+        return 0;
     }
 
     public synchronized List<Object[]> getOverdue(int daysThreshold) {
@@ -93,7 +123,7 @@ public class PrestecDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant préstecs vençuts: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant préstecs vençuts: " + e.getMessage(), e);
         }
         return rows;
     }

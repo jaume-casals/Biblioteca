@@ -9,17 +9,51 @@ import java.util.stream.Collectors;
 
 public class EstadistiquesHelper {
 
+    public static class BookStats {
+        public final int total;
+        public final long llegits;
+        public final double avgValoracio;
+        public final double avgPreu;
+        public final java.util.Map<Integer, Long> booksByReadYear;
+
+        public BookStats(int total, long llegits, double avgValoracio, double avgPreu, java.util.Map<Integer, Long> booksByReadYear) {
+            this.total = total;
+            this.llegits = llegits;
+            this.avgValoracio = avgValoracio;
+            this.avgPreu = avgPreu;
+            this.booksByReadYear = booksByReadYear;
+        }
+    }
+
+    private static int readYearFor(Llibre l) {
+        int yr = l.getDataLectura() != null ? herramienta.DateUtils.parseYear(l.getDataLectura()) : 0;
+        return yr > 0 ? yr : (l.getAny() != null && l.getAny() > 1900 ? l.getAny() : 0);
+    }
+
+    public static java.util.Map<Integer, Long> booksByReadYear(ArrayList<Llibre> books) {
+        java.util.Map<Integer, Long> byYear = new java.util.HashMap<>();
+        for (Llibre l : books) {
+            if (!Boolean.TRUE.equals(l.getLlegit())) continue;
+            if ((l.getDataLectura() == null || l.getDataLectura().isEmpty()) && (l.getAny() == null || l.getAny() <= 1900)) continue;
+            int yr = readYearFor(l);
+            if (yr > 0) byYear.merge(yr, 1L, Long::sum);
+        }
+        return byYear;
+    }
+
+    public static BookStats computeStats(ArrayList<Llibre> books) {
+        int total = books.size();
+        long llegits = books.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+        double avgVal = books.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
+        double avgPreu = books.stream().mapToDouble(l -> l.getPreu() != null ? l.getPreu() : 0).average().orElse(0);
+        return new BookStats(total, llegits, avgVal, avgPreu, booksByReadYear(books));
+    }
+
     public static javax.swing.JPanel buildReadingChart(ArrayList<Llibre> books) {
-        java.util.Map<Integer, Long> perYear = books.stream()
-            .filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-            .filter(l -> {
-                if (l.getDataLectura() != null && !l.getDataLectura().isEmpty()) return true;
-                return l.getAny() != null && l.getAny() > 1900;
-            })
-            .collect(Collectors.groupingBy(l -> {
-                int yr = l.getDataLectura() != null ? herramienta.DateUtils.parseYear(l.getDataLectura()) : 0;
-                return yr > 0 ? yr : (l.getAny() != null ? l.getAny() : 0);
-            }, Collectors.counting()));
+        return buildReadingChart(booksByReadYear(books));
+    }
+
+    static javax.swing.JPanel buildReadingChart(java.util.Map<Integer, Long> perYear) {
         java.awt.Font chartFont9 = herramienta.UITheme.FONT_BASE.deriveFont(9f);
         return new javax.swing.JPanel() {
             { setPreferredSize(new java.awt.Dimension(560, 180)); setBackground(herramienta.UITheme.BG_PANEL); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_books_year"))); }
@@ -95,7 +129,7 @@ public class EstadistiquesHelper {
         java.util.Map<Integer, String> tagIdToName = new java.util.HashMap<>();
         for (domini.Tag t : cd.getAllTags()) tagIdToName.put(t.getId(), t.getNom());
         java.util.Map<String, Long> tagCount = new java.util.HashMap<>();
-        for (domini.LlibreTagRow row : cd.getAllLlibreTagRows()) {
+        for (persistencia.LlibreTagRow row : cd.getAllLlibreTagRows()) {
             if (!bookIsbns.contains(row.isbn())) continue;
             String nom = tagIdToName.get(row.tagId());
             if (nom != null) tagCount.merge(nom, 1L, Long::sum);
@@ -122,6 +156,10 @@ public class EstadistiquesHelper {
     }
 
     public static javax.swing.JPanel buildReadingPacePanel(ArrayList<Llibre> books) {
+        return buildReadingPacePanel(books, booksByReadYear(books));
+    }
+
+    static javax.swing.JPanel buildReadingPacePanel(ArrayList<Llibre> books, java.util.Map<Integer, Long> byYear) {
         javax.swing.JPanel panel = new javax.swing.JPanel();
         panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
         panel.setBackground(herramienta.UITheme.BG_PANEL);
@@ -130,10 +168,7 @@ public class EstadistiquesHelper {
         int currentYear = java.time.LocalDate.now().getYear();
         int dayOfYear = java.time.LocalDate.now().getDayOfYear();
 
-        long finishedThisYear = books.stream()
-            .filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-            .filter(l -> l.getDataLectura() != null && herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
-            .count();
+        long finishedThisYear = byYear.getOrDefault(currentYear, 0L);
         double booksPerDay = dayOfYear > 0 ? (double) finishedThisYear / dayOfYear : 0;
         double booksPerMonth = booksPerDay * 30.44;
         double projectedYear = booksPerDay * 365;
@@ -160,25 +195,59 @@ public class EstadistiquesHelper {
         return panel;
     }
 
-    public static String buildStatsSummary(ArrayList<Llibre> llibres, String scope) {
-        int total = llibres.size();
-        long llegits = llibres.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
-        double avgVal = llibres.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
-        double avgPreu = llibres.stream().mapToDouble(l -> l.getPreu() != null ? l.getPreu() : 0).average().orElse(0);
-        String topAnys = llibres.stream()
-            .filter(l -> l.getAny() != null && l.getAny() > 0)
-            .collect(Collectors.groupingBy(Llibre::getAny, Collectors.counting()))
-            .entrySet().stream()
+    public static String buildStatsSummary(BookStats stats, String scope) {
+        return buildStatsSummary(stats, scope,
+            stats.total > 0 ? String.format("%.1f", 100.0 * stats.llegits / stats.total) + "%" : "0%");
+    }
+
+    private static String buildStatsSummary(BookStats stats, String scope, String llegitsPercent) {
+        String topAnys = stats.booksByReadYear.entrySet().stream()
+            .filter(e -> e.getKey() > 0)
             .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
             .limit(3)
             .map(e -> "  " + e.getKey() + ": " + e.getValue() + " " + (e.getValue() > 1 ? I18n.t("stats_book_plural") : I18n.t("stats_book_singular")))
             .collect(Collectors.joining("\n"));
         return scope + "\n" +
-            I18n.t("stats_total") + " " + total + "  ·  " +
-            I18n.t("stats_llegits_colon") + " " + llegits + " (" + String.format("%.1f", 100.0 * llegits / total) + "%)  ·  " +
-            I18n.t("stats_no_llegits_colon") + " " + (total - llegits) + "\n" +
-            I18n.t("stats_avg_rating_colon") + " " + String.format("%.2f", avgVal) + " / 10  ·  " +
-            I18n.t("stats_avg_price_colon") + " " + String.format("%.2f", avgPreu) + " " + herramienta.Config.getCurrencySymbol() + "\n" +
+            I18n.t("stats_total") + " " + stats.total + "  ·  " +
+            I18n.t("stats_llegits_colon") + " " + stats.llegits + " (" + llegitsPercent + ")  ·  " +
+            I18n.t("stats_no_llegits_colon") + " " + (stats.total - stats.llegits) + "\n" +
+            I18n.t("stats_avg_rating_colon") + " " + String.format("%.2f", stats.avgValoracio) + " / 10  ·  " +
+            I18n.t("stats_avg_price_colon") + " " + String.format("%.2f", stats.avgPreu) + " " + herramienta.Config.getCurrencySymbol() + "\n" +
             I18n.t("stats_top_years") + "\n" + (topAnys.isEmpty() ? "  " + I18n.t("stats_no_years") : topAnys);
+    }
+
+    public static String buildStatsSummary(ArrayList<Llibre> llibres, String scope) {
+        return buildStatsSummary(computeStats(llibres), scope);
+    }
+
+    public static void showDialog(java.awt.Window parent, javax.swing.JComponent[] tabs, String[] tabTitles) {
+        javax.swing.JDialog dlg = new javax.swing.JDialog(parent,
+            I18n.t("dlg_stats_title"), java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+
+        javax.swing.JTabbedPane tabbedPane = new javax.swing.JTabbedPane();
+        tabbedPane.setBackground(herramienta.UITheme.BG_PANEL);
+        for (int i = 0; i < tabs.length; i++) {
+            String title = i < tabTitles.length ? tabTitles[i] : ("Tab " + i);
+            tabbedPane.addTab(title, tabs[i]);
+        }
+
+        dlg.getContentPane().setBackground(herramienta.UITheme.BG_PANEL);
+        dlg.add(tabbedPane);
+        javax.swing.JButton btnClose = new javax.swing.JButton(I18n.t("btn_close"));
+        herramienta.UITheme.styleSecondaryButton(btnClose);
+        btnClose.addActionListener(e -> dlg.dispose());
+        dlg.getRootPane().setDefaultButton(btnClose);
+        dlg.getRootPane().registerKeyboardAction(e -> dlg.dispose(),
+            javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW);
+        javax.swing.JPanel btnPanel = new javax.swing.JPanel();
+        btnPanel.setBackground(herramienta.UITheme.BG_PANEL);
+        btnPanel.add(btnClose);
+        dlg.add(btnPanel, java.awt.BorderLayout.SOUTH);
+        dlg.setSize(600, 500);
+        dlg.setMinimumSize(new java.awt.Dimension(500, 400));
+        dlg.setLocationRelativeTo(parent);
+        dlg.setVisible(true);
     }
 }

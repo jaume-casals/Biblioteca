@@ -3,10 +3,12 @@ package herramienta;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.TreeSet;
 
 public class FieldAutoComplete {
 
@@ -14,12 +16,19 @@ public class FieldAutoComplete {
 
     private static final int MAX_SUGGESTIONS = 8;
 
-    // Note: the DocumentListener added here is never explicitly removed.
-    // This is intentional — attach() is called once per field (at dialog construction), so the field
-    // and popup share the same lifetime and the listener does not leak.
+    public sealed interface Attachment permits FieldAutoCompletionAttachment {}
+    private static final class FieldAutoCompletionAttachment implements Attachment { }
+
+    public static Attachment attachReturning(JTextField field, List<String> suggestions) {
+        attach(field, suggestions);
+        return new FieldAutoCompletionAttachment();
+    }
+
     public static void attach(JTextField field, List<String> suggestions) {
         JPopupMenu popup = new JPopupMenu();
         popup.setFocusable(false);
+        TreeSet<String> sorted = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        sorted.addAll(suggestions);
 
         field.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { update(); }
@@ -31,20 +40,21 @@ public class FieldAutoComplete {
                     String text = field.getText();
                     popup.removeAll();
                     if (text.isEmpty()) { popup.setVisible(false); return; }
-                    String lower = text.toLowerCase();
+                    String lower = text.toLowerCase(java.util.Locale.ROOT);
                     int count = 0;
-                    for (String s : suggestions) {
-                        if (s.toLowerCase().contains(lower) && !s.equalsIgnoreCase(text)) {
-                            JMenuItem item = new JMenuItem(s);
-                            item.addMouseListener(new MouseAdapter() {
-                                @Override public void mousePressed(MouseEvent e) {
-                                    field.setText(s);
-                                    popup.setVisible(false);
-                                }
-                            });
-                            popup.add(item);
-                            if (++count >= MAX_SUGGESTIONS) break;
-                        }
+                    for (String s : sorted.tailSet(lower, true)) {
+                        if (count >= MAX_SUGGESTIONS) break;
+                        if (!s.toLowerCase(java.util.Locale.ROOT).startsWith(lower)) break;
+                        if (s.equalsIgnoreCase(text)) continue;
+                        JMenuItem item = new JMenuItem(s);
+                        item.addMouseListener(new MouseAdapter() {
+                            @Override public void mousePressed(MouseEvent e) {
+                                field.setText(s);
+                                popup.setVisible(false);
+                            }
+                        });
+                        popup.add(item);
+                        count++;
                     }
                     if (count == 0) { popup.setVisible(false); return; }
                     if (!popup.isVisible()) {

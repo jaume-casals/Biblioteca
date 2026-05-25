@@ -17,6 +17,16 @@ public class OpenLibraryClient {
 
 	private OpenLibraryClient() {}
 
+	private static final long MIN_REQUEST_INTERVAL_MS = 300;
+	private static long lastRequestMs = 0;
+
+	private static synchronized void rateLimit() throws InterruptedException {
+		long now = System.currentTimeMillis();
+		long wait = MIN_REQUEST_INTERVAL_MS - (now - lastRequestMs);
+		if (wait > 0) Thread.sleep(wait);
+		lastRequestMs = System.currentTimeMillis();
+	}
+
 	// @VisibleForTesting
 	public static String testBaseUrl = null;
 	public static int testMaxRetries = -1;
@@ -125,6 +135,7 @@ public class OpenLibraryClient {
 	}
 
 	public static byte[] fetchCoverByISBN(String isbn) {
+		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 		String coverBase = testBaseUrl != null ? testBaseUrl : "https://covers.openlibrary.org";
 		String url = coverBase + "/b/isbn/" + isbn + "-L.jpg";
 		try {
@@ -159,6 +170,7 @@ public class OpenLibraryClient {
 	}
 
 	private static String fetchWithRetry(String url) throws java.io.IOException {
+		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 		int retries = testMaxRetries >= 0 ? testMaxRetries : MAX_RETRIES;
 		long baseMs = testRetryBaseMs >= 0 ? testRetryBaseMs : RETRY_BASE_MS;
 		java.io.IOException last = null;

@@ -18,17 +18,26 @@ import javax.swing.UIManager;
 
 public class Ejecutable {
 
-    public static void main(String[] args) throws Exception {
-        Thread.setDefaultUncaughtExceptionHandler((t, e) ->
-            new herramienta.DialogoError("Uncaught exception in " + t.getName(), (Exception)(e instanceof Exception ? e : new RuntimeException(e))).showErrorMessage());
+    private static SplashScreen splashRef;
 
-        String mode = resolveMode(args);
-        if (mode == null) return; // user closed dialog
+    public static void main(String[] args) throws Exception {
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            if (splashRef != null) splashRef.forceHide();
+            herramienta.DialogoError err = e instanceof Exception ? new herramienta.DialogoError((Exception) e) : new herramienta.DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
+            err.showErrorMessage();
+        });
+
+        java.util.Optional<String> mode = resolveMode(args);
+        if (mode.isEmpty()) {
+            System.out.println("No mode selected. Exiting.");
+            return;
+        }
+        String modeStr = mode.get();
 
         Runtime.getRuntime().addShutdownHook(new Thread(
             persistencia.ControladorPersistencia::resetForProfileSwitch));
 
-        if ("web".equals(mode)) {
+        if ("web".equals(modeStr)) {
             System.out.println("Starting database...");
             try {
                 ControladorDomini.getInstance();
@@ -42,16 +51,16 @@ public class Ejecutable {
         }
     }
 
-    private static String resolveMode(String[] args) {
+    public static java.util.Optional<String> resolveMode(String[] args) {
         if (args.length > 0) {
-            if ("--web".equals(args[0]))   { Config.setLastMode("web");   return "web"; }
-            if ("--swing".equals(args[0])) { Config.setLastMode("swing"); return "swing"; }
+            if ("--web".equals(args[0]))   { Config.setLastMode("web");   return java.util.Optional.of("web"); }
+            if ("--swing".equals(args[0])) { Config.setLastMode("swing"); return java.util.Optional.of("swing"); }
         }
         String last = Config.getLastMode();
         ModeSelectorDialog.Mode choice = ModeSelectorDialog.prompt(last);
-        if (choice == ModeSelectorDialog.Mode.WEB)   { Config.setLastMode("web");   return "web"; }
-        if (choice == ModeSelectorDialog.Mode.SWING) { Config.setLastMode("swing"); return "swing"; }
-        return null; // CANCELLED
+        if (choice == ModeSelectorDialog.Mode.WEB)   { Config.setLastMode("web");   return java.util.Optional.of("web"); }
+        if (choice == ModeSelectorDialog.Mode.SWING) { Config.setLastMode("swing"); return java.util.Optional.of("swing"); }
+        return java.util.Optional.empty();
     }
 
     private static void startWeb() throws Exception {
@@ -84,6 +93,7 @@ public class Ejecutable {
                 UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
 
                 SplashScreen splash = new SplashScreen();
+                splashRef = splash;
                 splash.show();
 
                 // Load DB in background, then open main window

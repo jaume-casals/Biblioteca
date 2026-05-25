@@ -21,11 +21,13 @@ public class LlibreFilter {
     public String sortColumn;
     public boolean sortAsc = true;
 
+    private LlibreFilter() {}
+
     public static LlibreFilter empty() { return new LlibreFilter(); }
 
     // Update copy() whenever a new field is added above.
     public LlibreFilter copy() {
-        LlibreFilter f = new LlibreFilter();
+        LlibreFilter f = empty();
         f.autor = this.autor; f.nom = this.nom; f.isbn = this.isbn;
         f.anyMin = this.anyMin; f.anyMax = this.anyMax;
         f.valoracioMin = this.valoracioMin; f.valoracioMax = this.valoracioMax;

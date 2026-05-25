@@ -32,6 +32,7 @@ public class Llibre {
 	private String nomCa = null;
 	private String nomEs = null;
 	private String nomEn = null;
+	private boolean heavyFieldsLoaded = true;
 
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
@@ -63,11 +64,11 @@ public class Llibre {
 	}
 
 	public String getNomCa() { return nomCa; }
-	public void setNomCa(String v) { this.nomCa = v; }
+	public void setNomCa(String v) { this.nomCa = (v != null && !v.isBlank()) ? v.trim() : null; }
 	public String getNomEs() { return nomEs; }
-	public void setNomEs(String v) { this.nomEs = v; }
+	public void setNomEs(String v) { this.nomEs = (v != null && !v.isBlank()) ? v.trim() : null; }
 	public String getNomEn() { return nomEn; }
-	public void setNomEn(String v) { this.nomEn = v; }
+	public void setNomEn(String v) { this.nomEn = (v != null && !v.isBlank()) ? v.trim() : null; }
 
 	/** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
 	public String getDisplayNom(String lang) {
@@ -192,6 +193,9 @@ public class Llibre {
 		c.hasBlob = src.hasBlob;
 		return c;
 	}
+
+	public boolean isHeavyFieldsLoaded() { return heavyFieldsLoaded; }
+	public void setHeavyFieldsLoaded(boolean heavyFieldsLoaded) { this.heavyFieldsLoaded = heavyFieldsLoaded; }
 
 	@Override
 	public String toString() {

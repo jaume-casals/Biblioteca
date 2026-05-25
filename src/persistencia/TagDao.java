@@ -11,10 +11,14 @@ public class TagDao {
 
     private final Connection con;
 
-    private static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
+    public static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
         Arrays.asList("editorial", "serie", "idioma", "pais_origen", "format", "llengua_original"));
 
+    private volatile java.util.List<LlibreTagRow> llibreTagCache;
+
     TagDao(Connection con) { this.con = con; }
+
+    private void invalidateLlibreTagCache() { llibreTagCache = null; }
 
     public synchronized ArrayList<Tag> getAll() {
         ArrayList<Tag> tags = new ArrayList<>();
@@ -24,7 +28,7 @@ public class TagDao {
                 while (rs.next()) tags.add(new Tag(rs.getInt(1), rs.getString(2)));
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant les etiquetes: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant les etiquetes: " + e.getMessage(), e);
         }
         return tags;
     }
@@ -67,7 +71,7 @@ public class TagDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant les etiquetes del llibre: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant les etiquetes del llibre: " + e.getMessage(), e);
         }
         return tags;
     }
@@ -79,6 +83,7 @@ public class TagDao {
             ps.setInt(2, tagId);
             ps.execute();
         }
+        invalidateLlibreTagCache();
     }
 
     public synchronized void removeFromLlibre(long isbn, int tagId) throws SQLException {
@@ -88,6 +93,7 @@ public class TagDao {
             ps.setInt(2, tagId);
             ps.execute();
         }
+        invalidateLlibreTagCache();
     }
 
     public synchronized Set<Long> getLlibresWithTag(int tagId) {
@@ -101,24 +107,26 @@ public class TagDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els llibres de l'etiqueta: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant els llibres de l'etiqueta: " + e.getMessage(), e);
         }
         return isbns;
     }
 
-    public synchronized java.util.List<domini.LlibreTagRow> getAllLlibreTag() {
-        java.util.List<domini.LlibreTagRow> rows = new java.util.ArrayList<>();
+    public synchronized java.util.List<LlibreTagRow> getAllLlibreTag() {
+        if (llibreTagCache != null) return llibreTagCache;
+        java.util.List<LlibreTagRow> rows = new java.util.ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery(
                     "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn")) {
                 while (rs.next())
-                    rows.add(new domini.LlibreTagRow(rs.getLong(1), rs.getInt(2)));
+                    rows.add(new LlibreTagRow(rs.getLong(1), rs.getInt(2)));
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant les dades d'etiquetes: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant les dades d'etiquetes: " + e.getMessage(), e);
         }
-        return rows;
+        llibreTagCache = java.util.List.copyOf(rows);
+        return llibreTagCache;
     }
 
     public synchronized java.util.List<String> getDistinctValues(String column) {
@@ -132,7 +140,7 @@ public class TagDao {
                 while (rs.next()) vals.add(rs.getString(1));
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant valors de " + column + ": " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant valors de " + column + ": " + e.getMessage(), e);
         }
         return vals;
     }

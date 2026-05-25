@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class JsonMapper {
 
@@ -17,6 +18,50 @@ public class JsonMapper {
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
 
     public static Gson gson() { return GSON; }
+
+    private static final Map<String, java.util.function.Function<Llibre, Object>> LLIBRE_FIELD_EXTRACTORS = Map.ofEntries(
+        Map.entry("isbn", l -> l.getISBN()),
+        Map.entry("nom", l -> l.getNom()),
+        Map.entry("autor", l -> l.getAutor()),
+        Map.entry("autors", l -> l.getAutors()),
+        Map.entry("any", l -> l.getAny()),
+        Map.entry("descripcio", l -> l.getDescripcio()),
+        Map.entry("valoracio", l -> l.getValoracio()),
+        Map.entry("preu", l -> l.getPreu()),
+        Map.entry("llegit", l -> l.getLlegit()),
+        Map.entry("imatge", l -> l.getImatge()),
+        Map.entry("hasBlob", l -> l.hasBlob()),
+        Map.entry("notes", l -> l.getNotes()),
+        Map.entry("pagines", l -> l.getPagines()),
+        Map.entry("paginesLlegides", l -> l.getPaginesLlegides()),
+        Map.entry("editorial", l -> l.getEditorial()),
+        Map.entry("serie", l -> l.getSerie()),
+        Map.entry("volum", l -> l.getVolum()),
+        Map.entry("dataCompra", l -> l.getDataCompra()),
+        Map.entry("dataLectura", l -> l.getDataLectura()),
+        Map.entry("idioma", l -> l.getIdioma()),
+        Map.entry("format", l -> l.getFormat()),
+        Map.entry("desitjat", l -> l.getDesitjat()),
+        Map.entry("paisOrigen", l -> l.getPaisOrigen()),
+        Map.entry("nomCa", l -> l.getNomCa()),
+        Map.entry("nomEs", l -> l.getNomEs()),
+        Map.entry("nomEn", l -> l.getNomEn())
+    );
+
+    public static Map<String, Object> slimBookMap(Llibre l, Set<String> fields) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        for (String f : fields) {
+            java.util.function.Function<Llibre, Object> fn = LLIBRE_FIELD_EXTRACTORS.get(f);
+            if (fn != null) m.put(f, fn.apply(l));
+        }
+        return m;
+    }
+
+    public static List<Map<String, Object>> llibresToSlimList(ArrayList<Llibre> llibres, Set<String> fields) {
+        List<Map<String, Object>> out = new ArrayList<>(llibres.size());
+        for (Llibre l : llibres) out.add(slimBookMap(l, fields));
+        return out;
+    }
 
     public static Map<String, Object> llibreToMap(Llibre l) {
         Map<String, Object> m = new LinkedHashMap<>();

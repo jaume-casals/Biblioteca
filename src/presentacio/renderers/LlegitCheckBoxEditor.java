@@ -1,0 +1,70 @@
+package presentacio.renderers;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.util.function.Consumer;
+import javax.swing.*;
+import javax.swing.table.*;
+
+import domini.Llibre;
+import herramienta.DialogoError;
+import herramienta.I18n;
+import herramienta.UITheme;
+import interficie.BibliotecaWriter;
+import presentacio.MainFrameControl;
+
+public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCellEditor {
+    private static final int COLUMNA_ISBN = 1;
+    private final JCheckBox cb = new JCheckBox();
+    private int editingRow = -1;
+    private JTable editingTable = null;
+    private final BibliotecaWriter cd;
+    private final Consumer<Llibre> onUpdated;
+
+    public LlegitCheckBoxEditor(BibliotecaWriter cd, Consumer<Llibre> onUpdated) {
+        this.cd = cd;
+        this.onUpdated = onUpdated;
+        cb.setHorizontalAlignment(JCheckBox.CENTER);
+        cb.setOpaque(true);
+        cb.addActionListener(e -> {
+            boolean newLlegit = cb.isSelected();
+            int row = editingRow;
+            JTable tbl = editingTable;
+            String isbnStr = tbl != null && row >= 0 && row < tbl.getRowCount()
+                ? (String) tbl.getValueAt(row, COLUMNA_ISBN) : null;
+            fireEditingStopped();
+            if (isbnStr != null) {
+                String isbn = isbnStr;
+                Thread t = new Thread(() -> {
+                    try {
+                        Llibre l = MainFrameControl.getInstance().getLlibreIsbn(Long.parseLong(isbn));
+                        if (l == null) return;
+                        l.setLlegit(newLlegit);
+                        cd.updateLlibre(l);
+                        SwingUtilities.invokeLater(() -> onUpdated.accept(l));
+                    } catch (Exception ex) {
+                        SwingUtilities.invokeLater(() -> new DialogoError(ex).showErrorMessage());
+                    }
+                });
+                t.setDaemon(true);
+                t.start();
+            }
+        });
+    }
+
+    @Override
+    public Component getTableCellEditorComponent(JTable table, Object value,
+            boolean isSelected, int row, int col) {
+        editingRow = row;
+        editingTable = table;
+        cb.setSelected(I18n.t("filter_read").equals(value));
+        cb.setBackground(UITheme.ACCENT);
+        cb.setForeground(Color.WHITE);
+        return cb;
+    }
+
+    @Override
+    public Object getCellEditorValue() {
+        return cb.isSelected() ? I18n.t("filter_read") : I18n.t("filter_unread");
+    }
+}

@@ -24,14 +24,11 @@ import javax.swing.border.EmptyBorder;
 
 import herramienta.I18n;
 import herramienta.UITheme;
+import presentacio.FormGridBuilder;
 
 public class GuardarLlibresDialogo extends JDialog {
 
 	private static final int ENTRY_MIN_W = 240;
-	private static final int ENTRY_H     = 42;
-	private static final int LBL_W       = 90;
-	private static final int SIDE_W      = 155;
-	private static final int IMG_SIZE    = 135;
 
 	private JLabel     labelPreview;
 	private JButton    btnGuardar;
@@ -54,6 +51,7 @@ public class GuardarLlibresDialogo extends JDialog {
 	private JCheckBox  chckDesitjat;
 	private JTextField textPortada;
 	private JCheckBox  chckLlegit;
+	private JTextField textNotes;
 	private JProgressBar progressBar;
 
 	public GuardarLlibresDialogo() {
@@ -66,21 +64,20 @@ public class GuardarLlibresDialogo extends JDialog {
 		setLayout(new BorderLayout(0, 0));
 		getContentPane().setBackground(UITheme.BG_PANEL);
 
-		// ── WEST: preview + action buttons ───────────────────────────────────
 		JPanel west = new JPanel();
 		west.setBackground(UITheme.BG_PANEL);
-		west.setPreferredSize(new Dimension(SIDE_W, 0));
-		west.setMinimumSize(new Dimension(SIDE_W, 0));
-		west.setMaximumSize(new Dimension(SIDE_W, Integer.MAX_VALUE));
+		west.setPreferredSize(new Dimension(155, 0));
+		west.setMinimumSize(new Dimension(155, 0));
+		west.setMaximumSize(new Dimension(155, Integer.MAX_VALUE));
 		west.setLayout(new BoxLayout(west, BoxLayout.Y_AXIS));
 		west.setBorder(new EmptyBorder(8, 8, 8, 6));
 
 		labelPreview = new JLabel();
 		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
 		labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
-		labelPreview.setPreferredSize(new Dimension(IMG_SIZE, IMG_SIZE));
-		labelPreview.setMinimumSize(new Dimension(IMG_SIZE, IMG_SIZE));
-		labelPreview.setMaximumSize(new Dimension(SIDE_W - 16, IMG_SIZE));
+		labelPreview.setPreferredSize(new Dimension(135, 135));
+		labelPreview.setMinimumSize(new Dimension(135, 135));
+		labelPreview.setMaximumSize(new Dimension(139, 135));
 		labelPreview.setAlignmentX(Component.LEFT_ALIGNMENT);
 		west.add(labelPreview);
 		west.add(Box.createVerticalStrut(6));
@@ -104,32 +101,58 @@ public class GuardarLlibresDialogo extends JDialog {
 
 		add(west, BorderLayout.WEST);
 
-		// ── CENTER: responsive field grid ────────────────────────────────────
 		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
 		grid.setBackground(UITheme.BG_PANEL);
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
-		textISBN       = addFieldEntry(grid, I18n.t("field_isbn"));
-		textNom        = addFieldEntry(grid, I18n.t("field_title"));
-		textAutor      = addFieldEntry(grid, I18n.t("field_author"));
-		textAny        = addFieldEntry(grid, I18n.t("field_year"));
-		textDescripcio = addFieldEntry(grid, I18n.t("field_description"));
-		textValoracio  = addFieldEntry(grid, I18n.t("field_rating"));
-		textPreu       = addFieldEntry(grid, I18n.t("field_price"));
-		textEditorial  = addFieldEntry(grid, I18n.t("field_publisher"));
-		textSerie      = addFieldEntry(grid, I18n.t("field_series"));
-		textVolum      = addFieldEntry(grid, I18n.t("field_volume"));
-		textDataCompra  = addFieldEntry(grid, I18n.t("field_purchased"));
-		textDataLectura = addFieldEntry(grid, I18n.t("field_read_on"));
+		textISBN       = new JTextField(); textISBN.setColumns(10); UITheme.styleField(textISBN);
+		textNom        = new JTextField(); textNom.setColumns(10); UITheme.styleField(textNom);
+		textAutor      = new JTextField(); textAutor.setColumns(10); UITheme.styleField(textAutor);
+		textAny        = new JTextField(); textAny.setColumns(10); UITheme.styleField(textAny);
+		textDescripcio = new JTextField(); textDescripcio.setColumns(10); UITheme.styleField(textDescripcio);
+		textValoracio  = new JTextField(); textValoracio.setColumns(10); UITheme.styleField(textValoracio);
+		textPreu       = new JTextField(); textPreu.setColumns(10); UITheme.styleField(textPreu);
+		textEditorial  = new JTextField(); textEditorial.setColumns(10); UITheme.styleField(textEditorial);
+		textSerie      = new JTextField(); textSerie.setColumns(10); UITheme.styleField(textSerie);
+		textVolum      = new JTextField(); textVolum.setColumns(10); UITheme.styleField(textVolum);
+		textDataCompra  = new JTextField(); textDataCompra.setColumns(10); UITheme.styleField(textDataCompra);
+		textDataLectura = new JTextField(); textDataLectura.setColumns(10); UITheme.styleField(textDataLectura);
 		textDataCompra.setToolTipText("YYYY-MM-DD");
 		textDataLectura.setToolTipText("YYYY-MM-DD");
-		textIdioma     = addFieldEntry(grid, I18n.t("field_language"));
-		comboFormat    = addComboEntry(grid, I18n.t("field_format"),
-				new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
-		chckDesitjat   = addCheckEntry(grid, I18n.t("field_wishlist"),
-				I18n.t("tip_desitjat"));
-		chckLlegit     = addCheckEntry(grid, I18n.t("field_read"), null);
-		textPortada    = addFieldEntry(grid, I18n.t("col_cover"));
+		textIdioma     = new JTextField(); textIdioma.setColumns(10); UITheme.styleField(textIdioma);
+		comboFormat    = new JComboBox<>(herramienta.FormatOptions.withBlank());
+		comboFormat.setBackground(UITheme.BG_MAIN);
+		comboFormat.setForeground(UITheme.TEXT_DARK);
+		comboFormat.setFont(UITheme.FONT_BASE);
+		chckDesitjat   = new JCheckBox("");
+		chckDesitjat.setBackground(UITheme.BG_PANEL);
+		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);
+		chckDesitjat.setToolTipText(I18n.t("tip_desitjat"));
+		chckLlegit     = new JCheckBox("");
+		chckLlegit.setBackground(UITheme.BG_PANEL);
+		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
+		textNotes      = new JTextField(); textNotes.setColumns(10); UITheme.styleField(textNotes);
+		textPortada    = new JTextField(); textPortada.setColumns(10); UITheme.styleField(textPortada);
+
+		FormGridBuilder builder = FormGridBuilder.columnsOf(grid);
+		builder.addField(I18n.t("field_isbn"), textISBN);
+		builder.addField(I18n.t("field_title"), textNom);
+		builder.addField(I18n.t("field_author"), textAutor);
+		builder.addField(I18n.t("field_year"), textAny);
+		builder.addField(I18n.t("field_description"), textDescripcio);
+		builder.addField(I18n.t("field_rating"), textValoracio);
+		builder.addField(I18n.t("field_price"), textPreu);
+		builder.addField(I18n.t("field_publisher"), textEditorial);
+		builder.addField(I18n.t("field_series"), textSerie);
+		builder.addField(I18n.t("field_volume"), textVolum);
+		builder.addField(I18n.t("field_purchased"), textDataCompra);
+		builder.addField(I18n.t("field_read_on"), textDataLectura);
+		builder.addField(I18n.t("field_language"), textIdioma);
+		builder.addCombo(I18n.t("field_format"), comboFormat);
+		builder.addCheck(I18n.t("field_wishlist"), chckDesitjat);
+		builder.addCheck(I18n.t("field_read"), chckLlegit);
+		builder.addField(I18n.t("field_notes"), textNotes);
+		builder.addField(I18n.t("col_cover"), textPortada);
 
 		JScrollPane scroll = new JScrollPane(grid,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -138,7 +161,6 @@ public class GuardarLlibresDialogo extends JDialog {
 		scroll.getViewport().setBackground(UITheme.BG_PANEL);
 		add(scroll, BorderLayout.CENTER);
 
-		// Viewport-driven column reflow (same pattern as DetallesLlibrePanel)
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
 			private int lastCols = 2;
 			@Override
@@ -155,7 +177,6 @@ public class GuardarLlibresDialogo extends JDialog {
 			}
 		});
 
-		// ── SOUTH: internet search button + progress bar ──────────────────────
 		JPanel south = new JPanel(new BorderLayout(0, 2));
 		south.setBackground(UITheme.BG_PANEL);
 		south.setBorder(new EmptyBorder(0, 8, 8, 8));
@@ -176,58 +197,6 @@ public class GuardarLlibresDialogo extends JDialog {
 		add(south, BorderLayout.SOUTH);
 
 		setSize(600, 720);
-	}
-
-	// ── entry builders ────────────────────────────────────────────────────────
-
-	private JTextField addFieldEntry(JPanel grid, String label) {
-		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
-		JTextField field = new JTextField();
-		field.setColumns(10);
-		UITheme.styleField(field);
-		entry.add(field, BorderLayout.CENTER);
-		grid.add(entry);
-		return field;
-	}
-
-	private JComboBox<String> addComboEntry(JPanel grid, String label, String[] items) {
-		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
-		JComboBox<String> combo = new JComboBox<>(items);
-		combo.setBackground(UITheme.BG_MAIN);
-		combo.setForeground(UITheme.TEXT_DARK);
-		combo.setFont(UITheme.FONT_BASE);
-		entry.add(combo, BorderLayout.CENTER);
-		grid.add(entry);
-		return combo;
-	}
-
-	private JCheckBox addCheckEntry(JPanel grid, String label, String tooltip) {
-		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
-		JCheckBox chk = new JCheckBox("");
-		chk.setBackground(UITheme.BG_PANEL);
-		chk.setHorizontalAlignment(SwingConstants.LEFT);
-		if (tooltip != null) chk.setToolTipText(tooltip);
-		entry.add(chk, BorderLayout.CENTER);
-		grid.add(entry);
-		return chk;
-	}
-
-	private JPanel entryPanel() {
-		JPanel p = new JPanel(new BorderLayout(4, 0));
-		p.setBackground(UITheme.BG_PANEL);
-		p.setBorder(new EmptyBorder(2, 2, 2, 2));
-		p.setPreferredSize(new Dimension(ENTRY_MIN_W, ENTRY_H));
-		return p;
-	}
-
-	private JLabel makeLabel(String text) {
-		JLabel lbl = new JLabel(text);
-		UITheme.styleLabel(lbl);
-		lbl.setPreferredSize(new Dimension(LBL_W, 0));
-		return lbl;
 	}
 
 	// ── getters ───────────────────────────────────────────────────────────────
@@ -254,4 +223,5 @@ public class GuardarLlibresDialogo extends JDialog {
 	public JCheckBox     getChckDesitjat()       { return chckDesitjat; }
 	public JTextField    getTextPortada()        { return textPortada; }
 	public JCheckBox     getChckLlegit()         { return chckLlegit; }
+	public JTextField    getTextNotes()          { return textNotes; }
 }

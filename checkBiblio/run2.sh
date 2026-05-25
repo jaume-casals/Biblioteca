@@ -21,7 +21,16 @@ if [ -z "$DISPLAY" ]; then
     echo "Started Xvfb on $DISP (PID $XVFB_PID)"
 fi
 
-TIMEOUT=${STRESS_TIMEOUT:-300}   # seconds; override with: STRESS_TIMEOUT=120 bash run2.sh
+if [ -n "$STRESS_EXTREME" ]; then
+    TIMEOUT=${STRESS_TIMEOUT:-600}
+    STRESS_THREADS=${STRESS_THREADS:-100}
+    STRESS_JAVA_OPTS="-Dbiblioteca.stress.extreme=true -Dbiblioteca.stress.threads=${STRESS_THREADS}"
+    echo "STRESS_EXTREME=1 (timeout=${TIMEOUT}s, threads=${STRESS_THREADS})"
+else
+    TIMEOUT=${STRESS_TIMEOUT:-600}
+    STRESS_THREADS=${STRESS_THREADS:-50}
+    STRESS_JAVA_OPTS="-Dbiblioteca.stress.threads=${STRESS_THREADS}"
+fi
 
 CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar"
 
@@ -45,7 +54,7 @@ rm -f checkBiblio/stress_report.txt
 rm -f checkBiblio/screenshots/stress_*.png
 
 echo "Starting StressTest... (timeout: ${TIMEOUT}s)"
-setsid java -Xmx512m -cp "$CP" checkBiblio.StressTest "$@" &
+setsid java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.StressTest "$@" &
 JAVA_PID=$!
 
 ( sleep "$TIMEOUT"
@@ -59,4 +68,8 @@ EXIT_CODE=0
 wait "$JAVA_PID" || EXIT_CODE=$?
 kill "$WATCHDOG_PID" 2>/dev/null || true
 wait "$WATCHDOG_PID" 2>/dev/null || true
+if ! grep -q 'SUMMARY' checkBiblio/stress_report.txt 2>/dev/null; then
+    echo "ERROR: StressTest did not finish (timeout ${TIMEOUT}s or crash). See checkBiblio/stress_report.txt" >&2
+    exit 1
+fi
 exit "$EXIT_CODE"

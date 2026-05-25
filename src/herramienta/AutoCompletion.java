@@ -44,27 +44,18 @@ public class AutoCompletion extends PlainDocument {
 				model = (ComboBoxModel<String>) e.getNewValue();
 		});
 		editorKeyListener = new KeyAdapter() {
-			public void keyPressed(KeyEvent e) {
+			@Override public void keyPressed(KeyEvent e) {
 				if (comboBox.isDisplayable() && e.getKeyCode() != KeyEvent.VK_ALT && !e.isAltDown())
 					comboBox.setPopupVisible(true);
-				hitBackspace = false;
-				switch (e.getKeyCode()) {
-				case KeyEvent.VK_BACK_SPACE:
-					hitBackspace = true;
+				hitBackspace = e.getKeyCode() == KeyEvent.VK_BACK_SPACE;
+				if (hitBackspace)
 					hitBackspaceOnSelection = editor.getSelectionStart() != editor.getSelectionEnd();
-					break;
-				}
 			}
 		};
 		hidePopupOnFocusLoss = true;
 		editorFocusListener = new FocusAdapter() {
-			public void focusGained(FocusEvent e) {
-				highlightCompletedText(0);
-			}
-
-			public void focusLost(FocusEvent e) {
-				comboBox.setPopupVisible(false);
-			}
+			@Override public void focusGained(FocusEvent e) { highlightCompletedText(0); }
+			@Override public void focusLost(FocusEvent e) { comboBox.setPopupVisible(false); }
 		};
 		configureEditor(comboBox.getEditor());
 		Object selected = comboBox.getSelectedItem();

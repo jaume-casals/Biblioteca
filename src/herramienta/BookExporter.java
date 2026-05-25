@@ -16,8 +16,8 @@ public class BookExporter {
         // Build isbn→rows bulk map to avoid N+1 queries
         java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
         for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
-        java.util.Map<Long, List<domini.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (domini.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
+        java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
             llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
 
         try (PrintWriter pw = new PrintWriter(
@@ -25,9 +25,9 @@ public class BookExporter {
             pw.println("ISBN,Nom,Autor,Any,Descripcio,Valoracio,Preu,Llegit,Portada,Llistes");
             for (Llibre l : view) {
                 try {
-                    List<domini.LlibreLlistaRow> rows = llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList());
+                    List<persistencia.LlibreLlistaRow> rows = llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList());
                     StringBuilder llistesStr = new StringBuilder();
-                    for (domini.LlibreLlistaRow row : rows) {
+                    for (persistencia.LlibreLlistaRow row : rows) {
                         Llista ll = llistaById.get(row.llistaId());
                         if (ll == null) continue;
                         if (llistesStr.length() > 0) llistesStr.append(';');
@@ -45,11 +45,11 @@ public class BookExporter {
 
     public static void exportJSON(File f, BibliotecaWriter cd) throws Exception {
         // Bulk-load relational data to avoid N+1
-        java.util.Map<Long, List<domini.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (domini.LlibreLlistaRow r : cd.getAllLlibreLlistaRows())
+        java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (persistencia.LlibreLlistaRow r : cd.getAllLlibreLlistaRows())
             llistaRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
-        java.util.Map<Long, List<domini.LlibreTagRow>> tagRows = new java.util.HashMap<>();
-        for (domini.LlibreTagRow r : cd.getAllLlibreTagRows())
+        java.util.Map<Long, List<persistencia.LlibreTagRow>> tagRows = new java.util.HashMap<>();
+        for (persistencia.LlibreTagRow r : cd.getAllLlibreTagRows())
             tagRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
 
         try (PrintWriter pw = new PrintWriter(
@@ -57,7 +57,7 @@ public class BookExporter {
             pw.println("{");
             pw.println("\"version\":1,");
             // books
-            ArrayList<Llibre> tots = cd.getAllLlibres();
+            ArrayList<Llibre> tots = new ArrayList<>(cd.getAllLlibres());
             pw.print("\"llibres\":[");
             for (int i = 0; i < tots.size(); i++) {
                 Llibre l = tots.get(i);
@@ -67,7 +67,7 @@ public class BookExporter {
             }
             pw.println("],");
             // shelves
-            ArrayList<Llista> llistes = cd.getAllLlistes();
+            ArrayList<Llista> llistes = new ArrayList<>(cd.getAllLlistes());
             pw.print("\"llistes\":[");
             for (int i = 0; i < llistes.size(); i++) {
                 Llista ll = llistes.get(i);
@@ -76,7 +76,7 @@ public class BookExporter {
             }
             pw.println("],");
             // tags
-            ArrayList<Tag> tags = cd.getAllTags();
+            ArrayList<Tag> tags = new ArrayList<>(cd.getAllTags());
             pw.print("\"tags\":[");
             for (int i = 0; i < tags.size(); i++) {
                 Tag t = tags.get(i);
@@ -88,26 +88,29 @@ public class BookExporter {
         }
     }
 
+    private static final String HTML_CSS =
+        "body{font-family:sans-serif;background:#1a1a2e;color:#e0e0e0;margin:0;padding:20px}" +
+        "h1{color:#a78bfa;text-align:center;margin-bottom:30px}" +
+        "h2{color:#c4b5fd;border-bottom:1px solid #4c1d95;padding-bottom:8px;margin:30px 0 16px}" +
+        ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}" +
+        ".card{background:#16213e;border-radius:10px;padding:12px;text-align:center;transition:transform .2s}" +
+        ".card:hover{transform:translateY(-4px)}" +
+        ".card img{width:100%;height:200px;object-fit:cover;border-radius:6px;margin-bottom:8px}" +
+        ".card .no-cover{width:100%;height:200px;background:#0f3460;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:40px}" +
+        ".card .title{font-weight:bold;font-size:13px;margin:4px 0}" +
+        ".card .autor{color:#a0a0c0;font-size:12px}" +
+        ".card .stars{color:#f59e0b;font-size:12px;margin:4px 0}" +
+        ".card .badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:10px;margin-top:4px}" +
+        ".read{background:#065f46;color:#6ee7b7}.unread{background:#3b0764;color:#c4b5fd}" +
+        "table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}" +
+        "th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}";
+
     public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) throws Exception {
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
             pw.println("<title>La meva biblioteca</title><style>");
-            pw.println("body{font-family:sans-serif;background:#1a1a2e;color:#e0e0e0;margin:0;padding:20px}");
-            pw.println("h1{color:#a78bfa;text-align:center;margin-bottom:30px}");
-            pw.println("h2{color:#c4b5fd;border-bottom:1px solid #4c1d95;padding-bottom:8px;margin:30px 0 16px}");
-            pw.println(".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}");
-            pw.println(".card{background:#16213e;border-radius:10px;padding:12px;text-align:center;transition:transform .2s}");
-            pw.println(".card:hover{transform:translateY(-4px)}");
-            pw.println(".card img{width:100%;height:200px;object-fit:cover;border-radius:6px;margin-bottom:8px}");
-            pw.println(".card .no-cover{width:100%;height:200px;background:#0f3460;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:40px}");
-            pw.println(".card .title{font-weight:bold;font-size:13px;margin:4px 0}");
-            pw.println(".card .autor{color:#a0a0c0;font-size:12px}");
-            pw.println(".card .stars{color:#f59e0b;font-size:12px;margin:4px 0}");
-            pw.println(".card .badge{display:inline-block;padding:2px 6px;border-radius:10px;font-size:10px;margin-top:4px}");
-            pw.println(".read{background:#065f46;color:#6ee7b7}.unread{background:#3b0764;color:#c4b5fd}");
-            pw.println("table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}");
-            pw.println("th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}");
+            pw.println(HTML_CSS);
             pw.println("</style></head><body>");
             pw.println("<h1>📚 La meva biblioteca</h1>");
 
@@ -115,7 +118,7 @@ public class BookExporter {
                 List<Llista> llistes = cd.getAllLlistes();
                 // Build isbn→set<llistaId> map in bulk to avoid N+1 queries
                 java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
-                for (domini.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
+                for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
                     isbnToLlistes.computeIfAbsent(row.isbn(), k -> new java.util.HashSet<>()).add(row.llistaId());
                 java.util.Set<Long> printed = new java.util.HashSet<>();
                 for (Llista llista : llistes) {
@@ -257,7 +260,7 @@ public class BookExporter {
     }
 
     private static String jsonLlibre(Llibre l,
-            List<domini.LlibreLlistaRow> llistaRows, List<domini.LlibreTagRow> tagRows) {
+            List<persistencia.LlibreLlistaRow> llistaRows, List<persistencia.LlibreTagRow> tagRows) {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"isbn\":").append(l.getISBN()).append(",");
         sb.append("\"nom\":").append(jsonStr(l.getNom())).append(",");
@@ -283,7 +286,7 @@ public class BookExporter {
         // shelf memberships (pre-fetched)
         sb.append("\"llistes\":[");
         for (int i = 0; i < llistaRows.size(); i++) {
-            domini.LlibreLlistaRow row = llistaRows.get(i);
+            persistencia.LlibreLlistaRow row = llistaRows.get(i);
             sb.append("{\"id\":").append(row.llistaId())
                 .append(",\"valoracio\":").append(row.valoracio())
                 .append(",\"llegit\":").append(row.llegit()).append("}");

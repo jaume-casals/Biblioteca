@@ -13,21 +13,28 @@ import sys
 import os
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CSV_PATH  = os.path.join(REPO, "strings", "strings.csv")
+STRINGS_DIR = os.path.join(REPO, "strings")
+CSV_PATH  = os.path.join(STRINGS_DIR, "strings.csv")  # legacy monolith (optional)
+SPLIT_FILES = ["ui.csv", "errors.csv", "csv.csv"]
 JS_PATH   = os.path.join(REPO, "src", "web", "js", "i18n.js")
 JAVA_PATH = os.path.join(REPO, "src", "herramienta", "I18n.java")
 
 def read_csv():
     entries = []  # list of (key, ca, es, en)
-    with open(CSV_PATH, newline='', encoding='utf-8') as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped or stripped.startswith('#'):
-                continue
-            row = next(csv.reader([stripped]))
-            if len(row) < 4 or row[0] == 'key':
-                continue
-            entries.append((row[0], row[1], row[2], row[3]))
+    sources = [os.path.join(STRINGS_DIR, name) for name in SPLIT_FILES
+               if os.path.isfile(os.path.join(STRINGS_DIR, name))]
+    if not sources and os.path.isfile(CSV_PATH):
+        sources = [CSV_PATH]
+    for path in sources:
+        with open(path, newline='', encoding='utf-8') as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#'):
+                    continue
+                row = next(csv.reader([stripped]))
+                if len(row) < 4 or row[0] == 'key':
+                    continue
+                entries.append((row[0], row[1], row[2], row[3]))
     return entries
 
 def js_str(s):
@@ -107,6 +114,7 @@ package herramienta;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.swing.UIManager;
 
 public class I18n {{
 
@@ -125,14 +133,29 @@ public class I18n {{
         String[] vals = TABLE.get(key);
         String raw;
         if (vals == null) {{
+            String msg = "[I18n] Missing key: " + key;
+            System.err.println(msg);
+            if ("true".equals(System.getProperty("biblioteca.test")))
+                throw new IllegalStateException(msg);
             raw = key;
         }} else {{
             int idx = langIndex();
             raw = vals[Math.min(idx, vals.length - 1)];
         }}
+        if (args.length > 0 && !raw.contains("{{0}}")) {{
+            System.err.println("[I18n] Key '" + key + "' has no placeholder for args");
+        }}
         for (int i = 0; i < args.length; i++)
             raw = raw.replace("{{" + i + "}}", String.valueOf(args[i]));
         return raw;
+    }}
+
+    /** Localize JOptionPane button labels after a language change. */
+    public static void applySwingOptionPane() {{
+        UIManager.put("OptionPane.okButtonText",     t("btn_ok"));
+        UIManager.put("OptionPane.cancelButtonText", t("btn_cancel"));
+        UIManager.put("OptionPane.yesButtonText",  t("btn_yes"));
+        UIManager.put("OptionPane.noButtonText",   t("btn_no"));
     }}
 
     private static int langIndex() {{

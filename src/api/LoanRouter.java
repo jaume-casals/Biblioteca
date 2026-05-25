@@ -21,7 +21,7 @@ public class LoanRouter {
         var loans = cd.getAllActiveLoans();
         var out = new java.util.ArrayList<Map<String, Object>>(loans.size());
         for (var r : loans) {
-            out.add(Map.of("isbn", r.isbn(), "persona", r.nomPersona(), "dataPrestec", r.dataPrestec()));
+            out.add(Map.of("isbn", r.isbn(), "persona", r.nomPersona(), "dataPrestec", r.dataPrestec() != null ? r.dataPrestec().toString() : null));
         }
         ctx.json(Map.of("loans", out));
     }
@@ -31,7 +31,7 @@ public class LoanRouter {
         var loans = cd.getLoansForIsbn(isbn);
         var out = new java.util.ArrayList<Map<String, Object>>(loans.size());
         for (var r : loans) {
-            out.add(Map.of("persona", r.nomPersona(), "dataPrestec", r.dataPrestec(), "retornat", r.retornat()));
+            out.add(Map.of("persona", r.nomPersona(), "dataPrestec", r.dataPrestec() != null ? r.dataPrestec().toString() : null, "retornat", r.retornat()));
         }
         ctx.json(Map.of("isbn", isbn, "loans", out));
     }
@@ -42,7 +42,9 @@ public class LoanRouter {
         String persona = j.has("persona") ? j.get("persona").getAsString() : "";
         if (persona.isBlank()) throw new Exception("Borrower name required");
         synchronized (cd) {
-            if (cd.getLoanedISBNs().contains(isbn)) throw new Exception("Book already on loan");
+            // Cache loaned ISBNs to avoid querying the DB multiple times per request
+            var loaned = cd.getLoanedISBNs();
+            if (loaned.contains(isbn)) throw new Exception("Book already on loan");
             cd.prestarLlibre(isbn, persona);
         }
         ctx.status(201).json(Map.of("ok", true));
@@ -51,7 +53,9 @@ public class LoanRouter {
     private void returnBook(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) {
-            if (!cd.getLoanedISBNs().contains(isbn)) {
+            // Cache loaned ISBNs to avoid querying the DB multiple times per request
+            var loaned = cd.getLoanedISBNs();
+            if (!loaned.contains(isbn)) {
                 ctx.status(404).json(Map.of("error", "Book is not on loan"));
                 return;
             }

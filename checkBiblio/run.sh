@@ -29,7 +29,7 @@ make compile -s
 
 # Compile UIAudit
 echo "Compiling UIAudit..."
-javac -cp "$CP" checkBiblio/UIAudit.java -d bin
+javac -Xlint:deprecation -cp "$CP" checkBiblio/UIAudit.java -d bin
 
 rm -f checkBiblio/audit_report.txt
 rm -f checkBiblio/screenshots/screen_*.png

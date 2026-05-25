@@ -1,11 +1,15 @@
 package presentacio;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Window;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -18,6 +22,7 @@ import interficie.BibliotecaWriter;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
+import herramienta.ColorUtils;
 
 public class GestioLlistesDialog extends JDialog {
 
@@ -57,107 +62,32 @@ public class GestioLlistesDialog extends JDialog {
 
         JButton btnAfegir = new JButton(I18n.t("btn_nova_llista"));
         UITheme.styleAccentButton(btnAfegir);
-        btnAfegir.addActionListener(e -> {
-            String nom = txtNom.getText().trim();
-            if (nom.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                    I18n.t("err_nom_llista_buit"), I18n.t("dlg_validacio_title"),
-                    JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            try {
-                cd.addLlista(nom);
-                txtNom.setText("");
-                reload();
-                mainControl.refreshComboLlistes();
-            } catch (Exception ex) {
-                new DialogoError(ex).showErrorMessage();
-            }
-        });
+        btnAfegir.addActionListener(e -> onAddLlista(txtNom));
 
         JButton btnEliminar = new JButton(I18n.t("btn_eliminar_seleccionada"));
         UITheme.styleSecondaryButton(btnEliminar);
         btnEliminar.setBackground(UITheme.DANGER);
-        btnEliminar.addActionListener(e -> {
-            Llista sel = jList.getSelectedValue();
-            if (sel == null) return;
-            int confirm = JOptionPane.showConfirmDialog(this,
-                I18n.t("dlg_confirm_delete_llista", sel.getNom()),
-                I18n.t("dlg_confirm_delete_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (confirm != JOptionPane.YES_OPTION) return;
-            try {
-                cd.deleteLlista(sel);
-                reload();
-                mainControl.refreshComboLlistes();
-            } catch (Exception ex) {
-                new DialogoError(ex).showErrorMessage();
-            }
-        });
+        btnEliminar.addActionListener(e -> onDeleteLlista());
 
         JButton btnRename = new JButton(I18n.t("btn_rename_llista"));
         UITheme.styleSecondaryButton(btnRename);
         btnRename.setToolTipText(I18n.t("tip_rename_llista"));
-        btnRename.addActionListener(e -> {
-            Llista sel = jList.getSelectedValue();
-            if (sel == null) return;
-            String newNom = (String) JOptionPane.showInputDialog(this,
-                I18n.t("dlg_rename_llista_prompt", sel.getNom()),
-                I18n.t("dlg_rename_llista_title"), JOptionPane.PLAIN_MESSAGE, null, null, sel.getNom());
-            if (newNom == null || newNom.isBlank()) return;
-            try {
-                cd.renameLlista(sel.getId(), newNom.trim());
-                reload();
-                mainControl.refreshComboLlistes();
-            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
-        });
+        btnRename.addActionListener(e -> onRenameLlista());
 
         JButton btnColor = new JButton(I18n.t("btn_color_llista"));
         UITheme.styleSecondaryButton(btnColor);
         btnColor.setToolTipText(I18n.t("tip_color_llista"));
-        btnColor.addActionListener(e -> {
-            Llista sel = jList.getSelectedValue();
-            if (sel == null) return;
-            java.awt.Color initial = sel.getColor() != null
-                ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode("#3498DB");
-            java.awt.Color chosen = javax.swing.JColorChooser.showDialog(this, I18n.t("dlg_escull_color_title"), initial);
-            if (chosen == null) return;
-            String hex = String.format("#%02X%02X%02X", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
-            try {
-                cd.setLlistaColor(sel.getId(), hex);
-                reload();
-                mainControl.refreshComboLlistes();
-            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
-        });
+        btnColor.addActionListener(e -> onColorLlista());
 
         JButton btnUp = new JButton("▲");
         UITheme.styleSecondaryButton(btnUp);
         btnUp.setToolTipText(I18n.t("tip_pujar_llista"));
-        btnUp.addActionListener(e -> {
-            Llista sel = jList.getSelectedValue();
-            if (sel == null) return;
-            try {
-                cd.moveLlistaUp(sel.getId());
-                reload();
-                mainControl.refreshComboLlistes();
-                for (int i = 0; i < listModel.size(); i++)
-                    if (listModel.get(i).getId() == sel.getId()) { jList.setSelectedIndex(i); break; }
-            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
-        });
+        btnUp.addActionListener(e -> onMoveLlista(true));
 
         JButton btnDown = new JButton("▼");
         UITheme.styleSecondaryButton(btnDown);
         btnDown.setToolTipText(I18n.t("tip_baixar_llista"));
-        btnDown.addActionListener(e -> {
-            Llista sel = jList.getSelectedValue();
-            if (sel == null) return;
-            try {
-                cd.moveLlistaDown(sel.getId());
-                reload();
-                mainControl.refreshComboLlistes();
-                for (int i = 0; i < listModel.size(); i++)
-                    if (listModel.get(i).getId() == sel.getId()) { jList.setSelectedIndex(i); break; }
-            } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
-        });
+        btnDown.addActionListener(e -> onMoveLlista(false));
 
         JPanel reorderRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
         reorderRow.setBackground(UITheme.BG_PANEL);
@@ -179,6 +109,80 @@ public class GestioLlistesDialog extends JDialog {
         reload();
     }
 
+    private void onAddLlista(JTextField txtNom) {
+        String nom = txtNom.getText().trim();
+        if (nom.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                I18n.t("err_nom_llista_buit"), I18n.t("dlg_validacio_title"),
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            cd.addLlista(nom);
+            txtNom.setText("");
+            reload();
+            mainControl.refreshComboLlistes();
+        } catch (Exception ex) {
+            new DialogoError(ex).showErrorMessage();
+        }
+    }
+
+    private void onDeleteLlista() {
+        Llista sel = jList.getSelectedValue();
+        if (sel == null) return;
+        int confirm = JOptionPane.showConfirmDialog(this,
+            I18n.t("dlg_confirm_delete_llista", sel.getNom()),
+            I18n.t("dlg_confirm_delete_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        try {
+            cd.deleteLlista(sel);
+            reload();
+            mainControl.refreshComboLlistes();
+        } catch (Exception ex) {
+            new DialogoError(ex).showErrorMessage();
+        }
+    }
+
+    private void onRenameLlista() {
+        Llista sel = jList.getSelectedValue();
+        if (sel == null) return;
+        String newNom = (String) JOptionPane.showInputDialog(this,
+            I18n.t("dlg_rename_llista_prompt", sel.getNom()),
+            I18n.t("dlg_rename_llista_title"), JOptionPane.PLAIN_MESSAGE, null, null, sel.getNom());
+        if (newNom == null || newNom.isBlank()) return;
+        try {
+            cd.renameLlista(sel.getId(), newNom.trim());
+            reload();
+            mainControl.refreshComboLlistes();
+        } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+    }
+
+    private void onColorLlista() {
+        Llista sel = jList.getSelectedValue();
+        if (sel == null) return;
+        java.awt.Color initial = sel.getColor() != null
+            ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode("#3498DB");
+        String hex = herramienta.ColorSwatchPicker.chooseHex(this, initial, "dlg_escull_color_title");
+        if (hex == null) return;
+        try {
+            cd.setLlistaColor(sel.getId(), hex);
+            reload();
+            mainControl.refreshComboLlistes();
+        } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+    }
+
+    private void onMoveLlista(boolean up) {
+        Llista sel = jList.getSelectedValue();
+        if (sel == null) return;
+        try {
+            if (up) cd.moveLlistaUp(sel.getId()); else cd.moveLlistaDown(sel.getId());
+            reload();
+            mainControl.refreshComboLlistes();
+            for (int i = 0; i < listModel.size(); i++)
+                if (listModel.get(i).getId() == sel.getId()) { jList.setSelectedIndex(i); break; }
+        } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
+    }
+
     private void reload() {
         listModel.clear();
         for (Llista l : cd.getAllLlistes()) listModel.addElement(l);
@@ -192,7 +196,7 @@ public class GestioLlistesDialog extends JDialog {
                     Llista ll = (Llista) value;
                     String col = ll.getColor();
                     if (col != null) {
-                        lbl.setIcon(colorSwatch(java.awt.Color.decode(col)));
+                        lbl.setIcon(ColorUtils.colorSwatch(java.awt.Color.decode(col)));
                     } else {
                         lbl.setIcon(null);
                     }
@@ -200,18 +204,5 @@ public class GestioLlistesDialog extends JDialog {
                 return lbl;
             }
         });
-    }
-
-    private javax.swing.Icon colorSwatch(java.awt.Color c) {
-        return new javax.swing.Icon() {
-            public int getIconWidth()  { return 14; }
-            public int getIconHeight() { return 14; }
-            public void paintIcon(java.awt.Component comp, java.awt.Graphics g, int x, int y) {
-                g.setColor(c);
-                g.fillRoundRect(x, y + 1, 12, 12, 4, 4);
-                g.setColor(c.darker());
-                g.drawRoundRect(x, y + 1, 12, 12, 4, 4);
-            }
-        };
     }
 }

@@ -1,50 +1,37 @@
 package presentacio;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Frame;
 
 import javax.swing.BorderFactory;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
-import herramienta.Config;
+import herramienta.I18n;
 import herramienta.UITheme;
 
-public class MainFramePanel extends JFrame {
+/** Main window content (library table + status bar). Frame chrome lives in {@link MainFrameControl}. */
+public class MainFramePanel extends JPanel {
 
-	private JPanel contentPane;
-	private MostrarBibliotecaPanel mostrarBibliotecaPanel = new MostrarBibliotecaPanel();
-	private JLabel statusBar;
+	private final MostrarBibliotecaPanel mostrarBibliotecaPanel = new MostrarBibliotecaPanel();
+	private final JLabel statusBar;
 
 	public MainFramePanel() {
-		setTitle("Biblioteca");
-		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		setBounds(Config.getWindowX(), Config.getWindowY(),
-				Config.getWindowWidth(), Config.getWindowHeight());
-		setMinimumSize(new Dimension(800, 500));
-		if (Config.isWindowMaximized()) setExtendedState(Frame.MAXIMIZED_BOTH);
-
-		contentPane = new JPanel();
-		contentPane.setBackground(UITheme.BG_MAIN);
-		contentPane.setBorder(new EmptyBorder(8, 8, 8, 8));
-		contentPane.setLayout(new BorderLayout(0, 0));
-		setContentPane(contentPane);
-		contentPane.add(mostrarBibliotecaPanel);
+		setBackground(UITheme.BG_MAIN);
+		setBorder(new EmptyBorder(8, 8, 8, 8));
+		setLayout(new BorderLayout(0, 0));
+		add(mostrarBibliotecaPanel, BorderLayout.CENTER);
 
 		statusBar = new JLabel(" ");
 		statusBar.setFont(UITheme.FONT_BASE);
 		statusBar.setForeground(UITheme.TEXT_MID);
+		statusBar.getAccessibleContext().setAccessibleName(I18n.t("acc_status_bar"));
 		statusBar.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createMatteBorder(1, 0, 0, 0, UITheme.BORDER_CLR),
 			BorderFactory.createEmptyBorder(3, 6, 3, 6)));
 		statusBar.setBackground(UITheme.BG_PANEL);
 		statusBar.setOpaque(true);
-		contentPane.add(statusBar, BorderLayout.SOUTH);
-
-		pack();
+		add(statusBar, BorderLayout.SOUTH);
 	}
 
 	public MostrarBibliotecaPanel getMostrarBibliotecaPanel() {

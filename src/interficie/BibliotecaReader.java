@@ -2,45 +2,43 @@ package interficie;
 
 import domini.Llibre;
 import domini.LlibreFilter;
-import domini.LlibreLlistaRow;
-import domini.LlibreTagRow;
+import persistencia.LlibreLlistaRow;
+import persistencia.LlibreTagRow;
 import domini.Llista;
-import domini.PrestecRow;
+import persistencia.PrestecRow;
 import domini.Tag;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Note: several methods return ArrayList<> (implementation type) instead of List<>.
-// Changing to List<> would require updating all callers — deferred to avoid a large refactor.
 public interface BibliotecaReader {
 
-    ArrayList<Llibre> getAllLlibres();
+    List<Llibre> getAllLlibres();
     Llibre getLlibre(long isbn) throws Exception;
     int getSize();
     boolean existsLlibre(long isbn);
-    ArrayList<Llibre> get10Llibres();
-    ArrayList<Llibre> get100Llibres(int index);
+    List<Llibre> get10Llibres();
+    List<Llibre> get100Llibres(int index);
     int maxIndex100Llibres();
-    ArrayList<Llibre> getRecentlyAdded();
+    List<Llibre> getRecentlyAdded();
     boolean isLargeLibrary();
     int countLlibresDB();
-    ArrayList<Llibre> getLlibresPage(int offset, int pageSize);
+    List<Llibre> getLlibresPage(int offset, int pageSize);
 
-    ArrayList<Llibre> aplicarFiltres(LlibreFilter f);
-    ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, LlibreFilter f);
-    ArrayList<Llibre> searchLlibresSQL(LlibreFilter f);
+    List<Llibre> aplicarFiltres(LlibreFilter f);
+    List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f);
+    List<Llibre> searchLlibresSQL(LlibreFilter f);
 
-    ArrayList<Llista> getAllLlistes();
+    List<Llista> getAllLlistes();
     int getCountInLlista(int llistaId);
     Map<Integer, Integer> getAllCountsInLlistes();
-    ArrayList<Llibre> getLlibresInLlista(int llistaId);
+    List<Llibre> getLlibresInLlista(int llistaId);
     List<LlibreLlistaRow> getAllLlibreLlistaRows();
-    ArrayList<Llista> getLlistesForLlibre(long isbn);
+    List<Llista> getLlistesForLlibre(long isbn);
 
-    ArrayList<Tag> getAllTags();
-    ArrayList<Tag> getTagsForLlibre(long isbn);
+    List<Tag> getAllTags();
+    List<Tag> getTagsForLlibre(long isbn);
     List<LlibreTagRow> getAllLlibreTagRows();
     Set<Long> getLlibresWithTag(int tagId);
 
@@ -48,10 +46,24 @@ public interface BibliotecaReader {
     List<PrestecRow> getAllActiveLoans();
     List<PrestecRow> getLoansForIsbn(long isbn);
     List<Object[]> getAllOverdueLoans(int daysThreshold);
+    int countLoans(long isbn);
 
     byte[] getLlibreBlob(long isbn);
 
     long getDbSizeBytes();
     List<String> getDistinctValues(String column);
     List<String> getDistinctAutorNames();
+
+    /** Loads notes/descripcio for a book returned by a light table query. */
+    default void loadHeavyFields(Llibre book) {}
+
+    /** Read-only view for export/backup without mutation API. */
+    default ExportSnapshot asExportSnapshot() {
+        return new ExportSnapshot() {
+            @Override public List<Llibre> books() { return getAllLlibres(); }
+            @Override public List<Llista> shelves() { return getAllLlistes(); }
+            @Override public List<Tag> tags() { return getAllTags(); }
+            @Override public long dbSizeBytes() { return getDbSizeBytes(); }
+        };
+    }
 }

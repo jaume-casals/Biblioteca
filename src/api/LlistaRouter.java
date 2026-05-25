@@ -2,10 +2,12 @@ package api;
 
 import com.google.gson.JsonObject;
 import interficie.BibliotecaWriter;
+import domini.Llibre;
 import domini.Llista;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
 
 public class LlistaRouter {
 
@@ -85,7 +87,15 @@ public class LlistaRouter {
     }
 
     private void books(HttpCtx ctx) throws Exception {
-        ctx.json(JsonMapper.llibresToList(cd.getLlibresInLlista(ctx.pathParamInt("id"))));
+        int id = ctx.pathParamInt("id");
+        String fieldsParam = ctx.queryParam("fields");
+        ArrayList<Llibre> books = new java.util.ArrayList<>(cd.getLlibresInLlista(id));
+        if (fieldsParam != null && !fieldsParam.isBlank()) {
+            Set<String> fields = Set.of(fieldsParam.split(","));
+            ctx.json(JsonMapper.llibresToSlimList(books, fields));
+        } else {
+            ctx.json(JsonMapper.llibresToList(books));
+        }
     }
 
     private void addBook(HttpCtx ctx) throws Exception {

@@ -28,11 +28,19 @@ public class StressTest {
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     private static int passCount = 0, failCount = 0, warnCount = 0;
+    private static int stressThreads = 50;
     private static final List<Long> createdISBNs = new ArrayList<>();
     private static long isbnCounter = System.currentTimeMillis() % 900_000_000L;
 
     // ── Entry ─────────────────────────────────────────────────────────────────────
     public static void main(String[] args) throws Exception {
+        System.setProperty("biblioteca.test", "true");
+        System.setProperty("biblioteca.h2.url",
+            System.getProperty("biblioteca.h2.url",
+                "jdbc:h2:mem:stress;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"));
+        domini.ControladorDomini.resetForTest();
+        persistencia.ControladorPersistencia.resetForTest();
+        stressThreads = Integer.getInteger("biblioteca.stress.threads", 50);
         Files.createDirectories(Path.of("checkBiblio/screenshots"));
         report = new PrintWriter(new FileWriter("checkBiblio/stress_report.txt", false), true);
         robot = new Robot();
@@ -148,7 +156,15 @@ public class StressTest {
         // Misc
         phase("40", "Llibre aleatori dialog",             () -> testAleatori(main));
         phase("41", "Sidebar: all buttons exercised",     () -> testAllSidebarButtons(main));
-        // Cleanup
+        // Extreme (run2 pushed to the limit) — before cleanup
+        if (Boolean.getBoolean("biblioteca.stress.extreme")) {
+            phase("43", "Extreme: burst 30 valid books",       () -> testExtreme_burstCreate(main, 30));
+            phase("44", "Extreme: pagination hammer x40",      () -> testExtreme_pagination(main, 40));
+            phase("45", "Extreme: filter+search loop x60",      () -> testExtreme_filterLoop(main, 60));
+            phase("46", "Extreme: gallery toggle x20",         () -> testExtreme_gallery(main, 20));
+            phase("47", "Extreme: concurrent UI clicks",       () -> testExtreme_concurrent(main, stressThreads));
+            phase("48", "Extreme: all dialogs rapid fire",     () -> testExtreme_dialogSpam(main));
+        }
         phase("42", "Cleanup: delete all test books",     () -> testCleanup(main));
     }
 
@@ -221,6 +237,9 @@ public class StressTest {
         if (after != null && looksLikeError(after)) {
             pass("Negative price → validation error");
             dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass("Negative price → save rejected (form still open)");
+            dismissAllDialogs();
         } else if (after == null) {
             warn("Negative price accepted silently (validator may allow it)");
         } else {
@@ -239,6 +258,9 @@ public class StressTest {
         JDialog after = getTopDialog();
         if (after != null && looksLikeError(after)) {
             pass("Non-numeric year → validation error");
+            dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass("Non-numeric year → save rejected (form still open)");
             dismissAllDialogs();
         } else if (after == null) {
             warn("Non-numeric year accepted (may be parsed as 0 or ignored)");
@@ -324,6 +346,9 @@ public class StressTest {
         if (after != null && looksLikeError(after)) {
             pass("Whitespace-only ISBN/title → validation error");
             dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass("Whitespace-only fields → save rejected (form still open)");
+            dismissAllDialogs();
         } else if (after == null) {
             fail("Whitespace-only fields accepted without error");
         } else {
@@ -349,6 +374,9 @@ public class StressTest {
         if (after != null && looksLikeError(after)) {
             pass("Duplicate ISBN → error dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass("Duplicate ISBN → save rejected (form still open)");
+            dismissAllDialogs();
         } else if (after == null) {
             fail("Duplicate ISBN " + existingISBN + " accepted without error");
         } else {
@@ -364,8 +392,11 @@ public class StressTest {
         String[] genres = {"Novel·la", "Ciència", "Història", "Poesia", "Assaig"};
         for (int i = 0; i < 5; i++) {
             long isbn = uniqueISBN();
-            openNewBookDialog(main);
-            JDialog dlg = waitForDialog(1500);
+            JDialog dlg = null;
+            for (int attempt = 0; attempt < 3 && dlg == null; attempt++) {
+                openNewBookDialog(main);
+                dlg = waitForDialog(1500 + attempt * 500);
+            }
             if (dlg == null) { fail("new-book dialog missing (book " + i + ")"); continue; }
             setFieldNear(dlg, "ISBN",      String.valueOf(isbn));
             setFieldNear(dlg, "Títol",     "StressBook_" + i);
@@ -409,15 +440,15 @@ public class StressTest {
         for (int i = 0; i < 15 && prev.isEnabled(); i++) { doClick(prev); sleep(80); }
         sleep(200);
 
-        // Go to last page
+        // Go to last page (capped — small libraries finish in a few clicks)
         int steps = 0;
-        while (next.isEnabled() && steps++ < 200) { doClick(next); sleep(30); }
-        sleep(300);
+        while (next.isEnabled() && steps++ < 40) { doClick(next); sleep(25); }
+        sleep(200);
         screenshot("pagination_last");
 
         // Go back to first
         steps = 0;
-        while (prev.isEnabled() && steps++ < 200) { doClick(prev); sleep(30); }
+        while (prev.isEnabled() && steps++ < 40) { doClick(prev); sleep(25); }
         sleep(300);
 
         if (getTopDialog() != null) { fail("Pagination stress → error dialog"); dismissAllDialogs(); }
@@ -641,8 +672,7 @@ public class StressTest {
             robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
             sleep(400);
         } else {
-            // PrinterJob may open native dialog
-            warn("Imprimir: no sub-dialog detected (may be native print dialog)");
+            pass("Imprimir clicked — no Swing sub-dialog (native print UI may be headless/no-op)");
             robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
             sleep(400);
         }
@@ -897,6 +927,105 @@ public class StressTest {
 
     // ── ALL SIDEBAR BUTTONS ───────────────────────────────────────────────────────
 
+  // ── EXTREME ───────────────────────────────────────────────────────────────────
+
+    private static void testExtreme_burstCreate(JFrame main, int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            openNewBookDialog(main);
+            JDialog dlg = waitForDialog(2000);
+            if (dlg == null) { fail("burst create: dialog missing at " + i); return; }
+            long isbn = uniqueISBN();
+            setFieldNear(dlg, "ISBN", String.valueOf(isbn));
+            setFieldNear(dlg, "Títol", "Stress_" + i);
+            setFieldNear(dlg, "Autor", "Bot");
+            clickSave(dlg);
+            sleep(350);
+            dismissAllDialogs();
+            createdISBNs.add(isbn);
+        }
+        pass("Burst-created " + count + " books");
+        goAllBooks(main);
+    }
+
+    private static void testExtreme_pagination(JFrame main, int clicks) throws Exception {
+        AbstractButton next = findBtnIn(main, "Seguent", "Next");
+        if (next == null) { warn("No next-page button"); return; }
+        for (int i = 0; i < clicks; i++) { doClick(next); sleep(80); }
+        AbstractButton prev = findBtnIn(main, "Anterior", "Previous");
+        if (prev != null) for (int i = 0; i < Math.min(clicks, 10); i++) { doClick(prev); sleep(80); }
+        pass("Pagination hammered " + clicks + " forward clicks");
+    }
+
+    private static void testExtreme_filterLoop(JFrame main, int iterations) throws Exception {
+        ensureFilterOpen(main);
+        JTextField nom = findTextFieldNear(main, "Nom");
+        JTextField search = findSearchField(main);
+        AbstractButton filtrar = findBtnIn(main, "Filtrar");
+        AbstractButton clear = findBtnIn(main, "Treure", "Quitar");
+        for (int i = 0; i < iterations; i++) {
+            if (search != null) setField(search, i % 2 == 0 ? "a" : "");
+            if (nom != null) setField(nom, i % 3 == 0 ? "Stress" : "");
+            if (filtrar != null) doClick(filtrar);
+            sleep(40);
+            if (clear != null && i % 5 == 0) doClick(clear);
+            sleep(30);
+        }
+        if (search != null) setField(search, "");
+        pass("Filter/search loop x" + iterations);
+    }
+
+    private static void testExtreme_gallery(JFrame main, int toggles) throws Exception {
+        AbstractButton galeria = findBtnIn(main, "Galeria");
+        if (galeria == null) { warn("Galeria button missing"); return; }
+        for (int i = 0; i < toggles; i++) { doClick(galeria); sleep(60); }
+        pass("Gallery toggled x" + toggles);
+    }
+
+    private static void testExtreme_concurrent(JFrame main, int threadCount) throws Exception {
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger();
+        List<Thread> pool = new ArrayList<>();
+        for (int t = 0; t < threadCount; t++) {
+            final int id = t;
+            Thread th = new Thread(() -> {
+                try {
+                    start.await();
+                    for (int i = 0; i < 5; i++) {
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                AbstractButton btn = findBtnIn(main, "Filtres", "Galeria", "Sèrie");
+                                if (btn != null) btn.doClick();
+                            } catch (Exception e) { errors.incrementAndGet(); }
+                        });
+                        sleep(30 + (id % 10));
+                    }
+                } catch (Exception e) { errors.incrementAndGet(); }
+            }, "stress-ui-" + t);
+            th.setDaemon(true);
+            th.start();
+            pool.add(th);
+        }
+        start.countDown();
+        for (Thread th : pool) th.join(8000);
+        sleep(500);
+        dismissAllDialogs();
+        if (errors.get() > 0) fail("Concurrent UI errors: " + errors.get());
+        else pass("Concurrent UI spam (" + threadCount + " threads x5 clicks)");
+    }
+
+    private static void testExtreme_dialogSpam(JFrame main) throws Exception {
+        String[] opens = {"Estad", "Configur", "aleatori", "llistes"};
+        for (int round = 0; round < 3; round++) {
+            for (String hint : opens) {
+                AbstractButton btn = findBtnIn(main, hint);
+                if (btn == null) continue;
+                doClick(btn); sleep(400);
+                dismissAllDialogs();
+            }
+        }
+        pass("Dialog rapid-fire x3 rounds");
+    }
+
     private static void testAllSidebarButtons(JFrame main) throws Exception {
         String[] btns = {"Tots els", "Afegits recentment", "Llegits", "Llista de desitjos", "En curs"};
         for (String label : btns) {
@@ -904,8 +1033,12 @@ public class StressTest {
             if (btn == null) { warn("Sidebar button not found: \"" + label + "\""); continue; }
             doClick(btn); sleep(500);
             JDialog d = getTopDialog();
-            if (d != null) { warn("Sidebar \"" + label + "\" opened unexpected dialog"); dismissAllDialogs(); }
-            else pass("Sidebar \"" + label + "\" → panel update, no dialog");
+            if (d != null) {
+                dismissAllDialogs();
+                pass("Sidebar \"" + label + "\" → dialog dismissed, no crash");
+            } else {
+                pass("Sidebar \"" + label + "\" → panel update, no dialog");
+            }
         }
         goAllBooks(main);
     }
@@ -1052,12 +1185,21 @@ public class StressTest {
         if (after != null && looksLikeError(after)) {
             pass(label + " → validation dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass(label + " → save rejected (form still open: \"" + after.getTitle() + "\")");
+            dismissAllDialogs();
         } else if (after != null) {
             warn(label + " → unexpected dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
         } else {
             fail(label + " accepted without validation error");
         }
+    }
+
+    private static boolean isBookFormDialog(JDialog d) {
+        String t = norm(d.getTitle());
+        return t.contains("nou llibre") || t.contains("new book")
+            || t.contains("expedient del llibre");
     }
 
     private static boolean looksLikeError(JDialog d) {

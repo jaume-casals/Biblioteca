@@ -17,7 +17,11 @@ public class Llista {
     public int getOrdre() { return ordre; }
     public void setOrdre(int ordre) { this.ordre = ordre; }
     public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    public void setColor(String color) {
+        if (color != null && !color.matches("#[0-9a-fA-F]{3}") && !color.matches("#[0-9a-fA-F]{6}"))
+            throw new IllegalArgumentException(herramienta.I18n.t("val_color_invalid", color));
+        this.color = color;
+    }
 
     public int getId() { return id; }
     public String getNom() { return nom; }

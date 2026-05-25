@@ -3,6 +3,7 @@ package herramienta;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.swing.UIManager;
 
 public class I18n {
 
@@ -60,9 +61,6 @@ public class I18n {
         T("field_read", "Llegit", "Leído", "Read");
         T("field_pages", "Pàgines", "Páginas", "Pages");
         T("field_pages_read", "Pàgines llegides", "Páginas leídas", "Pages read");
-        T("field_title_ca", "Títol (CA)", "Título (CA)", "Title (CA)");
-        T("field_title_es", "Títol (ES)", "Título (ES)", "Title (ES)");
-        T("field_title_en", "Títol (EN)", "Title (EN)",  "Title (EN)");
         T("field_publisher", "Editorial", "Editorial", "Publisher");
         T("field_series", "Sèrie", "Serie", "Series");
         T("field_volume", "Volum", "Volumen", "Volume");
@@ -85,6 +83,10 @@ public class I18n {
         T("modal_manage_shelves", "Gestionar prestatges", "Gestionar estantes", "Manage Shelves");
         T("btn_save", "Desar", "Guardar", "Save");
         T("btn_cancel", "Cancel·lar", "Cancelar", "Cancel");
+        T("btn_yes", "Sí", "Sí", "Yes");
+        T("btn_no", "No", "No", "No");
+        T("btn_ok", "D'acord", "De acuerdo", "OK");
+        T("lbl_no_cover", "Sense portada", "Sin portada", "No cover");
         T("btn_edit", "Editar", "Editar", "Edit");
         T("btn_delete", "Eliminar", "Eliminar", "Delete");
         T("btn_loan", "Prestar", "Prestar", "Loan");
@@ -175,7 +177,6 @@ public class I18n {
         T("dlg_clear_done", "Biblioteca buidada correctament.", "Biblioteca vaciada correctamente.", "Library cleared successfully.");
         T("dlg_clear_done_title", "Completat", "Completado", "Done");
         T("dlg_db_validation", "El servidor i l'usuari no poden estar buits.", "El servidor y el usuario no pueden estar vacíos.", "Server and user cannot be empty.");
-        T("dlg_error_title", "Error", "Error", "Error");
         T("dlg_config_saved", "Configuració guardada.\\nReinicia l'app per aplicar canvis de BD.", "Configuración guardada.\\nReinicia la app para aplicar cambios de BD.", "Settings saved.\\nRestart the app to apply DB changes.");
         T("dlg_config_saved_title", "Guardat", "Guardado", "Saved");
         T("lbl_language_setting", "Idioma", "Idioma", "Language");
@@ -190,7 +191,6 @@ public class I18n {
         T("btn_gallery_view", "Galeria", "Galería", "Gallery");
         T("lbl_all_library", "Tota la biblioteca", "Toda la biblioteca", "All library");
         T("lbl_all_lists", "Totes les llistes", "Todas las listas", "All lists");
-        T("lbl_all_tags",  "Totes les etiquetes", "Todas las etiquetas", "All tags");
         T("lbl_books_count", "{0} llibres", "{0} libros", "{0} books");
         T("page_info_java", "Pàgina {0} / {1}", "Página {0} / {1}", "Page {0} / {1}");
         T("menu_open_details", "Obrir detalls", "Abrir detalles", "Open details");
@@ -207,19 +207,12 @@ public class I18n {
         T("menu_add_to_list_title", "Afegir a llista", "Añadir a lista", "Add to list");
         T("dlg_new_list_title", "Nova llista", "Nueva lista", "New list");
         T("dlg_add_to_list_msg", "Selecciona la llista on afegir {0} llibre(s):", "Selecciona la lista donde añadir {0} libro(s):", "Select the list to add {0} book(s) to:");
-        T("batch_field_format", "Format:", "Formato:", "Format:");
-        T("batch_field_llegit", "Llegit:", "Leído:", "Read:");
-        T("batch_field_add_list", "Afegir a llista:", "Añadir a lista:", "Add to list:");
-        T("batch_no_add_list", "(no afegir a cap llista)", "(no añadir a ninguna lista)", "(don't add to any list)");
-        T("batch_no_change", "(sense canviar)", "(sin cambiar)", "(no change)");
         T("dlg_save_filter_title", "Desa filtre", "Guardar filtro", "Save filter");
         T("dlg_filter_name_prompt", "Nom del preset:", "Nombre del preset:", "Filter name:");
         T("dlg_delete_preset", "Eliminar preset \"{0}\"?", "¿Eliminar preset \"{0}\"?", "Delete preset \"{0}\"?");
         T("dlg_delete_preset_title", "Confirmar", "Confirmar", "Confirm");
         T("dlg_scan_isbn_msg", "Escaneja o escriu el codi ISBN\\n(el lector de barres escriurà automàticament):", "Escanea o escribe el código ISBN\\n(el lector de barras escribirá automáticamente):", "Scan or type the ISBN code\\n(barcode reader will type automatically):");
         T("dlg_scan_isbn_title", "Escanejar ISBN", "Escanear ISBN", "Scan ISBN");
-        T("dlg_network_error", "Error de connexió amb OpenLibrary:", "Error de conexión con OpenLibrary:", "Connection error with OpenLibrary:");
-        T("dlg_network_error_title", "Error de xarxa", "Error de red", "Network error");
         T("dlg_export_done", "Exportat a: {0}", "Exportado a: {0}", "Exported to: {0}");
         T("dlg_export_title", "Exportació completada", "Exportación completada", "Export complete");
         T("dlg_empty_library", "La biblioteca és buida.", "La biblioteca está vacía.", "Library is empty.");
@@ -246,18 +239,6 @@ public class I18n {
         T("dlg_confirm_delete_one", "Eliminar \"{0}\"?\\nAquesta acció no es pot desfer.", "¿Eliminar \"{0}\"?\\nEsta acción no se puede deshacer.", "Delete \"{0}\"?\\nThis action cannot be undone.");
         T("dlg_confirm_delete_n", "Eliminar {0} llibres seleccionats?\\nAquesta acció no es pot desfer.", "¿Eliminar {0} libros seleccionados?\\nEsta acción no se puede deshacer.", "Delete {0} selected books?\\nThis action cannot be undone.");
         T("dlg_confirm_delete_title", "Confirmar eliminació", "Confirmar eliminación", "Confirm deletion");
-        T("ctx_open_details", "Obrir detalls", "Abrir detalles", "Open details");
-        T("ctx_copy_isbn", "Copiar ISBN", "Copiar ISBN", "Copy ISBN");
-        T("ctx_delete_n", "Eliminar {0} llibres", "Eliminar {0} libros", "Delete {0} books");
-        T("ctx_delete_one", "Eliminar", "Eliminar", "Delete");
-        T("dlg_confirm_galeria_delete_one", "Eliminar \"{0}\"?\\nAquesta acció no es pot desfer.", "¿Eliminar \"{0}\"?\\nEsta acción no se puede deshacer.", "Delete \"{0}\"?\\nThis action cannot be undone.");
-        T("dlg_confirm_galeria_delete_n", "Eliminar {0} llibres seleccionats?\\nAquesta acció no es pot desfer.", "¿Eliminar {0} libros seleccionados?\\nEsta acción no se puede deshacer.", "Delete {0} selected books?\\nThis action cannot be undone.");
-        T("dlg_undo_empty", "No hi ha cap eliminació per desfer.", "No hay ninguna eliminación para deshacer.", "No deletion to undo.");
-        T("dlg_undo_title", "Desfer", "Deshacer", "Undo");
-        T("dlg_undo_done", "\"{0}\" restaurat.", "\"{0}\" restaurado.", "\"{0}\" restored.");
-        T("dlg_undo_done_title", "Desfer eliminació", "Deshacer eliminación", "Undo deletion");
-        T("dlg_validacio_title", "Camp no vàlid", "Campo no válido", "Invalid field");
-        T("err_nom_llista_buit", "El nom de la llista no pot estar buit.", "El nombre de la lista no puede estar vacío.", "List name cannot be empty.");
         T("dlg_backup_done", "Backup guardat a:\\n{0}", "Backup guardado en:\\n{0}", "Backup saved to:\\n{0}");
         T("dlg_backup_done_title", "Backup complet", "Backup completo", "Backup complete");
         T("dlg_confirm_restore_msg", "Restaurar la base de dades des d'un fitxer SQL?\\nATENCIÓ: Tots els llibres actuals seran eliminats i substituïts.", "¿Restaurar la base de datos desde un fichero SQL?\\nATENCIÓN: Todos los libros actuales serán eliminados y sustituidos.", "Restore the database from a SQL file?\\nWARNING: All current books will be deleted and replaced.");
@@ -275,7 +256,6 @@ public class I18n {
         T("lbl_source", "Font", "Fuente", "Source");
         T("lbl_license_section", "Llicència (GPL v3 — extracte)", "Licencia (GPL v3 — extracto)", "License (GPL v3 — excerpt)");
         T("btn_source_github", "Codi font (GitHub)", "Código fuente (GitHub)", "Source code (GitHub)");
-        T("lbl_csv_files", "CSV files", "CSV files", "CSV files");
         T("dlg_import_title", "Importació", "Importación", "Import");
         T("dlg_import_warn", "Cuidado que hay diferentes columnas en la tabla de Libros", "Cuidado: diferentes columnas en la tabla", "Warning: different column structure in CSV");
         T("dlg_books_added_to_list", "{0} llibres afegits a \"{1}\".", "{0} libros añadidos a \"{1}\".", "{0} books added to \"{1}\".");
@@ -289,25 +269,17 @@ public class I18n {
         T("btn_nova_llista", "Nova Llista", "Nueva Lista", "New List");
         T("btn_eliminar_seleccionada", "Eliminar Seleccionada", "Eliminar Seleccionada", "Delete Selected");
         T("dlg_confirm_delete_llista", "Eliminar la llista \"{0}\"?\\nS'eliminaran totes les assignacions de llibres a aquesta llista.", "¿Eliminar la lista \"{0}\"?\\nSe eliminarán todas las asignaciones de libros a esta lista.", "Delete list \"{0}\"?\\nAll book assignments will be removed.");
-        T("btn_rename_llista", "Renombrar", "Renombrar", "Rename");
-        T("tip_rename_llista", "Canviar el nom de la llista seleccionada", "Cambiar el nombre de la lista seleccionada", "Rename selected list");
-        T("dlg_rename_llista_title", "Renombrar llista", "Renombrar lista", "Rename list");
-        T("dlg_rename_llista_prompt", "Nou nom per a la llista \"{0}\":", "Nuevo nombre para la lista \"{0}\":", "New name for list \"{0}\":");
         T("btn_color_llista", "Color", "Color", "Color");
         T("tip_color_llista", "Canviar color de la llista seleccionada", "Cambiar color de la lista seleccionada", "Change list color");
         T("dlg_escull_color_title", "Escull color", "Elegir color", "Choose color");
         T("tip_pujar_llista", "Pujar llista", "Subir lista", "Move list up");
         T("tip_baixar_llista", "Baixar llista", "Bajar lista", "Move list down");
-        T("acc_scroll_up",   "Desplaçar amunt", "Desplazar arriba", "Scroll up");
-        T("acc_scroll_down", "Desplaçar avall", "Desplazar abajo",  "Scroll down");
         T("btn_gestio_perfils", "Gestió de perfils BD", "Gestión de perfiles BD", "DB Profile Management");
         T("tip_gestio_perfils", "Canviar entre bases de dades H2 (~/.biblioteca/*.mv.db)", "Cambiar entre bases de datos H2 (~/.biblioteca/*.mv.db)", "Switch H2 database profiles (~/.biblioteca/*.mv.db)");
         T("dlg_perfils_h2_only", "Els perfils només estan disponibles per a H2 (base de dades interna).", "Los perfiles solo están disponibles para H2 (base de datos interna).", "Profiles only available for H2 (embedded database).");
         T("dlg_perfils_bd_title", "Perfils BD", "Perfiles BD", "DB Profiles");
         T("dlg_perfil_actiu", "Perfil actiu: {0}\\nSelecciona o escriu un nom nou:", "Perfil activo: {0}\\nSelecciona o escribe un nombre nuevo:", "Active profile: {0}\\nSelect or type a new name:");
         T("dlg_canviar_perfil_title", "Canviar perfil BD", "Cambiar perfil BD", "Change DB Profile");
-        T("dlg_perfil_confirmar", "Canviar al perfil \"{0}\"? Els canvis s'aplicaran al proper reinici.", "¿Cambiar al perfil \"{0}\"? Los cambios se aplicarán al próximo reinicio.", "Switch to profile \"{0}\"? Changes take effect on next restart.");
-        T("dlg_perfil_confirmar_title", "Confirmar canvi de perfil", "Confirmar cambio de perfil", "Confirm Profile Switch");
         T("dlg_perfil_canviat", "Perfil canviat a \"{0}\".\\nReinicia l'aplicació per aplicar el canvi.", "Perfil cambiado a \"{0}\".\\nReinicia la aplicación para aplicar el cambio.", "Profile changed to \"{0}\".\\nRestart the app to apply the change.");
         T("dlg_perfil_bd_info_title", "Perfil BD", "Perfil BD", "DB Profile");
         T("dlg_search_hint_msg", "Introdueix un ISBN un títol o un autor per cercar.", "Introduce un ISBN un título o un autor para buscar.", "Enter an ISBN title or author to search.");
@@ -358,11 +330,6 @@ public class I18n {
         T("tip_gestio_llistes_sidebar", "Crear reordenar i eliminar llistes", "Crear reordenar y eliminar listas", "Create reorder and delete lists");
         T("btn_mode_fosc", "Mode fosc", "Modo oscuro", "Dark mode");
         T("tip_mode_fosc", "Canviar entre mode clar i fosc", "Cambiar entre modo claro y oscuro", "Toggle light/dark mode");
-        T("theme_light",    "Mode clar",  "Modo claro",   "Light");
-        T("theme_dark",     "Mode fosc",  "Modo oscuro",  "Dark");
-        T("theme_sepia",    "Sèpia",      "Sepia",        "Sepia");
-        T("theme_ocean",    "Oceà",       "Océano",       "Ocean");
-        T("lbl_theme",      "Tema",       "Tema",         "Theme");
         T("btn_configuracio_sidebar", "Configuració", "Configuración", "Settings");
         T("tip_configuracio_sidebar", "Configuració: BD carpeta d'imatges font...", "Configuración: BD carpeta de imágenes fuente...", "Settings: DB image folder font...");
         T("btn_sobre_sidebar", "Sobre...", "Sobre...", "About...");
@@ -410,10 +377,6 @@ public class I18n {
         T("btn_quitar_filtres", "Treure filtres", "Quitar filtros", "Clear filters");
         T("btn_export_lbl", "Exportar", "Exportar", "Export");
         T("btn_import_lbl", "Importar", "Importar", "Import");
-        T("btn_export_csv", "Export CSV", "Exportar CSV", "Export CSV");
-        T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");
-        T("btn_import_csv", "Importar CSV", "Importar CSV", "Import CSV");
-        T("tip_import_csv", "Importar llibres des d'un fitxer CSV (Goodreads compatible)", "Importar libros desde un archivo CSV (compatible con Goodreads)", "Import books from CSV (Goodreads compatible)");
         T("btn_export_json_lbl", "Export JSON", "Exportar JSON", "Export JSON");
         T("tip_export_json", "Exportar tota la biblioteca a JSON (inclou llistes i tags)", "Exportar toda la biblioteca a JSON (incluye listas y tags)", "Export full library to JSON (includes lists and tags)");
         T("btn_import_json_lbl", "Importar JSON", "Importar JSON", "Import JSON");
@@ -424,16 +387,6 @@ public class I18n {
         T("tip_export_pdf", "Imprimir/exportar la llista actual a PDF", "Imprimir/exportar la lista actual a PDF", "Print/export current list to PDF");
         T("btn_fetch_covers_lbl", "Fetch portades", "Descarregar portades", "Fetch covers");
         T("tip_fetch_covers", "Descarregar portades que falten de tots els llibres", "Descargar portadas que faltan de todos los libros", "Download missing covers for all books");
-        T("tip_col_cover",   "Portada del llibre",                "Portada del libro",               "Book cover");
-        T("tip_col_isbn",    "Número ISBN del llibre",            "Número ISBN del libro",            "Book ISBN");
-        T("tip_col_title",   "Títol del llibre",                  "Título del libro",                 "Book title");
-        T("tip_col_author",  "Nom de l'autor",                    "Nombre del autor",                 "Author name");
-        T("tip_col_year",    "Any de publicació",                 "Año de publicación",               "Publication year");
-        T("tip_col_rating",  "Valoració (0–10)",                  "Valoración (0–10)",                "Rating (0–10)");
-        T("tip_col_price",   "Preu",                              "Precio",                           "Price");
-        T("tip_col_read",    "Estat de lectura (clic per canviar)", "Estado de lectura (clic para cambiar)", "Read status (click to toggle)");
-        T("tip_col_progress","Progrés de lectura",                "Progreso de lectura",              "Reading progress");
-        T("tip_col_details", "Obrir detalls del llibre",          "Abrir detalles del libro",         "Open book details");
         T("btn_scan_isbn_lbl", "Escanejar ISBN", "Escanear ISBN", "Scan ISBN");
         T("tip_scan_isbn", "Introduir ISBN i auto-omplir dades d'OpenLibrary", "Introducir ISBN y auto-rellenar datos de OpenLibrary", "Enter ISBN and auto-fill from OpenLibrary");
         T("btn_backup_bd", "Backup BD", "Backup BD", "DB Backup");
@@ -451,7 +404,6 @@ public class I18n {
         T("dlg_fetch_portades_all_done", "Tots els llibres ja tenen portada.", "Todos los libros ya tienen portada.", "All books already have a cover.");
         T("dlg_fetch_portades_title", "Fetch portades", "Descàrrega portades", "Fetch covers");
         T("dlg_fetch_portades_progress", "Descarregant portades {0}/{1}...", "Descargando portadas {0}/{1}...", "Downloading covers {0}/{1}...");
-        T("splash_loading", "Carregant biblioteca...", "Cargando biblioteca...", "Loading library...");
         T("dlg_fetch_portades_done", "{0} portades noves descarregades de {1} llibres.", "{0} portadas nuevas descargadas de {1} libros.", "{0} new covers downloaded for {1} books.");
         T("dlg_fetch_portades_done_title", "Fetch portades completat", "Descarga portadas completada", "Cover fetch complete");
         T("dlg_pdf_title", "La meva biblioteca — {0} llibres", "Mi biblioteca — {0} libros", "My library — {0} books");
@@ -464,8 +416,6 @@ public class I18n {
         T("dlg_import_json_title", "Import JSON", "Import JSON", "Import JSON");
         T("dlg_import_json_msg", "{0} llibres importats.", "{0} libros importados.", "{0} books imported.");
         T("dlg_import_json_skipped", "{0} omesos (ISBN ja existeix).", "{0} omitidos (ISBN ya existe).", "{0} skipped (ISBN already exists).");
-        T("dlg_import_json_errors", "{0} errors.", "{0} errores.", "{0} errors.");
-        T("csv_row_too_short", "La fila CSV té menys de 4 columnes requerides.", "La fila CSV tiene menos de 4 columnas requeridas.", "CSV row has fewer than 4 required columns.");
         T("col_read_count", "Llegits", "Leídos", "Read");
         T("stats_total", "Total:", "Total:", "Total:");
         T("stats_llegits_colon", "Llegits:", "Leídos:", "Read:");
@@ -499,7 +449,6 @@ public class I18n {
         T("dlg_calibre_no_sqlite3", "Cal tenir sqlite3 instal·lat per importar de Calibre.", "Se necesita sqlite3 instalado para importar de Calibre.", "sqlite3 must be installed to import from Calibre.");
         T("lbl_imported_ok", "llibres importats.", "libros importados.", "books imported.");
         T("lbl_skipped", "omesos (ISBN ja existeix).", "omitidos (ISBN ya existe).", "skipped (ISBN already exists).");
-        T("lbl_errors", "errors.", "errores.", "errors.");
         T("field_estat", "Estat", "Estado", "Condition");
         T("estat_nou", "Nou", "Nuevo", "New");
         T("estat_bo", "Bo", "Bueno", "Good");
@@ -528,53 +477,93 @@ public class I18n {
         T("btn_imprimir_detail", "Imprimir fitxa", "Imprimir ficha", "Print sheet");
         T("tip_imprimir_detail", "Imprimir la fitxa d'aquest llibre", "Imprimir la ficha de este libro", "Print this book detail sheet");
         T("yes_lbl", "Sí", "Sí", "Yes");
+        T("lbl_filter_colon", "Filtre:", "Filtro:", "Filter:");
+        T("tip_filter_tags", "Filtra les etiquetes per nom", "Filtrar etiquetas por nombre", "Filter tags by name");
+        T("field_title_ca", "Títol (CA)", "Título (CA)", "Title (CA)");
+        T("field_title_es", "Títol (ES)", "Título (ES)", "Title (ES)");
+        T("batch_field_format", "Format:", "Formato:", "Format:");
+        T("batch_field_llegit", "Llegit:", "Leído:", "Read:");
+        T("batch_field_add_list", "Afegir a llista:", "Añadir a lista:", "Add to list:");
+        T("batch_no_add_list", "(no afegir a cap llista)", "(no añadir a ninguna lista)", "(don't add to any list)");
+        T("batch_no_change", "(sense canviar)", "(sin cambiar)", "(no change)");
+        T("ctx_open_details", "Obrir detalls", "Abrir detalles", "Open details");
+        T("ctx_copy_isbn", "Copiar ISBN", "Copiar ISBN", "Copy ISBN");
+        T("ctx_delete_n", "Eliminar {0} llibres", "Eliminar {0} libros", "Delete {0} books");
+        T("ctx_delete_one", "Eliminar", "Eliminar", "Delete");
+        T("dlg_confirm_galeria_delete_one", "Eliminar \\\"{0}\\\"?\\\\nAquesta acció no es pot desfer.", "¿Eliminar \\\"{0}\\\"?\\\\nEsta acción no se puede deshacer.", "Delete \\\"{0}\\\"?\\\\nThis action cannot be undone.");
+        T("dlg_confirm_galeria_delete_n", "Eliminar {0} llibres seleccionats?\\\\nAquesta acció no es pot desfer.", "¿Eliminar {0} libros seleccionados?\\\\nEsta acción no se puede deshacer.", "Delete {0} selected books?\\\\nThis action cannot be undone.");
+        T("dlg_undo_empty", "No hi ha cap eliminació per desfer.", "No hay ninguna eliminación para deshacer.", "No deletion to undo.");
+        T("dlg_undo_title", "Desfer", "Deshacer", "Undo");
+        T("dlg_undo_done", "\\\"{0}\\\" restaurat.", "\\\"{0}\\\" restaurado.", "\\\"{0}\\\" restored.");
+        T("dlg_undo_done_title", "Desfer eliminació", "Deshacer eliminación", "Undo deletion");
+        T("dlg_validacio_title", "Camp no vàlid", "Campo no válido", "Invalid field");
+        T("err_nom_llista_buit", "El nom de la llista no pot estar buit.", "El nombre de la lista no puede estar vacío.", "List name cannot be empty.");
+        T("btn_rename_llista", "Renombrar", "Renombrar", "Rename");
+        T("tip_rename_llista", "Canviar el nom de la llista seleccionada", "Cambiar el nombre de la lista seleccionada", "Rename selected list");
+        T("dlg_rename_llista_title", "Renombrar llista", "Renombrar lista", "Rename list");
+        T("dlg_rename_llista_prompt", "Nou nom per a la llista \\\"{0}\\\":", "Nuevo nombre para la lista \\\"{0}\\\":", "New name for list \\\"{0}\\\":");
+        T("dlg_perfil_confirmar", "Canviar al perfil \\\"{0}\\\"? Els canvis s'aplicaran al proper reinici.", "¿Cambiar al perfil \\\"{0}\\\"? Los cambios se aplicarán al próximo reinicio.", "Switch to profile \\\"{0}\\\"? Changes take effect on next restart.");
+        T("dlg_perfil_confirmar_title", "Confirmar canvi de perfil", "Confirmar cambio de perfil", "Confirm Profile Switch");
+        T("splash_loading", "Carregant biblioteca...", "Cargando biblioteca...", "Loading library...");
+        T("csv_row_too_short", "La fila CSV té menys de 4 columnes requerides.", "La fila CSV tiene menos de 4 columnas requeridas.", "CSV row has fewer than 4 required columns.");
         T("no_lbl", "No", "No", "No");
-        T("btn_ok",               "D'acord",                "De acuerdo",               "OK");
-        T("lbl_valoracio_tip",    "Valoració (0–10)",       "Valoración (0–10)",         "Rating (0–10)");
-        T("btn_afegir_llista",    "Afegir a llista",        "Añadir a lista",            "Add to list");
-        T("lbl_llista_colon",     "Llista:",                "Lista:",                    "List:");
-        T("btn_guardar_canvis",   "Guardar canvis",         "Guardar cambios",           "Save changes");
-        T("dlg_no_llistes_msg",   "No hi ha cap llista. Crea'n una primer des de \"Gestionar llistes\".", "No hay ninguna lista. Crea una primero desde \"Gestionar listas\".", "No lists found. Create one first from \"Manage lists\".");
-        T("dlg_no_llistes_title", "Sense llistes",          "Sin listas",                "No lists");
-        T("dlg_canvis_guardats",  "Canvis guardats.",       "Cambios guardados.",        "Changes saved.");
-        T("dlg_llistes_title",    "Llistes de: {0}",       "Listas de: {0}",            "Lists for: {0}");
-        T("dlg_no_prestecs_msg",  "No hi ha préstecs registrats per a aquest llibre.", "No hay préstamos registrados para este libro.", "No loans recorded for this book.");
-        T("dlg_historial_title",  "Historial de préstecs",  "Historial de préstamos",   "Loan history");
-        T("col_persona",          "Persona",                "Persona",                   "Person");
-        T("col_data_prestec",     "Data préstec",           "Fecha préstamo",            "Loan date");
-        T("col_retornat",         "Retornat",               "Devuelto",                  "Returned");
         T("dlg_shortcuts_title", "Dreceres de teclat", "Atajos de teclado", "Keyboard shortcuts");
-        T("dlg_shortcuts_content",
-            "Ctrl+N          Nou llibre\nCtrl+F          Cerca\nCtrl+E          Editar llibre seleccionat\n" +
-            "Ctrl+A          Seleccionar tots\nEnter           Obrir detalls\nDelete          Eliminar seleccionat\n" +
-            "Ctrl+Shift+D    Canviar tema (Clar→Fosc→Sèpia→Oceà)\nCtrl++/-        Zoom galeria\n" +
-            "Ctrl+Roda       Zoom galeria\nFletxes         Navegar galeria\nCtrl+Clic autor Filtrar per autor\n" +
-            "Ctrl+Z          Desfer última eliminació\nF1 / Ctrl+?     Aquesta ajuda",
-            "Ctrl+N          Nuevo libro\nCtrl+F          Buscar\nCtrl+E          Editar libro seleccionado\n" +
-            "Ctrl+A          Seleccionar todos\nEnter           Abrir detalles\nDelete          Eliminar seleccionado\n" +
-            "Ctrl+Shift+D    Cambiar tema (Claro→Oscuro→Sepia→Océano)\nCtrl++/-        Zoom galería\n" +
-            "Ctrl+Rueda      Zoom galería\nFlechas         Navegar galería\nCtrl+Clic autor Filtrar por autor\n" +
-            "Ctrl+Z          Deshacer última eliminación\nF1 / Ctrl+?     Esta ayuda",
-            "Ctrl+N          New book\nCtrl+F          Search\nCtrl+E          Edit selected book\n" +
-            "Ctrl+A          Select all\nEnter           Open details\nDelete          Delete selected\n" +
-            "Ctrl+Shift+D    Change theme (Light→Dark→Sepia→Ocean)\nCtrl++/-        Gallery zoom\n" +
-            "Ctrl+Wheel      Gallery zoom\nArrows          Navigate gallery\nCtrl+Click author  Filter by author\n" +
-            "Ctrl+Z          Undo last deletion\nF1 / Ctrl+?     This help");
         T("dlg_batch_edit_title", "Edició massiva de {0} llibres", "Edición masiva de {0} libros", "Batch edit {0} books");
-        T("val_isbn_digits",    "L'ISBN ha de tenir 10 o 13 dígits",        "El ISBN debe tener 10 o 13 dígitos",         "ISBN must have 10 or 13 digits");
-        T("val_isbn_invalid",   "ISBN invàlid (dígit de control incorrecte)", "ISBN inválido (dígito de control incorrecto)", "Invalid ISBN (incorrect check digit)");
-        T("val_nom_buit",       "El títol no pot estar buit",                "El título no puede estar vacío",             "Title cannot be empty");
-        T("val_nom_llarg",      "El títol no pot superar 255 caràcters",     "El título no puede superar 255 caracteres",  "Title cannot exceed 255 characters");
-        T("val_autor_llarg",    "L'autor no pot superar 255 caràcters",      "El autor no puede superar 255 caracteres",   "Author cannot exceed 255 characters");
-        T("val_any_rang",       "L'any ha d'estar entre 1000 i {0}",         "El año debe estar entre 1000 y {0}",         "Year must be between 1000 and {0}");
-        T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10",      "La valoración debe estar entre 0 y 10",      "Rating must be between 0 and 10");
-        T("val_preu_negatiu",   "El preu no pot ser negatiu",                "El precio no puede ser negativo",            "Price cannot be negative");
-        T("val_editorial_llarg","L'editorial no pot superar 255 caràcters",  "La editorial no puede superar 255 caracteres", "Publisher cannot exceed 255 characters");
-        T("val_serie_llarg",    "La sèrie no pot superar 255 caràcters",     "La serie no puede superar 255 caracteres",   "Series cannot exceed 255 characters");
-        T("val_idioma_llarg",   "L'idioma no pot superar 100 caràcters",     "El idioma no puede superar 100 caracteres",   "Language cannot exceed 100 characters");
-        T("val_format_llarg",   "El format no pot superar 50 caràcters",     "El formato no puede superar 50 caracteres",   "Format cannot exceed 50 characters");
-        T("val_pais_llarg",     "El país d'origen no pot superar 100 caràcters", "El país de origen no puede superar 100 caracteres", "Country cannot exceed 100 characters");
-        T("val_estat_llarg",    "L'estat no pot superar 50 caràcters",       "El estado no puede superar 50 caracteres",    "Status cannot exceed 50 characters");
+        T("acc_scroll_down", "Desplaçar avall", "Desplazar abajo", "Scroll down");
+        T("acc_scroll_up", "Desplaçar amunt", "Desplazar arriba", "Scroll up");
+        T("btn_afegir_llista", "Afegir a llista", "Añadir a lista", "Add to list");
+        T("btn_guardar_canvis", "Guardar canvis", "Guardar cambios", "Save changes");
+        T("col_data_prestec", "Data préstec", "Fecha préstamo", "Loan date");
+        T("col_persona", "Persona", "Persona", "Person");
+        T("col_retornat", "Retornat", "Devuelto", "Returned");
+        T("dlg_canvis_guardats", "Canvis guardats.", "Cambios guardados.", "Changes saved.");
+        T("dlg_historial_title", "Historial de préstecs", "Historial de préstamos", "Loan history");
+        T("dlg_llistes_title", "Llistes de: {0}", "Listas de: {0}", "Lists for: {0}");
+        T("dlg_no_llistes_msg", "No hi ha cap llista. Crea'n una primer des de \\\"Gestionar llistes\\\".", "No hay ninguna lista. Crea una primero desde \\\"Gestionar listas\\\".", "No lists found. Create one first from \\\"Manage lists\\\".");
+        T("dlg_no_llistes_title", "Sense llistes", "Sin listas", "No lists");
+        T("dlg_no_prestecs_msg", "No hi ha préstecs registrats per a aquest llibre.", "No hay préstamos registrados para este libro.", "No loans recorded for this book.");
+        T("field_title_en", "Títol (EN)", "Title (EN)", "Title (EN)");
+        T("lbl_all_tags", "Totes les etiquetes", "Todas las etiquetas", "All tags");
+        T("lbl_llista_colon", "Llista:", "Lista:", "List:");
+        T("lbl_theme", "Tema", "Tema", "Theme");
+        T("lbl_valoracio_tip", "Valoració (0–10)", "Valoración (0–10)", "Rating (0–10)");
+        T("tip_col_author", "Nom de l'autor", "Nombre del autor", "Author name");
+        T("tip_col_cover", "Portada del llibre", "Portada del libro", "Book cover");
+        T("tip_col_details", "Obrir detalls del llibre", "Abrir detalles del libro", "Open book details");
+        T("tip_col_isbn", "Número ISBN del llibre", "Número ISBN del libro", "Book ISBN");
+        T("tip_col_price", "Preu", "Precio", "Price");
+        T("tip_col_progress", "Progrés de lectura", "Progreso de lectura", "Reading progress");
+        T("tip_col_rating", "Valoració (0–10)", "Valoración (0–10)", "Rating (0–10)");
+        T("tip_col_read", "Estat de lectura (clic per canviar)", "Estado de lectura (clic para cambiar)", "Read status (click to toggle)");
+        T("tip_col_title", "Títol del llibre", "Título del libro", "Book title");
+        T("tip_col_year", "Any de publicació", "Año de publicación", "Publication year");
+        T("val_any_rang", "L'any ha d'estar entre 1000 i {0}", "El año debe estar entre 1000 y {0}", "Year must be between 1000 and {0}");
+        T("val_autor_llarg", "L'autor no pot superar 255 caràcters", "El autor no puede superar 255 caracteres", "Author cannot exceed 255 characters");
+        T("val_editorial_llarg", "L'editorial no pot superar 255 caràcters", "La editorial no puede superar 255 caracteres", "Publisher cannot exceed 255 characters");
+        T("val_format_llarg", "El format no pot superar 50 caràcters", "El formato no puede superar 50 caracteres", "Format cannot exceed 50 characters");
+        T("val_idioma_llarg", "L'idioma no pot superar 100 caràcters", "El idioma no puede superar 100 caracteres", "Language cannot exceed 100 characters");
+        T("val_isbn_digits", "L'ISBN ha de tenir 10 o 13 dígits", "El ISBN debe tener 10 o 13 dígitos", "ISBN must have 10 or 13 digits");
+        T("val_isbn_invalid", "ISBN invàlid (dígit de control incorrecte)", "ISBN inválido (dígito de control incorrecto)", "Invalid ISBN (incorrect check digit)");
+        T("val_nom_buit", "El títol no pot estar buit", "El título no puede estar vacío", "Title cannot be empty");
+        T("val_nom_llarg", "El títol no pot superar 255 caràcters", "El título no puede superar 255 caracteres", "Title cannot exceed 255 characters");
+        T("val_pais_llarg", "El país d'origen no pot superar 100 caràcters", "El país de origen no puede superar 100 caracteres", "Country cannot exceed 100 characters");
+        T("val_preu_negatiu", "El preu no pot ser negatiu", "El precio no puede ser negativo", "Price cannot be negative");
+        T("val_serie_llarg", "La sèrie no pot superar 255 caràcters", "La serie no puede superar 255 caracteres", "Series cannot exceed 255 characters");
+        T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10", "La valoración debe estar entre 0 y 10", "Rating must be between 0 and 10");
+        T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
+        T("err_causa", "Causa:", "Causa:", "Cause:");
+        T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");
+        T("dlg_error_title", "Error", "Error", "Error");
+        T("dlg_network_error", "Error de connexió amb OpenLibrary:", "Error de conexión con OpenLibrary:", "Connection error with OpenLibrary:");
+        T("dlg_network_error_title", "Error de xarxa", "Error de red", "Network error");
+        T("dlg_import_json_errors", "{0} errors.", "{0} errores.", "{0} errors.");
+        T("lbl_errors", "errors.", "errores.", "errors.");
+        T("val_estat_llarg", "L'estat no pot superar 50 caràcters", "El estado no puede superar 50 caracteres", "Status cannot exceed 50 characters");
+        T("lbl_csv_files", "CSV files", "CSV files", "CSV files");
+        T("btn_export_csv", "Export CSV", "Exportar CSV", "Export CSV");
+        T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");
+        T("btn_import_csv", "Importar CSV", "Importar CSV", "Import CSV");
+        T("tip_import_csv", "Importar llibres des d'un fitxer CSV (Goodreads compatible)", "Importar libros desde un archivo CSV (compatible con Goodreads)", "Import books from CSV (Goodreads compatible)");
     }
 
     private static void T(String key, String ca, String es, String en) {
@@ -600,6 +589,14 @@ public class I18n {
         for (int i = 0; i < args.length; i++)
             raw = raw.replace("{" + i + "}", String.valueOf(args[i]));
         return raw;
+    }
+
+    /** Localize JOptionPane button labels after a language change. */
+    public static void applySwingOptionPane() {
+        UIManager.put("OptionPane.okButtonText",     t("btn_ok"));
+        UIManager.put("OptionPane.cancelButtonText", t("btn_cancel"));
+        UIManager.put("OptionPane.yesButtonText",  t("btn_yes"));
+        UIManager.put("OptionPane.noButtonText",   t("btn_no"));
     }
 
     private static int langIndex() {

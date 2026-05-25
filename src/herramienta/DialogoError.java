@@ -16,7 +16,7 @@ public class DialogoError {
     private final boolean isValidation;
 
     public DialogoError(Exception e) {
-        this("Error", e);
+        this(I18n.t("dlg_error_title"), e);
     }
 
     public DialogoError(String titol, Exception e) {
@@ -30,10 +30,10 @@ public class DialogoError {
         } else {
             StringBuilder sb = new StringBuilder();
             if (e.getCause() != null && e.getCause().getMessage() != null)
-                sb.append("\nCausa: ").append(e.getCause().getMessage());
+                sb.append("\n").append(I18n.t("err_causa")).append(" ").append(e.getCause().getMessage());
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
-            sb.append("\n\n─── Stack trace ───\n").append(sw);
+            sb.append("\n\n").append(I18n.t("err_stack_trace")).append("\n").append(sw);
             this.detalls = sb.toString();
         }
     }
@@ -59,10 +59,12 @@ public class DialogoError {
                 java.nio.file.Files.move(logFile, old,
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
-            try (FileWriter fw = new FileWriter(f, true)) {
-                fw.write("[" + LocalDateTime.now().format(LOG_FMT) + "] " + titol + ": " + missatge + "\n");
-                if (!detalls.isBlank()) fw.write(detalls + "\n");
-                fw.write("---\n");
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(f, true), 4096)) {
+                bw.write("[" + LocalDateTime.now().format(LOG_FMT) + "] " + titol + ": " + missatge);
+                bw.newLine();
+                if (!detalls.isBlank()) { bw.write(detalls); bw.newLine(); }
+                bw.write("---");
+                bw.newLine();
             }
         } catch (IOException ignored) {}
     }

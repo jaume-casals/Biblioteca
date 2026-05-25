@@ -18,12 +18,30 @@ public class LlibreDao {
 
     LlibreDao(Connection con) { this.con = con; }
 
+    static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
+        Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
+            rs.getInt("any"), null, rs.getDouble("valoracio"),
+            rs.getDouble("preu"), rs.getBoolean("llegit"), rs.getString("imatge"));
+        l.setHasBlob(rs.getBoolean("has_blob"));
+        fillLlibreTail(l, rs, false);
+        l.setHeavyFieldsLoaded(false);
+        return l;
+    }
+
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
         Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
             rs.getInt("any"), rs.getString("descripcio"), rs.getDouble("valoracio"),
             rs.getDouble("preu"), rs.getBoolean("llegit"), rs.getString("imatge"));
         l.setHasBlob(rs.getBoolean("has_blob"));
         l.setNotes(rs.getString("notes"));
+        fillLlibreTail(l, rs, true);
+        return l;
+    }
+
+    private static void fillLlibreTail(Llibre l, ResultSet rs, boolean withHeavy) throws SQLException {
+        if (withHeavy) {
+            l.setNotes(rs.getString("notes"));
+        }
         l.setPagines(rs.getInt("pagines"));
         l.setPaginesLlegides(rs.getInt("pagines_llegides"));
         l.setEditorial(rs.getString("editorial"));
@@ -42,8 +60,31 @@ public class LlibreDao {
         l.setNomCa(rs.getString("nom_ca"));
         l.setNomEs(rs.getString("nom_es"));
         l.setNomEn(rs.getString("nom_en"));
-        return l;
     }
+
+    public synchronized void loadHeavyFields(long isbn, Llibre target) {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT descripcio, notes FROM llibre WHERE ISBN = ?")) {
+            ps.setLong(1, isbn);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    target.setDescripcio(rs.getString("descripcio"));
+                    target.setNotes(rs.getString("notes"));
+                    target.setHeavyFieldsLoaded(true);
+                }
+            }
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error carregant camps pesats: " + e.getMessage(), e);
+        }
+    }
+
+    private static final String LLIBRE_SELECT_L_LIGHT =
+        "SELECT l.ISBN, l.nom, " +
+        "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, " +
+        "l.`any`, l.valoracio, l.preu, l.llegit, l.imatge, " +
+        "(l.imatge_blob IS NOT NULL) AS has_blob, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
+        "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
+        "l.nom_ca, l.nom_es, l.nom_en ";
 
     private static final String LLIBRE_SELECT_L =
         "SELECT l.ISBN, l.nom, " +
@@ -59,7 +100,7 @@ public class LlibreDao {
         try {
             try (Statement stmt = con.createStatement();
                  ResultSet rs = stmt.executeQuery(
-                    LLIBRE_SELECT_L + ", a.nom AS autor_nom FROM llibre l" +
+                    LLIBRE_SELECT_L_LIGHT + ", a.nom AS autor_nom FROM llibre l" +
                     " LEFT JOIN llibre_autor la ON l.ISBN = la.isbn" +
                     " LEFT JOIN autor a ON la.autor_id = a.id" +
                     " ORDER BY l.ISBN, a.nom")) {
@@ -67,7 +108,7 @@ public class LlibreDao {
                     long isbn = rs.getLong("ISBN");
                     Llibre l = byISBN.get(isbn);
                     if (l == null) {
-                        l = buildLlibre(rs);
+                        l = buildLlibreLight(rs);
                         byISBN.put(isbn, l);
                         biblio.add(l);
                     }
@@ -76,7 +117,7 @@ public class LlibreDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al agafar tots els llibres: " + e.getMessage());
+            throw new domini.BibliotecaException("Error al agafar tots els llibres: " + e.getMessage(), e);
         }
         return biblio;
     }
@@ -196,7 +237,7 @@ public class LlibreDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els llibres recents: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant els llibres recents: " + e.getMessage(), e);
         }
         return result;
     }
@@ -210,7 +251,7 @@ public class LlibreDao {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant la imatge del llibre: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant la imatge del llibre: " + e.getMessage(), e);
         }
         return null;
     }
@@ -221,6 +262,11 @@ public class LlibreDao {
             ps.setLong(2, isbn);
             ps.execute();
         }
+    }
+
+    /** Unified filter search; use {@link domini.LlibreFilter#empty()} for unconstrained lists. */
+    public synchronized ArrayList<Llibre> search(domini.LlibreFilter f) {
+        return search(f, 0, 0);
     }
 
     public synchronized ArrayList<Llibre> search(domini.LlibreFilter f, int offset, int pageSize) {
@@ -272,7 +318,7 @@ public class LlibreDao {
                 while (rs.next()) result.add(buildLlibre(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Error en searchLlibres: " + e.getMessage());
+            throw new domini.BibliotecaException("Error en searchLlibres: " + e.getMessage(), e);
         }
         return result;
     }
@@ -282,7 +328,7 @@ public class LlibreDao {
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) {
-            System.err.println("Error comptant llibres: " + e.getMessage());
+            throw new domini.BibliotecaException("Error comptant llibres: " + e.getMessage(), e);
         }
         return 0;
     }
@@ -295,7 +341,7 @@ public class LlibreDao {
             while (rs.next())
                 rows.add(new LecturaRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)));
         } catch (SQLException e) {
-            System.err.println("Error carregant les lectures: " + e.getMessage());
+            throw new domini.BibliotecaException("Error carregant les lectures: " + e.getMessage(), e);
         }
         return rows;
     }
@@ -372,22 +418,36 @@ public class LlibreDao {
     }
 
     private void syncAutors(long isbn, java.util.List<String> autors) throws SQLException {
+        if (autors == null || autors.isEmpty()) {
+            try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
+                del.setLong(1, isbn);
+                del.execute();
+            }
+            return;
+        }
+        // Batch the author sync: one DELETE + one batch INSERT IGNORE for authors + one batch INSERT IGNORE for links.
+        // This reduces round trips from N+2 (N authors) to 3 (delete + author insert + link insert).
         try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
             del.setLong(1, isbn);
             del.execute();
         }
-        for (String nom : autors) {
-            if (nom == null || nom.isBlank()) continue;
-            try (PreparedStatement ins = con.prepareStatement("INSERT IGNORE INTO autor (nom) VALUES (?)")) {
-                ins.setString(1, nom);
-                ins.execute();
+        try (PreparedStatement insAutor = con.prepareStatement("INSERT IGNORE INTO autor (nom) VALUES (?)")) {
+            for (String nom : autors) {
+                if (nom == null || nom.isBlank()) continue;
+                insAutor.setString(1, nom);
+                insAutor.addBatch();
             }
-            try (PreparedStatement link = con.prepareStatement(
-                    "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?")) {
+            insAutor.executeBatch();
+        }
+        try (PreparedStatement link = con.prepareStatement(
+                "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?")) {
+            for (String nom : autors) {
+                if (nom == null || nom.isBlank()) continue;
                 link.setLong(1, isbn);
                 link.setString(2, nom);
-                link.execute();
+                link.addBatch();
             }
+            link.executeBatch();
         }
     }
 }

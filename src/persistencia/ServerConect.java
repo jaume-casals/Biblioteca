@@ -105,6 +105,23 @@ public class ServerConect {
 
 	public Connection getConnection() { return con; }
 
+	public static Connection testConnection(java.util.Properties props) throws Exception {
+		String dbType = props.getProperty("dbType", "h2");
+		ServerConect sc = new ServerConect();
+		if ("h2".equals(dbType)) {
+			String dir = System.getProperty("user.home") + "/.biblioteca";
+			new File(dir).mkdirs();
+			String profile = props.getProperty("dbProfile", "biblioteca");
+			String url = "jdbc:h2:" + dir + "/" + profile + ";MODE=MySQL;NON_KEYWORDS=VALUE";
+			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
+		} else {
+			String host = props.getProperty("dbHost", "localhost");
+			String url = "jdbc:mariadb://" + host + "/?characterEncoding=UTF-8&useUnicode=true";
+			return sc.connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
+				url, props.getProperty("dbUser", ""), props.getProperty("dbPassword", ""));
+		}
+	}
+
 	public void createDatabase() {
 		String testUrl = System.getProperty("biblioteca.h2.url");
 		createDatabase(new ConnectionConfig(

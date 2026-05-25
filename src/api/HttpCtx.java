@@ -17,6 +17,7 @@ public class HttpCtx {
     private String contentType = "application/json; charset=utf-8";
     private final Map<String, String> responseHeaders = new LinkedHashMap<>();
     private boolean committed = false;
+    String corsOrigin;
 
     HttpCtx(HttpExchange ex, Map<String, String> pathParams) {
         this.ex = ex;
@@ -102,6 +103,9 @@ public class HttpCtx {
         byte[] body = responseBytes != null ? responseBytes : new byte[0];
         ex.getResponseHeaders().set("Content-Type", contentType);
         responseHeaders.forEach((k, v) -> ex.getResponseHeaders().set(k, v));
+        if (corsOrigin != null) {
+            ex.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
+        }
         ex.sendResponseHeaders(status, body.length == 0 && status == 204 ? -1 : body.length);
         if (body.length > 0) {
             try (var os = ex.getResponseBody()) { os.write(body); }

@@ -144,7 +144,10 @@ public class ModeSelectorDialog extends JDialog {
         return prompt();
     }
 
-    /** Display the dialog and return the chosen mode. */
+    /**
+     * Blocks on the EDT until the user picks a mode or closes the dialog (CANCELLED).
+     * Call only from the EDT or via {@link #prompt(String)} which uses invokeAndWait.
+     */
     public static Mode prompt() {
         if (EventQueue.isDispatchThread()) {
             ModeSelectorDialog d = new ModeSelectorDialog(null);

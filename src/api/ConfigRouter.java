@@ -4,62 +4,115 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import herramienta.Config;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
+/**
+ * REST endpoints for application configuration.
+ * <p>UI settings: {@code GET/PUT /api/config/ui} — theme, font, view mode (no restart).
+ * DB settings: {@code GET/PUT /api/config/db} — dbType/host/user/password (restart to reconnect).
+ * Legacy {@code /api/config} returns the union of both.
+ */
 public class ConfigRouter {
 
+    private static final Set<String> RESTART_KEYS = Set.of("dbType", "dbHost", "dbUser", "dbPassword");
+
+    private static final Map<String, Consumer<JsonElement>> UI_SETTERS = buildUiSetters();
+
+    private static Map<String, Consumer<JsonElement>> buildUiSetters() {
+        Map<String, Consumer<JsonElement>> m = new LinkedHashMap<>();
+        m.put("theme",            e -> Config.setTheme(herramienta.UITheme.Theme.fromKey(e.getAsString())));
+        m.put("darkMode",         e -> Config.setDarkMode(e.getAsBoolean()));
+        m.put("fontSize",         e -> Config.setFontSize(e.getAsString()));
+        m.put("currencySymbol",   e -> Config.setCurrencySymbol(e.getAsString()));
+        m.put("defaultValoracio", e -> Config.setDefaultValoracio(e.getAsDouble()));
+        m.put("readingGoal",      e -> Config.setReadingGoal(e.getAsInt()));
+        m.put("viewMode",         e -> Config.setViewMode(e.getAsString()));
+        m.put("galleryZoom",      e -> Config.setGalleryZoom(e.getAsInt()));
+        m.put("defaultImgDir",    e -> Config.setDefaultImgDir(e.getAsString()));
+        return Map.copyOf(m);
+    }
+
+    private static final Map<String, Consumer<JsonElement>> DB_SETTERS = buildDbSetters();
+
+    private static Map<String, Consumer<JsonElement>> buildDbSetters() {
+        Map<String, Consumer<JsonElement>> m = new LinkedHashMap<>();
+        m.put("dbType",     e -> Config.setDbType(e.getAsString()));
+        m.put("dbHost",     e -> Config.setDbHost(e.getAsString()));
+        m.put("dbUser",     e -> Config.setDbUser(e.getAsString()));
+        m.put("dbPassword", e -> {
+            String v = e.getAsString();
+            if (!"***".equals(v)) Config.setDbPassword(v);
+        });
+        return Map.copyOf(m);
+    }
+
     public ConfigRouter(HttpRouter app) {
-        app.get("/api/config", ctx -> getConfig(ctx));
-        app.put("/api/config", ctx -> setConfig(ctx));
+        app.get("/api/config",     ctx -> getConfig(ctx));
+        app.put("/api/config",     ctx -> setConfig(ctx, unionSetters()));
+        app.get("/api/config/ui",  ctx -> getUiConfig(ctx));
+        app.put("/api/config/ui",  ctx -> setConfig(ctx, UI_SETTERS));
+        app.get("/api/config/db",  ctx -> getDbConfig(ctx));
+        app.put("/api/config/db",  ctx -> setConfig(ctx, DB_SETTERS));
+    }
+
+    private static Map<String, Consumer<JsonElement>> unionSetters() {
+        Map<String, Consumer<JsonElement>> m = new LinkedHashMap<>(UI_SETTERS);
+        m.putAll(DB_SETTERS);
+        return m;
     }
 
     private void getConfig(HttpCtx ctx) {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("theme",           Config.getTheme().key());
-        m.put("darkMode",        Config.isDarkMode());
-        m.put("dbType",          Config.getDbType());
-        m.put("dbHost",          Config.getDbHost());
-        m.put("dbUser",          Config.getDbUser());
-        m.put("dbPassword",      Config.getDbPassword().isEmpty() ? "" : "***");
-        m.put("fontSize",        Config.getFontSize());
-        m.put("currencySymbol",  Config.getCurrencySymbol());
-        m.put("defaultValoracio",Config.getDefaultValoracio());
-        m.put("readingGoal",     Config.getReadingGoal());
-        m.put("viewMode",        Config.getViewMode());
-        m.put("galleryZoom",     Config.getGalleryZoom());
-        m.put("defaultImgDir",   Config.getDefaultImgDir());
+        m.putAll(uiMap());
+        m.putAll(dbMap());
         ctx.json(m);
     }
 
-    private static final Map<String, Consumer<JsonElement>> CONFIG_SETTERS = new LinkedHashMap<>();
-    static {
-        CONFIG_SETTERS.put("theme",            e -> Config.setTheme(herramienta.UITheme.Theme.fromKey(e.getAsString())));
-        CONFIG_SETTERS.put("darkMode",         e -> Config.setDarkMode(e.getAsBoolean()));
-        CONFIG_SETTERS.put("dbType",           e -> Config.setDbType(e.getAsString()));
-        CONFIG_SETTERS.put("dbHost",           e -> Config.setDbHost(e.getAsString()));
-        CONFIG_SETTERS.put("dbUser",           e -> Config.setDbUser(e.getAsString()));
-        CONFIG_SETTERS.put("dbPassword",       e -> Config.setDbPassword(e.getAsString()));
-        CONFIG_SETTERS.put("fontSize",         e -> {
-            String v = e.getAsString();
-            if (!Set.of("small", "medium", "large", "xlarge").contains(v))
-                throw new IllegalArgumentException("Invalid fontSize: " + v);
-            Config.setFontSize(v);
-        });
-        CONFIG_SETTERS.put("currencySymbol",   e -> Config.setCurrencySymbol(e.getAsString()));
-        CONFIG_SETTERS.put("defaultValoracio", e -> Config.setDefaultValoracio(e.getAsDouble()));
-        CONFIG_SETTERS.put("readingGoal",      e -> Config.setReadingGoal(e.getAsInt()));
-        CONFIG_SETTERS.put("viewMode",         e -> Config.setViewMode(e.getAsString()));
-        CONFIG_SETTERS.put("galleryZoom",      e -> Config.setGalleryZoom(e.getAsInt()));
-        CONFIG_SETTERS.put("defaultImgDir",    e -> Config.setDefaultImgDir(e.getAsString()));
+    private void getUiConfig(HttpCtx ctx) { ctx.json(uiMap()); }
+
+    private void getDbConfig(HttpCtx ctx) { ctx.json(dbMap()); }
+
+    private static Map<String, Object> uiMap() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("theme",            Config.getTheme().key());
+        m.put("darkMode",         Config.isDarkMode());
+        m.put("fontSize",         Config.getFontSize());
+        m.put("currencySymbol",   Config.getCurrencySymbol());
+        m.put("defaultValoracio", Config.getDefaultValoracio());
+        m.put("readingGoal",      Config.getReadingGoal());
+        m.put("viewMode",         Config.getViewMode());
+        m.put("galleryZoom",      Config.getGalleryZoom());
+        m.put("defaultImgDir",    Config.getDefaultImgDir());
+        return m;
     }
 
-    private void setConfig(HttpCtx ctx) {
-        // Note: theme/font changes here do NOT trigger UI refresh — web mode has no Swing UI.
+    private static Map<String, Object> dbMap() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("dbType",     Config.getDbType());
+        m.put("dbHost",     Config.getDbHost());
+        m.put("dbUser",     Config.getDbUser());
+        m.put("dbPassword", Config.getDbPassword().isEmpty() ? "" : "***");
+        m.put("requiresRestart", true);
+        return m;
+    }
+
+    private void setConfig(HttpCtx ctx, Map<String, Consumer<JsonElement>> setters) {
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        CONFIG_SETTERS.forEach((key, setter) -> { if (j.has(key)) setter.accept(j.get(key)); });
-        ctx.json(Map.of("ok", true));
+        List<String> unknown = new ArrayList<>();
+        for (String key : j.keySet()) {
+            if (!setters.containsKey(key)) unknown.add(key);
+        }
+        if (!unknown.isEmpty()) {
+            ctx.status(400).json(Map.of("error", "Unknown config keys", "keys", unknown));
+            return;
+        }
+        setters.forEach((key, setter) -> { if (j.has(key)) setter.accept(j.get(key)); });
+        boolean needsRestart = j.keySet().stream().anyMatch(RESTART_KEYS::contains);
+        ctx.json(Map.of("ok", true, "requiresRestart", needsRestart));
     }
 }

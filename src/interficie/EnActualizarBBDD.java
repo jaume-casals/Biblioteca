@@ -1,5 +1,7 @@
 package interficie;
 
-import domini.Llibre;
-
-public interface EnActualizarBBDD extends OnLlibreUpdate, OnLlibreDelete {}
+/**
+ * @deprecated Use {@link presentacio.listener.EnActualizarBBDD}.
+ */
+@Deprecated
+public interface EnActualizarBBDD extends presentacio.listener.EnActualizarBBDD {}

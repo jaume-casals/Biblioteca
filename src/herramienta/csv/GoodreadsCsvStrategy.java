@@ -10,7 +10,8 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
     @Override
     public boolean canHandle(String headerRow) {
-        return headerRow.contains("Book Id") && headerRow.contains("Exclusive Shelf");
+        String[] cols = CsvUtils.parseLine(headerRow);
+        return cols.length >= 5 && headerRow.contains("Book Id") && headerRow.contains("Exclusive Shelf");
     }
 
     @Override
@@ -24,6 +25,9 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
         String nom       = CsvUtils.colVal(hMap, c, "Title");
         String autor     = CsvUtils.colVal(hMap, c, "Author");
+        String additionalAuthors = CsvUtils.colVal(hMap, c, "Additional Authors");
+        if (!additionalAuthors.isEmpty() && !autor.isEmpty()) autor = autor + ", " + additionalAuthors;
+        else if (!additionalAuthors.isEmpty()) autor = additionalAuthors;
         String editorial = CsvUtils.colVal(hMap, c, "Publisher");
         String pagesStr  = CsvUtils.colVal(hMap, c, "Number of Pages");
         int pagines = pagesStr.isEmpty() ? 0 : (int) CsvUtils.parseDoubleOrZero(pagesStr);

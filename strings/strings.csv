@@ -79,6 +79,13 @@ modal_manage_shelves,Gestionar prestatges,Gestionar estantes,Manage Shelves
 # ── Buttons ───────────────────────────────────────────────────────────────────
 btn_save,Desar,Guardar,Save
 btn_cancel,Cancel·lar,Cancelar,Cancel
+btn_yes,Sí,Sí,Yes
+btn_no,No,No,No
+btn_ok,D'acord,De acuerdo,OK
+lbl_no_cover,Sense portada,Sin portada,No cover
+val_color_invalid,"Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.","Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.","Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format."
+err_causa,Causa:,Causa:,Cause:
+err_stack_trace,─── Traça ───,─── Traza ───,─── Stack trace ───
 btn_edit,Editar,Editar,Edit
 btn_delete,Eliminar,Eliminar,Delete
 btn_loan,Prestar,Prestar,Loan
@@ -511,4 +518,6 @@ alert_goal_pace_title,Objectiu de lectura,Objetivo de lectura,Reading goal
 btn_imprimir_detail,Imprimir fitxa,Imprimir ficha,Print sheet
 tip_imprimir_detail,Imprimir la fitxa d'aquest llibre,Imprimir la ficha de este libro,Print this book detail sheet
 yes_lbl,Sí,Sí,Yes
-no_lbl,No,No,No
+val_estat_llarg,L'estat no pot superar 50 caràcters,El estado no puede superar 50 caracteres,Status cannot exceed 50 characters
+lbl_filter_colon,Filtre:,Filtro:,Filter:
+tip_filter_tags,Filtra les etiquetes per nom,Filtrar etiquetas por nombre,Filter tags by name

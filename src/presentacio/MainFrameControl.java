@@ -1,38 +1,56 @@
 package presentacio;
 
+import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 
 import domini.Llibre;
 import domini.LlibreFilter;
-import interficie.BibliotecaWriter;
 import herramienta.Config;
 import herramienta.DialogoError;
 import herramienta.I18n;
-import interficie.EnActualizarBBDD;
-import presentacio.detalles.control.GuardarLlibresDialogoControl;
-import presentacio.detalles.vista.GuardarLlibresDialogo;
+import interficie.BibliotecaWriter;
+import presentacio.listener.EnActualizarBBDD;
 
-public class MainFrameControl implements EnActualizarBBDD {
+public class MainFrameControl implements interficie.EnActualizarBBDD {
 
-	private BibliotecaWriter cLlibres;
+	private final BibliotecaWriter cLlibres;
+	private final MostrarBibliotecaPanel libraryPanel;
+	private final MainFramePanel panel;
+	private final JFrame frame;
 	private MostrarBibliotecaControl mostrarControl;
-	private MainFramePanel vista;
+	private BookIOController ioCtrl;
 	private static MainFrameControl instance;
 
-	private MainFrameControl(MainFramePanel vista, BibliotecaWriter cd) {
-		this.vista = vista;
-		cLlibres = cd;
+	private MainFrameControl(MainFramePanel panel, BibliotecaWriter cd) {
+		this.panel = panel;
+		this.libraryPanel = panel.getMostrarBibliotecaPanel();
+		this.cLlibres = cd;
+		this.frame = new JFrame("Biblioteca");
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		frame.setBounds(Config.getWindowX(), Config.getWindowY(),
+				Config.getWindowWidth(), Config.getWindowHeight());
+		frame.setMinimumSize(new Dimension(800, 500));
+		if (Config.isWindowMaximized()) frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+		frame.setContentPane(panel);
+		frame.pack();
+
+		ioCtrl = new BookIOController(panel, cd, () -> cLlibres.getAllLlibres(), () -> mostrarControl.refresh());
 
 		int ctrl = java.awt.event.InputEvent.CTRL_DOWN_MASK;
-		javax.swing.InputMap  im = this.vista.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-		javax.swing.ActionMap am = this.vista.getRootPane().getActionMap();
+		int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
+		JComponent root = frame.getRootPane();
+		javax.swing.InputMap im = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+		javax.swing.ActionMap am = root.getActionMap();
 
-		this.vista.getMostrarBibliotecaPanel().getBtnNouLlibre()
+		libraryPanel.getBtnNouLlibre()
 				.addActionListener(e -> new Thread(this::obrirNouLlibreDialeg).start());
 
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrl), "nouLlibre");
@@ -41,36 +59,42 @@ public class MainFrameControl implements EnActualizarBBDD {
 				new Thread(MainFrameControl.this::obrirNouLlibreDialeg).start();
 			}
 		});
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlShift), "nouLlibreScan");
+		am.put("nouLlibreScan", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				new Thread(() -> ioCtrl.escanejarISBN()).start();
+			}
+		});
 
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrl), "focusFiltres");
 		am.put("focusFiltres", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				vista.getMostrarBibliotecaPanel().getSearchBar().requestFocusInWindow();
+				libraryPanel.getSearchBar().requestFocusInWindow();
 			}
 		});
 
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, ctrl), "galeriaZoomIn");
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ADD,    ctrl), "galeriaZoomIn");
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ADD, ctrl), "galeriaZoomIn");
 		am.put("galeriaZoomIn", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				vista.getMostrarBibliotecaPanel().getGaleria().adjustZoom(1);
+				libraryPanel.getGaleria().adjustZoom(1);
 			}
 		});
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS,    ctrl), "galeriaZoomOut");
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, ctrl), "galeriaZoomOut");
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SUBTRACT, ctrl), "galeriaZoomOut");
 		am.put("galeriaZoomOut", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				vista.getMostrarBibliotecaPanel().getGaleria().adjustZoom(-1);
+				libraryPanel.getGaleria().adjustZoom(-1);
 			}
 		});
 
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, ctrl), "seleccionarTot");
 		am.put("seleccionarTot", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				if (vista.getMostrarBibliotecaPanel().isGaleriaMode()) {
-					vista.getMostrarBibliotecaPanel().getGaleria().selectAll();
+				if (libraryPanel.isGaleriaMode()) {
+					libraryPanel.getGaleria().selectAll();
 				} else {
-					JTable t = vista.getMostrarBibliotecaPanel().getjTableBilio();
+					JTable t = libraryPanel.getjTableBilio();
 					if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
 				}
 			}
@@ -83,14 +107,13 @@ public class MainFrameControl implements EnActualizarBBDD {
 			}
 		});
 
-		int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme");
 		am.put("toggleTheme", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
 				herramienta.UITheme.Theme[] themes = herramienta.UITheme.Theme.values();
 				herramienta.UITheme.Theme next = themes[(herramienta.UITheme.getTheme().ordinal() + 1) % themes.length];
 				herramienta.UITheme.setTheme(next);
-				vista.getMostrarBibliotecaPanel().applyTheme();
+				libraryPanel.applyTheme();
 			}
 		});
 
@@ -109,38 +132,35 @@ public class MainFrameControl implements EnActualizarBBDD {
 			}
 		});
 
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getInputMap(JComponent.WHEN_FOCUSED)
+		libraryPanel.getjTableBilio().getInputMap(JComponent.WHEN_FOCUSED)
 				.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "eliminarFila");
-		this.vista.getMostrarBibliotecaPanel().getjTableBilio()
-				.getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
-					@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-						mostrarControl.eliminarFilaSeleccionada();
-					}
-				});
+		libraryPanel.getjTableBilio().getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				mostrarControl.eliminarFilaSeleccionada();
+			}
+		});
 
 		mostrarControl = new MostrarBibliotecaControl(
-				this.vista.getMostrarBibliotecaPanel(), cLlibres.getAllLlibres(), this, cLlibres);
+				libraryPanel, new ArrayList<>(cLlibres.getAllLlibres()), this, cLlibres);
 
-		// Track normal (non-maximized) bounds so we can save them on close
 		final java.awt.Rectangle[] normalBounds = {
 			new java.awt.Rectangle(Config.getWindowX(), Config.getWindowY(),
 				Config.getWindowWidth(), Config.getWindowHeight())
 		};
-		this.vista.addComponentListener(new java.awt.event.ComponentAdapter() {
+		frame.addComponentListener(new java.awt.event.ComponentAdapter() {
 			@Override public void componentResized(java.awt.event.ComponentEvent e) { captureNormal(); }
-			@Override public void componentMoved(java.awt.event.ComponentEvent e)   { captureNormal(); }
+			@Override public void componentMoved(java.awt.event.ComponentEvent e) { captureNormal(); }
 			private void captureNormal() {
-				if ((vista.getExtendedState() & java.awt.Frame.MAXIMIZED_BOTH) == 0)
-					normalBounds[0] = vista.getBounds();
+				if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) == 0)
+					normalBounds[0] = frame.getBounds();
 			}
 		});
-		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
-				if (javax.swing.JOptionPane.showConfirmDialog(vista,
+				if (javax.swing.JOptionPane.showConfirmDialog(frame,
 						I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 						javax.swing.JOptionPane.YES_NO_OPTION) != javax.swing.JOptionPane.YES_OPTION) return;
-				boolean max = (vista.getExtendedState() & java.awt.Frame.MAXIMIZED_BOTH) != 0;
+				boolean max = (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0;
 				Config.setWindowMaximized(max);
 				java.awt.Rectangle r = normalBounds[0];
 				Config.setWindowBounds(r.x, r.y, r.width, r.height);
@@ -149,14 +169,14 @@ public class MainFrameControl implements EnActualizarBBDD {
 		});
 	}
 
-	// Singleton — call order: getInstance(vista, cd) first, then getInstance() anywhere else.
-	public static MainFrameControl getInstance(MainFramePanel vista, BibliotecaWriter cd) {
-		if (instance == null && vista != null) instance = new MainFrameControl(vista, cd);
+	public static MainFrameControl getInstance(MainFramePanel panel, BibliotecaWriter cd) {
+		if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
 		return instance;
 	}
 
-	public static MainFrameControl getInstance(MainFramePanel vista) {
-		if (instance == null && vista != null) throw new IllegalStateException("MainFrameControl not yet initialized — use getInstance(vista, cd)");
+	public static MainFrameControl getInstance(MainFramePanel panel) {
+		if (instance == null && panel != null)
+			throw new IllegalStateException("MainFrameControl not yet initialized — use getInstance(panel, cd)");
 		return instance;
 	}
 
@@ -164,13 +184,17 @@ public class MainFrameControl implements EnActualizarBBDD {
 		return instance;
 	}
 
+	public JFrame getFrame() { return frame; }
+
 	private void obrirNouLlibreDialeg() {
-		GuardarLlibresDialogoControl ctrl = new GuardarLlibresDialogoControl(new GuardarLlibresDialogo(), this, cLlibres);
-		ctrl.getVista().setLocationRelativeTo(this.vista);
+		presentacio.detalles.control.GuardarLlibresDialogoControl ctrl =
+			new presentacio.detalles.control.GuardarLlibresDialogoControl(
+				new presentacio.detalles.vista.GuardarLlibresDialogo(), this, cLlibres);
+		ctrl.getVista().setLocationRelativeTo(frame);
 		ctrl.getVista().setVisible(true);
 	}
 
-	protected ArrayList<Llibre> aplicarFiltres(LlibreFilter f) {
+	protected List<Llibre> aplicarFiltres(LlibreFilter f) {
 		return cLlibres.aplicarFiltres(f);
 	}
 
@@ -183,44 +207,41 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	public void setVisible(boolean b) {
-		this.vista.setVisible(b);
-		if (b) {
-			javax.swing.SwingUtilities.invokeLater(this::mostrarAlertes);
-		}
+		frame.setVisible(b);
+		if (b) javax.swing.SwingUtilities.invokeLater(this::mostrarAlertes);
 	}
 
 	private void mostrarAlertes() {
-		// Overdue loan alert: retornat=false and data_prestec > 30 days ago
 		try {
-			java.util.List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
+			List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
 			if (!loans.isEmpty()) {
 				StringBuilder sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
 				for (Object[] row : loans) {
 					sb.append("• ").append(row[0]).append(" → ").append(row[1]).append(" (").append(row[2]).append(")\n");
 				}
-				javax.swing.JOptionPane.showMessageDialog(this.vista, sb.toString(),
+				javax.swing.JOptionPane.showMessageDialog(frame, sb.toString(),
 					I18n.t("alert_overdue_loans_title"), javax.swing.JOptionPane.WARNING_MESSAGE);
 			}
 		} catch (Exception ignored) {}
 
-		// Reading goal deadline alert
 		try {
 			int goal = herramienta.Config.getReadingGoal();
 			if (goal > 0) {
-				java.util.ArrayList<domini.Llibre> all = cLlibres.getAllLlibres();
+				List<Llibre> all = cLlibres.getAllLlibres();
 				java.time.LocalDate today = java.time.LocalDate.now();
 				int currentYear = today.getYear();
 				int dayOfYear = today.getDayOfYear();
 				int daysInYear = today.isLeapYear() ? 366 : 365;
 				long readThisYear = all.stream()
 					.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-					.filter(l -> l.getDataLectura() != null && herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
+					.filter(l -> l.getDataLectura() != null
+						&& herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
 					.count();
 				int daysLeft = daysInYear - dayOfYear;
 				double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;
 				double actualPerDay = dayOfYear > 0 ? (double) readThisYear / dayOfYear : 0;
 				if (readThisYear < goal && neededPerDay > actualPerDay * 1.5 && daysLeft < 90) {
-					javax.swing.JOptionPane.showMessageDialog(this.vista,
+					javax.swing.JOptionPane.showMessageDialog(frame,
 						I18n.t("alert_goal_pace_msg", goal, readThisYear, daysLeft, String.format("%.2f", neededPerDay)),
 						I18n.t("alert_goal_pace_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
 				}
@@ -231,7 +252,6 @@ public class MainFrameControl implements EnActualizarBBDD {
 	@Override
 	public void actualitzarLlibre(Llibre l, boolean nuevo) {
 		if (nuevo) {
-			// Auto-assign the new book to the currently selected shelf (if any)
 			Integer llistaId = mostrarControl.getCurrentLlistaId();
 			if (llistaId != null) {
 				try {
@@ -250,7 +270,7 @@ public class MainFrameControl implements EnActualizarBBDD {
 	}
 
 	private void mostrarAjudaDreceres() {
-		javax.swing.JOptionPane.showMessageDialog(vista, I18n.t("dlg_shortcuts_content"),
+		javax.swing.JOptionPane.showMessageDialog(frame, I18n.t("dlg_shortcuts_content"),
 			I18n.t("dlg_shortcuts_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
 	}
 }

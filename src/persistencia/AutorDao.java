@@ -6,47 +6,71 @@ import java.util.List;
 
 public class AutorDao {
 
+    @FunctionalInterface
+    interface RowMapper<T> { T map(ResultSet rs) throws SQLException; }
+
     private final Connection con;
 
     AutorDao(Connection con) { this.con = con; }
 
-    public synchronized List<AutorRow> getAll() {
-        List<AutorRow> rows = new ArrayList<>();
-        try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery("SELECT id, nom FROM autor ORDER BY nom")) {
-                while (rs.next()) rows.add(new AutorRow(rs.getInt(1), rs.getString(2)));
-            }
+    private <T> List<T> queryAll(String sql, RowMapper<T> mapper) {
+        List<T> rows = new ArrayList<>();
+        try (Statement s = con.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) rows.add(mapper.map(rs));
         } catch (SQLException e) {
-            System.err.println("Error carregant els autors: " + e.getMessage());
+            throw new domini.BibliotecaException("Error executant consulta: " + e.getMessage(), e);
         }
         return rows;
     }
 
-    public synchronized List<String> getDistinctAutorNames() {
-        List<String> vals = new ArrayList<>();
-        try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery("SELECT nom FROM autor ORDER BY nom")) {
-                while (rs.next()) vals.add(rs.getString(1));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error carregant autors: " + e.getMessage());
-        }
-        return vals;
+    // Double-locking note: callers go through ControladorPersistencia which is
+    // already synchronized, so DAO methods need not be synchronized themselves.
+
+    public List<AutorRow> getAll() {
+        return queryAll("SELECT id, nom FROM autor ORDER BY nom",
+                rs -> new AutorRow(rs.getInt(1), rs.getString(2)));
     }
 
-    public synchronized List<LlibreAutorRow> getAllLlibreAutor() {
-        List<LlibreAutorRow> rows = new ArrayList<>();
-        try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery(
-                    "SELECT isbn, autor_id FROM llibre_autor ORDER BY isbn, autor_id")) {
-                while (rs.next()) rows.add(new LlibreAutorRow(rs.getLong(1), rs.getInt(2)));
+    public List<String> getDistinctAutorNames() {
+        return queryAll("SELECT nom FROM autor ORDER BY nom", rs -> rs.getString(1));
+    }
+
+    public List<LlibreAutorRow> getAllLlibreAutor() {
+        return queryAll("SELECT isbn, autor_id FROM llibre_autor ORDER BY isbn, autor_id",
+                rs -> new LlibreAutorRow(rs.getLong(1), rs.getInt(2)));
+    }
+
+    public int createAutor(String nom) {
+        try (PreparedStatement ps = con.prepareStatement(
+                "INSERT INTO autor (nom) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, nom);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("Error carregant els autors dels llibres: " + e.getMessage());
+            throw new domini.BibliotecaException("Error creant autor: " + e.getMessage(), e);
         }
-        return rows;
+        throw new domini.BibliotecaException("No s'ha obtingut id d'autor nou");
+    }
+
+    public void updateAutor(int id, String nom) {
+        try (PreparedStatement ps = con.prepareStatement("UPDATE autor SET nom = ? WHERE id = ?")) {
+            ps.setString(1, nom);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error actualitzant autor: " + e.getMessage(), e);
+        }
+    }
+
+    public void deleteAutor(int id) {
+        try (PreparedStatement ps = con.prepareStatement("DELETE FROM autor WHERE id = ?")) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error eliminant autor: " + e.getMessage(), e);
+        }
     }
 }

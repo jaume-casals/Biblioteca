@@ -15,6 +15,8 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
     @Override
     public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
+        // ISBN values from LibraryThing may arrive bracketed as [978...]; parseIsbn
+        // strips all non-digit characters, so brackets are removed automatically.
         String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
         if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
         isbnRaw = CsvUtils.parseIsbn(isbnRaw);
@@ -26,6 +28,8 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
         String autor = CsvUtils.colVal(hMap, c, "Authors");
         // Invert "Lastname, Firstname" → "Firstname Lastname". Only works for a single comma;
         // multi-word lastnames (e.g. "van der Berg, Jan") are handled incorrectly.
+        // Known limitation: when multiple authors are separated by commas (rather than
+        // semicolons), the split produces incorrect "Firstname Lastname" inversions.
         if (autor.contains(",") && !autor.contains(";")) {
             String[] parts = autor.split(",", 2);
             autor = parts[1].trim() + " " + parts[0].trim();

@@ -1,0 +1,45 @@
+# ── Navigation / Navbar ──────────────────────────────────────────────────────
+# ── Sidebar ──────────────────────────────────────────────────────────────────
+# ── Toolbar ──────────────────────────────────────────────────────────────────
+# ── Filter form ──────────────────────────────────────────────────────────────
+# ── Table columns ─────────────────────────────────────────────────────────────
+# ── Book detail fields ────────────────────────────────────────────────────────
+# ── Modal titles ──────────────────────────────────────────────────────────────
+# ── Buttons ───────────────────────────────────────────────────────────────────
+# ── Yes / No ─────────────────────────────────────────────────────────────────
+# ── Loan badge ───────────────────────────────────────────────────────────────
+# ── Toast messages ───────────────────────────────────────────────────────────
+# ── Confirm dialogs ───────────────────────────────────────────────────────────
+# ── Prompts ───────────────────────────────────────────────────────────────────
+# ── Pagination ────────────────────────────────────────────────────────────────
+# ── Settings (web) ───────────────────────────────────────────────────────────
+# ── Shelf manager (web) ──────────────────────────────────────────────────────
+# ── Java: App exit ────────────────────────────────────────────────────────────
+# ── Java: Config dialog ───────────────────────────────────────────────────────
+# ── Java: Main table ──────────────────────────────────────────────────────────
+# ── Java: Context menu ────────────────────────────────────────────────────────
+# ── Java: Dialogs (main) ──────────────────────────────────────────────────────
+# ── Java: Delete confirms ─────────────────────────────────────────────────────
+# ── Java: Backup / restore ────────────────────────────────────────────────────
+# ── Java: Book detail panel ───────────────────────────────────────────────────
+# ── Java: About dialog ────────────────────────────────────────────────────────
+# ── Java: Import/export CSV ───────────────────────────────────────────────────
+lbl_csv_files,CSV files,CSV files,CSV files
+# ── Java: Misc ────────────────────────────────────────────────────────────────
+# ── HTML: Filter placeholders ─────────────────────────────────────────────────
+# ── Java: GestioLlistesDialog ─────────────────────────────────────────────────
+# ── Java: ConfiguracioDialog profile management ───────────────────────────────
+# ── Java: GuardarLlibresDialogoControl (internet search) ─────────────────────
+# ── Java: ModeSelectorDialog ──────────────────────────────────────────────────
+# ── Java: TagsDelLlibreDialog ─────────────────────────────────────────────────
+# ── Java: GuardarLlibresDialogo (add book dialog) ────────────────────────────
+# ── Java: MostrarBibliotecaPanel sidebar/toolbar ─────────────────────────────
+btn_export_csv,Export CSV,Exportar CSV,Export CSV
+tip_export_csv,Exportar la llista actual a CSV,Exportar la lista actual a CSV,Export current list to CSV
+btn_import_csv,Importar CSV,Importar CSV,Import CSV
+tip_import_csv,Importar llibres des d'un fitxer CSV (Goodreads compatible),Importar libros desde un archivo CSV (compatible con Goodreads),Import books from CSV (Goodreads compatible)
+# ── Java: MostrarBibliotecaControl dialogs ────────────────────────────────────
+# ── Java: Statistics summary ──────────────────────────────────────────────────
+# ── Java: Statistics table columns ───────────────────────────────────────────
+# ── Java: DetallesLlibrePanel buttons ────────────────────────────────────────
+# ── Java: GestioLlistesDialog / AboutDialog rows ─────────────────────────────

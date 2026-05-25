@@ -23,6 +23,17 @@ import herramienta.UITheme;
 
 public class AboutDialog extends JDialog {
 
+	private static String getVersion() {
+		try (var in = AboutDialog.class.getResourceAsStream("/version.properties")) {
+			if (in != null) {
+				var p = new java.util.Properties();
+				p.load(in);
+				return p.getProperty("version", "?");
+			}
+		} catch (Exception ignored) {}
+		return "?";
+	}
+
 	public AboutDialog(Frame parent) {
 		super(parent, I18n.t("dlg_about_title"), true);
 		setResizable(false);
@@ -38,7 +49,7 @@ public class AboutDialog extends JDialog {
 		main.setBorder(new EmptyBorder(24, 32, 16, 32));
 
 		// App name
-		JLabel lblApp = new JLabel("Biblioteca");
+		JLabel lblApp = new JLabel("Biblioteca " + getVersion());
 		lblApp.setFont(UITheme.FONT_BOLD.deriveFont(22f));
 		lblApp.setForeground(UITheme.ACCENT);
 		lblApp.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -69,15 +80,8 @@ public class AboutDialog extends JDialog {
 		main.add(lblLicTitle);
 		main.add(Box.createVerticalStrut(6));
 
-		JTextArea licText = new JTextArea(
-			"This program is free software: you can redistribute it and/or modify " +
-			"it under the terms of the GNU General Public License as published by " +
-			"the Free Software Foundation, either version 3 of the License, or " +
-			"(at your option) any later version.\n\n" +
-			"This program is distributed in the hope that it will be useful, " +
-			"but WITHOUT ANY WARRANTY; without even the implied warranty of " +
-			"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the " +
-			"GNU General Public License for more details.");
+		String licenseText = loadLicense();
+		JTextArea licText = new JTextArea(licenseText);
 		licText.setLineWrap(true);
 		licText.setWrapStyleWord(true);
 		licText.setEditable(false);
@@ -140,5 +144,12 @@ public class AboutDialog extends JDialog {
 		row.add(v, BorderLayout.CENTER);
 		parent.add(row);
 		parent.add(Box.createVerticalStrut(4));
+	}
+
+	private static String loadLicense() {
+		try (var in = AboutDialog.class.getResourceAsStream("/LICENSE")) {
+			if (in != null) return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		} catch (Exception ignored) {}
+		return "GNU General Public License v3 — see LICENSE file for details.";
 	}
 }

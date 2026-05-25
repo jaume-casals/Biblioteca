@@ -17,7 +17,13 @@ public class MetaRouter {
         app.get("/api/meta/stats",             ctx -> stats(ctx));
     }
 
-    private static final Set<String> ALLOWED_DISTINCT = Set.of("editorial", "serie", "idioma", "pais_origen", "autors");
+    private static final Set<String> ALLOWED_DISTINCT;
+
+    static {
+        Set<String> s = new java.util.HashSet<>(persistencia.TagDao.AUTOCOMPLETE_COLUMNS);
+        s.add("autors");
+        ALLOWED_DISTINCT = Set.copyOf(s);
+    }
 
     private void distinct(HttpCtx ctx) throws Exception {
         String col = ctx.pathParam("column");
@@ -41,8 +47,12 @@ public class MetaRouter {
     private void stats(HttpCtx ctx) {
         var all = cd.getAllLlibres();
         int total = all.size();
-        long read = all.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
-        long wanted = all.stream().filter(l -> Boolean.TRUE.equals(l.getDesitjat())).count();
+        long read = 0;
+        long wanted = 0;
+        for (var l : all) {
+            if (Boolean.TRUE.equals(l.getLlegit())) read++;
+            if (Boolean.TRUE.equals(l.getDesitjat())) wanted++;
+        }
         ctx.json(Map.of("total", total, "read", read, "unread", total - read, "wanted", wanted));
     }
 }

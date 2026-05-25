@@ -1,7 +1,7 @@
 package interficie;
 
-import domini.Llibre;
-
-public interface OnLlibreDelete {
-    void eliminarLlibre(Llibre l);
-}
+/**
+ * @deprecated Use {@link presentacio.listener.OnLlibreDelete}.
+ */
+@Deprecated
+public interface OnLlibreDelete extends presentacio.listener.OnLlibreDelete {}

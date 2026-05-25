@@ -10,6 +10,7 @@ import herramienta.OpenLibraryClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class LlibreRouter {
 
@@ -38,25 +39,31 @@ public class LlibreRouter {
     }
 
     private void recent(HttpCtx ctx) {
-        ctx.json(JsonMapper.llibresToList(cd.getRecentlyAdded()));
+        ctx.json(JsonMapper.llibresToList(new java.util.ArrayList<>(cd.getRecentlyAdded())));
     }
 
     private void list(HttpCtx ctx) throws Exception {
         String pageStr = ctx.queryParam("page");
+        String fieldsParam = ctx.queryParam("fields");
 
         LlibreFilter f = buildFilter(ctx);
 
         ArrayList<Llibre> result;
         if (f.hasAnyFilter()) {
-            result = cd.aplicarFiltres(f);
+            result = new java.util.ArrayList<>(cd.aplicarFiltres(f));
         } else if (notBlank(pageStr)) {
             int page = 0;
             try { page = Integer.parseInt(pageStr); } catch (NumberFormatException ignored) {}
-            result = cd.get100Llibres(page);
+            result = new java.util.ArrayList<>(cd.get100Llibres(page));
         } else {
-            result = cd.getAllLlibres();
+            result = new java.util.ArrayList<>(cd.getAllLlibres());
         }
-        ctx.json(JsonMapper.llibresToList(result));
+        if (fieldsParam != null && !fieldsParam.isBlank()) {
+            Set<String> fields = Set.of(fieldsParam.split(","));
+            ctx.json(JsonMapper.llibresToSlimList(result, fields));
+        } else {
+            ctx.json(JsonMapper.llibresToList(result));
+        }
     }
 
     private void getOne(HttpCtx ctx) throws Exception {

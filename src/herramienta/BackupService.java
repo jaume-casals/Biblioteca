@@ -9,6 +9,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
 
+/** BackupService reads all data from ControladorPersistencia to produce SQL dumps.
+ *  Constructed with cp (not cd) because cp is the single source of truth for backup data —
+ *  all rows come from DAO queries, not the in-memory cache. This avoids a desync where
+ *  cd.allLlibres() might lag behind cp.getAllLlibres() after recent mutations. */
 public class BackupService {
 
     private final ControladorPersistencia cp;
@@ -18,9 +22,13 @@ public class BackupService {
     }
 
     public void scheduleAutoBackup() {
-        Thread t = new Thread(this::autoBackup);
-        t.setDaemon(true);
-        t.start();
+        java.util.concurrent.ScheduledExecutorService scheduler =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "auto-backup");
+                t.setDaemon(true);
+                return t;
+            });
+        scheduler.scheduleWithFixedDelay(this::autoBackup, 30, 86400, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     private void autoBackup() {
@@ -94,20 +102,20 @@ public class BackupService {
                     l.getNomEs() != null ? "'" + sqlEsc(l.getNomEs()) + "'" : "NULL",
                     l.getNomEn() != null ? "'" + sqlEsc(l.getNomEn()) + "'" : "NULL");
             }
-            for (persistencia.AutorRow row : cp.getAllAutors()) {
+            for (Object[] row : cp.getAllAutors()) {
                 pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,'%s');%n",
-                    row.id(), sqlEsc(row.nom()));
+                    (int) row[0], sqlEsc((String) row[1]));
             }
-            for (persistencia.LlibreAutorRow row : cp.getAllLlibreAutor()) {
+            for (Object[] row : cp.getAllLlibreAutor()) {
                 pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
-                    row.isbn(), row.autorId());
+                    ((Number) row[0]).longValue(), ((Number) row[1]).intValue());
             }
             for (Llista ll : llistes) {
                 pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,'%s',%d,%s);%n",
                     ll.getId(), sqlEsc(ll.getNom()), ll.getOrdre(),
                     ll.getColor() != null ? "'" + sqlEsc(ll.getColor()) + "'" : "NULL");
             }
-            for (domini.LlibreLlistaRow row : cp.getAllLlibreLlista()) {
+            for (persistencia.LlibreLlistaRow row : cp.getAllLlibreLlista()) {
                 pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
                     row.isbn(), row.llistaId(), row.valoracio(), row.llegit());
             }
@@ -115,13 +123,13 @@ public class BackupService {
                 pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,'%s');%n",
                     t.getId(), sqlEsc(t.getNom()));
             }
-            for (domini.LlibreTagRow row : cp.getAllLlibreTag()) {
+            for (persistencia.LlibreTagRow row : cp.getAllLlibreTag()) {
                 pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
                     row.isbn(), row.tagId());
             }
-            for (domini.PrestecRow row : cp.getAllPrestecs()) {
+            for (persistencia.PrestecRow row : cp.getAllPrestecs()) {
                 pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,'%s','%s',%b);%n",
-                    row.isbn(), sqlEsc(row.nomPersona()), sqlEsc(row.dataPrestec() != null ? row.dataPrestec() : ""), row.retornat());
+                    row.isbn(), sqlEsc(row.nomPersona()), row.dataPrestec() != null ? sqlEsc(row.dataPrestec().toString()) : "", row.retornat());
             }
             for (persistencia.LecturaRow row : cp.getAllLectures()) {
                 pw.printf("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (%d,%s,%s,%d);%n",

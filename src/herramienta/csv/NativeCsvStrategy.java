@@ -27,7 +27,7 @@ public class NativeCsvStrategy implements CsvImportStrategy {
             c.length > 4 ? c[4] : "",
             c.length > 5 ? CsvUtils.parseDoubleOrZero(c[5]) : 0.0,
             c.length > 6 ? CsvUtils.parseDoubleOrZero(c[6]) : 0.0,
-            c.length > 7 ? Boolean.parseBoolean(c[7].trim()) : false,
+            c.length > 7 ? parseBool(c[7].trim()) : false,
             c.length > 8 ? c[8] : "");
         cd.addLlibre(l);
         if (c.length > 9 && !c[9].isBlank()) {
@@ -36,7 +36,7 @@ public class NativeCsvStrategy implements CsvImportStrategy {
                 if (parts.length < 1 || parts[0].isBlank()) continue;
                 String nomLlista = parts[0].trim();
                 double val = parts.length > 1 ? CsvUtils.parseDoubleOrZero(parts[1]) : 0.0;
-                boolean llegitLl = parts.length > 2 && Boolean.parseBoolean(parts[2].trim());
+                boolean llegitLl = parts.length > 2 && parseBool(parts[2].trim());
                 domini.Llista llista = cd.getAllLlistes().stream()
                     .filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
                 if (llista == null) llista = cd.addLlista(nomLlista);
@@ -44,5 +44,10 @@ public class NativeCsvStrategy implements CsvImportStrategy {
             }
         }
         return true;
+    }
+
+    private static boolean parseBool(String s) {
+        if (s == null || s.isBlank()) return false;
+        return "true".equalsIgnoreCase(s) || "1".equals(s) || "yes".equalsIgnoreCase(s) || "y".equalsIgnoreCase(s);
     }
 }

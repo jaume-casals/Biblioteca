@@ -6,12 +6,16 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.JLayeredPane;
 import domini.Llibre;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
@@ -25,6 +29,12 @@ public class GaleriaCobertesPanel extends JPanel {
     private static final int   SDX    = 3;
     private static final int   SDY    = 5;
     private static final int   GAP    = 14;
+
+    private static final ExecutorService imageLoader = Executors.newFixedThreadPool(4, r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        return t;
+    });
 
     // Cached Color constants — never allocate in paint path.
     // A = outer shadow, B = inner shadow; H prefix = hover (stronger alpha).
@@ -55,14 +65,13 @@ public class GaleriaCobertesPanel extends JPanel {
     private final Map<Long, JPanel> cardMap = new java.util.HashMap<>();
 
     private java.util.function.Consumer<Llibre> onCardClick;
-    private ArrayList<Llibre> currentLlibres;
+    private java.util.List<Llibre> currentLlibres;
     private final Set<Long> selectedISBNs = new java.util.LinkedHashSet<>();
     private java.util.function.BiConsumer<java.awt.event.MouseEvent, List<Llibre>> onRightClick;
     private java.util.function.Consumer<List<Llibre>> onDeleteSelected;
     private BibliotecaWriter cd;
-    private int lastClickedIdx = -1;
-    private int keyboardIdx = -1;
-    private JWindow zoomPopup;
+    private int focusedIdx = -1;
+    private JPanel zoomOverlay;
     private javax.swing.Timer zoomTimer;
 
     public void setCd(BibliotecaWriter cd) { this.cd = cd; }
@@ -127,8 +136,8 @@ public class GaleriaCobertesPanel extends JPanel {
         });
         getActionMap().put("galEnter", new javax.swing.AbstractAction() {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (keyboardIdx >= 0 && currentLlibres != null && keyboardIdx < currentLlibres.size() && onCardClick != null)
-                    onCardClick.accept(currentLlibres.get(keyboardIdx));
+                if (focusedIdx >= 0 && currentLlibres != null && focusedIdx < currentLlibres.size() && onCardClick != null)
+                    onCardClick.accept(currentLlibres.get(focusedIdx));
             }
         });
     }
@@ -142,13 +151,12 @@ public class GaleriaCobertesPanel extends JPanel {
     private void moveKeyboard(int delta) {
         if (currentLlibres == null || currentLlibres.isEmpty()) return;
         int n = currentLlibres.size();
-        if (keyboardIdx < 0) keyboardIdx = 0;
-        else keyboardIdx = Math.max(0, Math.min(n - 1, keyboardIdx + delta));
+        if (focusedIdx < 0) focusedIdx = 0;
+        else focusedIdx = Math.max(0, Math.min(n - 1, focusedIdx + delta));
         selectedISBNs.clear();
-        selectedISBNs.add(currentLlibres.get(keyboardIdx).getISBN());
-        lastClickedIdx = keyboardIdx;
+        selectedISBNs.add(currentLlibres.get(focusedIdx).getISBN());
         wrap.repaint();
-        JPanel card = cardMap.get(currentLlibres.get(keyboardIdx).getISBN());
+        JPanel card = cardMap.get(currentLlibres.get(focusedIdx).getISBN());
         if (card != null) card.scrollRectToVisible(card.getBounds());
     }
 
@@ -187,14 +195,25 @@ public class GaleriaCobertesPanel extends JPanel {
         // Pre-scaled images are now wrong size — discard
         imageCache.clear();
         loading.clear();
-        if (currentLlibres != null) updateLlibres(currentLlibres);
+        if (currentLlibres != null) {
+            Set<Long> savedSelection = new LinkedHashSet<>(selectedISBNs);
+            int savedFocus = focusedIdx;
+            updateLlibres(currentLlibres);
+            selectedISBNs.addAll(savedSelection);
+            if (savedFocus >= 0 && savedFocus < currentLlibres.size()) {
+                focusedIdx = savedFocus;
+            }
+            revalidate();
+            repaint();
+        }
     }
 
-    public void updateLlibres(ArrayList<Llibre> llibres) {
+public void updateLlibres(java.util.List<Llibre> llibres) {
         this.currentLlibres = llibres;
         selectedISBNs.clear();
-        lastClickedIdx = -1;
+        focusedIdx = -1;
         cardMap.clear();
+        hideZoomPopup(); // clean up any lingering zoom popup
         wrap.setBackground(UITheme.BG_MAIN);
         wrap.removeAll();
         if (llibres != null) {
@@ -214,6 +233,7 @@ public class GaleriaCobertesPanel extends JPanel {
 
     private void showZoomPopup(Llibre l, JPanel card) {
         hideZoomPopup();
+        if (!isDisplayable()) return; // safety: don't show popup if gallery is hidden
         BufferedImage img = imageCache.get(l.getISBN());
         if (img == null) return;
         int pw = Math.min(img.getWidth() * 2, 300);
@@ -222,16 +242,25 @@ public class GaleriaCobertesPanel extends JPanel {
         scaled.createGraphics().drawImage(img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
         JLabel lbl = new JLabel(new ImageIcon(scaled));
         lbl.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR, 1));
-        zoomPopup = new JWindow(SwingUtilities.getWindowAncestor(this));
-        zoomPopup.setContentPane(lbl);
-        zoomPopup.pack();
-        java.awt.Point loc = card.getLocationOnScreen();
-        zoomPopup.setLocation(loc.x + card.getWidth() + 4, loc.y);
-        zoomPopup.setVisible(true);
+        javax.swing.JRootPane root = SwingUtilities.getRootPane(this);
+        if (root == null) return;
+        zoomOverlay = new JPanel(new java.awt.BorderLayout());
+        zoomOverlay.setOpaque(true);
+        zoomOverlay.setBackground(UITheme.BG_PANEL);
+        zoomOverlay.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR, 1));
+        zoomOverlay.add(lbl, java.awt.BorderLayout.CENTER);
+        java.awt.Point loc = SwingUtilities.convertPoint(card, card.getWidth() + 4, 0, root.getLayeredPane());
+        zoomOverlay.setBounds(loc.x, loc.y, pw + 8, ph + 8);
+        root.getLayeredPane().add(zoomOverlay, JLayeredPane.POPUP_LAYER);
+        root.getLayeredPane().repaint();
     }
 
     private void hideZoomPopup() {
-        if (zoomPopup != null) { zoomPopup.dispose(); zoomPopup = null; }
+        if (zoomOverlay != null) {
+            java.awt.Container parent = zoomOverlay.getParent();
+            if (parent != null) parent.remove(zoomOverlay);
+            zoomOverlay = null;
+        }
     }
 
     // ── Targeted repaint helpers ──────────────────────────────────────────────
@@ -363,8 +392,8 @@ public class GaleriaCobertesPanel extends JPanel {
                 }
                 boolean ctrl  = (e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK)  != 0;
                 boolean shift = (e.getModifiersEx() & java.awt.event.InputEvent.SHIFT_DOWN_MASK) != 0;
-                if (shift && lastClickedIdx >= 0 && currentLlibres != null) {
-                    int lo = Math.min(cardIdx, lastClickedIdx), hi = Math.max(cardIdx, lastClickedIdx);
+                if (shift && focusedIdx >= 0 && currentLlibres != null) {
+                    int lo = Math.min(cardIdx, focusedIdx), hi = Math.max(cardIdx, focusedIdx);
                     List<Long> prev = new ArrayList<>(selectedISBNs);
                     if (!ctrl) selectedISBNs.clear();
                     for (int i = lo; i <= hi && i < currentLlibres.size(); i++)
@@ -377,13 +406,13 @@ public class GaleriaCobertesPanel extends JPanel {
                 } else if (ctrl) {
                     if (selectedISBNs.contains(isbn)) selectedISBNs.remove(isbn);
                     else selectedISBNs.add(isbn);
-                    lastClickedIdx = cardIdx;
+                    focusedIdx = cardIdx;
                     repaintCard(isbn);
                 } else {
                     List<Long> prev = new ArrayList<>(selectedISBNs);
                     selectedISBNs.clear();
                     selectedISBNs.add(isbn);
-                    lastClickedIdx = cardIdx;
+                    focusedIdx = cardIdx;
                     repaintCards(prev);
                     repaintCard(isbn);
                 }
@@ -398,22 +427,20 @@ public class GaleriaCobertesPanel extends JPanel {
         cardMap.put(isbn, card);
         if (cached == null && !loading.contains(isbn)) {
             loading.add(isbn);
-            new SwingWorker<BufferedImage, Void>() {
-                @Override protected BufferedImage doInBackground() { return loadAndScale(l, capW, capH); }
-                @Override protected void done() {
+            imageLoader.submit(() -> {
+                BufferedImage img = loadAndScale(l, capW, capH);
+                SwingUtilities.invokeLater(() -> {
                     try {
-                        BufferedImage img = get();
                         if (img != null) {
                             imageCache.put(isbn, img);
                             imgRef[0] = img;
                         }
-                    } catch (Exception ignored) {
                     } finally {
                         loading.remove(isbn);
                         card.repaint();
                     }
-                }
-            }.execute();
+                });
+            });
         }
 
         return card;

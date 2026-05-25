@@ -6,13 +6,13 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -20,30 +20,39 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import domini.Llibre;
-import interficie.BibliotecaWriter;
 import domini.Tag;
-import herramienta.DialogoError;
 import herramienta.I18n;
+import herramienta.SwingUtils;
 import herramienta.UITheme;
 
+/**
+ * Dialog for managing the tags assigned to a single book.
+ * <p>
+ * Unlike {@link presentacio.detalles.vista.LlistesDelLlibreDialog}, which defers
+ * shelf-membership changes until the user clicks OK/Save, this dialog applies every
+ * tag add/remove operation immediately (via {@link presentacio.detalles.control.TagsDelLlibreControl}).
+ * The immediate-persist model is chosen because tag operations are lightweight single
+ * many-to-many rows, whereas shelf membership also carries per-book rating and read-state
+ * that benefit from batch editing.
+ */
 public class TagsDelLlibreDialog extends JDialog {
 
-    private final Llibre llibre;
     private final DefaultTableModel tableModel;
     private final JTable table;
-    private ArrayList<Tag> tagsCache = new ArrayList<>();
-    private JComboBox<Tag> comboAdd;
-    private final BibliotecaWriter cd;
+    private final JComboBox<Tag> comboAdd;
+    private final JTextField filterField;
+    private final JTextField txtNovaEtiqueta;
+    private final JButton btnAfegir;
+    private final JButton btnCrear;
+    private final JButton btnTreure;
 
     public TagsDelLlibreDialog(Window owner, Llibre llibre) {
         this(owner, llibre, null);
     }
 
-    public TagsDelLlibreDialog(Window owner, Llibre llibre, BibliotecaWriter cd) {
+    public TagsDelLlibreDialog(Window owner, Llibre llibre, interficie.BibliotecaWriter cd) {
         super(owner, I18n.t("dlg_tags_for_book", llibre.getNom()), ModalityType.APPLICATION_MODAL);
-        this.llibre = llibre;
-        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
-        setSize(400, 380);
+        setSize(400, 440);
         setLocationRelativeTo(owner);
         setResizable(false);
 
@@ -51,6 +60,17 @@ public class TagsDelLlibreDialog extends JDialog {
         panel.setBackground(UITheme.BG_PANEL);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
+
+        filterField = new JTextField();
+        UITheme.styleField(filterField);
+        filterField.setToolTipText(I18n.t("tip_filter_tags"));
+        JPanel filterPanel = new JPanel(new BorderLayout(4, 0));
+        filterPanel.setBackground(UITheme.BG_PANEL);
+        JLabel lblFilter = new JLabel(I18n.t("lbl_filter_colon"));
+        UITheme.styleLabel(lblFilter);
+        filterPanel.add(lblFilter, BorderLayout.WEST);
+        filterPanel.add(filterField, BorderLayout.CENTER);
+        panel.add(filterPanel, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(new String[]{I18n.t("col_tag_name")}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -68,17 +88,16 @@ public class TagsDelLlibreDialog extends JDialog {
         south.setBackground(UITheme.BG_PANEL);
 
         comboAdd = new JComboBox<>();
-        reloadComboAdd();
         comboAdd.setPreferredSize(new Dimension(180, 30));
 
-        JButton btnAfegir = new JButton(I18n.t("btn_afegir_etiqueta"));
+        btnAfegir = new JButton(I18n.t("btn_afegir_etiqueta"));
         UITheme.styleAccentButton(btnAfegir);
 
-        JTextField txtNovaEtiqueta = new JTextField(12);
+        txtNovaEtiqueta = new JTextField(12);
         UITheme.styleField(txtNovaEtiqueta);
         txtNovaEtiqueta.setToolTipText(I18n.t("tip_nom_nova_etiqueta"));
 
-        JButton btnCrear = new JButton(I18n.t("btn_crear"));
+        btnCrear = new JButton(I18n.t("btn_crear"));
         UITheme.styleSecondaryButton(btnCrear);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
@@ -97,7 +116,7 @@ public class TagsDelLlibreDialog extends JDialog {
         createRow.add(txtNovaEtiqueta);
         createRow.add(btnCrear);
 
-        JButton btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
+        btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
         UITheme.styleSecondaryButton(btnTreure);
         btnTreure.setBackground(UITheme.DANGER);
 
@@ -114,74 +133,28 @@ public class TagsDelLlibreDialog extends JDialog {
         south.add(addArea, BorderLayout.CENTER);
         panel.add(south, BorderLayout.SOUTH);
 
-        btnCrear.addActionListener(e -> {
-            String nom = txtNovaEtiqueta.getText().trim();
-            if (nom.isEmpty()) return;
-            try {
-                cd.addTag(nom);
-                txtNovaEtiqueta.setText("");
-                reloadComboAdd();
-            } catch (Exception ex) {
-                new DialogoError(ex).showErrorMessage();
-            }
-        });
-
-        btnAfegir.addActionListener(e -> {
-            reloadComboAdd();
-            if (comboAdd.getItemCount() == 0) {
-                JOptionPane.showMessageDialog(this,
-                    I18n.t("dlg_no_tags_msg"),
-                    I18n.t("dlg_no_tags_title"), JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            Tag tag = (Tag) comboAdd.getSelectedItem();
-            if (tag == null) return;
-            if (tagsCache.stream().anyMatch(t -> t.getId() == tag.getId())) {
-                JOptionPane.showMessageDialog(this,
-                    I18n.t("dlg_tag_duplicate", tag.getNom()),
-                    I18n.t("dlg_duplicate_title"), JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            try {
-                cd.addLlibreToTag(llibre.getISBN(), tag.getId());
-                reload();
-            } catch (Exception ex) {
-                new DialogoError(ex).showErrorMessage();
-            }
-        });
-
-        btnTreure.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row < 0) return;
-            Tag target = tagsCache.get(row);
-            try {
-                cd.removeLlibreFromTag(llibre.getISBN(), target.getId());
-                reload();
-            } catch (Exception ex) {
-                new DialogoError(ex).showErrorMessage();
-            }
-        });
-
-        reload();
+        new presentacio.detalles.control.TagsDelLlibreControl(this, llibre, cd);
     }
 
-    private void reloadComboAdd() {
-        Tag prev = (Tag) comboAdd.getSelectedItem();
-        comboAdd.removeAllItems();
-        for (Tag t : cd.getAllTags()) comboAdd.addItem(t);
-        if (prev != null) {
-            for (int i = 0; i < comboAdd.getItemCount(); i++) {
-                if (comboAdd.getItemAt(i).getId() == prev.getId()) {
-                    comboAdd.setSelectedIndex(i);
-                    break;
-                }
-            }
+    public JTable getTable() { return table; }
+    public DefaultTableModel getTableModel() { return tableModel; }
+    public JComboBox<Tag> getComboAdd() { return comboAdd; }
+    public JTextField getFilterField() { return filterField; }
+    public JTextField getTxtNovaEtiqueta() { return txtNovaEtiqueta; }
+    public JButton getBtnAfegir() { return btnAfegir; }
+    public JButton getBtnCrear() { return btnCrear; }
+    public JButton getBtnTreure() { return btnTreure; }
+
+    public void updateTable(ArrayList<Tag> tags, Map<Integer, Integer> counts) {
+        tableModel.setRowCount(0);
+        for (Tag t : tags) {
+            Integer c = counts.get(t.getId());
+            String display = c != null && c > 0 ? t.getNom() + " (" + c + ")" : t.getNom();
+            tableModel.addRow(new Object[]{ display });
         }
     }
 
-    private void reload() {
-        tagsCache = cd.getTagsForLlibre(llibre.getISBN());
-        tableModel.setRowCount(0);
-        for (Tag t : tagsCache) tableModel.addRow(new Object[]{ t.getNom() });
+    public void updateComboAdd(ArrayList<Tag> tags) {
+        SwingUtils.reloadComboPreserveSelection(comboAdd, tags, Tag::getId);
     }
 }

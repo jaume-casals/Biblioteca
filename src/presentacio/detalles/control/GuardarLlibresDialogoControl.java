@@ -6,7 +6,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.File;
-import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
@@ -17,8 +16,9 @@ import interficie.BibliotecaWriter;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
-import herramienta.OpenLibraryClient;
+import herramienta.LlibreValidator;
 import herramienta.UITheme;
+import presentacio.FormValidator;
 import interficie.EnActualizarBBDD;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
@@ -28,7 +28,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	private BibliotecaWriter cLlibres;
 	private byte[] selectedBlob;
 	private EnActualizarBBDD callback;
-	private volatile Thread searchThread;
+	private volatile OpenLibrarySearchTask searchTask;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
 		this(vista, null, null);
@@ -68,6 +68,28 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		FieldAutoComplete.attach(vista.getTextEditorial(), cLlibres.getDistinctValues("editorial"));
 		FieldAutoComplete.attach(vista.getTextSerie(),     cLlibres.getDistinctValues("serie"));
 		FieldAutoComplete.attach(vista.getTextIdioma(),    cLlibres.getDistinctValues("idioma"));
+
+		javax.swing.event.DocumentListener live = new javax.swing.event.DocumentListener() {
+			public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
+		};
+		vista.getTextISBN().getDocument().addDocumentListener(live);
+		vista.getTextNom().getDocument().addDocumentListener(live);
+	}
+
+	private void refreshLiveValidation() {
+		String isbn = vista.getTextISBN().getText().trim();
+		boolean isbnOk = false;
+		if (!isbn.isEmpty()) {
+			try {
+				LlibreValidator.checkLlibreFromString(isbn, "x", null, null, null, null, null, null, null);
+				isbnOk = true;
+			} catch (IllegalArgumentException ignored) {}
+		}
+		FormValidator.validateField(vista.getTextISBN(), isbnOk);
+		String nom = vista.getTextNom().getText().trim();
+		FormValidator.validateField(vista.getTextNom(), !nom.isBlank() && nom.length() <= 255);
 	}
 
 	private void cercaInternet() {
@@ -88,69 +110,11 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		vista.getProgressBar().setVisible(true);
 		if (!isbn.isEmpty()) vista.getTextISBN().setEditable(false);
 
-		Thread t = new Thread(() -> {
-			Map<String, String> meta;
-			if (!isbn.isEmpty()) {
-				meta = OpenLibraryClient.lookupByISBN(isbn);
-			} else if (!titol.isEmpty()) {
-				meta = OpenLibraryClient.lookupByTitle(titol);
-			} else {
-				meta = OpenLibraryClient.lookupByAutor(autor);
-			}
-
-			if (Thread.interrupted()) return;
-
-			// Auto-fetch cover if we have an ISBN and no image already selected
-			String isbnForCover = !isbn.isEmpty() ? isbn : meta.get("isbn");
-			byte[] coverBlob = null;
-			if (isbnForCover != null && !isbnForCover.isBlank() && selectedBlob == null
-					&& !meta.containsKey("error")) {
-				coverBlob = OpenLibraryClient.fetchCoverByISBN(isbnForCover);
-			}
-			final byte[] finalCover = coverBlob;
-
-			SwingUtilities.invokeLater(() -> {
-				if (!vista.isDisplayable()) return;
-				btn.setEnabled(true);
-				btn.setText(I18n.t("btn_cerca_internet"));
-				btn.setBackground(UITheme.GREEN);
-				vista.getProgressBar().setVisible(false);
-				vista.getTextISBN().setEditable(true);
-
-				if (meta.containsKey("error")) {
-					JOptionPane.showMessageDialog(vista,
-						I18n.t("dlg_network_error") + "\n" + meta.get("error"),
-						I18n.t("dlg_network_error_title"), JOptionPane.ERROR_MESSAGE);
-					return;
-				}
-				if (meta.isEmpty()) {
-					JOptionPane.showMessageDialog(vista,
-						I18n.t("dlg_no_results_msg"),
-						I18n.t("dlg_search_internet_title"), JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-
-				if (meta.containsKey("title"))
-					vista.getTextNom().setText(meta.get("title"));
-				if (meta.containsKey("autor"))
-					vista.getTextAutor().setText(meta.get("autor"));
-				if (meta.containsKey("any") && vista.getTextAny().getText().isEmpty())
-					vista.getTextAny().setText(meta.get("any"));
-				if (meta.containsKey("isbn") && vista.getTextISBN().getText().isEmpty())
-					vista.getTextISBN().setText(meta.get("isbn"));
-				if (meta.containsKey("descripcio") && vista.getTextDescripcio().getText().isEmpty())
-					vista.getTextDescripcio().setText(meta.get("descripcio"));
-
-				if (finalCover != null && selectedBlob == null) {
-					selectedBlob = finalCover;
-					vista.getLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
-				}
-			});
-		});
-		t.setDaemon(true);
-		searchThread = t;
-		t.start();
+		searchTask = new OpenLibrarySearchTask(isbn, titol, autor, vista, selectedBlob, this::setSelectedBlob);
+		searchTask.execute();
 	}
+
+	void setSelectedBlob(byte[] blob) { this.selectedBlob = blob; }
 
 	private void carregarImatge(String path) {
 		selectedBlob = null;
@@ -198,6 +162,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			String fmt = (String) vista.getComboFormat().getSelectedItem();
 			l.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
 			l.setDesitjat(vista.getChckDesitjat().isSelected());
+			l.setNotes(vista.getTextNotes().getText().trim());
 			l.setImatgeBlob(selectedBlob);
 			herramienta.LlibreValidator.validateExtrasAll(l.getEditorial(), l.getSerie(), l.getIdioma(), l.getFormat(), l.getPaisOrigen(), l.getEstat());
 			cLlibres.addLlibre(l);
@@ -213,7 +178,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	@Override public void windowOpened(WindowEvent e) {}
 	@Override public void windowClosing(WindowEvent e) {}
 	@Override public void windowClosed(WindowEvent e) {
-		Thread t = searchThread; if (t != null) { t.interrupt(); searchThread = null; }
+		OpenLibrarySearchTask t = searchTask; if (t != null) { t.cancel(true); searchTask = null; }
 	}
 	@Override public void windowIconified(WindowEvent e) {}
 	@Override public void windowDeiconified(WindowEvent e) {}

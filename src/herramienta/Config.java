@@ -12,14 +12,25 @@ public class Config {
 
     private Config() {}
 
-    private static final File FILE = new File(
-        System.getProperty("user.home") + "/.biblioteca/config.properties");
-
     private static final Properties props = new Properties();
 
+    /** Reload configuration from disk, overriding in-memory values. For tests. */
+    public static void reload() {
+        props.clear();
+        File cfgFile = new File(System.getProperty("user.home") + "/.biblioteca/config.properties");
+        if (cfgFile.exists()) {
+            try (FileInputStream in = new FileInputStream(cfgFile)) {
+                props.load(in);
+            } catch (IOException e) {
+                System.err.println("Config reload failed: " + e.getMessage());
+            }
+        }
+    }
+
     static {
-        if (FILE.exists()) {
-            try (FileInputStream in = new FileInputStream(FILE)) {
+        File f = currentFile();
+        if (f.exists()) {
+            try (FileInputStream in = new FileInputStream(f)) {
                 props.load(in);
             } catch (IOException e) {
                 System.err.println("Config load failed: " + e.getMessage());
@@ -137,7 +148,11 @@ public class Config {
 
     /** Last chosen startup mode ("swing" or "web"). Null if never set. */
     public static String getLastMode() { return props.getProperty("lastMode", null); }
-    public static void setLastMode(String mode) { props.setProperty("lastMode", mode); save(); }
+    public static void setLastMode(String mode) {
+        if (mode == null) props.remove("lastMode");
+        else props.setProperty("lastMode", mode);
+        save();
+    }
 
     /** "ca" (default), "es", or "en". */
     public static String getLang() { return props.getProperty("lang", "ca"); }
@@ -145,7 +160,14 @@ public class Config {
 
     /** "h2" (embedded, default) or "mariadb" (external server). */
     public static String getDbType() { return props.getProperty("dbType", "h2"); }
-    public static void setDbType(String type) { props.setProperty("dbType", type); save(); }
+    public static void setDbType(String type) {
+        props.setProperty("dbType", type);
+        if ("h2".equals(type)) {
+            props.setProperty("dbHost", "localhost");
+            props.setProperty("dbUser", "user");
+        }
+        save();
+    }
 
     /** Directory where automatic and manual backups are stored. */
     public static java.io.File getBackupDir() {
@@ -251,14 +273,31 @@ public class Config {
             t.setDaemon(true);
             return t;
         });
+private static volatile boolean batchActive = false;
+
+    public static void withBatch(Runnable action) {
+        batchActive = true;
+        try {
+            action.run();
+        } finally {
+            batchActive = false;
+            save();
+        }
+    }
+
     private static volatile java.util.concurrent.ScheduledFuture<?> pendingSave = null;
+
+    private static File currentFile() {
+        return new File(System.getProperty("user.home") + "/.biblioteca/config.properties");
+    }
 
     private static void save() {
         if (pendingSave != null) pendingSave.cancel(false);
         pendingSave = SAVE_SCHEDULER.schedule(() -> {
             try {
-                FILE.getParentFile().mkdirs();
-                try (FileOutputStream out = new FileOutputStream(FILE)) {
+                File f = currentFile();
+                f.getParentFile().mkdirs();
+                try (FileOutputStream out = new FileOutputStream(f)) {
                     props.store(out, "Biblioteca configuration");
                 }
             } catch (IOException e) {

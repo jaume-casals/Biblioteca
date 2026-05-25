@@ -10,25 +10,8 @@ public class LlibreValidator {
 			Double valoracio, Double preu, Boolean llegit, String portada) {
 		if (isbnStr == null || isbnStr.isBlank())
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
-		String trimmed = isbnStr.trim();
-		// ISBN-10 with X check digit (e.g. "019853110X") — convert to ISBN-13
-		if (trimmed.length() > 0 && Character.toUpperCase(trimmed.charAt(trimmed.length() - 1)) == 'X') {
-			String core = trimmed.substring(0, trimmed.length() - 1).replaceAll("[^0-9]", "");
-			if (core.length() == 9) {
-				String base12 = "978" + core;
-				int sum = 0;
-				for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-				trimmed = base12 + (10 - sum % 10) % 10;
-			}
-		}
+		String trimmed = normalizeIsbn13(isbnStr.trim());
 		String digits = trimmed.replaceAll("[^0-9]", "");
-		// ISBN-10 starting with 0 → ISBN-13: avoids leading-zero loss when stored as Long
-		if (digits.length() == 10 && digits.charAt(0) == '0') {
-			String base12 = "978" + digits.substring(0, 9);
-			int sum = 0;
-			for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-			digits = base12 + (10 - sum % 10) % 10;
-		}
 		if (digits.length() != 13 && digits.length() != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 		// ISBN-13 check digit validation (user-input path only)
@@ -45,6 +28,28 @@ public class LlibreValidator {
 		}
 	}
 
+	private static String normalizeIsbn13(String isbn) {
+		// ISBN-10 with X check digit (e.g. "019853110X") — convert to ISBN-13
+		if (isbn.length() > 0 && Character.toUpperCase(isbn.charAt(isbn.length() - 1)) == 'X') {
+			String core = isbn.substring(0, isbn.length() - 1).replaceAll("[^0-9]", "");
+			if (core.length() == 9) {
+				String base12 = "978" + core;
+				int sum = 0;
+				for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
+				isbn = base12 + (10 - sum % 10) % 10;
+			}
+		}
+		String digits = isbn.replaceAll("[^0-9]", "");
+		// ISBN-10 starting with 0 → ISBN-13: avoids leading-zero loss when stored as Long
+		if (digits.length() == 10 && digits.charAt(0) == '0') {
+			String base12 = "978" + digits.substring(0, 9);
+			int sum = 0;
+			for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
+			digits = base12 + (10 - sum % 10) % 10;
+		}
+		return digits.length() == 13 ? digits : isbn;
+	}
+
 	/**
 	 * Validates and builds a Llibre.
 	 * Only isbn and nom are mandatory. All other fields accept null/blank and get
@@ -53,6 +58,12 @@ public class LlibreValidator {
 	public static Llibre checkLlibre(Long isbn, String nom, String autor, Integer any, String descripcio,
 			Double valoracio, Double preu, Boolean llegit, String portada) {
 
+		if (isbn != null) {
+			String normalized = normalizeIsbn13(String.valueOf(isbn));
+			if (normalized.length() == 13) {
+				try { isbn = Long.parseLong(normalized); } catch (NumberFormatException ignored) {}
+			}
+		}
 		int digits = isbn == null ? 0 : countDig(isbn);
 		if (digits != 13 && digits != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
@@ -84,6 +95,21 @@ public class LlibreValidator {
 			preu != null ? preu : 0.0,
 			llegit != null ? llegit : false,
 			portada != null ? portada : "");
+	}
+
+	/** Validates core fields and writes normalized values into {@code target}; extras (notes, pagines, …) stay on target. */
+	public static void validateInto(Llibre target, Long isbn, String nom, String autor, Integer any,
+			String descripcio, Double valoracio, Double preu, Boolean llegit, String portada) {
+		Llibre v = checkLlibre(isbn, nom, autor, any, descripcio, valoracio, preu, llegit, portada);
+		target.setISBN(v.getISBN());
+		target.setNom(v.getNom());
+		target.setAutor(v.getAutor());
+		target.setAny(v.getAny());
+		target.setDescripcio(v.getDescripcio());
+		target.setValoracio(v.getValoracio());
+		target.setPreu(v.getPreu());
+		target.setLlegit(v.getLlegit());
+		target.setImatge(v.getImatge());
 	}
 
 	/** Validates optional string fields that have a DB VARCHAR limit. Throws if over limit. */

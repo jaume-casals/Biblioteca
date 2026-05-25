@@ -3,6 +3,7 @@ package domini;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Map;
 
 import herramienta.BackupService;
 import domini.BibliotecaException;
@@ -14,12 +15,21 @@ import java.util.Set;
 public class ControladorDomini implements BibliotecaWriter {
 	private static ControladorDomini inst;
 	private ControladorPersistencia cp;
+	private BackupService backupService;
 	private ArrayList<Llibre> bib;
 	private ArrayList<Llista> llistes;
 	private ArrayList<Tag> tags;
 
 	private static final Comparator<Llibre> compararISBN =
 		(a, b) -> a.getISBN().compareTo(b.getISBN());
+
+	private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
+		"ISBN",      Comparator.comparing(Llibre::getISBN),
+		"nom",       Comparator.comparing(Llibre::getNom, String.CASE_INSENSITIVE_ORDER),
+		"any",       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
+		"valoracio", Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
+		"preu",      Comparator.comparing(l -> l.getPreu() != null ? l.getPreu() : 0.0)
+	);
 
 	private static Llibre searchKey(long isbn) {
 		return new Llibre(isbn, "", "", 0, "", 0.0, 0.0, false, "");
@@ -44,8 +54,9 @@ public class ControladorDomini implements BibliotecaWriter {
 		Collections.sort(bib, compararISBN);
 		llistes = new ArrayList<>(cp.getAllLlistes());
 		tags = new ArrayList<>(cp.getAllTags());
+		backupService = new BackupService(cp);
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
-			new BackupService(cp).scheduleAutoBackup();
+			backupService.scheduleAutoBackup();
 		}
 	}
 
@@ -55,11 +66,11 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	// SQL fallback only applies to the full library (1-arg overload). This overload always filters in-memory.
-	public ArrayList<Llibre> aplicarFiltres(ArrayList<Llibre> font, LlibreFilter f) {
+	public ArrayList<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f) {
 		return filterInMemory(font, f);
 	}
 
-	private ArrayList<Llibre> filterInMemory(ArrayList<Llibre> font, LlibreFilter f) {
+	private ArrayList<Llibre> filterInMemory(java.util.List<Llibre> font, LlibreFilter f) {
 		Set<Long> tagISBNs   = f.tagId   != null ? cp.getLlibresWithTag(f.tagId)     : null;
 		Set<Long> llistaISBNs = f.llistaId != null ? cp.getISBNsInLlista(f.llistaId) : null;
 		ArrayList<Llibre> resultat = new ArrayList<>();
@@ -83,7 +94,15 @@ public class ControladorDomini implements BibliotecaWriter {
 				resultat.add(l);
 			}
 		}
+		applySort(resultat, f);
 		return resultat;
+	}
+
+	private static void applySort(ArrayList<Llibre> list, LlibreFilter f) {
+		if (f.sortColumn == null || list.size() < 2) return;
+		Comparator<Llibre> cmp = SORT_BY.getOrDefault(f.sortColumn, compararISBN);
+		if (!f.sortAsc) cmp = cmp.reversed();
+		list.sort(cmp);
 	}
 
 	/** Threshold above which SQL-side search is used instead of in-memory scan. */
@@ -117,9 +136,11 @@ public class ControladorDomini implements BibliotecaWriter {
 		return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
 	}
 
-	public ArrayList<Llibre> get100Llibres(int index) { // Comença des del 0 fins al final
-		return new ArrayList<>(bib.subList(100 * index, Math.min(100 * index + 100, bib.size())));
-	}
+public ArrayList<Llibre> get100Llibres(int index) { // Starts from index*100
+        int from = Math.min(100 * index, bib.size());
+        int to = Math.min(from + 100, bib.size());
+        return new ArrayList<>(bib.subList(from, to));
+    }
 
 	public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
 		return bib.size() / 100;
@@ -166,11 +187,22 @@ public class ControladorDomini implements BibliotecaWriter {
 		int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 		if (index < 0)
 			throw new BibliotecaException("No existeix el llibre amb ISBN " + ISBN);
-		return bib.get(index);
+		Llibre l = bib.get(index);
+		if (!l.isHeavyFieldsLoaded()) loadHeavyFields(l);
+		return l;
+	}
+
+	@Override
+	public void loadHeavyFields(Llibre book) {
+		if (book == null || book.isHeavyFieldsLoaded()) return;
+		cp.loadHeavyFields(book.getISBN(), book);
+		int index = Collections.binarySearch(bib, book, compararISBN);
+		if (index >= 0) bib.set(index, book);
 	}
 
 	public void backupToSQL(java.io.File file) {
-		try { new BackupService(cp).backupToSQL(file, bib, llistes, tags); }
+		for (Llibre l : bib) loadHeavyFields(l);
+		try { backupService.backupToSQL(file, bib, llistes, tags); }
 		catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
@@ -275,6 +307,8 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	public void setLlistaColor(int id, String color) {
+		if (color != null && !color.matches("#[0-9a-fA-F]{3}") && !color.matches("#[0-9a-fA-F]{6}"))
+			throw new BibliotecaException.Validation(herramienta.I18n.t("val_color_invalid", color));
 		try { cp.updateLlistaColor(id, color); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		for (Llista l : llistes) {
 			if (l.getId() == id) { l.setColor(color); break; }
@@ -293,17 +327,19 @@ public class ControladorDomini implements BibliotecaWriter {
 		return cp.getLoanedISBNs();
 	}
 
-	public java.util.List<domini.PrestecRow> getAllActiveLoans() {
+	public java.util.List<persistencia.PrestecRow> getAllActiveLoans() {
 		return cp.getAllActiveLoans();
 	}
 
-	public java.util.List<domini.PrestecRow> getLoansForIsbn(long isbn) {
+	public java.util.List<persistencia.PrestecRow> getLoansForIsbn(long isbn) {
 		return cp.getLoansForIsbn(isbn);
 	}
 
 	public java.util.List<Object[]> getAllOverdueLoans(int daysThreshold) {
 		return cp.getAllOverdueLoans(daysThreshold);
 	}
+
+	public int countLoans(long isbn) { return cp.countLoans(isbn); }
 
 	public byte[] getLlibreBlob(long isbn) {
 		return cp.getLlibreBlob(isbn);
@@ -391,6 +427,11 @@ public class ControladorDomini implements BibliotecaWriter {
 		return new java.util.ArrayList<>(names);
 	}
 
-	public java.util.List<LlibreLlistaRow> getAllLlibreLlistaRows() { return cp.getAllLlibreLlista(); }
-	public java.util.List<LlibreTagRow>    getAllLlibreTagRows()    { return cp.getAllLlibreTag(); }
+	public java.util.List<persistencia.LlibreLlistaRow> getAllLlibreLlistaRows() { return cp.getAllLlibreLlista(); }
+	public java.util.List<persistencia.LlibreTagRow>    getAllLlibreTagRows()    { return cp.getAllLlibreTag(); }
+
+	public java.util.List<Object[]> getAutorsData() { return cp.getAllAutors(); }
+	public java.util.List<Object[]> getLlibreAutorData() { return cp.getAllLlibreAutor(); }
+	public java.util.List<persistencia.PrestecRow> getAllPrestecs() { return cp.getAllPrestecs(); }
+	public java.util.List<persistencia.LecturaRow> getAllLecturesData() { return cp.getAllLectures(); }
 }

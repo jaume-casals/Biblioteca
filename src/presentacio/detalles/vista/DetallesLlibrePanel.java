@@ -19,6 +19,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -26,16 +27,17 @@ import javax.swing.border.EmptyBorder;
 
 import herramienta.I18n;
 import herramienta.UITheme;
+import presentacio.FormFieldRegistry;
 
 public class DetallesLlibrePanel extends JDialog {
 
-	// Min width of one label+field cell; drives column-count calculation
 	private static final int ENTRY_MIN_W = 260;
 	private static final int ENTRY_H     = 44;
 	private static final int LBL_W       = 92;
 	private static final int SIDE_W      = 215;
 	private static final int IMG_SIZE    = 185;
 
+	private final FormFieldRegistry fieldRegistry = new FormFieldRegistry();
 	private JLabel     labelIcono;
 	private JTextField textISBN;
 	private JTextField textNom;
@@ -80,7 +82,6 @@ public class DetallesLlibrePanel extends JDialog {
 		setLayout(new BorderLayout(0, 0));
 		getContentPane().setBackground(UITheme.BG_PANEL);
 
-		// ── EAST: image + action buttons ──────────────────────────────────────
 		JPanel east = new JPanel();
 		east.setBackground(UITheme.BG_PANEL);
 		east.setPreferredSize(new Dimension(SIDE_W, 0));
@@ -146,7 +147,16 @@ public class DetallesLlibrePanel extends JDialog {
 
 		add(east, BorderLayout.EAST);
 
-		// ── CENTER: responsive field grid + notes ─────────────────────────────
+		JTabbedPane tabbedPane = new JTabbedPane();
+		tabbedPane.addTab(I18n.t("stats_tab_general"), DetallesGeneralTab.build(this));
+		tabbedPane.addTab(I18n.t("field_notes"), DetallesNotesTab.build(this));
+		tabbedPane.addTab(I18n.t("tab_advanced"), DetallesAvancatTab.build(this));
+		add(tabbedPane, BorderLayout.CENTER);
+
+		setSize(800, 680);
+	}
+
+	JScrollPane buildGeneralTab() {
 		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
 		grid.setBackground(UITheme.BG_PANEL);
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
@@ -161,58 +171,27 @@ public class DetallesLlibrePanel extends JDialog {
 		textEditorial       = addFieldEntry(grid, I18n.t("field_publisher"));
 		textSerie           = addFieldEntry(grid, I18n.t("field_series"));
 		textVolum           = addFieldEntry(grid, I18n.t("field_volume"));
-		textDataCompra      = addFieldEntry(grid, I18n.t("field_purchased"));
-		textDataLectura     = addFieldEntry(grid, I18n.t("field_read_on"));
 		textIdioma          = addFieldEntry(grid, I18n.t("field_language"));
 		textPaisOrigen      = addFieldEntry(grid, I18n.t("field_country"));
 		comboFormat         = addComboEntry(grid, I18n.t("field_format"),
-				new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
+				herramienta.FormatOptions.withBlank());
 		comboEstat          = addComboEntry(grid, I18n.t("field_estat"),
 				new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
-		textExemplars       = addFieldEntry(grid, I18n.t("field_exemplars"));
-		textLlenguaOriginal = addFieldEntry(grid, I18n.t("field_llengua_original"));
 		chckDesitjat        = addCheckEntry(grid, I18n.t("field_wishlist"),
 				I18n.t("tip_desitjat"));
 		chckLlegit          = addCheckEntry(grid, I18n.t("field_read"), null);
 		textPortada         = addFieldEntry(grid, I18n.t("col_cover"));
-		textPagines         = addFieldEntry(grid, I18n.t("field_pages"));
-		textPaginesLlegides = addFieldEntry(grid, I18n.t("field_pages_read"));
-		textNomCa           = addFieldEntry(grid, I18n.t("field_title_ca"));
-		textNomEs           = addFieldEntry(grid, I18n.t("field_title_es"));
-		textNomEn           = addFieldEntry(grid, I18n.t("field_title_en"));
 
-		// Notes: full-width panel pinned to SOUTH
-		JPanel notesRow = new JPanel(new BorderLayout(4, 0));
-		notesRow.setBackground(UITheme.BG_PANEL);
-		notesRow.setBorder(new EmptyBorder(0, 8, 8, 4));
-		JLabel lblNotes = makeLabel(I18n.t("field_notes"));
-		lblNotes.setVerticalAlignment(SwingConstants.TOP);
-		lblNotes.setPreferredSize(new Dimension(LBL_W, 0));
-		notesRow.add(lblNotes, BorderLayout.WEST);
-		textNotes = new JTextArea(4, 0);
-		textNotes.setLineWrap(true);
-		textNotes.setWrapStyleWord(true);
-		textNotes.setEnabled(false);
-		textNotes.setFont(UITheme.FONT_BASE);
-		textNotes.setBackground(UITheme.BG_MAIN);
-		textNotes.setForeground(UITheme.TEXT_DARK);
-		JScrollPane notesScroll = new JScrollPane(textNotes);
-		notesScroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
-		notesRow.add(notesScroll, BorderLayout.CENTER);
+		JPanel wrapper = new JPanel(new BorderLayout());
+		wrapper.setBackground(UITheme.BG_PANEL);
+		wrapper.add(grid, BorderLayout.NORTH);
 
-		JPanel center = new JPanel(new BorderLayout(0, 4));
-		center.setBackground(UITheme.BG_PANEL);
-		center.add(grid, BorderLayout.CENTER);
-		center.add(notesRow, BorderLayout.SOUTH);
-
-		JScrollPane scroll = new JScrollPane(center,
+		JScrollPane scroll = new JScrollPane(wrapper,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
 		scroll.getViewport().setBackground(UITheme.BG_PANEL);
-		add(scroll, BorderLayout.CENTER);
 
-		// Recompute column count based on viewport width (authoritative when shrinking)
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
 			private int lastCols = 2;
 			@Override
@@ -229,24 +208,96 @@ public class DetallesLlibrePanel extends JDialog {
 			}
 		});
 
-		setSize(800, 680);
+		return scroll;
 	}
 
-	// ── entry builders ────────────────────────────────────────────────────────
+	JPanel buildNotesTab() {
+		JPanel panel = new JPanel(new BorderLayout(4, 0));
+		panel.setBackground(UITheme.BG_PANEL);
+		panel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-	private JTextField addFieldEntry(JPanel grid, String label) {
+		JLabel lblNotes = makeLabel(I18n.t("field_notes"));
+		lblNotes.setVerticalAlignment(SwingConstants.TOP);
+		lblNotes.setPreferredSize(new Dimension(LBL_W, 0));
+		panel.add(lblNotes, BorderLayout.WEST);
+
+		textNotes = new JTextArea(20, 40);
+		textNotes.setLineWrap(true);
+		textNotes.setWrapStyleWord(true);
+		textNotes.setEnabled(false);
+		textNotes.setFont(UITheme.FONT_BASE);
+		textNotes.setBackground(UITheme.BG_MAIN);
+		textNotes.setForeground(UITheme.TEXT_DARK);
+
+		JScrollPane notesScroll = new JScrollPane(textNotes);
+		notesScroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		panel.add(notesScroll, BorderLayout.CENTER);
+
+		return panel;
+	}
+
+	JScrollPane buildAdvancedTab() {
+		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
+		grid.setBackground(UITheme.BG_PANEL);
+		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
+
+		textDataCompra      = addFieldEntry(grid, I18n.t("field_purchased"));
+		textDataLectura     = addFieldEntry(grid, I18n.t("field_read_on"));
+		textExemplars       = addFieldEntry(grid, I18n.t("field_exemplars"));
+		textLlenguaOriginal = addFieldEntry(grid, I18n.t("field_llengua_original"));
+		textPagines         = addFieldEntry(grid, I18n.t("field_pages"));
+		textPaginesLlegides = addFieldEntry(grid, I18n.t("field_pages_read"));
+		textNomCa           = addFieldEntry(grid, I18n.t("field_title_ca"));
+		textNomEs           = addFieldEntry(grid, I18n.t("field_title_es"));
+		textNomEn           = addFieldEntry(grid, I18n.t("field_title_en"));
+
+		JPanel wrapper = new JPanel(new BorderLayout());
+		wrapper.setBackground(UITheme.BG_PANEL);
+		wrapper.add(grid, BorderLayout.NORTH);
+
+		JScrollPane scroll = new JScrollPane(wrapper,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		scroll.setBorder(null);
+		scroll.getViewport().setBackground(UITheme.BG_PANEL);
+
+		scroll.getViewport().addComponentListener(new ComponentAdapter() {
+			private int lastCols = 2;
+			@Override
+			public void componentResized(ComponentEvent e) {
+				int vpW = scroll.getViewport().getWidth();
+				if (vpW <= 0) return;
+				int cols = Math.max(1, vpW / ENTRY_MIN_W);
+				if (cols != lastCols) {
+					lastCols = cols;
+					((GridLayout) grid.getLayout()).setColumns(cols);
+					grid.revalidate();
+					grid.repaint();
+				}
+			}
+		});
+
+		return scroll;
+	}
+
+	JTextField addFieldEntry(JPanel grid, String label) {
 		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
+		JLabel lbl = makeLabel(label);
+		entry.add(lbl, BorderLayout.WEST);
 		JTextField field = new JTextField();
 		field.setEnabled(false);
 		field.setColumns(10);
 		UITheme.styleField(field);
+		fieldRegistry.linkLabel(lbl, field);
+		fieldRegistry.register(label, field);
 		entry.add(field, BorderLayout.CENTER);
 		grid.add(entry);
 		return field;
 	}
 
-	private JComboBox<String> addComboEntry(JPanel grid, String label, String[] items) {
+	public FormFieldRegistry getFieldRegistry() { return fieldRegistry; }
+
+	JComboBox<String> addComboEntry(JPanel grid, String label, String[] items) {
 		JPanel entry = entryPanel();
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JComboBox<String> combo = new JComboBox<>(items);
@@ -259,7 +310,7 @@ public class DetallesLlibrePanel extends JDialog {
 		return combo;
 	}
 
-	private JCheckBox addCheckEntry(JPanel grid, String label, String tooltip) {
+	JCheckBox addCheckEntry(JPanel grid, String label, String tooltip) {
 		JPanel entry = entryPanel();
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JCheckBox chk = new JCheckBox("");
@@ -272,7 +323,7 @@ public class DetallesLlibrePanel extends JDialog {
 		return chk;
 	}
 
-	private JPanel entryPanel() {
+	JPanel entryPanel() {
 		JPanel p = new JPanel(new BorderLayout(4, 0));
 		p.setBackground(UITheme.BG_PANEL);
 		p.setBorder(new EmptyBorder(2, 2, 2, 2));
@@ -280,14 +331,12 @@ public class DetallesLlibrePanel extends JDialog {
 		return p;
 	}
 
-	private JLabel makeLabel(String text) {
+	JLabel makeLabel(String text) {
 		JLabel lbl = new JLabel(text);
 		UITheme.styleLabel(lbl);
 		lbl.setPreferredSize(new Dimension(LBL_W, 0));
 		return lbl;
 	}
-
-	// ── getters (used by DetallesLlibrePanelControl) ─────────────────────────
 
 	public JLabel     getLabelIcono()          { return labelIcono; }
 	public JButton    getBtnSeleccionarImatge() { return btnSeleccionarImatge; }

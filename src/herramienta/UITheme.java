@@ -14,6 +14,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
@@ -248,6 +249,7 @@ public class UITheme {
         // Prevent Nimbus SynthBorder painter ClassCastException on label-based cell renderers
         UIManager.put("Table.cellNoFocusBorder",      BorderFactory.createEmptyBorder(0, 2, 0, 2));
         UIManager.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(0, 2, 0, 2));
+        I18n.applySwingOptionPane();
     }
 
     // ── Style helpers ─────────────────────────────────────────────────────────
@@ -288,6 +290,10 @@ public class UITheme {
     public static void styleLabel(JLabel lbl) {
         lbl.setFont(FONT_LABEL);
         lbl.setForeground(TEXT_MID);
+    }
+
+    public static void stylePanel(JPanel panel) {
+        panel.setBackground(BG_PANEL);
     }
 
     public static void styleField(JTextField field) {

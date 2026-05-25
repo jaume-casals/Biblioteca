@@ -4,8 +4,19 @@ import herramienta.I18n;
 import herramienta.UITheme;
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class SplashScreen {
+
+    private static final ScheduledExecutorService SCHEDULER =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "splash-hide");
+            t.setDaemon(true);
+            return t;
+        });
 
     private final JDialog dialog;
     private long showTime = 0;
@@ -47,13 +58,19 @@ public class SplashScreen {
 
     public void hide() {
         if (!dialog.isVisible()) return;
-        long remaining = MIN_DISPLAY_MS - (System.currentTimeMillis() - showTime);
+        long elapsed = System.currentTimeMillis() - showTime;
+        long remaining = MIN_DISPLAY_MS - elapsed;
         if (remaining > 0) {
-            javax.swing.Timer t = new javax.swing.Timer((int) remaining, e -> dialog.dispose());
-            t.setRepeats(false);
-            t.start();
+            ScheduledFuture<?> future = SCHEDULER.schedule(
+                () -> SwingUtilities.invokeLater(dialog::dispose),
+                remaining, TimeUnit.MILLISECONDS);
         } else {
             dialog.dispose();
         }
+    }
+
+    /** Emergency cleanup: dispose the dialog regardless of timing. */
+    public void forceHide() {
+        dialog.dispose();
     }
 }
