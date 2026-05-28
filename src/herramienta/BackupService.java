@@ -16,19 +16,31 @@ import java.util.List;
 public class BackupService {
 
     private final ControladorPersistencia cp;
+    private final java.util.concurrent.atomic.AtomicBoolean schedulerStarted = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private java.util.concurrent.ScheduledExecutorService scheduler;
 
     public BackupService(ControladorPersistencia cp) {
         this.cp = cp;
     }
 
     public void scheduleAutoBackup() {
-        java.util.concurrent.ScheduledExecutorService scheduler =
-            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "auto-backup");
-                t.setDaemon(true);
-                return t;
-            });
+        if (!schedulerStarted.compareAndSet(false, true)) return;
+        scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "auto-backup");
+            t.setDaemon(true);
+            return t;
+        });
         scheduler.scheduleWithFixedDelay(this::autoBackup, 30, 86400, java.util.concurrent.TimeUnit.SECONDS);
+        main.ShutdownHooks.register(this::shutdownScheduler);
+    }
+
+    public void shutdownScheduler() {
+        java.util.concurrent.ScheduledExecutorService local = scheduler;
+        if (local != null) {
+            local.shutdownNow();
+            scheduler = null;
+        }
+        schedulerStarted.set(false);
     }
 
     private void autoBackup() {
@@ -74,75 +86,84 @@ public class BackupService {
                     "INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`," +
                     "`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`," +
                     "`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) " +
-                    "VALUES (%d,'%s',%d,'%s',%.4f,%.4f,%b,'%s','%s',%d,%d,'%s','%s',%d,%s,%s,%s,%s,%b,%s,%s,%d,%s,%s,%s,%s);%n",
+                    "VALUES (%d,%s,%d,%s,%.4f,%.4f,%b,%s,%s,%d,%d,%s,%s,%d,%s,%s,%s,%s,%b,%s,%s,%d,%s,%s,%s,%s);%n",
                     l.getISBN(),
-                    sqlEsc(l.getNom()),
+                    sqlNullable(l.getNom()),
                     l.getAny() != null ? l.getAny() : 0,
-                    sqlEsc(l.getDescripcio() != null ? l.getDescripcio() : ""),
+                    sqlNullable(l.getDescripcio()),
                     l.getValoracio() != null ? l.getValoracio() : 0.0,
                     l.getPreu() != null ? l.getPreu() : 0.0,
                     Boolean.TRUE.equals(l.getLlegit()),
-                    sqlEsc(l.getImatge() != null ? l.getImatge() : ""),
-                    sqlEsc(l.getNotes()),
+                    sqlNullable(l.getImatge()),
+                    sqlNullable(l.getNotes()),
                     l.getPagines(),
                     l.getPaginesLlegides(),
-                    sqlEsc(l.getEditorial()),
-                    sqlEsc(l.getSerie()),
+                    sqlNullable(l.getEditorial()),
+                    sqlNullable(l.getSerie()),
                     l.getVolum(),
-                    l.getDataCompra() != null ? "'" + sqlEsc(l.getDataCompra()) + "'" : "NULL",
-                    l.getDataLectura() != null ? "'" + sqlEsc(l.getDataLectura()) + "'" : "NULL",
-                    l.getIdioma() != null ? "'" + sqlEsc(l.getIdioma()) + "'" : "NULL",
-                    l.getFormat() != null ? "'" + sqlEsc(l.getFormat()) + "'" : "NULL",
+                    sqlNullable(l.getDataCompra()),
+                    sqlNullable(l.getDataLectura()),
+                    sqlNullable(l.getIdioma()),
+                    sqlNullable(l.getFormat()),
                     l.getDesitjat(),
-                    l.getPaisOrigen() != null ? "'" + sqlEsc(l.getPaisOrigen()) + "'" : "NULL",
-                    l.getEstat() != null ? "'" + sqlEsc(l.getEstat()) + "'" : "NULL",
+                    sqlNullable(l.getPaisOrigen()),
+                    sqlNullable(l.getEstat()),
                     l.getExemplars(),
-                    l.getLlenguaOriginal() != null ? "'" + sqlEsc(l.getLlenguaOriginal()) + "'" : "NULL",
-                    l.getNomCa() != null ? "'" + sqlEsc(l.getNomCa()) + "'" : "NULL",
-                    l.getNomEs() != null ? "'" + sqlEsc(l.getNomEs()) + "'" : "NULL",
-                    l.getNomEn() != null ? "'" + sqlEsc(l.getNomEn()) + "'" : "NULL");
+                    sqlNullable(l.getLlenguaOriginal()),
+                    sqlNullable(l.getNomCa()),
+                    sqlNullable(l.getNomEs()),
+                    sqlNullable(l.getNomEn()));
             }
             for (Object[] row : cp.getAllAutors()) {
-                pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,'%s');%n",
-                    (int) row[0], sqlEsc((String) row[1]));
+                pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,%s);%n",
+                    (int) row[0], sqlNullable((String) row[1]));
             }
             for (Object[] row : cp.getAllLlibreAutor()) {
                 pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
                     ((Number) row[0]).longValue(), ((Number) row[1]).intValue());
             }
             for (Llista ll : llistes) {
-                pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,'%s',%d,%s);%n",
-                    ll.getId(), sqlEsc(ll.getNom()), ll.getOrdre(),
-                    ll.getColor() != null ? "'" + sqlEsc(ll.getColor()) + "'" : "NULL");
+                pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,%s,%d,%s);%n",
+                    ll.getId(), sqlNullable(ll.getNom()), ll.getOrdre(), sqlNullable(ll.getColor()));
             }
             for (persistencia.LlibreLlistaRow row : cp.getAllLlibreLlista()) {
                 pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
                     row.isbn(), row.llistaId(), row.valoracio(), row.llegit());
             }
             for (Tag t : tags) {
-                pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,'%s');%n",
-                    t.getId(), sqlEsc(t.getNom()));
+                pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,%s);%n",
+                    t.getId(), sqlNullable(t.getNom()));
             }
             for (persistencia.LlibreTagRow row : cp.getAllLlibreTag()) {
                 pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
                     row.isbn(), row.tagId());
             }
             for (persistencia.PrestecRow row : cp.getAllPrestecs()) {
-                pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,'%s','%s',%b);%n",
-                    row.isbn(), sqlEsc(row.nomPersona()), row.dataPrestec() != null ? sqlEsc(row.dataPrestec().toString()) : "", row.retornat());
+                pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,%s,%s,%b);%n",
+                    row.isbn(),
+                    sqlNullable(row.nomPersona()),
+                    sqlNullable(row.dataPrestec() != null ? row.dataPrestec().toString() : null),
+                    row.retornat());
             }
             for (persistencia.LecturaRow row : cp.getAllLectures()) {
                 pw.printf("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (%d,%s,%s,%d);%n",
                     row.isbn(),
-                    row.dataInici() != null ? "'" + sqlEsc(row.dataInici()) + "'" : "NULL",
-                    row.dataFi() != null ? "'" + sqlEsc(row.dataFi()) + "'" : "NULL",
+                    sqlNullable(row.dataInici()),
+                    sqlNullable(row.dataFi()),
                     row.paginesLlegides());
             }
         }
     }
 
+    private static String sqlNullable(String s) {
+        if (s == null) return "NULL";
+        return "'" + sqlEsc(s) + "'";
+    }
+
     private static String sqlEsc(String s) {
         if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("'", "''");
+        String out = s.replace("\\", "\\\\").replace("'", "''");
+        out = out.replace("\u0000", "");
+        return out;
     }
 }

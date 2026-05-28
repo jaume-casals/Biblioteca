@@ -8,6 +8,7 @@ import herramienta.FiltreUtils;
 import herramienta.I18n;
 
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,15 +88,15 @@ class FilterController {
 
         String isbnText = state.vista.getTextISBN().getText().trim();
         if (!isbnText.isEmpty()) {
-            try { f.isbn = Long.parseLong(isbnText); } catch (NumberFormatException ignored) {}
+            f.isbn = parseLongField(state.vista.getTextISBN(), isbnText);
         }
 
-        try { f.anyMin       = Integer.parseInt(state.vista.getAnyMin().getText().trim());         } catch (NumberFormatException ignored) {}
-        try { f.anyMax       = Integer.parseInt(state.vista.getAnyMax().getText().trim());         } catch (NumberFormatException ignored) {}
-        try { f.valoracioMin = Double.parseDouble(state.vista.getValoracioMin().getText().trim()); } catch (NumberFormatException ignored) {}
-        try { f.valoracioMax = Double.parseDouble(state.vista.getValoracioMax().getText().trim()); } catch (NumberFormatException ignored) {}
-        try { f.preuMin      = Double.parseDouble(state.vista.getPreuMin().getText().trim());      } catch (NumberFormatException ignored) {}
-        try { f.preuMax      = Double.parseDouble(state.vista.getPreuMax().getText().trim());      } catch (NumberFormatException ignored) {}
+        f.anyMin = parseIntField(state.vista.getAnyMin());
+        f.anyMax = parseIntField(state.vista.getAnyMax());
+        f.valoracioMin = parseDoubleField(state.vista.getValoracioMin());
+        f.valoracioMax = parseDoubleField(state.vista.getValoracioMax());
+        f.preuMin = parseDoubleField(state.vista.getPreuMin());
+        f.preuMax = parseDoubleField(state.vista.getPreuMax());
 
         if (state.vista.getchckbxLlegit().isSelected())  f.llegit = true;
         if (state.vista.getchckbxNoLlegit().isSelected()) f.llegit = false;
@@ -315,5 +316,62 @@ class FilterController {
             state.vista.getBtnCarregaPreset().setEnabled(true);
             state.vista.getBtnEsborraPreset().setEnabled(true);
         }
+    }
+
+    private Integer parseIntField(JTextField field) {
+        String raw = field.getText().trim();
+        if (raw.isEmpty()) {
+            clearInvalidField(field);
+            return null;
+        }
+        try {
+            int value = Integer.parseInt(raw);
+            clearInvalidField(field);
+            return value;
+        } catch (NumberFormatException e) {
+            markInvalidField(field);
+            return null;
+        }
+    }
+
+    private Long parseLongField(JTextField field, String raw) {
+        if (raw.isEmpty()) {
+            clearInvalidField(field);
+            return null;
+        }
+        try {
+            long value = Long.parseLong(raw);
+            clearInvalidField(field);
+            return value;
+        } catch (NumberFormatException e) {
+            markInvalidField(field);
+            return null;
+        }
+    }
+
+    private Double parseDoubleField(JTextField field) {
+        String raw = field.getText().trim();
+        if (raw.isEmpty()) {
+            clearInvalidField(field);
+            return null;
+        }
+        try {
+            double value = Double.parseDouble(raw);
+            clearInvalidField(field);
+            return value;
+        } catch (NumberFormatException e) {
+            markInvalidField(field);
+            return null;
+        }
+    }
+
+    private void markInvalidField(JTextField field) {
+        field.putClientProperty("JComponent.outline", "error");
+        field.setToolTipText(I18n.t("validation_invalid_number"));
+    }
+
+    private void clearInvalidField(JTextField field) {
+        field.putClientProperty("JComponent.outline", null);
+        field.setToolTipText(null);
     }
 }

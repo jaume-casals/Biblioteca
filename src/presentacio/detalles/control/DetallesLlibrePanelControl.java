@@ -26,8 +26,12 @@ public class DetallesLlibrePanelControl {
 			t.setDaemon(true);
 			return t;
 		});
+	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
+		new java.util.concurrent.atomic.AtomicBoolean(false);
 
 	private static final int IMG_W = 200;
+	private static final int MAX_DESCRIPTION_CHARS = 120;
+	private static final int MAX_NOTES_CHARS = 200;
 
 	private final DeleteHandler deleteHandler = new DeleteHandler();
 	private final HistoryHandler historyHandler = new HistoryHandler();
@@ -39,6 +43,7 @@ public class DetallesLlibrePanelControl {
 
 	public DetallesLlibrePanelControl(Llibre l, EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
 		this.vista = new DetallesLlibrePanel();
+		registerExecutorShutdownHook();
 
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
@@ -83,14 +88,14 @@ public class DetallesLlibrePanelControl {
 		FieldAutoComplete.attach(this.vista.getTextSerie(),     cLlibres.getDistinctValues("serie"));
 		FieldAutoComplete.attach(this.vista.getTextIdioma(),    cLlibres.getDistinctValues("idioma"));
 
-		this.vista.getTextAny().setText(l.getAny().toString());
-		this.vista.getTextAutor().setText(l.getAutor().toString());
-		this.vista.getTextISBN().setText(l.getISBN().toString());
-		this.vista.getTextDescripcio().setText(l.getDescripcio().toString());
-		this.vista.getTextNom().setText(l.getNom().toString());
+		this.vista.getTextAny().setText(java.util.Objects.toString(l.getAny(), ""));
+		this.vista.getTextAutor().setText(java.util.Objects.toString(l.getAutor(), ""));
+		this.vista.getTextISBN().setText(java.util.Objects.toString(l.getISBN(), ""));
+		this.vista.getTextDescripcio().setText(java.util.Objects.toString(l.getDescripcio(), ""));
+		this.vista.getTextNom().setText(java.util.Objects.toString(l.getNom(), ""));
 		this.vista.getTextPortada().setText(l.getImatge() != null ? l.getImatge() : "");
-		this.vista.getTextPreu().setText(l.getPreu().toString());
-		this.vista.getTextValoracio().setText(l.getValoracio().toString());
+		this.vista.getTextPreu().setText(java.util.Objects.toString(l.getPreu(), ""));
+		this.vista.getTextValoracio().setText(java.util.Objects.toString(l.getValoracio(), ""));
 		this.vista.getChckLlegit().setSelected(l.getLlegit());
 		this.vista.getTextNotes().setText(l.getNotes());
 		this.vista.getTextEditorial().setText(l.getEditorial() != null ? l.getEditorial() : "");
@@ -164,6 +169,16 @@ public class DetallesLlibrePanelControl {
 		this.vista.getLabelIcono().setIcon(herramienta.UITheme.scaledIcon(data, IMG_W));
 	}
 
+	public static void shutdownImageExecutor() {
+		IMAGE_EXECUTOR.shutdownNow();
+	}
+
+	private static void registerExecutorShutdownHook() {
+		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
+			main.ShutdownHooks.register(DetallesLlibrePanelControl::shutdownImageExecutor);
+		}
+	}
+
 	private void seleccionarImatge() {
 		File f = herramienta.UITheme.chooseImageFile(this.vista);
 		if (f != null) {
@@ -203,16 +218,14 @@ public class DetallesLlibrePanelControl {
 				y += lineH + 4;
 				g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.ITALIC, 11));
 				String desc = l.getDescripcio().toString();
-				int maxChars = 120;
-				if (desc.length() > maxChars) desc = desc.substring(0, maxChars) + "…";
+				if (desc.length() > MAX_DESCRIPTION_CHARS) desc = desc.substring(0, MAX_DESCRIPTION_CHARS) + "…";
 				g2.drawString(desc, x, y += lineH);
 			}
 			if (l.getNotes() != null && !l.getNotes().isEmpty()) {
 				y += 4;
 				g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11));
 				String notes = l.getNotes();
-				int maxChars = 200;
-				if (notes.length() > maxChars) notes = notes.substring(0, maxChars) + "…";
+				if (notes.length() > MAX_NOTES_CHARS) notes = notes.substring(0, MAX_NOTES_CHARS) + "…";
 				g2.drawString(I18n.t("field_notes") + ": " + notes, x, y += lineH);
 			}
 			return java.awt.print.Printable.PAGE_EXISTS;
@@ -274,31 +287,7 @@ public class DetallesLlibrePanelControl {
 	private class EditHandler {
 		void editar(Llibre llibre) {
 			if (I18n.t("btn_edit_java").equals(vista.getBtnEditar().getText())) {
-				vista.getTextAny().setEnabled(true);
-				vista.getTextAutor().setEnabled(true);
-				vista.getTextISBN().setEnabled(false);
-				vista.getTextDescripcio().setEnabled(true);
-				vista.getTextNom().setEnabled(true);
-				vista.getTextPortada().setEnabled(true);
-				vista.getTextPreu().setEnabled(true);
-				vista.getTextValoracio().setEnabled(true);
-				vista.getTextEditorial().setEnabled(true);
-				vista.getTextSerie().setEnabled(true);
-				vista.getTextVolum().setEnabled(true);
-				vista.getTextDataCompra().setEnabled(true);
-				vista.getTextDataLectura().setEnabled(true);
-				vista.getTextIdioma().setEnabled(true);
-				vista.getTextPaisOrigen().setEnabled(true);
-				vista.getComboFormat().setEnabled(true);
-				vista.getComboEstat().setEnabled(true);
-				vista.getTextExemplars().setEnabled(true);
-				vista.getTextLlenguaOriginal().setEnabled(true);
-				vista.getChckDesitjat().setEnabled(true);
-				vista.getChckLlegit().setEnabled(true);
-				vista.getBtnSeleccionarImatge().setEnabled(true);
-				vista.getTextNotes().setEnabled(true);
-				vista.getTextPagines().setEnabled(true);
-				vista.getTextPaginesLlegides().setEnabled(true);
+				setEditMode(true);
 				vista.getBtnEditar().setText(I18n.t("btn_save_java"));
 			} else if (vista.getBtnEditar().getText().equals(I18n.t("btn_save_java"))) {
 				try {
@@ -346,31 +335,7 @@ public class DetallesLlibrePanelControl {
 						cLlibres.addLlibre(a);
 					}
 					enActualizarBBDD.actualitzarLlibre(a, false);
-					vista.getTextAny().setEnabled(false);
-					vista.getTextAutor().setEnabled(false);
-					vista.getTextISBN().setEnabled(false);
-					vista.getTextDescripcio().setEnabled(false);
-					vista.getTextNom().setEnabled(false);
-					vista.getTextPortada().setEnabled(false);
-					vista.getTextPreu().setEnabled(false);
-					vista.getTextValoracio().setEnabled(false);
-					vista.getTextEditorial().setEnabled(false);
-					vista.getTextSerie().setEnabled(false);
-					vista.getTextVolum().setEnabled(false);
-					vista.getTextDataCompra().setEnabled(false);
-					vista.getTextDataLectura().setEnabled(false);
-					vista.getTextIdioma().setEnabled(false);
-					vista.getTextPaisOrigen().setEnabled(false);
-					vista.getComboFormat().setEnabled(false);
-					vista.getComboEstat().setEnabled(false);
-					vista.getTextExemplars().setEnabled(false);
-					vista.getTextLlenguaOriginal().setEnabled(false);
-					vista.getChckDesitjat().setEnabled(false);
-					vista.getChckLlegit().setEnabled(false);
-					vista.getBtnSeleccionarImatge().setEnabled(false);
-					vista.getTextNotes().setEnabled(false);
-					vista.getTextPagines().setEnabled(false);
-					vista.getTextPaginesLlegides().setEnabled(false);
+					setEditMode(false);
 					vista.getBtnEditar().setText(I18n.t("btn_edit_java"));
 					vista.setTitle(I18n.t("dlg_book_detail_title", a.getDisplayNom(herramienta.Config.getLang())));
 				} catch (Exception e) {
@@ -378,5 +343,33 @@ public class DetallesLlibrePanelControl {
 				}
 			}
 		}
+	}
+
+	private void setEditMode(boolean enabled) {
+		vista.getTextAny().setEnabled(enabled);
+		vista.getTextAutor().setEnabled(enabled);
+		vista.getTextISBN().setEnabled(false);
+		vista.getTextDescripcio().setEnabled(enabled);
+		vista.getTextNom().setEnabled(enabled);
+		vista.getTextPortada().setEnabled(enabled);
+		vista.getTextPreu().setEnabled(enabled);
+		vista.getTextValoracio().setEnabled(enabled);
+		vista.getTextEditorial().setEnabled(enabled);
+		vista.getTextSerie().setEnabled(enabled);
+		vista.getTextVolum().setEnabled(enabled);
+		vista.getTextDataCompra().setEnabled(enabled);
+		vista.getTextDataLectura().setEnabled(enabled);
+		vista.getTextIdioma().setEnabled(enabled);
+		vista.getTextPaisOrigen().setEnabled(enabled);
+		vista.getComboFormat().setEnabled(enabled);
+		vista.getComboEstat().setEnabled(enabled);
+		vista.getTextExemplars().setEnabled(enabled);
+		vista.getTextLlenguaOriginal().setEnabled(enabled);
+		vista.getChckDesitjat().setEnabled(enabled);
+		vista.getChckLlegit().setEnabled(enabled);
+		vista.getBtnSeleccionarImatge().setEnabled(enabled);
+		vista.getTextNotes().setEnabled(enabled);
+		vista.getTextPagines().setEnabled(enabled);
+		vista.getTextPaginesLlegides().setEnabled(enabled);
 	}
 }

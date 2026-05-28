@@ -7,6 +7,7 @@ final class Routers {
 
     static void registerAll(HttpRouter router, BibliotecaWriter cd) {
         new LlibreRouter(router, cd);
+        new OpenLibraryRouter(router);
         new LlistaRouter(router, cd);
         new TagRouter(router, cd);
         new LoanRouter(router, cd);

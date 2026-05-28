@@ -201,9 +201,13 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	@Override
 	public void loadHeavyFields(Llibre book) {
 		if (book == null || book.isHeavyFieldsLoaded()) return;
-		cp.loadHeavyFields(book.getISBN(), book);
-		int index = Collections.binarySearch(bib, book, compararISBN);
-		if (index >= 0) bib.set(index, book);
+		try {
+			cp.loadHeavyFields(book.getISBN(), book);
+			int index = Collections.binarySearch(bib, book, compararISBN);
+			if (index >= 0) bib.set(index, book);
+		} catch (RuntimeException e) {
+			throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.getISBN(), e);
+		}
 	}
 
 	public void backupToSQL(java.io.File file) {

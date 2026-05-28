@@ -296,10 +296,12 @@ public class ServerConect {
 	}
 
 	public void closeConection() {
-		try {
-			con.close();
-		} catch (SQLException e) {
+		if (con == null) return;
+		try { con.close(); }
+		catch (SQLException e) {
 			System.err.println("Fallo al tancar la connexió: " + e.getMessage());
+		} finally {
+			con = null;
 		}
 	}
 }

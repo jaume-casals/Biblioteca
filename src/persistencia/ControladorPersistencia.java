@@ -31,6 +31,8 @@ import herramienta.Config;
 public class ControladorPersistencia {
 
 	private static ControladorPersistencia inst;
+	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
+		new java.util.concurrent.atomic.AtomicBoolean(false);
 	private final ServerConect sc;
 	private final LlibreDao libreDao;
 	private final LlistaDao llistaDao;
@@ -78,6 +80,15 @@ public class ControladorPersistencia {
 		tagDao    = new TagDao(con);
 		prestecDao = new PrestecDao(con);
 		autorDao  = new AutorDao(con);
+		registerShutdownHook();
+	}
+
+	private void registerShutdownHook() {
+		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
+			main.ShutdownHooks.register(() -> {
+				try { sc.closeConection(); } catch (Exception ignored) {}
+			});
+		}
 	}
 
 	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDao.getAll(); }

@@ -5,7 +5,6 @@ import interficie.BibliotecaWriter;
 import domini.Llibre;
 import domini.LlibreFilter;
 import herramienta.LlibreValidator;
-import herramienta.OpenLibraryClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,8 +29,6 @@ public class LlibreRouter {
         app.post("/api/books",                  ctx -> add(ctx));
         app.put("/api/books/{isbn}",            ctx -> update(ctx));
         app.delete("/api/books/{isbn}",         ctx -> delete(ctx));
-        app.get("/api/openlibrary/isbn/{isbn}", ctx -> openLibraryIsbn(ctx));
-        app.get("/api/openlibrary/title/{title}", ctx -> openLibraryTitle(ctx));
     }
 
     private void count(HttpCtx ctx) {
@@ -148,15 +145,6 @@ public class LlibreRouter {
         var out = new java.util.ArrayList<Map<String, Object>>();
         for (var t : tags) out.add(JsonMapper.tagToMap(t));
         ctx.json(out);
-    }
-
-    // TODO: if OpenLibrary lookup grows to more endpoints, extract to a dedicated OpenLibraryRouter
-    private void openLibraryIsbn(HttpCtx ctx) throws Exception {
-        ctx.json(OpenLibraryClient.lookupByISBN(ctx.pathParam("isbn")));
-    }
-
-    private void openLibraryTitle(HttpCtx ctx) throws Exception {
-        ctx.json(OpenLibraryClient.lookupByTitle(ctx.pathParam("title")));
     }
 
     private static Llibre validate(Llibre l) {

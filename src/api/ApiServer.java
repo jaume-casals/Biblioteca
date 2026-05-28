@@ -21,6 +21,7 @@ public class ApiServer {
         });
 
         new LlibreRouter(router, cd);
+        new OpenLibraryRouter(router);
         new LlistaRouter(router, cd);
         new TagRouter(router, cd);
         new LoanRouter(router, cd);

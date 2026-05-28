@@ -552,6 +552,7 @@ public class I18n {
         T("val_serie_llarg", "La sèrie no pot superar 255 caràcters", "La serie no puede superar 255 caracteres", "Series cannot exceed 255 characters");
         T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10", "La valoración debe estar entre 0 y 10", "Rating must be between 0 and 10");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
+        T("validation_invalid_number", "Introdueix un valor numèric vàlid", "Introduce un valor numérico válido", "Enter a valid numeric value");
         T("err_causa", "Causa:", "Causa:", "Cause:");
         T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");
         T("dlg_error_title", "Error", "Error", "Error");
