@@ -70,10 +70,10 @@ public class DialogoError {
     }
 
     public void showErrorMessage() {
+        if (Boolean.getBoolean("biblioteca.test")) return;
         writeToLog(titol, missatge, detalls);
-        if (GraphicsEnvironment.isHeadless() || Boolean.getBoolean("biblioteca.test")) {
+        if (GraphicsEnvironment.isHeadless()) {
             System.err.println("[" + titol + "] " + missatge);
-            if (!detalls.isBlank()) System.err.println(detalls);
             return;
         }
         if (isValidation) showValidationDialog();

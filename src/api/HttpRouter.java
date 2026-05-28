@@ -63,7 +63,11 @@ public class HttpRouter {
 
     public void start(int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), port), 0);
-        server.setExecutor(Executors.newFixedThreadPool(32));
+        server.setExecutor(Executors.newFixedThreadPool(32, r -> {
+            Thread t = new Thread(r, "api-http");
+            t.setDaemon(true);
+            return t;
+        }));
         server.createContext("/", this::dispatch);
         server.start();
         System.out.println("Server started on http://localhost:" + port);
@@ -115,7 +119,8 @@ public class HttpRouter {
                             HttpCtx errCtx = new HttpCtx(ex, Collections.emptyMap());
                             errCtx.corsOrigin = allowedOrigin ? origin : null;
                             errCtx.setException(e);
-                            errCtx.status(400);
+                            int status = (e instanceof IllegalArgumentException || e instanceof NumberFormatException) ? 400 : 500;
+                            errCtx.status(status);
                             exceptionHandler.handle(errCtx);
                             errCtx.commit();
                         } else {

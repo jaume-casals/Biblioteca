@@ -256,7 +256,7 @@ public class BookExporter {
 
     private static String htmlEsc(String s) {
         if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private static String jsonLlibre(Llibre l,
@@ -305,9 +305,13 @@ public class BookExporter {
 
     private static String jsonStr(String s) {
         if (s == null) return "null";
-        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
-                       .replace("\n", "\\n").replace("\r", "")
-                       .replace("\t", "\\t").replace("\b", "\\b").replace("\f", "\\f") + "\"";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r') sb.append("\\u").append(String.format("%04x", (int)ch));
+            else sb.append(switch(ch) { case '"' -> "\\\""; case '\\' -> "\\\\"; case '\n' -> "\\n"; case '\r' -> ""; case '\t' -> "\\t"; case '\b' -> "\\b"; case '\f' -> "\\f"; default -> String.valueOf(ch); });
+        }
+        return '"' + sb.toString() + '"';
     }
 
     private static String esc(String s) {

@@ -86,6 +86,7 @@ public class LlibreRouter {
         updated.setISBN(isbn);
         synchronized (cd) {
             Llibre existing = cd.getLlibre(isbn);
+            if (existing == null) throw new IllegalArgumentException("Book not found: " + isbn);
             updated.setHasBlob(existing.hasBlob());
             cd.updateLlibre(updated);
         }
@@ -94,7 +95,10 @@ public class LlibreRouter {
 
     private void delete(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
-        synchronized (cd) { cd.deleteLlibre(isbn); }
+        synchronized (cd) {
+            if (cd.getLlibre(isbn) == null) throw new IllegalArgumentException("Book not found: " + isbn);
+            cd.deleteLlibre(isbn);
+        }
         ctx.status(204);
     }
 

@@ -172,7 +172,8 @@ class TableController {
             if (currentView != targetView) t.moveColumn(currentView, targetView);
             Config.setColVisible(modelIndex, true);
         } else {
-            TableColumn tc = t.getColumn(colNames()[modelIndex]);
+            TableColumn tc = columnByModelIndex(t, modelIndex);
+            if (tc == null) return;
             hiddenCols.put(modelIndex, tc);
             t.removeColumn(tc);
             Config.setColVisible(modelIndex, false);
@@ -204,16 +205,28 @@ class TableController {
             new TableCellComponents.LlegitCheckBoxEditor(cd, onRowUpdated));
         t.getColumnModel().getColumn(COL_PROGRES).setCellRenderer(new TableCellComponents.ProgressBarRenderer());
         highlightRenderer = new TableCellComponents.SearchHighlightRenderer(loanedIsbns);
-        for (int i = 0; i < t.getColumnCount(); i++) {
-            if (i != COL_COVER && i != COL_LLEGIT && i != COL_PROGRES)
-                t.getColumnModel().getColumn(i).setCellRenderer(highlightRenderer);
+        for (int v = 0; v < t.getColumnCount(); v++) {
+            int modelIndex = t.getColumnModel().getColumn(v).getModelIndex();
+            if (modelIndex != COL_COVER && modelIndex != COL_LLEGIT && modelIndex != COL_PROGRES)
+                t.getColumnModel().getColumn(v).setCellRenderer(highlightRenderer);
         }
         int[] defaults = {48, 130, 220, 180, 55, 75, 60, 80, 90, 85};
         for (int i = 0; i < defaults.length; i++) {
             int saved = Config.getColWidth(i, -1);
-            if (saved > 0) t.getColumnModel().getColumn(i).setPreferredWidth(saved);
+            if (saved > 0) {
+                TableColumn tc = columnByModelIndex(t, i);
+                if (tc != null) tc.setPreferredWidth(saved);
+            }
         }
         columnsInstalled = true;
+    }
+
+    private static TableColumn columnByModelIndex(JTable t, int modelIndex) {
+        for (int v = 0; v < t.getColumnCount(); v++) {
+            TableColumn c = t.getColumnModel().getColumn(v);
+            if (c.getModelIndex() == modelIndex) return c;
+        }
+        return null;
     }
 
     private static void setWidth(JTable t, int col, int pref, int min, int max) {

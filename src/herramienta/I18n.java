@@ -511,6 +511,7 @@ public class I18n {
         T("dlg_batch_edit_title", "Edició massiva de {0} llibres", "Edición masiva de {0} libros", "Batch edit {0} books");
         T("acc_scroll_down", "Desplaçar avall", "Desplazar abajo", "Scroll down");
         T("acc_scroll_up", "Desplaçar amunt", "Desplazar arriba", "Scroll up");
+        T("acc_status_bar", "Barra d'estat", "Barra de estado", "Status bar");
         T("btn_afegir_llista", "Afegir a llista", "Añadir a lista", "Add to list");
         T("btn_guardar_canvis", "Guardar canvis", "Guardar cambios", "Save changes");
         T("col_data_prestec", "Data préstec", "Fecha préstamo", "Loan date");

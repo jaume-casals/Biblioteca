@@ -9,15 +9,15 @@ public class ApiServer {
     private final HttpRouter router;
     private final int port;
 
-    // All routes are registered eagerly at construction time. Call start() after construction.
     public ApiServer(int port, BibliotecaWriter cd) {
         this.port = port;
         this.router = new HttpRouter();
 
         router.exception(ctx -> {
             Exception e = ctx.getException();
-            String msg = e != null && e.getMessage() != null ? e.getMessage() : "Internal error";
-            ctx.status(400).json(Map.of("error", msg));
+            if (e == null) { ctx.status(500).json(Map.of("error", "Internal error")); return; }
+            String msg = e.getMessage() != null ? e.getMessage() : "Bad request";
+            ctx.status(isBadInput(e) ? 400 : 500).json(Map.of("error", msg));
         });
 
         new LlibreRouter(router, cd);
@@ -28,6 +28,14 @@ public class ApiServer {
         new ConfigRouter(router);
         new MetaRouter(router, cd);
         new ImportExportRouter(router, cd);
+    }
+
+    private static boolean isBadInput(Throwable t) {
+        while (t != null) {
+            if (t instanceof IllegalArgumentException || t instanceof NumberFormatException) return true;
+            t = t.getCause();
+        }
+        return false;
     }
 
     public void start() throws Exception {

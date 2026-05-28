@@ -21,7 +21,13 @@ public class ControladorDomini implements BibliotecaWriter {
 	private ArrayList<Tag> tags;
 
 	private static final Comparator<Llibre> compararISBN =
-		(a, b) -> a.getISBN().compareTo(b.getISBN());
+		(a, b) -> {
+			Long ia = a.getISBN(), ib = b.getISBN();
+			if (ia == null && ib == null) return 0;
+			if (ia == null) return -1;
+			if (ib == null) return 1;
+			return ia.compareTo(ib);
+		};
 
 	private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
 		"ISBN",      Comparator.comparing(Llibre::getISBN),
@@ -41,7 +47,7 @@ public class ControladorDomini implements BibliotecaWriter {
 		return ControladorDomini.inst;
 	}
 
-	public static void resetForTest() { inst = null; }
+	public static synchronized void resetForTest() { inst = null; }
 
 	public static void resetForProfileSwitch() {
 		inst = null;
@@ -142,9 +148,9 @@ public ArrayList<Llibre> get100Llibres(int index) { // Starts from index*100
         return new ArrayList<>(bib.subList(from, to));
     }
 
-	public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
-		return bib.size() / 100;
-	}
+public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
+        return Math.max(0, (bib.size() - 1) / 100);
+    }
 
 	public int getSize() {
 		return bib.size();
@@ -288,19 +294,27 @@ public ArrayList<Llibre> get100Llibres(int index) { // Starts from index*100
 		return -1;
 	}
 
-	private void swapLlistesOrdre(int i, int j) {
-		Llista a = llistes.get(i);
-		Llista b = llistes.get(j);
-		int ordreA = a.getOrdre();
-		int ordreB = b.getOrdre();
-		a.setOrdre(ordreB);
-		b.setOrdre(ordreA);
-		try {
-			cp.updateLlistaOrdre(a.getId(), ordreB);
-			cp.updateLlistaOrdre(b.getId(), ordreA);
-		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		Collections.swap(llistes, i, j);
-	}
+private void swapLlistesOrdre(int i, int j) {
+        Llista a = llistes.get(i);
+        Llista b = llistes.get(j);
+        int ordreA = a.getOrdre();
+        int ordreB = b.getOrdre();
+        a.setOrdre(ordreB);
+        b.setOrdre(ordreA);
+        int firstOrder = -1, secondId = -1;
+        try {
+            cp.updateLlistaOrdre(a.getId(), ordreB);
+            firstOrder = ordreB;
+            secondId = b.getId();
+            cp.updateLlistaOrdre(b.getId(), ordreA);
+        } catch (java.sql.SQLException e) {
+            if (secondId != -1) {
+                try { cp.updateLlistaOrdre(secondId, firstOrder); } catch (Exception ignored) {}
+            }
+            throw new BibliotecaException(e.getMessage(), e);
+        }
+        Collections.swap(llistes, i, j);
+    }
 
 	public ArrayList<Llibre> getRecentlyAdded() {
 		return cp.getRecentlyAdded(20);
@@ -345,14 +359,15 @@ public ArrayList<Llibre> get100Llibres(int index) { // Starts from index*100
 		return cp.getLlibreBlob(isbn);
 	}
 
-	public void setLlibreBlob(long isbn, byte[] blob) {
-		try { cp.setLlibreBlob(isbn, blob); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		try {
-			Llibre l = getLlibre(isbn);
-			l.setImatgeBlob(blob);
-			if (blob != null) l.setHasBlob(true);
-		} catch (Exception ignored) {}
-	}
+public void setLlibreBlob(long isbn, byte[] blob) {
+        try {
+            cp.setLlibreBlob(isbn, blob);
+            for (Llibre l : bib) {
+                if (l.getISBN() == isbn) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+            }
+        }
+        catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
+    }
 
 	// ── Tag management ─────────────────────────────────────────────────────────
 

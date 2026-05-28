@@ -15,6 +15,7 @@ public class FiltreUtils {
     }
 
     public static String normalize(String s) {
+        if (s == null) return "";
         String nfd = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").toLowerCase(java.util.Locale.ROOT);
     }

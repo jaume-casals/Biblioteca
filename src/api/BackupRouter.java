@@ -40,7 +40,7 @@ public class BackupRouter {
 
     private void backup(HttpCtx ctx) throws Exception {
         File dir = Config.getBackupDir();
-        dir.mkdirs();
+        if (!dir.mkdirs() && !dir.isDirectory()) throw new Exception("Cannot create backup directory: " + dir);
         String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
         File out = new File(dir, "biblioteca_" + ts + ".sql");
         synchronized (cd) { cd.backupToSQL(out); }

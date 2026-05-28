@@ -24,7 +24,9 @@ public final class CoverService {
         return t;
     });
 
-    private static final Map<String, byte[]> L1 = new ConcurrentHashMap<>();
+    private static final Map<String, byte[]> L1 = new java.util.LinkedHashMap<>(L1_MAX, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, byte[]> eldest) { return size() > L1_MAX; }
+    };
     private static final Path DISK_DIR = Path.of(System.getProperty("user.home"), ".biblioteca", "covers");
 
     private CoverService() {}
@@ -85,13 +87,7 @@ public final class CoverService {
         } catch (Exception ignored) {}
     }
 
-    private static void putL1(String isbn, byte[] data) {
-        if (L1.size() >= L1_MAX) {
-            String first = L1.keySet().iterator().next();
-            if (first != null) L1.remove(first);
-        }
-        L1.put(isbn, data);
-    }
+    private static void putL1(String isbn, byte[] data) { L1.put(isbn, data); }
 
     public static int parallelism() { return MAX_PARALLEL; }
 }

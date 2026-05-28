@@ -142,7 +142,8 @@ public class ImportExportRouter {
             new GoodreadsCsvStrategy(),
             new herramienta.csv.NativeCsvStrategy());
         herramienta.csv.CsvImportStrategy strategy = strategies.stream()
-            .filter(s -> s.canHandle(headerLine)).findFirst().get();
+            .filter(s -> s.canHandle(headerLine)).findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("No CSV strategy matched header: " + headerLine));
         int ok = 0, skipped = 0, err = 0;
         List<String> errDetails = new ArrayList<>();
         for (int i = 1; i < lines.length; i++) {
@@ -172,6 +173,7 @@ public class ImportExportRouter {
             });
         }
         pool.shutdown();
+        pool.awaitTermination(5, java.util.concurrent.TimeUnit.MINUTES);
     }
 
 }

@@ -58,10 +58,14 @@ class BookActionsController {
 
     private void abrirDetalles(boolean editMode) {
         try {
-            int row = state.vista.getjTableBilio().getSelectedRow();
-            if (row < 0) return;
-            long isbn = Long.parseLong(state.vista.getjTableBilio().getValueAt(row, TableController.COL_ISBN).toString());
-            Llibre l = state.cd.getLlibre(isbn);
+            javax.swing.JTable table = state.vista.getjTableBilio();
+            int viewRow = table.getSelectedRow();
+            if (viewRow < 0) return;
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            javax.swing.table.TableModel model = table.getModel();
+            if (!(model instanceof BibliotecaTableModel bt)) return;
+            Llibre l = bt.getBookAt(modelRow);
+            if (l == null) return;
             abrirDetallesDeLlibre(l, editMode);
         } catch (Exception e) {
             new DialogoError(e).showErrorMessage();

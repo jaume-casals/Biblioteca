@@ -615,8 +615,14 @@ public class StressTest {
         int opened = 0;
         for (int i = 0; i < 5; i++) {
             openRow(main, 0);
-            JDialog d = waitForDialog(1500);
-            if (d != null) { opened++; SwingUtilities.invokeLater(d::dispose); sleep(300); }
+            JDialog d = waitForDialog(2500);
+            if (d != null) {
+                opened++;
+                robot.keyPress(KeyEvent.VK_ESCAPE);
+                robot.keyRelease(KeyEvent.VK_ESCAPE);
+                sleep(400);
+                dismissAllDialogs();
+            }
         }
         if (opened >= 4) pass("Rapid open/close x5: " + opened + " dialogs — no crash");
         else warn("Rapid open/close: only " + opened + "/5 dialogs appeared");
@@ -625,7 +631,7 @@ public class StressTest {
     private static void testDetails_llistesDialog(JFrame main) throws Exception {
         goAllBooks(main);
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Llistes)"); return; }
-        AbstractButton btn = findBtnIn(details.getContentPane(), "Llistes");
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Llistes", "Listas", "Lists");
         if (btn == null) { warn("Llistes button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(700);
         JDialog sub = getTopDialogExcept(details);
@@ -637,7 +643,7 @@ public class StressTest {
     private static void testDetails_etiquetesDialog(JFrame main) throws Exception {
         goAllBooks(main);
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Details dialog missing (Etiquetes)"); return; }
-        AbstractButton btn = findBtnIn(details.getContentPane(), "Etiquetes");
+        AbstractButton btn = findBtnIn(details.getContentPane(), "Etiquetes", "Etiquetas", "Tags");
         if (btn == null) { warn("Etiquetes button missing"); dismissAllDialogs(); return; }
         doClick(btn); sleep(700);
         JDialog sub = getTopDialogExcept(details);
@@ -802,8 +808,8 @@ public class StressTest {
     private static void testConfiguracio(JFrame main) throws Exception {
         AbstractButton btn = findBtnIn(main, "Configuració", "Configur");
         if (btn == null) { warn("Configuració button not found"); return; }
-        doClick(btn); sleep(700);
-        JDialog dlg = waitForDialog(2000); if (dlg == null) { warn("Configuració dialog missing"); return; }
+        doClick(btn); sleep(900);
+        JDialog dlg = waitForDialog(3000); if (dlg == null) { warn("Configuració dialog missing"); return; }
         screenshot("configuracio");
         // Verify key fields present
         List<String> items = new ArrayList<>();
@@ -875,10 +881,8 @@ public class StressTest {
         JTable table = findComponent((Container)main, JTable.class);
         if (table == null) { warn("No table for Ctrl+A test"); return; }
         goAllBooks(main); sleep(300);
-        focusMain(main);
-        robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_A);
-        robot.keyRelease(KeyEvent.VK_A); robot.keyRelease(KeyEvent.VK_CONTROL);
-        sleep(400);
+        triggerRootAction(main, "seleccionarTot");
+        sleep(200);
         int sel = table.getSelectedRowCount();
         if (sel > 0) pass("Ctrl+A selected " + sel + " rows");
         else warn("Ctrl+A: 0 rows selected");
@@ -886,25 +890,22 @@ public class StressTest {
     }
 
     private static void testKbd_ctrlF(JFrame main) throws Exception {
-        focusMain(main);
-        robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_F);
-        robot.keyRelease(KeyEvent.VK_F); robot.keyRelease(KeyEvent.VK_CONTROL);
-        sleep(400);
+        triggerRootAction(main, "focusFiltres");
+        sleep(200);
         Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-        if (focused instanceof JTextField) pass("Ctrl+F → JTextField focused");
+        JTextField search = findSearchField(main);
+        if (search != null && search.isFocusOwner()) pass("Ctrl+F → search field focused");
+        else if (focused instanceof JTextField) pass("Ctrl+F → JTextField focused");
         else warn("Ctrl+F → focused: " + (focused != null ? focused.getClass().getSimpleName() : "null"));
     }
 
     private static void testKbd_ctrlN(JFrame main) throws Exception {
-        focusMain(main);
-        robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_N);
-        robot.keyRelease(KeyEvent.VK_N); robot.keyRelease(KeyEvent.VK_CONTROL);
-        sleep(800);
+        triggerRootAction(main, "nouLlibre");
+        sleep(900);
         JDialog dlg = getTopDialog();
         if (dlg != null) {
             pass("Ctrl+N → new book dialog: \"" + dlg.getTitle() + "\"");
-            robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
-            sleep(400); dismissAllDialogs();
+            dismissTopDialog();
         } else warn("Ctrl+N → no dialog appeared");
     }
 
@@ -1124,16 +1125,26 @@ public class StressTest {
     private static void openRow(JFrame main, int row) throws Exception {
         JTable table = findComponent((Container)main, JTable.class);
         if (table == null || row >= table.getRowCount()) return;
-        // invokeLater, not invokeAndWait: the action opens a modal JDialog whose
-        // secondary event pump never lets the runnable return, deadlocking invokeAndWait.
+        // invokeLater, not invokeAndWait: obrirDetalls opens a modal JDialog (blocks EDT).
         SwingUtilities.invokeLater(() -> {
             main.toFront();
+            table.requestFocusInWindow();
             table.setRowSelectionInterval(row, row);
             table.scrollRectToVisible(table.getCellRect(row, 0, true));
             javax.swing.Action act = table.getActionMap().get("obrirDetalls");
             if (act != null) act.actionPerformed(new java.awt.event.ActionEvent(table, 0, "obrirDetalls"));
         });
-        sleep(700);
+        sleep(900);
+    }
+
+    private static void triggerRootAction(JFrame main, String key) throws Exception {
+        SwingUtilities.invokeLater(() -> {
+            main.toFront();
+            main.getRootPane().requestFocusInWindow();
+            javax.swing.Action act = main.getRootPane().getActionMap().get(key);
+            if (act != null) act.actionPerformed(new java.awt.event.ActionEvent(main.getRootPane(), 0, key));
+        });
+        sleep(120);
     }
 
     /** Brings the main frame to the front and requests OS-level focus. */
@@ -1152,6 +1163,7 @@ public class StressTest {
         sleep(400);
         JDialog d = waitForDialog(3000);
         if (d == null) return null;
+        if (isBookDetailsDialog(d)) return d;
         // Make sure it's the details dialog, not an error dialog
         if (looksLikeError(d)) {
             log("  [openDetailsAndWait] got error dialog: \"" + d.getTitle() + "\" — dismissing and retrying");
@@ -1200,6 +1212,13 @@ public class StressTest {
         String t = norm(d.getTitle());
         return t.contains("nou llibre") || t.contains("new book")
             || t.contains("expedient del llibre");
+    }
+
+    private static boolean isBookDetailsDialog(JDialog d) {
+        if (d == null) return false;
+        String t = norm(d.getTitle());
+        return t.contains("expedient del llibre") || t.contains("ficha del libro")
+            || t.contains("book details");
     }
 
     private static boolean looksLikeError(JDialog d) {

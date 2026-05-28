@@ -11,7 +11,8 @@ public final class CsvUtils {
     private CsvUtils() {}
 
     public static String[] parseLine(String line) {
-        if (line != null && line.indexOf('\r') >= 0) line = line.replace("\r", "");
+        if (line == null) return new String[0];
+        if (line.indexOf('\r') >= 0) line = line.replace("\r", "");
         String[] fields = new String[16];
         int count = 0;
         StringBuilder sb = new StringBuilder();

@@ -191,6 +191,8 @@ public class Llibre {
 		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : null;
 		c.nomCa = src.nomCa; c.nomEs = src.nomEs; c.nomEn = src.nomEn;
 		c.hasBlob = src.hasBlob;
+		c.imatgeBlob = src.imatgeBlob;
+		c.heavyFieldsLoaded = src.heavyFieldsLoaded;
 		return c;
 	}
 

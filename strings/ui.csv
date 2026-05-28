@@ -543,6 +543,7 @@ dlg_batch_edit_title,"Edició massiva de {0} llibres","Edición masiva de {0} li
 # Keys from HEAD I18n missing in generated file
 acc_scroll_down,"Desplaçar avall","Desplazar abajo","Scroll down"
 acc_scroll_up,"Desplaçar amunt","Desplazar arriba","Scroll up"
+acc_status_bar,"Barra d'estat","Barra de estado","Status bar"
 btn_afegir_llista,"Afegir a llista","Añadir a lista","Add to list"
 btn_guardar_canvis,"Guardar canvis","Guardar cambios","Save changes"
 col_data_prestec,"Data préstec","Fecha préstamo","Loan date"

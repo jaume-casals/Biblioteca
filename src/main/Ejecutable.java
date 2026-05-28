@@ -57,6 +57,11 @@ public class Ejecutable {
             if ("--swing".equals(args[0])) { Config.setLastMode("swing"); return java.util.Optional.of("swing"); }
         }
         String last = Config.getLastMode();
+        if (last != null) {
+            if ("web".equals(last))   return java.util.Optional.of("web");
+            if ("swing".equals(last)) return java.util.Optional.of("swing");
+        }
+        if (Boolean.getBoolean("biblioteca.test")) return java.util.Optional.of("swing");
         ModeSelectorDialog.Mode choice = ModeSelectorDialog.prompt(last);
         if (choice == ModeSelectorDialog.Mode.WEB)   { Config.setLastMode("web");   return java.util.Optional.of("web"); }
         if (choice == ModeSelectorDialog.Mode.SWING) { Config.setLastMode("swing"); return java.util.Optional.of("swing"); }

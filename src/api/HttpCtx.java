@@ -29,16 +29,20 @@ public class HttpCtx {
 
     public String pathParam(String key) { return pathParams.getOrDefault(key, ""); }
 
-    public long pathParamLong(String key) throws Exception {
+    public long pathParamLong(String key) {
         String s = pathParams.getOrDefault(key, "");
         try { return Long.parseLong(s); }
-        catch (NumberFormatException e) { throw new Exception("Invalid path param '" + key + "': " + s); }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid path param '" + key + "': " + s);
+        }
     }
 
-    public int pathParamInt(String key) throws Exception {
+    public int pathParamInt(String key) {
         String s = pathParams.getOrDefault(key, "");
         try { return Integer.parseInt(s); }
-        catch (NumberFormatException e) { throw new Exception("Invalid path param '" + key + "': " + s); }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid path param '" + key + "': " + s);
+        }
     }
 
     public String queryParam(String key) { return queryParams.get(key); }

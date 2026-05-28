@@ -32,7 +32,7 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
         // semicolons), the split produces incorrect "Firstname Lastname" inversions.
         if (autor.contains(",") && !autor.contains(";")) {
             String[] parts = autor.split(",", 2);
-            autor = parts[1].trim() + " " + parts[0].trim();
+            if (parts.length > 1) autor = parts[1].trim() + " " + parts[0].trim();
         }
         int any = 0;
         String yearStr = CsvUtils.colVal(hMap, c, "Original Publication Year");
