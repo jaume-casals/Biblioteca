@@ -217,7 +217,18 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	}
 
 	public void restoreFromSQL(java.io.File file) {
-		try { cp.executeSQLFile(file); } catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
+		try {
+			java.io.File backup = new java.io.File(java.io.File.createTempFile("biblioteca_restore_backup_", ".sql").getParent(), "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
+			backup.deleteOnExit();
+			backupService.backupToSQL(backup, bib, llistes, tags);
+			try {
+				cp.clearAllData();
+				cp.executeSQLFile(file);
+			} catch (Exception e) {
+				try { cp.executeSQLFile(backup); } catch (Exception ignored) {}
+				throw new BibliotecaException("Restore falldat: " + e.getMessage(), e);
+			}
+		} catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
 		bib = new ArrayList<>(cp.getAllLlibres());
 		if (bib.isEmpty()) throw new BibliotecaException("Restore completat però no s'han carregat llibres — el fitxer pot estar buit o corrupte");
 		Collections.sort(bib, compararISBN);
@@ -303,21 +314,17 @@ private void swapLlistesOrdre(int i, int j) {
         Llista b = llistes.get(j);
         int ordreA = a.getOrdre();
         int ordreB = b.getOrdre();
-        a.setOrdre(ordreB);
-        b.setOrdre(ordreA);
-        int firstOrder = -1, secondId = -1;
         try {
             cp.updateLlistaOrdre(a.getId(), ordreB);
-            firstOrder = ordreB;
-            secondId = b.getId();
             cp.updateLlistaOrdre(b.getId(), ordreA);
+            a.setOrdre(ordreB);
+            b.setOrdre(ordreA);
+            Collections.swap(llistes, i, j);
         } catch (java.sql.SQLException e) {
-            if (secondId != -1) {
-                try { cp.updateLlistaOrdre(secondId, firstOrder); } catch (Exception ignored) {}
-            }
+            a.setOrdre(ordreA);
+            b.setOrdre(ordreB);
             throw new BibliotecaException(e.getMessage(), e);
         }
-        Collections.swap(llistes, i, j);
     }
 
 	public ArrayList<Llibre> getRecentlyAdded() {

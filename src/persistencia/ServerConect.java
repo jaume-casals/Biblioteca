@@ -13,10 +13,6 @@ import herramienta.I18n;
 
 public class ServerConect {
 
-	// Base schema. All extra columns are added by MIGRATIONS. The `autor` column exists here but
-	// is dropped by migration 34 after data is migrated to the `autor` table (migrations 32-33).
-	// A fresh install applies CREATE_TABLE + all MIGRATIONS and reaches the same schema as an
-	// old install that migrated forward — both paths are exercised by BibliotecaTest (H2 in-memory).
 	private static final String CREATE_TABLE =
 		"CREATE TABLE IF NOT EXISTS llibre(" +
 		"ISBN BIGINT PRIMARY KEY, " +
@@ -99,6 +95,8 @@ public class ServerConect {
 		new Migration(35, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_ca VARCHAR(500) DEFAULT NULL"),
 		new Migration(36, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_es VARCHAR(500) DEFAULT NULL"),
 		new Migration(37, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_en VARCHAR(500) DEFAULT NULL"),
+		new Migration(38, "CREATE INDEX IF NOT EXISTS idx_llibre_nom ON llibre(nom)"),
+		new Migration(39, "CREATE INDEX IF NOT EXISTS idx_llibre_editorial_serie ON llibre(editorial, serie)"),
 	};
 
 	private Connection con;
@@ -114,7 +112,7 @@ public class ServerConect {
 			String dir = System.getProperty("user.home") + "/.biblioteca";
 			new File(dir).mkdirs();
 			String profile = props.getProperty("dbProfile", "biblioteca");
-			String url = "jdbc:h2:" + dir + "/" + profile + ";MODE=MySQL;NON_KEYWORDS=VALUE";
+ String url = "jdbc:h2:" + dir.trim().replaceAll("\\s+", "") + "/" + profile.trim().replaceAll("\\s+", "") + ";MODE=MySQL;NON_KEYWORDS=VALUE";
 			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 		} else {
 			String host = props.getProperty("dbHost", "localhost");
@@ -140,7 +138,7 @@ public class ServerConect {
 			} else if ("h2".equals(cfg.dbType())) {
 				String dir = System.getProperty("user.home") + "/.biblioteca";
 				new File(dir).mkdirs();
-				String url = "jdbc:h2:" + dir + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
+				 String url = "jdbc:h2:" + dir.trim().replaceAll("\\s+", "") + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 			} else {
 				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
@@ -188,15 +186,6 @@ public class ServerConect {
 		}
 	}
 
-	/**
-	 * Loads JDBC driver and connects. Falls back to dynamic JAR loading from lib/
-	 * if the driver class is not on the classpath (e.g. running from VSCode without
-	 * the library configured in the project's runtime classpath).
-	 *
-	 * Uses driver.connect() directly instead of DriverManager.getConnection() so that
-	 * a dynamically loaded driver (via URLClassLoader) is not required to register with
-	 * DriverManager — which only sees drivers loaded by the system classloader.
-	 */
 	private Connection connectViaDriver(String driverClass, String jarNameHint,
 			String url, String user, String password) throws Exception {
 		java.sql.Driver driver;
@@ -232,7 +221,6 @@ public class ServerConect {
 		diag.append("  user.dir=").append(System.getProperty("user.dir")).append("\n");
 		diag.append("  biblioteca.root=").append(System.getProperty("biblioteca.root")).append("\n");
 
-		// 1. Explicit project root via -Dbiblioteca.root (launch.json vmArgs)
 		String root = System.getProperty("biblioteca.root");
 		if (root != null && !root.isBlank()) {
 			File lib = new File(root, "lib");
@@ -241,13 +229,11 @@ public class ServerConect {
 			if (lib.isDirectory()) return lib;
 		}
 
-		// 2. Working directory lib/
 		File wdLib = new File(System.getProperty("user.dir"), "lib");
 		diag.append("  [2] ").append(wdLib.getAbsolutePath())
 			.append(hasJars(wdLib) ? " HAS_JARS" : (wdLib.isDirectory() ? " no-jars" : " missing")).append("\n");
 		if (hasJars(wdLib)) return wdLib;
 
-		// 3. Walk down one level from working dir (e.g. working dir is parent of project)
 		File[] children = new File(System.getProperty("user.dir")).listFiles(File::isDirectory);
 		if (children != null) {
 			for (File child : children) {
@@ -258,7 +244,6 @@ public class ServerConect {
 			}
 		}
 
-		// 4. Walk up from working dir
 		File dir = new File(System.getProperty("user.dir"));
 		for (int i = 0; i < 6; i++) {
 			File lib = new File(dir, "lib");
@@ -269,7 +254,6 @@ public class ServerConect {
 			if (dir == null) break;
 		}
 
-		// 5. Walk up from class file location
 		try {
 			java.net.URL loc = ServerConect.class.getProtectionDomain().getCodeSource().getLocation();
 			diag.append("  classSource=").append(loc).append("\n");
@@ -286,7 +270,7 @@ public class ServerConect {
 			diag.append("  classSource=ERROR:").append(e.getMessage()).append("\n");
 		}
 
-		return wdLib; // last resort — let caller report the path
+		return wdLib;
 	}
 
 	private boolean hasJars(File dir) {

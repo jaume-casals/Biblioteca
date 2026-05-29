@@ -212,41 +212,58 @@ public class MainFrameControl implements interficie.EnActualizarBBDD {
 	}
 
 	private void mostrarAlertes() {
-		try {
-			List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
-			if (!loans.isEmpty()) {
-				StringBuilder sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
-				for (Object[] row : loans) {
-					sb.append("• ").append(row[0]).append(" → ").append(row[1]).append(" (").append(row[2]).append(")\n");
-				}
-				javax.swing.JOptionPane.showMessageDialog(frame, sb.toString(),
-					I18n.t("alert_overdue_loans_title"), javax.swing.JOptionPane.WARNING_MESSAGE);
-			}
-		} catch (Exception ignored) {}
+		new javax.swing.SwingWorker<Void, Void>() {
+			private String overdueMsg;
+			private String goalMsg;
+			@Override
+			protected Void doInBackground() {
+				StringBuilder sb;
+				try {
+					List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
+					if (!loans.isEmpty()) {
+						sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
+						for (Object[] row : loans) {
+							sb.append("• ").append(row[0]).append(" → ").append(row[1]).append(" (").append(row[2]).append(")\n");
+						}
+						overdueMsg = sb.toString();
+					}
+				} catch (Exception ignored) {}
 
-		try {
-			int goal = herramienta.Config.getReadingGoal();
-			if (goal > 0) {
-				List<Llibre> all = cLlibres.getAllLlibres();
-				java.time.LocalDate today = java.time.LocalDate.now();
-				int currentYear = today.getYear();
-				int dayOfYear = today.getDayOfYear();
-				int daysInYear = today.isLeapYear() ? 366 : 365;
-				long readThisYear = all.stream()
-					.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-					.filter(l -> l.getDataLectura() != null
-						&& herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
-					.count();
-				int daysLeft = daysInYear - dayOfYear;
-				double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;
-				double actualPerDay = dayOfYear > 0 ? (double) readThisYear / dayOfYear : 0;
-				if (readThisYear < goal && neededPerDay > actualPerDay * 1.5 && daysLeft < 90) {
-					javax.swing.JOptionPane.showMessageDialog(frame,
-						I18n.t("alert_goal_pace_msg", goal, readThisYear, daysLeft, String.format("%.2f", neededPerDay)),
+				try {
+					int goal = herramienta.Config.getReadingGoal();
+					if (goal > 0) {
+						List<Llibre> all = cLlibres.getAllLlibres();
+						java.time.LocalDate today = java.time.LocalDate.now();
+						int currentYear = today.getYear();
+						int dayOfYear = today.getDayOfYear();
+						int daysInYear = today.isLeapYear() ? 366 : 365;
+						long readThisYear = all.stream()
+							.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+							.filter(l -> l.getDataLectura() != null
+								&& herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
+							.count();
+						int daysLeft = daysInYear - dayOfYear;
+						double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;
+						double actualPerDay = dayOfYear > 0 ? (double) readThisYear / dayOfYear : 0;
+						if (readThisYear < goal && neededPerDay > actualPerDay * 1.5 && daysLeft < 90) {
+							goalMsg = I18n.t("alert_goal_pace_msg", goal, readThisYear, daysLeft, String.format("%.2f", neededPerDay));
+						}
+					}
+				} catch (Exception ignored) {}
+				return null;
+			}
+			@Override
+			protected void done() {
+				if (overdueMsg != null) {
+					javax.swing.JOptionPane.showMessageDialog(frame, overdueMsg,
+						I18n.t("alert_overdue_loans_title"), javax.swing.JOptionPane.WARNING_MESSAGE);
+				}
+				if (goalMsg != null) {
+					javax.swing.JOptionPane.showMessageDialog(frame, goalMsg,
 						I18n.t("alert_goal_pace_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
 				}
 			}
-		} catch (Exception ignored) {}
+		}.execute();
 	}
 
 	@Override

@@ -1,0 +1,50 @@
+/* ── Gallery view ── */
+#gallery-view {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+}
+.gallery-grid {
+    display: grid;
+    gap: 12px;
+}
+.gallery-grid.zoom-sm  { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+.gallery-grid.zoom-md  { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.gallery-grid.zoom-lg  { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.gallery-grid.zoom-xl  { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+.gallery-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .1s, box-shadow .1s;
+}
+.gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.gallery-card img {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+    background: var(--surface2);
+}
+.gallery-title {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 6px 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gallery-author {
+    font-size: 11px;
+    color: var(--text-2);
+    padding: 0 6px 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

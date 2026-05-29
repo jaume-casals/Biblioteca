@@ -13,7 +13,6 @@ import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
-import presentacio.MainFrameControl;
 
 /**
  * Facade class re-exporting the split renderer/editor classes.

@@ -370,10 +370,10 @@ public class LlibreDao {
         try {
             String url = con.getMetaData().getURL();
             if (url != null && url.startsWith("jdbc:h2:")) {
-                String path = url.replaceFirst("jdbc:h2:", "").replaceAll(";.*", "");
+                String path = url.replaceFirst("jdbc:h2:", "").replaceAll(";.*", "").trim().replaceAll("\\s+", "");
                 if (path.startsWith("mem:") || path.startsWith("mem/")) return -1;
-                if (path.startsWith("file:")) path = path.substring(5);
-                if (path.startsWith("~")) path = System.getProperty("user.home") + path.substring(1);
+                if (path.startsWith("file:")) path = path.substring(5).trim().replaceAll("\\s+", "");
+                if (path.startsWith("~")) path = (System.getProperty("user.home") + path.substring(1)).trim().replaceAll("\\s+", "");
                 java.io.File f = new java.io.File(path + ".mv.db");
                 return f.exists() ? f.length() : -1;
             }
@@ -382,27 +382,30 @@ public class LlibreDao {
     }
 
     public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
-        try (java.io.BufferedReader br = new java.io.BufferedReader(
-                new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
-             Statement st = con.createStatement()) {
-            StringBuilder stmt = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("--")) continue;
-                // Strip inline comment (outside of quotes)
-                int dashIdx = line.indexOf(" --");
-                if (dashIdx > 0) line = line.substring(0, dashIdx).trim();
-                String upper = line.toUpperCase();
-                if (upper.startsWith("USE ") || upper.startsWith("CREATE DATABASE")
-                        || upper.startsWith("DROP DATABASE")) continue;
-                stmt.append(line).append(" ");
-                if (line.endsWith(";")) {
-                    st.execute(stmt.toString().trim());
-                    stmt = new StringBuilder();
+        withTransaction(() -> {
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
+                 Statement st = con.createStatement()) {
+                StringBuilder stmt = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty() || line.startsWith("--")) continue;
+                    int dashIdx = line.indexOf(" --");
+                    if (dashIdx > 0) line = line.substring(0, dashIdx).trim();
+                    String upper = line.toUpperCase();
+                    if (upper.startsWith("USE ") || upper.startsWith("CREATE DATABASE")
+                            || upper.startsWith("DROP DATABASE")) continue;
+                    stmt.append(line).append(" ");
+                    if (line.endsWith(";")) {
+                        st.execute(stmt.toString().trim());
+                        stmt = new StringBuilder();
+                    }
                 }
+            } catch (java.io.IOException e) {
+                throw new RuntimeException(e);
             }
-        }
+        });
     }
 
     @FunctionalInterface private interface SqlWork { void run() throws SQLException; }

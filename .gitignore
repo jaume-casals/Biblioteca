@@ -37,6 +37,7 @@ Biblioteca.html
 components.jsx
 checkBiblio/
 audits/
+implementation_log.txt
 
 # Generated packaging artifacts (source files in packaging/ ARE tracked)
 packaging/Biblioteca.ico

@@ -24,7 +24,7 @@ public class NativeCsvStrategy implements CsvImportStrategy {
     public boolean canHandle(String headerRow) {
         if (headerRow == null || headerRow.isBlank()) return false;
         String[] cols = CsvUtils.parseLine(headerRow);
-        return cols.length >= 4;
+        return cols.length >= 2;
     }
 
     @Override

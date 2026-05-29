@@ -47,9 +47,20 @@ class FilterController {
         vista.getFilterIdioma().addActionListener(enterFiltrar);
 
         vista.getSearchBar().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicarSearchBar(); vista.getjTableBilio().repaint(); }
+            private javax.swing.Timer debounce;
+            private final int DEBOUNCE_MS = 250;
+            private void scheduleSearch() {
+                if (debounce != null && debounce.isRunning()) debounce.stop();
+                debounce = new javax.swing.Timer(DEBOUNCE_MS, e -> {
+                    aplicarSearchBar();
+                    vista.getjTableBilio().repaint();
+                });
+                debounce.setRepeats(false);
+                debounce.start();
+            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { scheduleSearch(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { scheduleSearch(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { scheduleSearch(); }
         });
 
         vista.getBtnCarregaPreset().addActionListener(e -> carregarPreset());

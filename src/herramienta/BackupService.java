@@ -49,7 +49,10 @@ public class BackupService {
         if (bib.isEmpty()) return;
         try {
             File dir = Config.getBackupDir();
-            dir.mkdirs();
+            if (!dir.exists()) {
+                dir.mkdirs();
+                if (!dir.exists()) return;
+            }
             String today = java.time.LocalDate.now()
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             File[] existing = dir.listFiles((d, n) -> n.startsWith("biblioteca_" + today) && n.endsWith(".sql"));
@@ -82,77 +85,172 @@ public class BackupService {
             pw.println("DELETE FROM autor;");
             pw.println("DELETE FROM llibre;");
             for (Llibre l : bib) {
-                pw.printf(
-                    "INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`," +
-                    "`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`," +
-                    "`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) " +
-                    "VALUES (%d,%s,%d,%s,%.4f,%.4f,%b,%s,%s,%d,%d,%s,%s,%d,%s,%s,%s,%s,%b,%s,%s,%d,%s,%s,%s,%s);%n",
-                    l.getISBN(),
-                    sqlNullable(l.getNom()),
-                    l.getAny() != null ? l.getAny() : 0,
-                    sqlNullable(l.getDescripcio()),
-                    l.getValoracio() != null ? l.getValoracio() : 0.0,
-                    l.getPreu() != null ? l.getPreu() : 0.0,
-                    Boolean.TRUE.equals(l.getLlegit()),
-                    sqlNullable(l.getImatge()),
-                    sqlNullable(l.getNotes()),
-                    l.getPagines(),
-                    l.getPaginesLlegides(),
-                    sqlNullable(l.getEditorial()),
-                    sqlNullable(l.getSerie()),
-                    l.getVolum(),
-                    sqlNullable(l.getDataCompra()),
-                    sqlNullable(l.getDataLectura()),
-                    sqlNullable(l.getIdioma()),
-                    sqlNullable(l.getFormat()),
-                    l.getDesitjat(),
-                    sqlNullable(l.getPaisOrigen()),
-                    sqlNullable(l.getEstat()),
-                    l.getExemplars(),
-                    sqlNullable(l.getLlenguaOriginal()),
-                    sqlNullable(l.getNomCa()),
-                    sqlNullable(l.getNomEs()),
-                    sqlNullable(l.getNomEn()));
+                writeLlibreINSERT(pw, l);
             }
             for (Object[] row : cp.getAllAutors()) {
-                pw.printf("INSERT INTO autor (`id`,`nom`) VALUES (%d,%s);%n",
-                    (int) row[0], sqlNullable((String) row[1]));
+                writeAutorINSERT(pw, (int) row[0], (String) row[1]);
             }
             for (Object[] row : cp.getAllLlibreAutor()) {
-                pw.printf("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (%d,%d);%n",
-                    ((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+                writeLlibreAutorINSERT(pw, ((Number) row[0]).longValue(), ((Number) row[1]).intValue());
             }
             for (Llista ll : llistes) {
-                pw.printf("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (%d,%s,%d,%s);%n",
-                    ll.getId(), sqlNullable(ll.getNom()), ll.getOrdre(), sqlNullable(ll.getColor()));
+                writeLlistaINSERT(pw, ll);
             }
             for (persistencia.LlibreLlistaRow row : cp.getAllLlibreLlista()) {
-                pw.printf("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (%d,%d,%.4f,%b);%n",
-                    row.isbn(), row.llistaId(), row.valoracio(), row.llegit());
+                writeLlibreLlistaINSERT(pw, row);
             }
             for (Tag t : tags) {
-                pw.printf("INSERT INTO tag (`id`,`nom`) VALUES (%d,%s);%n",
-                    t.getId(), sqlNullable(t.getNom()));
+                writeTagINSERT(pw, t);
             }
             for (persistencia.LlibreTagRow row : cp.getAllLlibreTag()) {
-                pw.printf("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (%d,%d);%n",
-                    row.isbn(), row.tagId());
+                writeLlibreTagINSERT(pw, row);
             }
             for (persistencia.PrestecRow row : cp.getAllPrestecs()) {
-                pw.printf("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (%d,%s,%s,%b);%n",
-                    row.isbn(),
-                    sqlNullable(row.nomPersona()),
-                    sqlNullable(row.dataPrestec() != null ? row.dataPrestec().toString() : null),
-                    row.retornat());
+                writePrestecINSERT(pw, row);
             }
             for (persistencia.LecturaRow row : cp.getAllLectures()) {
-                pw.printf("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (%d,%s,%s,%d);%n",
-                    row.isbn(),
-                    sqlNullable(row.dataInici()),
-                    sqlNullable(row.dataFi()),
-                    row.paginesLlegides());
+                writeLecturaINSERT(pw, row);
             }
         }
+    }
+
+    private void writeLlibreINSERT(java.io.PrintWriter pw, Llibre l) {
+        pw.print("INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`," +
+                "`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`," +
+                "`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) " +
+                "VALUES (");
+        pw.print(l.getISBN());
+        pw.print(',');
+        pw.print(sqlNullable(l.getNom()));
+        pw.print(',');
+        pw.print(l.getAny() != null ? l.getAny() : 0);
+        pw.print(',');
+        pw.print(sqlNullable(l.getDescripcio()));
+        pw.print(',');
+        pw.print(String.format(java.util.Locale.ROOT, "%.4f", l.getValoracio() != null ? l.getValoracio() : 0.0));
+        pw.print(',');
+        pw.print(String.format(java.util.Locale.ROOT, "%.4f", l.getPreu() != null ? l.getPreu() : 0.0));
+        pw.print(',');
+        pw.print(Boolean.TRUE.equals(l.getLlegit()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getImatge()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getNotes()));
+        pw.print(',');
+        pw.print(l.getPagines());
+        pw.print(',');
+        pw.print(l.getPaginesLlegides());
+        pw.print(',');
+        pw.print(sqlNullable(l.getEditorial()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getSerie()));
+        pw.print(',');
+        pw.print(l.getVolum());
+        pw.print(',');
+        pw.print(sqlNullable(l.getDataCompra()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getDataLectura()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getIdioma()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getFormat()));
+        pw.print(',');
+        pw.print(l.getDesitjat());
+        pw.print(',');
+        pw.print(sqlNullable(l.getPaisOrigen()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getEstat()));
+        pw.print(',');
+        pw.print(l.getExemplars());
+        pw.print(',');
+        pw.print(sqlNullable(l.getLlenguaOriginal()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getNomCa()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getNomEs()));
+        pw.print(',');
+        pw.print(sqlNullable(l.getNomEn()));
+        pw.println(");");
+    }
+
+    private void writeAutorINSERT(java.io.PrintWriter pw, int id, String nom) {
+        pw.print("INSERT INTO autor (`id`,`nom`) VALUES (");
+        pw.print(id);
+        pw.print(',');
+        pw.print(sqlNullable(nom));
+        pw.println(");");
+    }
+
+    private void writeLlibreAutorINSERT(java.io.PrintWriter pw, long isbn, int autorId) {
+        pw.print("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (");
+        pw.print(isbn);
+        pw.print(',');
+        pw.print(autorId);
+        pw.println(");");
+    }
+
+    private void writeLlistaINSERT(java.io.PrintWriter pw, Llista ll) {
+        pw.print("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (");
+        pw.print(ll.getId());
+        pw.print(',');
+        pw.print(sqlNullable(ll.getNom()));
+        pw.print(',');
+        pw.print(ll.getOrdre());
+        pw.print(',');
+        pw.print(sqlNullable(ll.getColor()));
+        pw.println(");");
+    }
+
+    private void writeLlibreLlistaINSERT(java.io.PrintWriter pw, persistencia.LlibreLlistaRow row) {
+        pw.print("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (");
+        pw.print(row.isbn());
+        pw.print(',');
+        pw.print(row.llistaId());
+        pw.print(',');
+        pw.print(String.format(java.util.Locale.ROOT, "%.4f", row.valoracio()));
+        pw.print(',');
+        pw.print(row.llegit());
+        pw.println(");");
+    }
+
+    private void writeTagINSERT(java.io.PrintWriter pw, Tag t) {
+        pw.print("INSERT INTO tag (`id`,`nom`) VALUES (");
+        pw.print(t.getId());
+        pw.print(',');
+        pw.print(sqlNullable(t.getNom()));
+        pw.println(");");
+    }
+
+    private void writeLlibreTagINSERT(java.io.PrintWriter pw, persistencia.LlibreTagRow row) {
+        pw.print("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (");
+        pw.print(row.isbn());
+        pw.print(',');
+        pw.print(row.tagId());
+        pw.println(");");
+    }
+
+    private void writePrestecINSERT(java.io.PrintWriter pw, persistencia.PrestecRow row) {
+        pw.print("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (");
+        pw.print(row.isbn());
+        pw.print(',');
+        pw.print(sqlNullable(row.nomPersona()));
+        pw.print(',');
+        pw.print(sqlNullable(row.dataPrestec() != null ? row.dataPrestec().toString() : null));
+        pw.print(',');
+        pw.print(row.retornat());
+        pw.println(");");
+    }
+
+    private void writeLecturaINSERT(java.io.PrintWriter pw, persistencia.LecturaRow row) {
+        pw.print("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (");
+        pw.print(row.isbn());
+        pw.print(',');
+        pw.print(sqlNullable(row.dataInici()));
+        pw.print(',');
+        pw.print(sqlNullable(row.dataFi()));
+        pw.print(',');
+        pw.print(row.paginesLlegides());
+        pw.println(");");
     }
 
     private static String sqlNullable(String s) {

@@ -81,7 +81,7 @@ public class Llibre {
 
 	public String getAutor() {
 		if (!autors.isEmpty()) return String.join(", ", autors);
-		return autor;
+		return autor != null ? autor : "";
 	}
 
 	public void setAutor(String autor) {

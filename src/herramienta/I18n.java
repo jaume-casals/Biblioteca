@@ -584,7 +584,7 @@ public class I18n {
             System.err.println(msg);
             if ("true".equals(System.getProperty("biblioteca.test")))
                 throw new IllegalStateException(msg);
-            raw = key;
+            raw = "[" + key + "]";
         } else {
             int idx = langIndex();
             raw = vals[Math.min(idx, vals.length - 1)];

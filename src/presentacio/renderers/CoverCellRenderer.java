@@ -46,14 +46,17 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
                 coverLoading.add(isbn);
                 final int r = row, c = col;
                 LOADER.submit(() -> {
-                    Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
-                    ImageIcon img = l != null ? TableCellComponents.scaledCover(TableCellComponents.loadCoverBytes(l, cd)) : null;
-                    if (img != null) coverCache.put(isbn, img);
-                    coverLoading.remove(isbn);
-                    SwingUtilities.invokeLater(() -> {
-                        if (r < table.getRowCount())
-                            table.repaint(table.getCellRect(r, c, false));
-                    });
+                    try {
+                        Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
+                        ImageIcon img = l != null ? TableCellComponents.scaledCover(TableCellComponents.loadCoverBytes(l, cd)) : null;
+                        if (img != null) coverCache.put(isbn, img);
+                        SwingUtilities.invokeLater(() -> {
+                            if (r < table.getRowCount())
+                                table.repaint(table.getCellRect(r, c, false));
+                        });
+                    } finally {
+                        coverLoading.remove(isbn);
+                    }
                 });
             }
         } catch (Exception ignored) {}

@@ -37,9 +37,8 @@ public final class CsvUtils {
             }
         }
         if (count == fields.length) fields = java.util.Arrays.copyOf(fields, fields.length + 1);
-        fields[count] = sb.toString().trim();
-        // Trim all parsed fields to avoid "Author " != "Author" mismatches
-        for (int j = 0; j < count; j++) {
+        fields[count] = sb.toString();
+        for (int j = 0; j <= count; j++) {
             if (fields[j] != null) fields[j] = fields[j].trim();
         }
         return count + 1 == fields.length ? fields : java.util.Arrays.copyOf(fields, count + 1);
