@@ -566,6 +566,10 @@ public class I18n {
         T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");
         T("btn_import_csv", "Importar CSV", "Importar CSV", "Import CSV");
         T("tip_import_csv", "Importar llibres des d'un fitxer CSV (Goodreads compatible)", "Importar libros desde un archivo CSV (compatible con Goodreads)", "Import books from CSV (Goodreads compatible)");
+        T("err_db_init_h2", "Error inicialitzant la base de dades integrada.", "Error inicializando la base de datos integrada.", "Error initializing the embedded database.");
+        T("err_db_init_mariadb", "Comprova que MariaDB/MySQL estigui en execució i que les credencials siguin correctes.", "Comprueba que MariaDB/MySQL esté en ejecución y que las credenciales sean correctas.", "Check that MariaDB/MySQL is running and credentials are correct.");
+        T("err_db_close", "Fallo al tancar la connexió: {0}", "Error al cerrar la conexión: {0}", "Failed to close connection: {0}");
+        T("err_db_connect", "No s'ha pogut connectar a la base de dades.", "No se ha podido conectar a la base de datos.", "Could not connect to the database.");
     }
 
     private static void T(String key, String ca, String es, String en) {

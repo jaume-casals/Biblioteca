@@ -251,7 +251,7 @@ public class DetallesLlibrePanelControl {
 			if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
 			try {
 				cLlibres.deleteLlibre(llibre);
-				enActualizarBBDD.eliminarLlibre(llibre);
+				enActualizarBBDD.onBookDeleted(llibre);
 				vista.dispose();
 			} catch (Exception e) {
 				new DialogoError(e).showErrorMessage();
@@ -334,7 +334,7 @@ public class DetallesLlibrePanelControl {
 						cLlibres.deleteLlibre(llibre);
 						cLlibres.addLlibre(a);
 					}
-					enActualizarBBDD.actualitzarLlibre(a, false);
+					enActualizarBBDD.onBookUpdated(a, false);
 					setEditMode(false);
 					vista.getBtnEditar().setText(I18n.t("btn_edit_java"));
 					vista.setTitle(I18n.t("dlg_book_detail_title", a.getDisplayNom(herramienta.Config.getLang())));

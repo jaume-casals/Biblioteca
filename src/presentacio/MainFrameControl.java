@@ -250,8 +250,8 @@ public class MainFrameControl implements interficie.EnActualizarBBDD {
 	}
 
 	@Override
-	public void actualitzarLlibre(Llibre l, boolean nuevo) {
-		if (nuevo) {
+	public void onBookUpdated(Llibre l, boolean isNew) {
+		if (isNew) {
 			Integer llistaId = mostrarControl.getCurrentLlistaId();
 			if (llistaId != null) {
 				try {
@@ -261,11 +261,11 @@ public class MainFrameControl implements interficie.EnActualizarBBDD {
 				}
 			}
 		}
-		mostrarControl.refreshLlibre(l, nuevo);
+		mostrarControl.refreshLlibre(l, isNew);
 	}
 
 	@Override
-	public void eliminarLlibre(Llibre l) {
+	public void onBookDeleted(Llibre l) {
 		mostrarControl.eliminarFila(l);
 	}
 

@@ -25,9 +25,9 @@ final class LlibreFilterFactory {
         f.serie        = ctx.queryParamOrNull("serie");
         f.format       = ctx.queryParamOrNull("format");
         f.idioma       = ctx.queryParamOrNull("idioma");
-        f.sortColumn   = ctx.queryParamOrNull("sort");
+        String sortCol = ctx.queryParamOrNull("sort");
         String sortDir = ctx.queryParam("sortDir");
-        if (sortDir != null) f.sortAsc = !"desc".equalsIgnoreCase(sortDir);
+        if (sortCol != null) f.sort = new domini.SortSpec(sortCol, !"desc".equalsIgnoreCase(sortDir));
         return f;
     }
 }

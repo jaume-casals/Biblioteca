@@ -2,16 +2,24 @@ package persistencia;
 
 import java.sql.Connection;
 
-/**
- * Façade for {@link ServerConect}'s driver-loading + URL-building responsibilities, separated
- * from {@link SchemaManager}. Used by callers that want a typed entry point.
- */
+import herramienta.Config;
+
 public final class ConnectionFactory {
     private ConnectionFactory() {}
 
+    public static ConnectionConfig withConfig(String dbType, String host, String user,
+            String password, String profile, String testUrl) {
+        return new ConnectionConfig(dbType, host, user, password, profile, testUrl);
+    }
+
     public static Connection open() {
+        String testUrl = System.getProperty("biblioteca.h2.url");
+        ConnectionConfig cfg = withConfig(
+            testUrl != null ? "h2" : Config.getDbType(),
+            Config.getDbHost(), Config.getDbUser(), Config.getDbPassword(),
+            Config.getDbProfile(), testUrl);
         ServerConect sc = new ServerConect();
-        sc.createDatabase();
+        sc.createDatabase(cfg);
         return sc.getConnection();
     }
 }

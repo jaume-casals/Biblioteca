@@ -167,7 +167,7 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			herramienta.LlibreValidator.validateExtrasAll(l.getEditorial(), l.getSerie(), l.getIdioma(), l.getFormat(), l.getPaisOrigen(), l.getEstat());
 			cLlibres.addLlibre(l);
 			vista.dispose();
-			if (callback != null) callback.actualitzarLlibre(l, true);
+			if (callback != null) callback.onBookUpdated(l, true);
 		} catch (Exception e) {
 			new DialogoError(e).showErrorMessage();
 		}

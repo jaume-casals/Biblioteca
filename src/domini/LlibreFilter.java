@@ -17,9 +17,7 @@ public class LlibreFilter {
     public String format;
     public String idioma;
     public Integer llistaId;
-    /** DB column name for ORDER BY (null = default ISBN). Validated against whitelist in LlibreDao. */
-    public String sortColumn;
-    public boolean sortAsc = true;
+    public SortSpec sort = SortSpec.defaultAsc();
 
     private LlibreFilter() {}
 
@@ -36,7 +34,7 @@ public class LlibreFilter {
         f.editorial = this.editorial; f.serie = this.serie;
         f.format = this.format; f.idioma = this.idioma;
         f.llistaId = this.llistaId;
-        f.sortColumn = this.sortColumn; f.sortAsc = this.sortAsc;
+        f.sort = this.sort;
         return f;
     }
 

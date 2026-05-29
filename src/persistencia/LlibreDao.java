@@ -298,12 +298,16 @@ public class LlibreDao {
         if (f.serie        != null) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.serie + "%"); }
         if (f.format       != null) { sql.append(" AND l.format = ?");        params.add(f.format); }
         if (f.idioma       != null) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.idioma + "%"); }
+        String sortCol = f.sort != null ? f.sort.column() : "ISBN";
+        boolean sortAsc = f.sort != null ? f.sort.ascending() : true;
         java.util.Map<String, String> SORT_COLS = java.util.Map.of(
-            "ISBN", "l.`ISBN`", "nom", "l.`nom`", "any", "l.`any`",
-            "valoracio", "l.`valoracio`", "preu", "l.`preu`");
-        String sc = (f.sortColumn != null && SORT_COLS.containsKey(f.sortColumn))
-            ? SORT_COLS.get(f.sortColumn) : "l.`ISBN`";
-        sql.append(" ORDER BY ").append(sc).append(f.sortAsc ? " ASC" : " DESC");
+            domini.SortSpec.COL_ISBN, "l.`ISBN`",
+            domini.SortSpec.COL_NOM, "l.`nom`",
+            domini.SortSpec.COL_ANY, "l.`any`",
+            domini.SortSpec.COL_VALORACIO, "l.`valoracio`",
+            domini.SortSpec.COL_PREU, "l.`preu`");
+        String sc = SORT_COLS.getOrDefault(sortCol, "l.`ISBN`");
+        sql.append(" ORDER BY ").append(sc).append(sortAsc ? " ASC" : " DESC");
         if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {

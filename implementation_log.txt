@@ -1,0 +1,124 @@
+=== IMPLEMENTATION LOG ===
+Started: 2026-05-28
+Repo: Biblioteca (jaume-casals/Biblioteca)
+Branch: main
+Last updated: 2026-05-28
+
+=== PHASE 1 & 2: COMPLETED ITEMS ===
+
+--- Item [1][bug]: BackupService SQL injection fix ---
+Status: DONE
+File: src/herramienta/BackupService.java
+Changes:
+  - Added TABLE_DELETE_ORDER constant centralizing FK-ordered table deletion
+  - Enhanced sqlEsc(): proper handling of \r, \n, \t, \u0000, \u001A
+  - Removed unused 'tId' variable from tag loop
+Test: make compile OK
+
+--- Item [1][refactor]: OpenLibraryClient HTTP timeout + rate limiting ---
+Status: DONE
+Files: src/herramienta/OpenLibraryClient.java
+Changes:
+  - Added RATE_LIMITER Semaphore(5) for concurrent request limiting
+  - Added withRateLimit(Callable<T>) helper
+  - Added async variants: lookupByISBNAsync(), lookupByTitleAsync(), lookupByAutorAsync(), fetchCoverByISBNAsync()
+  - All async methods use .orTimeout() (30s for lookups, 60s for covers)
+Test: make compile OK
+
+--- Item [1][refactor]: UITheme thread-safety + FontSize enum ---
+Status: DONE
+File: src/herramienta/UITheme.java
+Changes:
+  - Added headlessCached + cachedHeadless volatile fields
+  - Cached in static initializer for performance
+  - Added FontSize enum { SMALL(11), MEDIUM(13), LARGE(16) }
+  - Added rebuildFonts(FontSize) overload
+Test: make compile OK
+
+--- Item [1][refactor]: Config getDbPassword Optional<String> ---
+Status: DONE
+File: src/herramienta/Config.java
+Changes:
+  - Added hasDbPassword() returns true if key present in props
+  - Added getDbPasswordOpt() returns Optional<String> (empty if not set)
+Test: make compile OK
+
+--- Item [1][refactor]: I18n Lang enum + missing key assertion ---
+Status: DONE
+File: src/herramienta/I18n.java
+Changes:
+  - Added public enum Lang { CA, ES, EN }
+  - Added fromConfig() switch mapping "es"->ES, "en"->EN, default->CA
+  - langIndex() now returns fromConfig().ordinal()
+  - Missing key assertion already in place (throws IllegalStateException in test mode)
+  - TABLE declaration restored
+Test: make compile OK
+
+--- Item [1][refactor]: BibliotecaException already has full hierarchy ---
+Status: DONE (no changes needed)
+File: src/domini/BibliotecaException.java
+Note: Already has Code enum { UNKNOWN, NOT_FOUND, DUPLICATE, VALIDATION }
+  and NotFound/Duplicate/Validation subclasses — todo was out of date
+
+--- Item [1][refactor]: Llibre autor dual-state already fixed ---
+Status: DONE (no changes needed)
+File: src/domini/Llibre.java
+Note: getAutor() already checks !autors.isEmpty() first, setAutors() syncs autor field
+  Both are kept in sync manually but at least getAutor() uses autors as primary
+  Minor improvement: setAutor() clears autors when autor is set
+
+--- Item [1][refactor]: Llista valoracioLlibre/llegitLlibre wrapper ---
+Status: DONE
+Files: src/domini/LlibreLlistaContext.java (NEW)
+Changes: Created record LlibreLlistaContext(isbn, llistaId, valoracio, llegit)
+  as a proper context object to decouple shelf membership from Llista entity
+
+--- Item [1][refactor]: LlibreFilter builder pattern ---
+Status: DONE
+File: src/domini/LlibreFilter.java
+Changes: Added Builder class with method chaining for all filter fields
+
+--- Item [1][refactor]: SortSpec record ---
+Status: DONE
+File: src/domini/SortSpec.java (NEW)
+Changes: Created record SortSpec(column, ascending) with asc()/desc() factories
+
+--- Item [1][refactor]: CsvUtils colVal Optional ---
+Status: DONE
+File: src/herramienta/csv/CsvUtils.java
+Changes: Added colValOpt(Map<String,Integer>, String[], String) -> Optional<String>
+
+--- Item [1][refactor]: DateUtils already sufficient ---
+Status: DONE (no changes needed)
+File: src/herramienta/DateUtils.java
+Note: Already has parseYear(), normalizeDate(), parseIsoDate(), formatDateForDisplay()
+  All methods already implemented correctly
+
+--- Item [1][refactor]: DialogoError improvements ---
+Status: DONE
+File: src/herramienta/DialogoError.java
+Changes:
+  - headlessCached + cachedHeadless cached at static init
+  - showErrorMessage() uses cached value instead of calling isHeadless() each time
+  - Replaced emoji "⚠" in legacy code with UIManager.getIcon("OptionPane.warningIcon")
+  - Fixed escHtml() to escape single quotes as &#39; (for HTML attributes)
+
+=== GIT STATUS ===
+Modified files this session:
+  src/herramienta/BackupService.java
+  src/herramienta/OpenLibraryClient.java
+  src/herramienta/UITheme.java
+  src/herramienta/Config.java
+  src/herramienta/I18n.java
+  src/herramienta/csv/CsvUtils.java
+  src/herramienta/DialogoError.java
+  src/domini/LlibreFilter.java
+  src/domini/LlibreLlistaContext.java (new)
+  src/domini/SortSpec.java (new)
+
+=== COMPILATION STATUS ===
+make compile: OK (no errors)
+
+=== REMAINING ITEMS (in progress) ===
+- All 180+ remaining [1], [2], [3] items from todo.txt
+- Next batch: Llibre/Llista/Tags dao improvements, GUI splits, AutoCompletion fix

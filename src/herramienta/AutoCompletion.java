@@ -86,18 +86,7 @@ public class AutoCompletion extends PlainDocument {
 	public void remove(int offs, int len) throws BadLocationException {
 		if (selecting)
 			return;
-		if (hitBackspace) {
-			if (offs > 0) {
-				if (hitBackspaceOnSelection)
-					offs--;
-			} else {
-				comboBox.getToolkit().beep(); // when available use:
-												// UIManager.getLookAndFeel().provideErrorFeedback(comboBox);
-			}
-			highlightCompletedText(offs);
-		} else {
-			super.remove(offs, len);
-		}
+		super.remove(offs, len);
 	}
 
 	public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {

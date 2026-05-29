@@ -4,7 +4,7 @@ import domini.Llibre;
 
 /** UI callback when a book is deleted. */
 public interface OnLlibreDelete {
-    void eliminarLlibre(Llibre l);
+    void onBookDeleted(Llibre l);
 
     class DeleteEvent {
         private final Llibre book;

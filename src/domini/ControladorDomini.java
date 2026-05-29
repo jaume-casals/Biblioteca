@@ -30,11 +30,11 @@ public class ControladorDomini implements BibliotecaWriter {
 		};
 
 	private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
-		"ISBN",      Comparator.comparing(Llibre::getISBN),
-		"nom",       Comparator.comparing(Llibre::getNom, String.CASE_INSENSITIVE_ORDER),
-		"any",       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
-		"valoracio", Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
-		"preu",      Comparator.comparing(l -> l.getPreu() != null ? l.getPreu() : 0.0)
+		SortSpec.COL_ISBN,      Comparator.comparing(Llibre::getISBN),
+		SortSpec.COL_NOM,       Comparator.comparing(l -> l.getNom() != null ? l.getNom() : "", String.CASE_INSENSITIVE_ORDER),
+		SortSpec.COL_ANY,       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
+		SortSpec.COL_VALORACIO, Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
+		SortSpec.COL_PREU,      Comparator.comparing(l -> l.getPreu() != null ? l.getPreu() : 0.0)
 	);
 
 	private static Llibre searchKey(long isbn) {
@@ -105,9 +105,9 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	private static void applySort(ArrayList<Llibre> list, LlibreFilter f) {
-		if (f.sortColumn == null || list.size() < 2) return;
-		Comparator<Llibre> cmp = SORT_BY.getOrDefault(f.sortColumn, compararISBN);
-		if (!f.sortAsc) cmp = cmp.reversed();
+		if (f.sort == null || list.size() < 2) return;
+		Comparator<Llibre> cmp = SORT_BY.getOrDefault(f.sort.column(), compararISBN);
+		if (!f.sort.ascending()) cmp = cmp.reversed();
 		list.sort(cmp);
 	}
 

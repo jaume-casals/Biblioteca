@@ -25,7 +25,7 @@ public final class LlibreFilterBuilder {
     public LlibreFilterBuilder format(String v)     { f.format = v;       return this; }
     public LlibreFilterBuilder idioma(String v)     { f.idioma = v;       return this; }
     public LlibreFilterBuilder sort(String column, boolean asc) {
-        f.sortColumn = column; f.sortAsc = asc; return this;
+        f.sort = new SortSpec(column, asc); return this;
     }
 
     public LlibreFilter build() { return f; }

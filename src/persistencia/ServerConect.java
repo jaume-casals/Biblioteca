@@ -6,8 +6,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.MessageFormat;
 
 import herramienta.Config;
+import herramienta.I18n;
 
 public class ServerConect {
 
@@ -124,10 +126,11 @@ public class ServerConect {
 
 	public void createDatabase() {
 		String testUrl = System.getProperty("biblioteca.h2.url");
-		createDatabase(new ConnectionConfig(
+		ConnectionConfig cfg = ConnectionFactory.withConfig(
 			testUrl != null ? "h2" : Config.getDbType(),
 			Config.getDbHost(), Config.getDbUser(), Config.getDbPassword(),
-			Config.getDbProfile(), testUrl));
+			Config.getDbProfile(), testUrl);
+		createDatabase(cfg);
 	}
 
 	public void createDatabase(ConnectionConfig cfg) {
@@ -153,10 +156,7 @@ public class ServerConect {
 			}
 			runMigrations();
 		} catch (Exception e) {
-			String hint = "h2".equals(cfg.dbType())
-				? "Error inicialitzant la base de dades integrada."
-				: "Comprova que MariaDB/MySQL estigui en execució...";
-			throw new RuntimeException("No s'ha pogut connectar a la base de dades.\n" + hint, e);
+			throw new RuntimeException(I18n.t("err_db_connect") + " " + I18n.t("err_db_init_" + cfg.dbType()), e);
 		}
 	}
 
@@ -299,7 +299,7 @@ public class ServerConect {
 		if (con == null) return;
 		try { con.close(); }
 		catch (SQLException e) {
-			System.err.println("Fallo al tancar la connexió: " + e.getMessage());
+			System.err.println(MessageFormat.format(I18n.t("err_db_close"), e.getMessage()));
 		} finally {
 			con = null;
 		}
