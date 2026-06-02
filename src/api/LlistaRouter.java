@@ -51,7 +51,7 @@ public class LlistaRouter {
 
     private void delete(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        synchronized (cd) { cd.deleteLlista(findById(id)); }
+        synchronized (cd) { cd.deleteLlista(cd.getLlistaById(id)); }
         ctx.status(204);
     }
 
@@ -61,7 +61,7 @@ public class LlistaRouter {
         if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         synchronized (cd) { cd.renameLlista(id, nom); }
-        ctx.json(JsonMapper.llistaToMap(findById(id)));
+        ctx.json(JsonMapper.llistaToMap(cd.getLlistaById(id)));
     }
 
     private void setColor(HttpCtx ctx) throws Exception {
@@ -74,14 +74,14 @@ public class LlistaRouter {
 
     private void moveUp(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        findById(id);
+        cd.getLlistaById(id);
         synchronized (cd) { cd.moveLlistaUp(id); }
         ctx.json(Map.of("ok", true));
     }
 
     private void moveDown(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        findById(id);
+        cd.getLlistaById(id);
         synchronized (cd) { cd.moveLlistaDown(id); }
         ctx.json(Map.of("ok", true));
     }
@@ -123,10 +123,5 @@ public class LlistaRouter {
         long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) { cd.removeLlibreFromLlista(isbn, id); }
         ctx.status(204);
-    }
-
-    private Llista findById(int id) throws Exception {
-        for (Llista l : cd.getAllLlistes()) if (l.getId() == id) return l;
-        throw new Exception("Shelf not found: " + id);
     }
 }

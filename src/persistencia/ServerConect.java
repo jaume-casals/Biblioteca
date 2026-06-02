@@ -89,6 +89,15 @@ public class ServerConect {
 		new Migration(29, "ALTER TABLE llibre MODIFY COLUMN valoracio DOUBLE"),
 		new Migration(30, "ALTER TABLE llibre MODIFY COLUMN preu DOUBLE"),
 		new Migration(31, "ALTER TABLE llibre_llista MODIFY COLUMN valoracio DOUBLE"),
+		// Migració 32-34: passa els autors de la columna `llibre.autor` (string)
+		// a la taula `llibre_autor` (relació N:M). Risc: si 33 falla parcialment
+		// en una BBDD gran (OOM, FK violada, etc.) i 34 corre igual, es perd
+		// la informació d'autors dels llibres que no s'han migrat.
+		// Les sentències són idempotents (INSERT IGNORE + subselect amb NOT IN),
+		// de manera que es poden re-correr manualment si cal — veure
+		// `todo.txt` [1] Migration 34. Abans de re-córrer, comprova que
+		// `SELECT COUNT(*) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != ''`
+		// coincideix amb `SELECT COUNT(*) FROM llibre_autor`.
 		new Migration(32, "INSERT IGNORE INTO autor (nom) SELECT DISTINCT TRIM(autor) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != '' AND ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
 		new Migration(33, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT l.ISBN, a.id FROM llibre l JOIN autor a ON a.nom = TRIM(l.autor) WHERE TRIM(l.autor) IS NOT NULL AND TRIM(l.autor) != '' AND l.ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
 		new Migration(34, "ALTER TABLE llibre DROP COLUMN autor"),
@@ -160,6 +169,10 @@ public class ServerConect {
 
 	private void runMigrations() throws SQLException {
 		boolean prevAutoCommit = con.getAutoCommit();
+		// Si la connexió ja està en una transacció aliena (prevAutoCommit == false),
+		// no podem fer rollback de tota la transacció — fem servir un SAVEPOINT
+		// per aïllar el rollback a les migracions.
+		java.sql.Savepoint sp = prevAutoCommit ? null : con.setSavepoint();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
 			java.util.Set<Integer> applied = new java.util.HashSet<>();
@@ -179,7 +192,8 @@ public class ServerConect {
 			}
 			con.commit();
 		} catch (SQLException e) {
-			try { con.rollback(); } catch (SQLException ignored) {}
+			if (prevAutoCommit) { try { con.rollback(); } catch (SQLException ignored) {} }
+			else { try { con.rollback(sp); } catch (SQLException ignored) {} }
 			throw e;
 		} finally {
 			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}
@@ -218,59 +232,7 @@ public class ServerConect {
 	}
 
 	private File findLibDir(StringBuilder diag) {
-		diag.append("  user.dir=").append(System.getProperty("user.dir")).append("\n");
-		diag.append("  biblioteca.root=").append(System.getProperty("biblioteca.root")).append("\n");
-
-		String root = System.getProperty("biblioteca.root");
-		if (root != null && !root.isBlank()) {
-			File lib = new File(root, "lib");
-			diag.append("  [1] ").append(lib.getAbsolutePath())
-				.append(lib.isDirectory() ? " EXISTS" : " missing").append("\n");
-			if (lib.isDirectory()) return lib;
-		}
-
-		File wdLib = new File(System.getProperty("user.dir"), "lib");
-		diag.append("  [2] ").append(wdLib.getAbsolutePath())
-			.append(hasJars(wdLib) ? " HAS_JARS" : (wdLib.isDirectory() ? " no-jars" : " missing")).append("\n");
-		if (hasJars(wdLib)) return wdLib;
-
-		File[] children = new File(System.getProperty("user.dir")).listFiles(File::isDirectory);
-		if (children != null) {
-			for (File child : children) {
-				File lib = new File(child, "lib");
-				diag.append("  [3.d] ").append(lib.getAbsolutePath())
-					.append(hasJars(lib) ? " HAS_JARS" : (lib.isDirectory() ? " no-jars" : " missing")).append("\n");
-				if (hasJars(lib)) return lib;
-			}
-		}
-
-		File dir = new File(System.getProperty("user.dir"));
-		for (int i = 0; i < 6; i++) {
-			File lib = new File(dir, "lib");
-			diag.append("  [4." + i + "] ").append(lib.getAbsolutePath())
-				.append(hasJars(lib) ? " HAS_JARS" : (lib.isDirectory() ? " no-jars" : " missing")).append("\n");
-			if (hasJars(lib)) return lib;
-			dir = dir.getParentFile();
-			if (dir == null) break;
-		}
-
-		try {
-			java.net.URL loc = ServerConect.class.getProtectionDomain().getCodeSource().getLocation();
-			diag.append("  classSource=").append(loc).append("\n");
-			dir = new File(loc.toURI());
-			for (int i = 0; i < 10; i++) {
-				File lib = new File(dir, "lib");
-				diag.append("  [5." + i + "] ").append(lib.getAbsolutePath())
-					.append(hasJars(lib) ? " HAS_JARS" : (lib.isDirectory() ? " no-jars" : " missing")).append("\n");
-				if (hasJars(lib)) return lib;
-				dir = dir.getParentFile();
-				if (dir == null) break;
-			}
-		} catch (Exception e) {
-			diag.append("  classSource=ERROR:").append(e.getMessage()).append("\n");
-		}
-
-		return wdLib;
+		return JarLocator.locate(diag, this::hasJars);
 	}
 
 	private boolean hasJars(File dir) {

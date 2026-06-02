@@ -13,6 +13,10 @@ public class BookImporter {
     public static ImportResult importCSV(java.io.File file, BibliotecaWriter cd) {
         int ok = 0, skipped = 0, err = 0;
         StringBuilder errors = new StringBuilder();
+        // Llista hardcoded d'estratègies — alternativament, ServiceLoader.load()
+        // amb un fitxer META-INF/services/ que permet afegir noves estratègies
+        // sense tocar aquest mètode. No s'ha fet per evitar un pas més de
+        // complexitat innecessari mentre només hi hagi 3 implementacions.
         java.util.List<herramienta.csv.CsvImportStrategy> strategies = java.util.List.of(
             new herramienta.csv.LibraryThingCsvStrategy(),
             new herramienta.csv.GoodreadsCsvStrategy(),
@@ -46,92 +50,7 @@ public class BookImporter {
     }
 
     public static ImportResult importJSON(java.io.File file, BibliotecaWriter cd) throws Exception {
-        int ok = 0, err = 0, skipped = 0;
-        StringBuilder errors = new StringBuilder();
-        String json = new String(java.nio.file.Files.readAllBytes(file.toPath()),
-            java.nio.charset.StandardCharsets.UTF_8);
-        com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
-        // Build tag id→domain id map (create tags if missing)
-        java.util.Map<Integer,Integer> tagIdMap = new java.util.HashMap<>();
-        if (root.has("tags")) {
-            for (com.google.gson.JsonElement te : root.getAsJsonArray("tags")) {
-                com.google.gson.JsonObject to = te.getAsJsonObject();
-                int oldId = to.get("id").getAsInt();
-                String nom = to.get("nom").getAsString();
-                Tag existing = cd.getAllTags().stream().filter(t -> t.getNom().equals(nom)).findFirst().orElse(null);
-                if (existing != null) { tagIdMap.put(oldId, existing.getId()); }
-                else { Tag nt = cd.addTag(nom); tagIdMap.put(oldId, nt.getId()); }
-            }
-        }
-        // Build shelf id→domain id map
-        java.util.Map<Integer,Integer> llistaIdMap = new java.util.HashMap<>();
-        if (root.has("llistes")) {
-            for (com.google.gson.JsonElement le : root.getAsJsonArray("llistes")) {
-                com.google.gson.JsonObject lo = le.getAsJsonObject();
-                int oldId = lo.get("id").getAsInt();
-                String nom = lo.get("nom").getAsString();
-                Llista existing = cd.getAllLlistes().stream().filter(l -> l.getNom().equals(nom)).findFirst().orElse(null);
-                if (existing != null) { llistaIdMap.put(oldId, existing.getId()); }
-                else { Llista nl = cd.addLlista(nom); llistaIdMap.put(oldId, nl.getId()); }
-            }
-        }
-        // Import books
-        if (root.has("llibres")) {
-            for (com.google.gson.JsonElement be : root.getAsJsonArray("llibres")) {
-                try {
-                    com.google.gson.JsonObject bo = be.getAsJsonObject();
-                    long isbn = bo.get("isbn").getAsLong();
-                    try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
-                    String nom = bo.has("nom") && !bo.get("nom").isJsonNull() ? bo.get("nom").getAsString() : "";
-                    String autor = bo.has("autor") && !bo.get("autor").isJsonNull() ? bo.get("autor").getAsString() : "";
-                    int any = bo.has("any") ? bo.get("any").getAsInt() : 0;
-                    String desc = jsonOptStr(bo, "descripcio");
-                    double val = bo.has("valoracio") ? bo.get("valoracio").getAsDouble() : 0.0;
-                    double preu = bo.has("preu") ? bo.get("preu").getAsDouble() : 0.0;
-                    boolean llegit = bo.has("llegit") && bo.get("llegit").getAsBoolean();
-                    String imatge = jsonOptStr(bo, "imatge");
-                    Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, val, preu, llegit, imatge);
-                    if (bo.has("notes") && !bo.get("notes").isJsonNull()) l.setNotes(bo.get("notes").getAsString());
-                    if (bo.has("pagines")) l.setPagines(bo.get("pagines").getAsInt());
-                    if (bo.has("paginesLlegides")) l.setPaginesLlegides(bo.get("paginesLlegides").getAsInt());
-                    if (bo.has("editorial") && !bo.get("editorial").isJsonNull()) l.setEditorial(bo.get("editorial").getAsString());
-                    if (bo.has("serie") && !bo.get("serie").isJsonNull()) l.setSerie(bo.get("serie").getAsString());
-                    if (bo.has("volum")) l.setVolum(bo.get("volum").getAsInt());
-                    if (bo.has("dataCompra") && !bo.get("dataCompra").isJsonNull()) l.setDataCompra(bo.get("dataCompra").getAsString());
-                    if (bo.has("dataLectura") && !bo.get("dataLectura").isJsonNull()) l.setDataLectura(bo.get("dataLectura").getAsString());
-                    if (bo.has("idioma") && !bo.get("idioma").isJsonNull()) l.setIdioma(bo.get("idioma").getAsString());
-                    if (bo.has("format") && !bo.get("format").isJsonNull()) l.setFormat(bo.get("format").getAsString());
-                    if (bo.has("desitjat")) l.setDesitjat(bo.get("desitjat").getAsBoolean());
-                    if (bo.has("paisOrigen") && !bo.get("paisOrigen").isJsonNull()) l.setPaisOrigen(bo.get("paisOrigen").getAsString());
-                    cd.addLlibre(l);
-                    // shelf memberships
-                    if (bo.has("llistes")) {
-                        for (com.google.gson.JsonElement me : bo.getAsJsonArray("llistes")) {
-                            com.google.gson.JsonObject mo = me.getAsJsonObject();
-                            int oldLlistaId = mo.get("id").getAsInt();
-                            Integer newId = llistaIdMap.get(oldLlistaId);
-                            if (newId != null) {
-                                double mVal = mo.has("valoracio") ? mo.get("valoracio").getAsDouble() : 0.0;
-                                boolean mLlegit = mo.has("llegit") && mo.get("llegit").getAsBoolean();
-                                cd.addLlibreToLlista(isbn, newId, mVal, mLlegit);
-                            }
-                        }
-                    }
-                    // tags
-                    if (bo.has("tags")) {
-                        for (com.google.gson.JsonElement te : bo.getAsJsonArray("tags")) {
-                            Integer newTagId = tagIdMap.get(te.getAsInt());
-                            if (newTagId != null) cd.addLlibreToTag(isbn, newTagId);
-                        }
-                    }
-                    ok++;
-                } catch (Exception ex) {
-                    err++;
-                    if (errors.length() < 400) errors.append("\n• ").append(ex.getMessage());
-                }
-            }
-        }
-        return new ImportResult(ok, skipped, err, errors.toString());
+        return JsonImporter.run(file, cd);
     }
 
     public static ImportResult importCalibre(java.io.File dbFile, String sqlite3, BibliotecaWriter cd) throws Exception {

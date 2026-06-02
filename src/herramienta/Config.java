@@ -12,6 +12,23 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Façana estàtica sobre les propietats de configuració (tema, idioma, BBDD,
+ * geometria de finestra, etc.).
+ *
+ * <p><b>TODO (refactor):</b> 303 línies, getters/setters plans per a 4
+ * dominis diferents (UI, DB, Window, Filter). La refactorització natural
+ * seria:
+ * <ul>
+ *   <li>{@code UIConfig}: tema, fontSize, idioma, currency, defaultValoracio, presets</li>
+ *   <li>{@code DBConfig}: dbHost, dbUser, dbPassword, dbType, dbPath, profiles</li>
+ *   <li>{@code WindowConfig}: windowX/Y/Width/Height, maximitzada, darrera pestanya</li>
+ *   <li>{@code FilterConfig}: defaultImgDir, defaultSearchMode, presetCount</li>
+ * </ul>
+ * {@code Config} es queda com a façana que delega. Fins llavors, els
+ * comentaris de secció més avall permeten navegar mentalment quin getter
+ * pertany a quin sub-domini.
+ */
 public class Config {
 
     private Config() {}
@@ -45,6 +62,7 @@ public class Config {
         }
     }
 
+    // ── UI ────────────────────────────────────────────────────────────────────
     public static boolean isDarkMode() {
         return Boolean.parseBoolean(props.getOrDefault("darkMode", "false"));
     }
@@ -66,6 +84,7 @@ public class Config {
         save();
     }
 
+    // ── DB ────────────────────────────────────────────────────────────────────
     public static String getDbHost() { return props.getOrDefault("dbHost", "localhost"); }
     public static void setDbHost(String host) { props.put("dbHost", host); save(); }
 
@@ -73,6 +92,9 @@ public class Config {
     public static void setDbUser(String user) { props.put("dbUser", user); save(); }
 
     public static String getDbPassword() { return props.getOrDefault("dbPassword", ""); }
+
+    /** Distingeix "no configurat" (retorna false) de "password buit" (true). */
+    public static boolean hasDbPassword() { return props.containsKey("dbPassword"); }
     public static void setDbPassword(String pw) { props.put("dbPassword", pw); save(); }
 
     private static final java.util.Set<String> VALID_FONT_SIZES = java.util.Set.of("small", "medium", "large");
@@ -140,6 +162,7 @@ public class Config {
         save();
     }
 
+    // ── Filter defaults ───────────────────────────────────────────────────────
     public static String getDefaultImgDir() {
         return props.getOrDefault("defaultImgDir", System.getProperty("user.home"));
     }
@@ -195,6 +218,7 @@ public class Config {
         return names;
     }
 
+    // ── Window / geometry ────────────────────────────────────────────────────
     public static int getWindowX()      { return parseInt(props.get("windowX"),      100);  }
     public static int getWindowY()      { return parseInt(props.get("windowY"),      100);  }
     public static int getWindowWidth()  { return parseInt(props.get("windowWidth"),  1280); }

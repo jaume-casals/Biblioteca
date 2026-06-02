@@ -8,6 +8,8 @@ import java.util.Map;
 
 public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
+    @Override public String getName() { return "Goodreads"; }
+
     @Override
     public boolean canHandle(String headerRow) {
         String[] cols = CsvUtils.parseLine(headerRow);
@@ -15,11 +17,11 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
+    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
         String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
         if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
         isbnRaw = CsvUtils.parseIsbn(isbnRaw);
-        if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
+        if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
         long isbn = Long.parseLong(isbnRaw);
         if (CsvUtils.existsInLibrary(cd, isbn)) return false;
 
@@ -55,11 +57,7 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
             java.util.Map<String, domini.Llista> shelfMap = new java.util.HashMap<>();
             for (domini.Llista ll : cd.getAllLlistes()) shelfMap.put(ll.getNom(), ll);
             for (String s : bookshelves.split(",")) {
-                String nomLlista = s.trim();
-                if (nomLlista.isEmpty()) continue;
-                domini.Llista llista = shelfMap.get(nomLlista);
-                if (llista == null) { llista = cd.addLlista(nomLlista); shelfMap.put(nomLlista, llista); }
-                cd.addLlibreToLlista(isbn, llista.getId(), valoracio, llegit);
+                ShelvesHelper.addBookToShelf(cd, shelfMap, isbn, s.trim(), valoracio, llegit);
             }
         }
         return true;

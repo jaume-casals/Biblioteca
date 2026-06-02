@@ -1,51 +1,11 @@
 package interficie;
 
 import domini.Llibre;
-import domini.LlibreFilter;
-import persistencia.LlibreLlistaRow;
-import persistencia.LlibreTagRow;
-import domini.Llista;
 import persistencia.PrestecRow;
-import domini.Tag;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-public interface BibliotecaReader {
+public interface BibliotecaReader extends BookReader, ShelfReader, TagReader, LoanReader {
 
-    List<Llibre> getAllLlibres();
-    Llibre getLlibre(long isbn) throws Exception;
-    int getSize();
-    boolean existsLlibre(long isbn);
-    List<Llibre> get10Llibres();
-    List<Llibre> get100Llibres(int index);
-    int maxIndex100Llibres();
-    List<Llibre> getRecentlyAdded();
-    boolean isLargeLibrary();
-    int countLlibresDB();
-    List<Llibre> getLlibresPage(int offset, int pageSize);
-
-    List<Llibre> aplicarFiltres(LlibreFilter f);
-    List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f);
-    List<Llibre> searchLlibresSQL(LlibreFilter f);
-
-    List<Llista> getAllLlistes();
-    int getCountInLlista(int llistaId);
-    Map<Integer, Integer> getAllCountsInLlistes();
-    List<Llibre> getLlibresInLlista(int llistaId);
-    List<LlibreLlistaRow> getAllLlibreLlistaRows();
-    List<Llista> getLlistesForLlibre(long isbn);
-
-    List<Tag> getAllTags();
-    List<Tag> getTagsForLlibre(long isbn);
-    List<LlibreTagRow> getAllLlibreTagRows();
-    Set<Long> getLlibresWithTag(int tagId);
-
-    Set<Long> getLoanedISBNs();
-    List<PrestecRow> getAllActiveLoans();
-    List<PrestecRow> getLoansForIsbn(long isbn);
-    List<Object[]> getAllOverdueLoans(int daysThreshold);
     int countLoans(long isbn);
 
     byte[] getLlibreBlob(long isbn);
@@ -61,8 +21,8 @@ public interface BibliotecaReader {
     default ExportSnapshot asExportSnapshot() {
         return new ExportSnapshot() {
             @Override public List<Llibre> books() { return getAllLlibres(); }
-            @Override public List<Llista> shelves() { return getAllLlistes(); }
-            @Override public List<Tag> tags() { return getAllTags(); }
+            @Override public List<domini.Llista> shelves() { return getAllLlistes(); }
+            @Override public List<domini.Tag> tags() { return getAllTags(); }
             @Override public long dbSizeBytes() { return getDbSizeBytes(); }
         };
     }

@@ -122,6 +122,14 @@ public class LlibreDao {
         return biblio;
     }
 
+    /**
+     * Insereix un llibre nou a la BBDD. El binding dels 25 camps compartits
+     * amb {@link #update} és gairebé idèntic; s'ha intentat extreure un
+     * {@code bindLlibreFields} helper però la diferència de posicions
+     * (INSERT té {@code imatge_blob} a la posició 9, UPDATE no) complica
+     * l'extracció més del que estalvia — preferim la duplicació explícita
+     * amb un {@code TODO} clar que un helper trencadís.
+     */
     public synchronized void insert(Llibre ll) throws SQLException {
         if (ll == null) return;
         withTransaction(() -> {
@@ -278,36 +286,29 @@ public class LlibreDao {
             "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
             "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
             "l.nom_ca, l.nom_es, l.nom_en FROM llibre l");
-        if (f.llistaId != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
-        if (f.tagId    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
+        if (f.getLlistaId() != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
+        if (f.getTagId()    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
         sql.append(" WHERE 1=1");
         java.util.List<Object> params = new java.util.ArrayList<>();
-        if (f.llistaId != null) params.add(f.llistaId);
-        if (f.tagId    != null) params.add(f.tagId);
-        if (f.nom          != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.nom + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
-        if (f.autor        != null) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.autor + "%"); }
-        if (f.isbn         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.isbn); }
-        if (f.anyMin       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.anyMin); }
-        if (f.anyMax       != null) { sql.append(" AND l.`any` <= ?");        params.add(f.anyMax); }
-        if (f.valoracioMin != null) { sql.append(" AND l.valoracio >= ?");    params.add(f.valoracioMin); }
-        if (f.valoracioMax != null) { sql.append(" AND l.valoracio <= ?");    params.add(f.valoracioMax); }
-        if (f.preuMin      != null) { sql.append(" AND l.preu >= ?");         params.add(f.preuMin); }
-        if (f.preuMax      != null) { sql.append(" AND l.preu <= ?");         params.add(f.preuMax); }
-        if (f.llegit       != null) { sql.append(" AND l.llegit = ?");        params.add(f.llegit); }
-        if (f.editorial    != null) { sql.append(" AND l.editorial LIKE ?");  params.add("%" + f.editorial + "%"); }
-        if (f.serie        != null) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.serie + "%"); }
-        if (f.format       != null) { sql.append(" AND l.format = ?");        params.add(f.format); }
-        if (f.idioma       != null) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.idioma + "%"); }
-        String sortCol = f.sort != null ? f.sort.column() : "ISBN";
-        boolean sortAsc = f.sort != null ? f.sort.ascending() : true;
-        java.util.Map<String, String> SORT_COLS = java.util.Map.of(
-            domini.SortSpec.COL_ISBN, "l.`ISBN`",
-            domini.SortSpec.COL_NOM, "l.`nom`",
-            domini.SortSpec.COL_ANY, "l.`any`",
-            domini.SortSpec.COL_VALORACIO, "l.`valoracio`",
-            domini.SortSpec.COL_PREU, "l.`preu`");
-        String sc = SORT_COLS.getOrDefault(sortCol, "l.`ISBN`");
-        sql.append(" ORDER BY ").append(sc).append(sortAsc ? " ASC" : " DESC");
+        if (f.getLlistaId() != null) params.add(f.getLlistaId());
+        if (f.getTagId()    != null) params.add(f.getTagId());
+        if (f.getNom()          != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
+        if (f.getAutor()        != null) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.getAutor() + "%"); }
+        if (f.getIsbn()         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.getIsbn()); }
+        if (f.getAnyMin()       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.getAnyMin()); }
+        if (f.getAnyMax()       != null) { sql.append(" AND l.`any` <= ?");        params.add(f.getAnyMax()); }
+        if (f.getValoracioMin() != null) { sql.append(" AND l.valoracio >= ?");    params.add(f.getValoracioMin()); }
+        if (f.getValoracioMax() != null) { sql.append(" AND l.valoracio <= ?");    params.add(f.getValoracioMax()); }
+        if (f.getPreuMin()      != null) { sql.append(" AND l.preu >= ?");         params.add(f.getPreuMin()); }
+        if (f.getPreuMax()      != null) { sql.append(" AND l.preu <= ?");         params.add(f.getPreuMax()); }
+        if (f.getLlegit()       != null) { sql.append(" AND l.llegit = ?");        params.add(f.getLlegit()); }
+        if (f.getEditorial()    != null) { sql.append(" AND l.editorial LIKE ?");  params.add("%" + f.getEditorial() + "%"); }
+        if (f.getSerie()        != null) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.getSerie() + "%"); }
+        if (f.getFormat()       != null) { sql.append(" AND l.format = ?");        params.add(f.getFormat()); }
+        if (f.getIdioma()       != null) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.getIdioma() + "%"); }
+        domini.SortSpec sort = f.getSort();
+        if (sort == null) sort = domini.SortSpec.defaultAsc();
+        sql.append(" ORDER BY ").append(sort.toSql());
         if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
@@ -343,25 +344,29 @@ public class LlibreDao {
              ResultSet rs = s.executeQuery(
                 "SELECT isbn, data_inici, data_fi, pagines_llegides FROM lectura ORDER BY id")) {
             while (rs.next())
-                rows.add(new LecturaRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)));
+                rows.add(new LecturaRow(rs.getLong(1), LecturaRow.parseDateOrNull(rs.getString(2)), LecturaRow.parseDateOrNull(rs.getString(3)), rs.getInt(4)));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant les lectures: " + e.getMessage(), e);
         }
         return rows;
     }
 
+    /**
+     * Ordre correcte de DELETE per satisfer les foreign keys: taules filles
+     * primer (les que tenen FK a altres), taules pare al final. Compartit
+     * entre {@link #clearAllData()}, {@link BackupService#backupToSQL}
+     * i qualsevol reset massiu — l'ordre s'ha de mantenir sincronitzat
+     * o les FOREIGN KEY constraints fallaran en mode estricte.
+     */
+    public static final String[] CLEAR_ORDER = {
+        "lectura", "prestec", "llibre_llista", "llista",
+        "llibre_autor", "llibre_tag", "tag", "autor", "llibre"
+    };
+
     public synchronized void clearAllData() throws SQLException {
         withTransaction(() -> {
             try (Statement s = con.createStatement()) {
-                s.executeUpdate("DELETE FROM lectura");
-                s.executeUpdate("DELETE FROM prestec");
-                s.executeUpdate("DELETE FROM llibre_llista");
-                s.executeUpdate("DELETE FROM llista");
-                s.executeUpdate("DELETE FROM llibre_autor");
-                s.executeUpdate("DELETE FROM llibre_tag");
-                s.executeUpdate("DELETE FROM tag");
-                s.executeUpdate("DELETE FROM autor");
-                s.executeUpdate("DELETE FROM llibre");
+                for (String t : CLEAR_ORDER) s.executeUpdate("DELETE FROM " + t);
             }
         });
     }
@@ -424,6 +429,15 @@ public class LlibreDao {
         }
     }
 
+    /**
+     * Sincronitza els autors d'un llibre: DELETE + INSERT IGNORE per lots.
+     *
+     * <p>Implementació optimitzada — 3 viatges round-trip totals (1 DELETE
+     * + 1 batch INSERT IGNORE a {@code autor} + 1 batch INSERT IGNORE a
+     * {@code llibre_autor}), independentment de quants autors tingui el
+     * llibre. La versió original feia N+2 viatges; veure {@code todo.txt}
+     * item [1] LlibreDao syncAutors().
+     */
     private void syncAutors(long isbn, java.util.List<String> autors) throws SQLException {
         if (autors == null || autors.isEmpty()) {
             try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {

@@ -11,6 +11,14 @@ public class TagDao {
 
     private final Connection con;
 
+    /**
+     * Whitelist de columnes vàlides per a {@link #getDistinctValues(String)}.
+     * El nom de la columna s'interpola directament a la SQL (no hi ha
+     * paràmetre per a un nom de columna en JDBC), per això la llista blanca
+     * és <em>obligatòria</em> — sense ella, una entrada no validada seria
+     * un vector d'SQL injection. Mantenir sincronitzada amb el switch en
+     * memòria de {@code ControladorDomini.getDistinctValues}.
+     */
     public static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
         Arrays.asList("editorial", "serie", "idioma", "pais_origen", "format", "llengua_original"));
 
@@ -129,6 +137,14 @@ public class TagDao {
         return llibreTagCache;
     }
 
+    /**
+     * Camí SQL per a {@code getDistinctValues}: consulta la taula {@code llibre}
+     * amb {@code SELECT DISTINCT}. La columna ha de ser a
+     * {@link #AUTOCOMPLETE_COLUMNS} (llista blanca) — qualsevol altra columna
+     * retorna llista buida. La capa de domini ({@code ControladorDomini}) té un
+     * camí alternatiu en memòria per a columnes que ja són a {@code Llibre};
+     * veure'n el Javadoc per a la justificació del doble camí.
+     */
     public synchronized java.util.List<String> getDistinctValues(String column) {
         java.util.List<String> vals = new java.util.ArrayList<>();
         if (!AUTOCOMPLETE_COLUMNS.contains(column)) return vals;

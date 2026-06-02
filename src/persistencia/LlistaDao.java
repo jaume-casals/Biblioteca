@@ -105,7 +105,7 @@ public class LlistaDao {
                     "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
                     "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
                     "l.nom_ca, l.nom_es, l.nom_en " +
-                    "FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ?")) {
+                    "FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN")) {
                 ps.setInt(1, llistaId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) llibres.add(LlibreDao.buildLlibre(rs));
@@ -186,6 +186,40 @@ public class LlistaDao {
             throw new domini.BibliotecaException("Error carregant les llistes del llibre: " + e.getMessage(), e);
         }
         return llistes;
+    }
+
+    /**
+     * Com a {@link #getLlistesForLlibre}, però retorna cada fila com a
+     * {@link domini.LlibreLlistaContext} — el valoració/llegit per llibre
+     * viatja al context, no pas al {@link Llista}. Preferit sobre
+     * {@code getLlistesForLlibre} per a noves crides; l'API anterior
+     * existeix per compat.
+     */
+    public java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) {
+        java.util.List<domini.LlibreLlistaContext> out = new java.util.ArrayList<>();
+        try {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
+                    "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.ordre, l.nom")) {
+                ps.setLong(1, isbn);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        out.add(domini.LlibreLlistaContext.of(
+                            (int) isbn,
+                            rs.getInt(1),
+                            rs.getString(2),
+                            rs.getInt(5),
+                            rs.getString(6),
+                            rs.getDouble(3),
+                            rs.getBoolean(4)
+                        ));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error carregant els contextos de llista del llibre: " + e.getMessage(), e);
+        }
+        return out;
     }
 
     public void updateOrdre(int id, int ordre) throws SQLException {

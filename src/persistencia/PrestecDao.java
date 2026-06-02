@@ -13,6 +13,15 @@ public class PrestecDao {
     PrestecDao(Connection con) { this.con = con; }
 
     public synchronized void add(long isbn, String nom) throws SQLException {
+        // Comprova que el llibre existeix abans d'insertar — la FK ho faria
+        // igual, però el missatge d'error SQL és opac. Així donem un
+        // missatge clar en català.
+        try (PreparedStatement check = con.prepareStatement("SELECT 1 FROM llibre WHERE ISBN = ?")) {
+            check.setLong(1, isbn);
+            try (ResultSet rs = check.executeQuery()) {
+                if (!rs.next()) throw new SQLException("No existeix cap llibre amb ISBN " + isbn);
+            }
+        }
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT INTO prestec (isbn, nom_persona, data_prestec, retornat) VALUES (?, ?, CURRENT_DATE, FALSE)")) {
             ps.setLong(1, isbn);
@@ -30,6 +39,11 @@ public class PrestecDao {
         }
     }
 
+    /** Tots els prèstecs, inclosos els ja retornats. Només l'usa
+     *  {@link BackupService#backupToSQL} — per a la UI i l'API, usar
+     *  {@link #getAllActiveLoans()} (exposat a través de
+     *  {@code ControladorPersistencia.getAllActiveLoans} i
+     *  {@code ControladorDomini.getAllActiveLoans}). */
     public synchronized List<persistencia.PrestecRow> getAll() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {

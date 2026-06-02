@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 abstract class AbstractMappingCsvStrategy implements CsvImportStrategy {
+    @Override public abstract String getName();
     private Map<String, Llista> shelfMap;
     private Map<String, Tag>    tagMap;
 

@@ -27,6 +27,15 @@ public class MainFrameControl implements interficie.EnActualizarBBDD {
 	private final JFrame frame;
 	private MostrarBibliotecaControl mostrarControl;
 	private BookIOController ioCtrl;
+	/**
+	 * Singleton — un sol MainFrameControl per tota l'aplicació. A diferència
+	 * de {@link domini.ControladorDomini}, no té resetForTest() perquè la UI
+	 * Swing no es destrueix entre test runs: els tests que toquin la UI
+	 * usen la bestreta de MostrarBibliotecaControl via SpringLayout o
+	 * directament. La dependència de Swing fa que el patró DI de
+	 * ControladorDomini (constructor injectable) no sigui fàcilment
+	 * aplicable aquí.
+	 */
 	private static MainFrameControl instance;
 
 	private MainFrameControl(MainFramePanel panel, BibliotecaWriter cd) {

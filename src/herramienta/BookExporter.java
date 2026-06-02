@@ -261,46 +261,41 @@ public class BookExporter {
 
     private static String jsonLlibre(Llibre l,
             List<persistencia.LlibreLlistaRow> llistaRows, List<persistencia.LlibreTagRow> tagRows) {
-        StringBuilder sb = new StringBuilder("{");
-        sb.append("\"isbn\":").append(l.getISBN()).append(",");
-        sb.append("\"nom\":").append(jsonStr(l.getNom())).append(",");
-        sb.append("\"autor\":").append(jsonStr(l.getAutor())).append(",");
-        sb.append("\"any\":").append(l.getAny()).append(",");
-        sb.append("\"descripcio\":").append(jsonStr(l.getDescripcio())).append(",");
-        sb.append("\"valoracio\":").append(l.getValoracio()).append(",");
-        sb.append("\"preu\":").append(l.getPreu()).append(",");
-        sb.append("\"llegit\":").append(l.getLlegit()).append(",");
-        sb.append("\"desitjat\":").append(l.getDesitjat()).append(",");
-        sb.append("\"imatge\":").append(jsonStr(l.getImatge())).append(",");
-        sb.append("\"notes\":").append(jsonStr(l.getNotes())).append(",");
-        sb.append("\"pagines\":").append(l.getPagines()).append(",");
-        sb.append("\"paginesLlegides\":").append(l.getPaginesLlegides()).append(",");
-        sb.append("\"editorial\":").append(jsonStr(l.getEditorial())).append(",");
-        sb.append("\"serie\":").append(jsonStr(l.getSerie())).append(",");
-        sb.append("\"volum\":").append(l.getVolum()).append(",");
-        sb.append("\"dataCompra\":").append(jsonStr(l.getDataCompra())).append(",");
-        sb.append("\"dataLectura\":").append(jsonStr(l.getDataLectura())).append(",");
-        sb.append("\"idioma\":").append(jsonStr(l.getIdioma())).append(",");
-        sb.append("\"format\":").append(jsonStr(l.getFormat())).append(",");
-        sb.append("\"paisOrigen\":").append(jsonStr(l.getPaisOrigen())).append(",");
-        // shelf memberships (pre-fetched)
-        sb.append("\"llistes\":[");
-        for (int i = 0; i < llistaRows.size(); i++) {
-            persistencia.LlibreLlistaRow row = llistaRows.get(i);
-            sb.append("{\"id\":").append(row.llistaId())
-                .append(",\"valoracio\":").append(row.valoracio())
-                .append(",\"llegit\":").append(row.llegit()).append("}");
-            if (i < llistaRows.size() - 1) sb.append(",");
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("isbn", l.getISBN());
+        m.put("nom", l.getNom());
+        m.put("autor", l.getAutor());
+        m.put("any", l.getAny());
+        m.put("descripcio", l.getDescripcio());
+        m.put("valoracio", l.getValoracio());
+        m.put("preu", l.getPreu());
+        m.put("llegit", l.getLlegit());
+        m.put("desitjat", l.getDesitjat());
+        m.put("imatge", l.getImatge());
+        m.put("notes", l.getNotes());
+        m.put("pagines", l.getPagines());
+        m.put("paginesLlegides", l.getPaginesLlegides());
+        m.put("editorial", l.getEditorial());
+        m.put("serie", l.getSerie());
+        m.put("volum", l.getVolum());
+        m.put("dataCompra", l.getDataCompra());
+        m.put("dataLectura", l.getDataLectura());
+        m.put("idioma", l.getIdioma());
+        m.put("format", l.getFormat());
+        m.put("paisOrigen", l.getPaisOrigen());
+        java.util.List<java.util.Map<String, Object>> llistes = new java.util.ArrayList<>();
+        for (persistencia.LlibreLlistaRow row : llistaRows) {
+            java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();
+            entry.put("id", row.llistaId());
+            entry.put("valoracio", row.valoracio());
+            entry.put("llegit", row.llegit());
+            llistes.add(entry);
         }
-        sb.append("],");
-        // tags (pre-fetched)
-        sb.append("\"tags\":[");
-        for (int i = 0; i < tagRows.size(); i++) {
-            sb.append(tagRows.get(i).tagId());
-            if (i < tagRows.size() - 1) sb.append(",");
-        }
-        sb.append("]}");
-        return sb.toString();
+        m.put("llistes", llistes);
+        java.util.List<Integer> tagIds = new java.util.ArrayList<>();
+        for (persistencia.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
+        m.put("tags", tagIds);
+        return new com.google.gson.Gson().toJson(m);
     }
 
     private static String jsonStr(String s) {

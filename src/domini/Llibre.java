@@ -86,13 +86,15 @@ public class Llibre {
 
 	public void setAutor(String autor) {
 		this.autor = autor;
-		this.autors.clear();
+		this.autors = (autor != null && !autor.isBlank())
+			? new java.util.ArrayList<>(java.util.List.of(autor))
+			: new java.util.ArrayList<>();
 	}
 
 	public java.util.List<String> getAutors() { return autors; }
 	public void setAutors(java.util.List<String> autors) {
 		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
-		if (!this.autors.isEmpty()) this.autor = String.join(", ", this.autors);
+		this.autor = this.autors.isEmpty() ? this.autor : String.join(", ", this.autors);
 	}
 
 	public Integer getAny() {

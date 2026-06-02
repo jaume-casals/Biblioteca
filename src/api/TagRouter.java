@@ -36,14 +36,14 @@ public class TagRouter {
         int id = ctx.pathParamInt("id");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
-        Tag target = findById(id);
+        cd.getTagById(id);
         synchronized (cd) { cd.renameTag(id, j.get("nom").getAsString()); }
-        ctx.json(JsonMapper.tagToMap(findById(id)));
+        ctx.json(JsonMapper.tagToMap(cd.getTagById(id)));
     }
 
     private void delete(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        Tag target = findById(id);
+        Tag target = cd.getTagById(id);
         synchronized (cd) { cd.deleteTag(target); }
         ctx.status(204);
     }
@@ -61,10 +61,5 @@ public class TagRouter {
         int id    = ctx.pathParamInt("id");
         synchronized (cd) { cd.removeLlibreFromTag(isbn, id); }
         ctx.status(204);
-    }
-
-    private Tag findById(int id) throws Exception {
-        for (Tag t : cd.getAllTags()) if (t.getId() == id) return t;
-        throw new Exception("Tag not found: " + id);
     }
 }

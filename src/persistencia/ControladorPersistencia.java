@@ -14,6 +14,24 @@ import herramienta.Config;
  * callers (ControladorDomini and the API layer) get thread-safe access without needing
  * to lock individual DAOs.
  *
+ * <p>Per què existeix aquest wrapper si la majoria de mètodes són delegació
+ * pura als DAOs? Tres motius:
+ * <ol>
+ *   <li><b>Lifecycle</b>: el singleton, el reset entre tests
+ *   ({@link #resetForTest()}), el reset quan l'usuari canvia de perfil
+ *   ({@link #resetForProfileSwitch()}) i el shutdown hook viuen aquí — no
+ *   als DAOs individuals, que només consumeixen una {@code Connection}.</li>
+ *   <li><b>Punt d'entrada únic per la capa de domini</b>: {@code ControladorDomini}
+ *   col·labora amb UNA classe ({@code ControladorPersistencia}), no amb 5 DAOs
+ *   separats. Si volem intercanviar la persistència (per exemple, un
+ *   {@code InMemoryPersistencia} per a tests purs), només cal implementar
+ *   aquesta classe — no cal tocar {@code ControladorDomini}.</li>
+ *   <li><b>Sincronització global</b>: el {@code synchronized} per mètode serialitza
+ *   totes les operacions de BD a través d'un sol lock. Això evita races
+ *   entre DAOs diferents que comparteixen la mateixa connexió. Veure el
+ *   TODO sobre {@code ReadWriteLock} més avall.</li>
+ * </ol>
+ *
  * <p>Lifecycle:
  * <ul>
  *   <li>{@link #getInstance()} — creates the singleton, opens a JDBC connection and
@@ -27,6 +45,15 @@ import herramienta.Config;
  * <p>DAOs are <em>not</em> individually synchronised because every call path goes through
  * a {@code synchronized} method on this class. Adding {@code synchronized} on DAO methods
  * would be redundant double-locking.
+ *
+ * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un
+ * {@link java.util.concurrent.locks.ReadWriteLock}. Mètodes de lectura
+ * (getAllLlibres, getAllLlistes, getDistinctValues, getLlistesForLlibre, etc.)
+ * haurien d'agafar el readLock per permetre lectures concurrents; mètodes
+ * d'escriptura (addLlibre, updateLlibre, deleteLlibre, addLlista, etc.) el
+ * writeLock. La conversió és mecànica però tediosa — un cop feta,
+ * la GUI pot refrescar el llistat de llibres mentre el backend encara
+ * processa una escriptura sense bloquejar.
  */
 public class ControladorPersistencia {
 
@@ -122,6 +149,7 @@ public class ControladorPersistencia {
 	public synchronized void removeLlibreFromLlista(long isbn, int llistaId) throws SQLException { llistaDao.removeLlibre(isbn, llistaId); }
 	public synchronized void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException { llistaDao.updateLlibre(isbn, llistaId, valoracio, llegit); }
 	public synchronized ArrayList<Llista> getLlistesForLlibre(long isbn) { return llistaDao.getLlistesForLlibre(isbn); }
+	public synchronized java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) { return llistaDao.getLlistesForLlibreContext(isbn); }
 	public synchronized void updateLlistaOrdre(int id, int ordre) throws java.sql.SQLException { llistaDao.updateOrdre(id, ordre); }
 	public synchronized void updateLlistaColor(int id, String color) throws java.sql.SQLException { llistaDao.updateColor(id, color); }
 

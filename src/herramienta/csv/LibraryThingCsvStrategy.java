@@ -8,19 +8,21 @@ import java.util.Map;
 
 public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
+    @Override public String getName() { return "LibraryThing"; }
+
     @Override
     public boolean canHandle(String headerRow) {
         return headerRow.contains("BCID");
     }
 
     @Override
-    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws Exception {
+    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
         // ISBN values from LibraryThing may arrive bracketed as [978...]; parseIsbn
         // strips all non-digit characters, so brackets are removed automatically.
         String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
         if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
         isbnRaw = CsvUtils.parseIsbn(isbnRaw);
-        if (isbnRaw.isEmpty()) throw new Exception("ISBN buit");
+        if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
         long isbn = Long.parseLong(isbnRaw);
         if (CsvUtils.existsInLibrary(cd, isbn)) return false;
 
@@ -51,11 +53,7 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
             java.util.Map<String, domini.Llista> shelfMap = new java.util.HashMap<>();
             for (domini.Llista ll : cd.getAllLlistes()) shelfMap.put(ll.getNom(), ll);
             for (String s : collections.split(",")) {
-                String nomLlista = s.trim();
-                if (nomLlista.isEmpty()) continue;
-                domini.Llista llista = shelfMap.get(nomLlista);
-                if (llista == null) { llista = cd.addLlista(nomLlista); shelfMap.put(nomLlista, llista); }
-                cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
+                ShelvesHelper.addBookToShelf(cd, shelfMap, isbn, s.trim(), valoracio, false);
             }
         }
 

@@ -1,29 +1,64 @@
 package domini;
 
 public class LlibreFilter {
-    public String autor;
-    public String nom;
-    public Long isbn;
-    public Integer anyMin;
-    public Integer anyMax;
-    public Double valoracioMin;
-    public Double valoracioMax;
-    public Double preuMin;
-    public Double preuMax;
-    public Boolean llegit;
-    public Integer tagId;
-    public String editorial;
-    public String serie;
-    public String format;
-    public String idioma;
-    public Integer llistaId;
-    public SortSpec sort = SortSpec.defaultAsc();
+    private String autor;
+    private String nom;
+    private Long isbn;
+    private Integer anyMin;
+    private Integer anyMax;
+    private Double valoracioMin;
+    private Double valoracioMax;
+    private Double preuMin;
+    private Double preuMax;
+    private Boolean llegit;
+    private Integer tagId;
+    private String editorial;
+    private String serie;
+    private String format;
+    private String idioma;
+    private Integer llistaId;
+    private SortSpec sort = SortSpec.defaultAsc();
 
     private LlibreFilter() {}
 
     public static LlibreFilter empty() { return new LlibreFilter(); }
 
-    // Update copy() whenever a new field is added above.
+    public String getAutor() { return autor; }
+    public String getNom() { return nom; }
+    public Long getIsbn() { return isbn; }
+    public Integer getAnyMin() { return anyMin; }
+    public Integer getAnyMax() { return anyMax; }
+    public Double getValoracioMin() { return valoracioMin; }
+    public Double getValoracioMax() { return valoracioMax; }
+    public Double getPreuMin() { return preuMin; }
+    public Double getPreuMax() { return preuMax; }
+    public Boolean getLlegit() { return llegit; }
+    public Integer getTagId() { return tagId; }
+    public String getEditorial() { return editorial; }
+    public String getSerie() { return serie; }
+    public String getFormat() { return format; }
+    public String getIdioma() { return idioma; }
+    public Integer getLlistaId() { return llistaId; }
+    public SortSpec getSort() { return sort; }
+
+    public LlibreFilter withAutor(String v) { this.autor = v; return this; }
+    public LlibreFilter withNom(String v) { this.nom = v; return this; }
+    public LlibreFilter withIsbn(Long v) { this.isbn = v; return this; }
+    public LlibreFilter withAnyMin(Integer v) { this.anyMin = v; return this; }
+    public LlibreFilter withAnyMax(Integer v) { this.anyMax = v; return this; }
+    public LlibreFilter withValoracioMin(Double v) { this.valoracioMin = v; return this; }
+    public LlibreFilter withValoracioMax(Double v) { this.valoracioMax = v; return this; }
+    public LlibreFilter withPreuMin(Double v) { this.preuMin = v; return this; }
+    public LlibreFilter withPreuMax(Double v) { this.preuMax = v; return this; }
+    public LlibreFilter withLlegit(Boolean v) { this.llegit = v; return this; }
+    public LlibreFilter withTagId(Integer v) { this.tagId = v; return this; }
+    public LlibreFilter withEditorial(String v) { this.editorial = v; return this; }
+    public LlibreFilter withSerie(String v) { this.serie = v; return this; }
+    public LlibreFilter withFormat(String v) { this.format = v; return this; }
+    public LlibreFilter withIdioma(String v) { this.idioma = v; return this; }
+    public LlibreFilter withLlistaId(Integer v) { this.llistaId = v; return this; }
+    public LlibreFilter withSort(SortSpec sort) { this.sort = sort; return this; }
+
     public LlibreFilter copy() {
         LlibreFilter f = empty();
         f.autor = this.autor; f.nom = this.nom; f.isbn = this.isbn;

@@ -14,7 +14,9 @@ public class FieldAutoComplete {
 
     private FieldAutoComplete() {}
 
-    private static final int MAX_SUGGESTIONS = 8;
+    /** Límit per defecte de sugerències mostrades al popup. Modificable per
+     *  {@link #attach(JTextField, java.util.List, int)}. */
+    public static final int MAX_SUGGESTIONS = 8;
 
     public sealed interface Attachment permits FieldAutoCompletionAttachment {}
     private static final class FieldAutoCompletionAttachment implements Attachment { }
@@ -25,6 +27,10 @@ public class FieldAutoComplete {
     }
 
     public static void attach(JTextField field, List<String> suggestions) {
+        attach(field, suggestions, MAX_SUGGESTIONS);
+    }
+
+    public static void attach(JTextField field, List<String> suggestions, int maxSuggestions) {
         JPopupMenu popup = new JPopupMenu();
         popup.setFocusable(false);
         TreeSet<String> sorted = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -43,7 +49,7 @@ public class FieldAutoComplete {
                     String lower = text.toLowerCase(java.util.Locale.ROOT);
                     int count = 0;
                     for (String s : sorted.tailSet(lower, true)) {
-                        if (count >= MAX_SUGGESTIONS) break;
+                        if (count >= maxSuggestions) break;
                         if (!s.toLowerCase(java.util.Locale.ROOT).startsWith(lower)) break;
                         if (s.equalsIgnoreCase(text)) continue;
                         JMenuItem item = new JMenuItem(s);

@@ -128,12 +128,16 @@ public class LlibreRouter {
 
     private void shelvesForBook(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
-        var llistes = cd.getLlistesForLlibre(isbn);
+        var ctxList = cd.getLlistesForLlibreContext(isbn);
         var out = new java.util.ArrayList<Map<String, Object>>();
-        for (var l : llistes) {
-            var m = JsonMapper.llistaToMap(l);
-            m.put("valoracio", l.getValoracioLlibre());
-            m.put("llegit", l.getLlegitLlibre());
+        for (var lc : ctxList) {
+            var m = new java.util.LinkedHashMap<String, Object>();
+            m.put("id", lc.llistaId());
+            m.put("nom", lc.nom());
+            m.put("ordre", lc.ordre());
+            m.put("color", lc.color());
+            m.put("valoracio", lc.valoracio());
+            m.put("llegit", lc.llegit());
             out.add(m);
         }
         ctx.json(out);
@@ -157,28 +161,28 @@ public class LlibreRouter {
     }
 
     private static LlibreFilter buildFilter(HttpCtx ctx) {
-        LlibreFilter f = LlibreFilter.empty();
+        domini.LlibreFilterBuilder b = domini.LlibreFilterBuilder.of();
         String isbnStr = ctx.queryParamOrNull("isbn");
-        if (isbnStr != null) { try { f.isbn = Long.parseLong(isbnStr); } catch (NumberFormatException ignored) {} }
-        f.autor        = ctx.queryParamOrNull("author");
-        f.nom          = ctx.queryParamOrNull("title");
-        f.anyMin       = ctx.queryParamInt("yearMin");
-        f.anyMax       = ctx.queryParamInt("yearMax");
-        f.valoracioMin = ctx.queryParamDbl("ratingMin");
-        f.valoracioMax = ctx.queryParamDbl("ratingMax");
-        f.preuMin      = ctx.queryParamDbl("priceMin");
-        f.preuMax      = ctx.queryParamDbl("priceMax");
-        f.llegit       = ctx.queryParamBool("read");
-        f.tagId        = ctx.queryParamInt("tagId");
-        f.llistaId     = ctx.queryParamInt("llistaId");
-        f.editorial    = ctx.queryParamOrNull("editorial");
-        f.serie        = ctx.queryParamOrNull("serie");
-        f.format       = ctx.queryParamOrNull("format");
-        f.idioma       = ctx.queryParamOrNull("idioma");
+        if (isbnStr != null) { try { b.isbn(Long.parseLong(isbnStr)); } catch (NumberFormatException ignored) {} }
+        b.autor(ctx.queryParamOrNull("author"));
+        b.nom(ctx.queryParamOrNull("title"));
+        b.anyMin(ctx.queryParamInt("yearMin"));
+        b.anyMax(ctx.queryParamInt("yearMax"));
+        b.valoracioMin(ctx.queryParamDbl("ratingMin"));
+        b.valoracioMax(ctx.queryParamDbl("ratingMax"));
+        b.preuMin(ctx.queryParamDbl("priceMin"));
+        b.preuMax(ctx.queryParamDbl("priceMax"));
+        b.llegit(ctx.queryParamBool("read"));
+        b.tagId(ctx.queryParamInt("tagId"));
+        b.llistaId(ctx.queryParamInt("llistaId"));
+        b.editorial(ctx.queryParamOrNull("editorial"));
+        b.serie(ctx.queryParamOrNull("serie"));
+        b.format(ctx.queryParamOrNull("format"));
+        b.idioma(ctx.queryParamOrNull("idioma"));
         String sortCol = ctx.queryParamOrNull("sort");
         String sortDir = ctx.queryParam("sortDir");
-        if (sortCol != null) f.sort = new domini.SortSpec(sortCol, !"desc".equalsIgnoreCase(sortDir));
-        return f;
+        if (sortCol != null) b.sort(sortCol, !"desc".equalsIgnoreCase(sortDir));
+        return b.build();
     }
 
     private static boolean notBlank(String s) { return s != null && !s.isBlank(); }

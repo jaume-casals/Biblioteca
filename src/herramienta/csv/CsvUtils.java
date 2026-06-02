@@ -54,6 +54,17 @@ public final class CsvUtils {
         return c[idx].trim();
     }
 
+    /** Com {@link #colVal} però distingeix "columna absent" de "valor buit".
+     *  Retorna {@code Optional.empty()} si la columna no és al header o si
+     *  l'índex excedeix la llargada de la fila; {@code Optional.of("")} si
+     *  la columna existeix però el valor és buit. */
+    public static java.util.Optional<String> colValOpt(Map<String, Integer> hMap, String[] c, String col) {
+        Integer idx = hMap.get(col);
+        if (idx == null || idx >= c.length) return java.util.Optional.empty();
+        String v = c[idx];
+        return java.util.Optional.of(v == null ? "" : v.trim());
+    }
+
     public static double parseDoubleOrZero(String s) {
         try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
     }

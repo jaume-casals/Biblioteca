@@ -5,6 +5,8 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
+import herramienta.BookImporter.ImportResult;
+import herramienta.JsonImporter;
 import herramienta.OpenLibraryClient;
 import herramienta.csv.CsvUtils;
 import herramienta.csv.GoodreadsCsvStrategy;
@@ -64,60 +66,8 @@ public class ImportExportRouter {
     private void importJson(HttpCtx ctx) throws Exception {
         String body = ctx.body();
         if (body == null || body.isBlank()) throw new Exception("Empty body");
-        JsonObject root = JsonParser.parseString(body).getAsJsonObject();
-        int ok = 0, skipped = 0, err = 0;
-        List<String> errDetails = new ArrayList<>();
-
-        Map<Integer, Integer> tagIdMap = new HashMap<>();
-        if (root.has("tags")) {
-            for (JsonElement te : root.getAsJsonArray("tags")) {
-                JsonObject to = te.getAsJsonObject();
-                int oldId = to.get("id").getAsInt();
-                String nom = to.get("nom").getAsString();
-                Tag existing = cd.getAllTags().stream().filter(t -> t.getNom().equals(nom)).findFirst().orElse(null);
-                tagIdMap.put(oldId, existing != null ? existing.getId() : cd.addTag(nom).getId());
-            }
-        }
-        Map<Integer, Integer> llistaIdMap = new HashMap<>();
-        if (root.has("llistes")) {
-            for (JsonElement le : root.getAsJsonArray("llistes")) {
-                JsonObject lo = le.getAsJsonObject();
-                int oldId = lo.get("id").getAsInt();
-                String nom = lo.get("nom").getAsString();
-                Llista existing = cd.getAllLlistes().stream().filter(l -> l.getNom().equals(nom)).findFirst().orElse(null);
-                llistaIdMap.put(oldId, existing != null ? existing.getId() : cd.addLlista(nom).getId());
-            }
-        }
-        if (root.has("llibres")) {
-            for (JsonElement be : root.getAsJsonArray("llibres")) {
-                try {
-                    JsonObject bo = be.getAsJsonObject();
-                    long isbn = bo.get("isbn").getAsLong();
-                    try { cd.getLlibre(isbn); skipped++; continue; } catch (Exception ignored) {}
-                    Llibre l = JsonMapper.jsonToLlibre(bo);
-                    cd.addLlibre(l);
-                    if (bo.has("tags") && bo.get("tags").isJsonArray()) {
-                        for (JsonElement te : bo.getAsJsonArray("tags")) {
-                            int oldTagId = te.getAsJsonObject().get("id").getAsInt();
-                            Integer newId = tagIdMap.get(oldTagId);
-                            if (newId != null) cd.addLlibreToTag(isbn, newId);
-                        }
-                    }
-                    if (bo.has("llistes") && bo.get("llistes").isJsonArray()) {
-                        for (JsonElement me : bo.getAsJsonArray("llistes")) {
-                            JsonObject mo = me.getAsJsonObject();
-                            Integer newLlistaId = llistaIdMap.get(mo.get("id").getAsInt());
-                            if (newLlistaId == null) continue;
-                            double val = mo.has("valoracio") ? mo.get("valoracio").getAsDouble() : 0.0;
-                            boolean llegit = mo.has("llegit") && mo.get("llegit").getAsBoolean();
-                            cd.addLlibreToLlista(isbn, newLlistaId, val, llegit);
-                        }
-                    }
-                    ok++;
-                } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
-            }
-        }
-        ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err, "errorDetails", errDetails));
+        ImportResult r = JsonImporter.run(JsonParser.parseString(body).getAsJsonObject(), cd);
+        ctx.json(Map.of("ok", r.imported(), "skipped", r.skipped(), "errors", r.errors(), "errorDetails", r.errorDetails()));
     }
 
     private void exportGoodreadsCSV(HttpCtx ctx) throws Exception {

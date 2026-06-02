@@ -5,6 +5,7 @@ import herramienta.I18n;
 import interficie.BibliotecaWriter;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class EstadistiquesHelper {
@@ -30,7 +31,7 @@ public class EstadistiquesHelper {
         return yr > 0 ? yr : (l.getAny() != null && l.getAny() > 1900 ? l.getAny() : 0);
     }
 
-    public static java.util.Map<Integer, Long> booksByReadYear(ArrayList<Llibre> books) {
+    public static java.util.Map<Integer, Long> booksByReadYear(List<Llibre> books) {
         java.util.Map<Integer, Long> byYear = new java.util.HashMap<>();
         for (Llibre l : books) {
             if (!Boolean.TRUE.equals(l.getLlegit())) continue;
@@ -41,7 +42,7 @@ public class EstadistiquesHelper {
         return byYear;
     }
 
-    public static BookStats computeStats(ArrayList<Llibre> books) {
+    public static BookStats computeStats(List<Llibre> books) {
         int total = books.size();
         long llegits = books.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
         double avgVal = books.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
@@ -49,7 +50,7 @@ public class EstadistiquesHelper {
         return new BookStats(total, llegits, avgVal, avgPreu, booksByReadYear(books));
     }
 
-    public static javax.swing.JPanel buildReadingChart(ArrayList<Llibre> books) {
+    public static javax.swing.JPanel buildReadingChart(List<Llibre> books) {
         return buildReadingChart(booksByReadYear(books));
     }
 
@@ -85,7 +86,7 @@ public class EstadistiquesHelper {
         };
     }
 
-    public static javax.swing.JPanel buildPublisherChart(ArrayList<Llibre> books) {
+    public static javax.swing.JPanel buildPublisherChart(List<Llibre> books) {
         java.util.Map<String, Long> byPublisher = books.stream()
             .filter(l -> l.getEditorial() != null && !l.getEditorial().isEmpty())
             .collect(Collectors.groupingBy(l -> l.getEditorial(), Collectors.counting()));
@@ -120,7 +121,7 @@ public class EstadistiquesHelper {
         };
     }
 
-    public static javax.swing.JPanel buildTagCloud(ArrayList<Llibre> books, BibliotecaWriter cd) {
+    public static javax.swing.JPanel buildTagCloud(List<Llibre> books, BibliotecaWriter cd) {
         javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 8, 6));
         panel.setBackground(herramienta.UITheme.BG_PANEL);
         panel.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_tab_tags")));
@@ -155,11 +156,11 @@ public class EstadistiquesHelper {
         return panel;
     }
 
-    public static javax.swing.JPanel buildReadingPacePanel(ArrayList<Llibre> books) {
+    public static javax.swing.JPanel buildReadingPacePanel(List<Llibre> books) {
         return buildReadingPacePanel(books, booksByReadYear(books));
     }
 
-    static javax.swing.JPanel buildReadingPacePanel(ArrayList<Llibre> books, java.util.Map<Integer, Long> byYear) {
+    static javax.swing.JPanel buildReadingPacePanel(List<Llibre> books, java.util.Map<Integer, Long> byYear) {
         javax.swing.JPanel panel = new javax.swing.JPanel();
         panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
         panel.setBackground(herramienta.UITheme.BG_PANEL);
@@ -216,7 +217,7 @@ public class EstadistiquesHelper {
             I18n.t("stats_top_years") + "\n" + (topAnys.isEmpty() ? "  " + I18n.t("stats_no_years") : topAnys);
     }
 
-    public static String buildStatsSummary(ArrayList<Llibre> llibres, String scope) {
+    public static String buildStatsSummary(List<Llibre> llibres, String scope) {
         return buildStatsSummary(computeStats(llibres), scope);
     }
 

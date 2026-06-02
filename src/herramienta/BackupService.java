@@ -75,15 +75,7 @@ public class BackupService {
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
-            pw.println("DELETE FROM lectura;");
-            pw.println("DELETE FROM prestec;");
-            pw.println("DELETE FROM llibre_llista;");
-            pw.println("DELETE FROM llista;");
-            pw.println("DELETE FROM llibre_autor;");
-            pw.println("DELETE FROM llibre_tag;");
-            pw.println("DELETE FROM tag;");
-            pw.println("DELETE FROM autor;");
-            pw.println("DELETE FROM llibre;");
+            for (String t : persistencia.LlibreDao.CLEAR_ORDER) pw.println("DELETE FROM " + t + ";");
             for (Llibre l : bib) {
                 writeLlibreINSERT(pw, l);
             }
@@ -245,9 +237,9 @@ public class BackupService {
         pw.print("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (");
         pw.print(row.isbn());
         pw.print(',');
-        pw.print(sqlNullable(row.dataInici()));
+        pw.print(sqlNullable(row.dataInici() == null ? null : row.dataInici().toString()));
         pw.print(',');
-        pw.print(sqlNullable(row.dataFi()));
+        pw.print(sqlNullable(row.dataFi() == null ? null : row.dataFi().toString()));
         pw.print(',');
         pw.print(row.paginesLlegides());
         pw.println(");");
@@ -258,10 +250,26 @@ public class BackupService {
         return "'" + sqlEsc(s) + "'";
     }
 
+    /**
+     * Escapa una cadena per incrustar-la dins un literal SQL dins un script
+     * {@code .sql} generat per {@link #backupToSQL}. No es poden usar
+     * {@code PreparedStatement} aquí perquè estem escrivint un fitxer de text,
+     * no executant SQL contra la BBDD. S'escapa:
+     * <ul>
+     *   <li>{@code \\} → {@code \\\\} — per a engines que interpretin
+     *       backslashes dins literals</li>
+     *   <li>{@code '} → {@code ''} — estàndard SQL</li>
+     *   <li>{@code \u0000} → buit — el null byte trenca JDBC i molts CLIs</li>
+     *   <li>{@code \n}, {@code \r} → espais — un newline dins un literal
+     *       és vàlid per JDBC però trenca el parser del MySQL CLI; per seguretat
+     *       es normalitza a espai (la pèrdua d'informació és negligible per camps
+     *       de text lliure com {@code notes})</li>
+     * </ul>
+     */
     private static String sqlEsc(String s) {
         if (s == null) return "";
         String out = s.replace("\\", "\\\\").replace("'", "''");
-        out = out.replace("\u0000", "");
+        out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ");
         return out;
     }
 }

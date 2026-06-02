@@ -183,7 +183,7 @@ public class GuardarLlibresDialogo extends JDialog {
 
 		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
 		UITheme.styleAccentButton(btnCercaInternet);
-		btnCercaInternet.setBackground(new java.awt.Color(0x117A65));
+		btnCercaInternet.setBackground(herramienta.UITheme.GREEN);
 		btnCercaInternet.setForeground(java.awt.Color.WHITE);
 		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
 		south.add(btnCercaInternet, BorderLayout.CENTER);

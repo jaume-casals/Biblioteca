@@ -54,7 +54,17 @@ public class ControladorDomini implements BibliotecaWriter {
 		ControladorPersistencia.resetForProfileSwitch();
 	}
 
-	private ControladorDomini(ControladorPersistencia cp) {
+	/**
+	 * Crea una instància de ControladorDomini lligada a un ControladorPersistencia concret.
+	 * Útil per a tests o per composició manual de dependències; la instància retornada
+	 * no s'enregistra com a singleton — convé que el codi de producció segueixi usant
+	 * {@link #getInstance()}.
+	 */
+	public static ControladorDomini create(ControladorPersistencia cp) {
+		return new ControladorDomini(cp);
+	}
+
+	public ControladorDomini(ControladorPersistencia cp) {
 		this.cp = cp;
 		bib = new ArrayList<Llibre>(cp.getAllLlibres());
 		Collections.sort(bib, compararISBN);
@@ -66,37 +76,37 @@ public class ControladorDomini implements BibliotecaWriter {
 		}
 	}
 
-	public ArrayList<Llibre> aplicarFiltres(LlibreFilter f) {
+	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f) {
 		if (bib.size() >= SQL_FILTER_THRESHOLD) return searchLlibresSQL(f);
 		return filterInMemory(bib, f);
 	}
 
 	// SQL fallback only applies to the full library (1-arg overload). This overload always filters in-memory.
-	public ArrayList<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f) {
+	public java.util.List<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f) {
 		return filterInMemory(font, f);
 	}
 
 	private ArrayList<Llibre> filterInMemory(java.util.List<Llibre> font, LlibreFilter f) {
-		Set<Long> tagISBNs   = f.tagId   != null ? cp.getLlibresWithTag(f.tagId)     : null;
-		Set<Long> llistaISBNs = f.llistaId != null ? cp.getISBNsInLlista(f.llistaId) : null;
+		Set<Long> tagISBNs   = f.getTagId()   != null ? cp.getLlibresWithTag(f.getTagId())     : null;
+		Set<Long> llistaISBNs = f.getLlistaId() != null ? cp.getISBNsInLlista(f.getLlistaId()) : null;
 		ArrayList<Llibre> resultat = new ArrayList<>();
 		for (Llibre l : font) {
-			if ((f.autor == null || FiltreUtils.matchString(f.autor, l.getAutor()))
-					&& (f.nom == null || FiltreUtils.matchString(f.nom, l.getNom()))
-					&& (f.isbn == null || FiltreUtils.matchISBN(f.isbn, l.getISBN()))
-					&& (f.anyMin == null || (l.getAny() != null && l.getAny() >= f.anyMin))
-					&& (f.anyMax == null || (l.getAny() != null && l.getAny() <= f.anyMax))
-					&& (f.valoracioMin == null || (l.getValoracio() != null && l.getValoracio() >= f.valoracioMin))
-					&& (f.valoracioMax == null || (l.getValoracio() != null && l.getValoracio() <= f.valoracioMax))
-					&& (f.preuMin == null || (l.getPreu() != null && l.getPreu() >= f.preuMin))
-					&& (f.preuMax == null || (l.getPreu() != null && l.getPreu() <= f.preuMax))
-					&& (f.llegit == null || f.llegit.equals(l.getLlegit()))
+			if ((f.getAutor() == null || FiltreUtils.matchString(f.getAutor(), l.getAutor()))
+					&& (f.getNom() == null || FiltreUtils.matchString(f.getNom(), l.getNom()))
+					&& (f.getIsbn() == null || FiltreUtils.matchISBN(f.getIsbn(), l.getISBN()))
+					&& (f.getAnyMin() == null || (l.getAny() != null && l.getAny() >= f.getAnyMin()))
+					&& (f.getAnyMax() == null || (l.getAny() != null && l.getAny() <= f.getAnyMax()))
+					&& (f.getValoracioMin() == null || (l.getValoracio() != null && l.getValoracio() >= f.getValoracioMin()))
+					&& (f.getValoracioMax() == null || (l.getValoracio() != null && l.getValoracio() <= f.getValoracioMax()))
+					&& (f.getPreuMin() == null || (l.getPreu() != null && l.getPreu() >= f.getPreuMin()))
+					&& (f.getPreuMax() == null || (l.getPreu() != null && l.getPreu() <= f.getPreuMax()))
+					&& (f.getLlegit() == null || f.getLlegit().equals(l.getLlegit()))
 					&& (tagISBNs == null || tagISBNs.contains(l.getISBN()))
 					&& (llistaISBNs == null || llistaISBNs.contains(l.getISBN()))
-					&& (f.editorial == null || FiltreUtils.matchString(f.editorial, l.getEditorial()))
-					&& (f.serie == null || FiltreUtils.matchString(f.serie, l.getSerie()))
-					&& (f.format == null || f.format.equalsIgnoreCase(l.getFormat()))
-					&& (f.idioma == null || FiltreUtils.matchString(f.idioma, l.getIdioma()))) {
+					&& (f.getEditorial() == null || FiltreUtils.matchString(f.getEditorial(), l.getEditorial()))
+					&& (f.getSerie() == null || FiltreUtils.matchString(f.getSerie(), l.getSerie()))
+					&& (f.getFormat() == null || f.getFormat().equalsIgnoreCase(l.getFormat()))
+					&& (f.getIdioma() == null || FiltreUtils.matchString(f.getIdioma(), l.getIdioma()))) {
 				resultat.add(l);
 			}
 		}
@@ -105,9 +115,10 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	private static void applySort(ArrayList<Llibre> list, LlibreFilter f) {
-		if (f.sort == null || list.size() < 2) return;
-		Comparator<Llibre> cmp = SORT_BY.getOrDefault(f.sort.column(), compararISBN);
-		if (!f.sort.ascending()) cmp = cmp.reversed();
+		SortSpec sort = f.getSort();
+		if (sort == null || list.size() < 2) return;
+		Comparator<Llibre> cmp = SORT_BY.getOrDefault(sort.column(), compararISBN);
+		if (!sort.ascending()) cmp = cmp.reversed();
 		list.sort(cmp);
 	}
 
@@ -115,12 +126,12 @@ public class ControladorDomini implements BibliotecaWriter {
 	private static final int SQL_FILTER_THRESHOLD = 2000;
 
 	/** SQL-backed filter for large libraries (> SQL_FILTER_THRESHOLD books). */
-	public ArrayList<Llibre> searchLlibresSQL(LlibreFilter f) {
+	public java.util.List<Llibre> searchLlibresSQL(LlibreFilter f) {
 		return cp.searchLlibres(f, 0, 0);
 	}
 
 	/** Paginated SQL query: returns pageSize books starting at offset. */
-	public ArrayList<Llibre> getLlibresPage(int offset, int pageSize) {
+	public java.util.List<Llibre> getLlibresPage(int offset, int pageSize) {
 		return cp.searchLlibres(LlibreFilter.empty(), offset, pageSize);
 	}
 
@@ -130,7 +141,7 @@ public class ControladorDomini implements BibliotecaWriter {
 	/** True when the library is large enough to benefit from SQL-side operations. */
 	public boolean isLargeLibrary() { return bib.size() >= SQL_FILTER_THRESHOLD; }
 
-	public ArrayList<Llibre> getAllLlibres() {
+	public java.util.List<Llibre> getAllLlibres() {
 		return new ArrayList<>(bib);
 	}
 
@@ -138,11 +149,11 @@ public class ControladorDomini implements BibliotecaWriter {
 		return Collections.unmodifiableList(bib);
 	}
 
-	public ArrayList<Llibre> get10Llibres() {
+	public java.util.List<Llibre> get10Llibres() {
 		return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
 	}
 
-public ArrayList<Llibre> get100Llibres(int index) { // Starts from index*100
+public java.util.List<Llibre> get100Llibres(int index) { // Starts from index*100
         int from = Math.min(100 * index, bib.size());
         int to = Math.min(from + 100, bib.size());
         return new ArrayList<>(bib.subList(from, to));
@@ -247,7 +258,12 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 
 	// ── Llista (shelf) management ──────────────────────────────────────────────
 
-	public ArrayList<Llista> getAllLlistes() { return llistes; }
+	public java.util.List<Llista> getAllLlistes() { return llistes; }
+
+	public Llista getLlistaById(int id) throws Exception {
+		for (Llista l : llistes) if (l.getId() == id) return l;
+		throw new Exception("Shelf not found: " + id);
+	}
 
 	public Llista addLlista(String nom) {
 		if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
@@ -273,12 +289,16 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	public int getCountInLlista(int llistaId) { return cp.getCountInLlista(llistaId); }
 	public java.util.Map<Integer, Integer> getAllCountsInLlistes() { return cp.getAllCountsInLlistes(); }
 
-	public ArrayList<Llibre> getLlibresInLlista(int llistaId) {
+	public java.util.List<Llibre> getLlibresInLlista(int llistaId) {
 		return cp.getLlibresInLlista(llistaId);
 	}
 
-	public ArrayList<Llista> getLlistesForLlibre(long isbn) {
+	public java.util.List<Llista> getLlistesForLlibre(long isbn) {
 		return cp.getLlistesForLlibre(isbn);
+	}
+
+	public java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) {
+		return cp.getLlistesForLlibreContext(isbn);
 	}
 
 	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) {
@@ -327,7 +347,7 @@ private void swapLlistesOrdre(int i, int j) {
         }
     }
 
-	public ArrayList<Llibre> getRecentlyAdded() {
+	public java.util.List<Llibre> getRecentlyAdded() {
 		return cp.getRecentlyAdded(20);
 	}
 
@@ -382,7 +402,12 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	// ── Tag management ─────────────────────────────────────────────────────────
 
-	public ArrayList<Tag> getAllTags() { return tags; }
+	public java.util.List<Tag> getAllTags() { return tags; }
+
+	public Tag getTagById(int id) throws Exception {
+		for (Tag t : tags) if (t.getId() == id) return t;
+		throw new Exception("Tag not found: " + id);
+	}
 
 	public Tag addTag(String nom) {
 		if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom de l'etiqueta no pot estar buit");
@@ -406,7 +431,7 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	public java.util.Set<Long> getLlibresWithTag(int tagId) { return cp.getLlibresWithTag(tagId); }
 
-	public ArrayList<Tag> getTagsForLlibre(long isbn) {
+	public java.util.List<Tag> getTagsForLlibre(long isbn) {
 		return cp.getTagsForLlibre(isbn);
 	}
 
@@ -418,7 +443,28 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 		try { cp.removeLlibreFromTag(isbn, tagId); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
-	// In-memory path for columns carried on every Llibre object; SQL path for everything else.
+	/**
+	 * Llista els valors diferents d'una columna per a l'autocompletat de camps.
+	 *
+	 * <p>Comportament amb doble camí (intencionat, no error):
+	 * <ul>
+	 *   <li><b>Camí en memòria</b>: columnes que són camps String de {@link Llibre}
+	 *       ({@code editorial}, {@code serie}, {@code idioma}, {@code format},
+	 *       {@code pais_origen}, {@code llengua_original}). Escaneja la llista
+	 *       {@code bib} en memòria — és la font de veritat quan la biblioteca és
+	 *       petita i tots els llibres són a memòria. Ràpid però només reflecteix
+	 *       els llibres ja carregats.</li>
+	 *   <li><b>Camí SQL (caiguda)</b>: per a qualsevol altra columna. Delega a
+	 *       {@code cp.getDistinctValues(column)}, que consulta la taula {@code llibre}
+	 *       directament. També retorna llista buida si la columna no és a
+	 *       {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS} (llista blanca).</li>
+	 * </ul>
+	 *
+	 * <p>Si la columna demanada no és ni al switch en memòria ni a la llista blanca
+	 * SQL, el resultat és una llista buida — no es llança excepció. Els dos conjunts
+	 * de columnes s'han de mantenir sincronitzats; el switch en memòria és un
+	 * subconjunt d'{@code AUTOCOMPLETE_COLUMNS}.
+	 */
 	public java.util.List<String> getDistinctValues(String column) {
 		java.util.function.Function<Llibre, String> extractor = switch (column) {
 			case "editorial"       -> Llibre::getEditorial;
@@ -459,5 +505,12 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 	public java.util.List<Object[]> getAutorsData() { return cp.getAllAutors(); }
 	public java.util.List<Object[]> getLlibreAutorData() { return cp.getAllLlibreAutor(); }
 	public java.util.List<persistencia.PrestecRow> getAllPrestecs() { return cp.getAllPrestecs(); }
+	/**
+	 * Retorna totes les sessions de lectura. Avui només l'usa
+	 * {@link herramienta.BackupService} per fer còpies de seguretat.
+	 * La UI no l'ha implementat encara — veure {@code todo.txt} [1]
+	 * ConnectionConfig LecturaRow — si mai es vol una vista "historial
+	 * de lectura", s'ha de connectar aquí.
+	 */
 	public java.util.List<persistencia.LecturaRow> getAllLecturesData() { return cp.getAllLectures(); }
 }

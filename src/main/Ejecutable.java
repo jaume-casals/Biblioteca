@@ -74,8 +74,8 @@ public class Ejecutable {
         ApiServer server = new ApiServer(port, cd);
         server.start();
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
-        System.out.println("Biblioteca running at http://localhost:" + port);
-        System.out.println("Press Ctrl+C to stop.");
+        System.out.println("Biblioteca escoltant a http://localhost:" + port);
+        System.out.println("Prem Ctrl+C per aturar.");
         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             Desktop.getDesktop().browse(new URI("http://localhost:" + port));
         }

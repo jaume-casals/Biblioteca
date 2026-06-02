@@ -46,7 +46,7 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     @Override public List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f) { return new ArrayList<>(font); }
     @Override public List<Llibre> searchLlibresSQL(LlibreFilter f) { return new ArrayList<>(books); }
     @Override public List<Llista> getAllLlistes() { return new ArrayList<>(llistes); }
-    public Llista getLlistaById(int id) throws Exception {
+    @Override public Llista getLlistaById(int id) throws Exception {
         for (Llista l : llistes) if (l.getId() == id) return l;
         throw new Exception("Shelf not found: " + id);
     }
@@ -55,8 +55,9 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     @Override public List<Llibre> getLlibresInLlista(int llistaId) { return new ArrayList<>(); }
     @Override public List<LlibreLlistaRow> getAllLlibreLlistaRows() { return new ArrayList<>(); }
     @Override public List<Llista> getLlistesForLlibre(long isbn) { return new ArrayList<>(); }
+    @Override public List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) { return new ArrayList<>(); }
     @Override public List<Tag> getAllTags() { return new ArrayList<>(tags); }
-    public Tag getTagById(int id) throws Exception {
+    @Override public Tag getTagById(int id) throws Exception {
         for (Tag t : tags) if (t.getId() == id) return t;
         throw new Exception("Tag not found: " + id);
     }

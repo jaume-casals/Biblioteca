@@ -20,6 +20,11 @@ public class OpenLibraryClient {
 	private static final long MIN_REQUEST_INTERVAL_MS = 300;
 	private static long lastRequestMs = 0;
 
+	/** Connect timeout (ms) per OL HTTP call — keeps the EDT responsive when OL hangs. */
+	private static final int CONNECT_TIMEOUT_MS = 6000;
+	/** Read timeout (ms) per OL HTTP call — slow OL response = IOException, not indefinite hang. */
+	private static final int READ_TIMEOUT_MS = 10000;
+
 	private static synchronized void rateLimit() throws InterruptedException {
 		long now = System.currentTimeMillis();
 		long wait = MIN_REQUEST_INTERVAL_MS - (now - lastRequestMs);
@@ -140,8 +145,8 @@ public class OpenLibraryClient {
 		String url = coverBase + "/b/isbn/" + isbn + "-L.jpg";
 		try {
 			HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-			conn.setConnectTimeout(6000);
-			conn.setReadTimeout(10000);
+			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			conn.setReadTimeout(READ_TIMEOUT_MS);
 			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 			if (conn.getResponseCode() == 200) {
 				String ct = conn.getContentType();
@@ -161,7 +166,7 @@ public class OpenLibraryClient {
 			if (!thumb.find()) return null;
 			String thumbUrl = thumb.group(1).replace("http://", "https://");
 			HttpURLConnection c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
-			c2.setConnectTimeout(6000); c2.setReadTimeout(10000);
+			c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
 			c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
 			if (c2.getResponseCode() != 200) return null;
 			try (java.io.InputStream is = c2.getInputStream()) { return is.readAllBytes(); }
@@ -195,8 +200,8 @@ public class OpenLibraryClient {
 		} catch (IllegalArgumentException e) {
 			throw new java.io.IOException("Malformed URL: " + url, e);
 		}
-		conn.setConnectTimeout(6000);
-		conn.setReadTimeout(6000);
+		conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+		conn.setReadTimeout(READ_TIMEOUT_MS);
 		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 		int code = conn.getResponseCode();
 		if (code != 200) throw new java.io.IOException("HTTP " + code);

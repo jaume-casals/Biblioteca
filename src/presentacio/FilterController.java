@@ -89,40 +89,42 @@ class FilterController {
     }
 
     void filtrar() {
-        LlibreFilter f = LlibreFilter.empty();
+        domini.LlibreFilterBuilder b = domini.LlibreFilterBuilder.of();
 
         String autorTyped = state.vista.getTextAutor().getText().trim();
-        if (!autorTyped.isEmpty()) f.autor = autorTyped;
+        if (!autorTyped.isEmpty()) b.autor(autorTyped);
 
         String nomTyped = state.vista.getTextNom().getText().trim();
-        if (!nomTyped.isEmpty()) f.nom = nomTyped;
+        if (!nomTyped.isEmpty()) b.nom(nomTyped);
 
         String isbnText = state.vista.getTextISBN().getText().trim();
         if (!isbnText.isEmpty()) {
-            f.isbn = parseLongField(state.vista.getTextISBN(), isbnText);
+            b.isbn(parseLongField(state.vista.getTextISBN(), isbnText));
         }
 
-        f.anyMin = parseIntField(state.vista.getAnyMin());
-        f.anyMax = parseIntField(state.vista.getAnyMax());
-        f.valoracioMin = parseDoubleField(state.vista.getValoracioMin());
-        f.valoracioMax = parseDoubleField(state.vista.getValoracioMax());
-        f.preuMin = parseDoubleField(state.vista.getPreuMin());
-        f.preuMax = parseDoubleField(state.vista.getPreuMax());
+        b.anyMin(parseIntField(state.vista.getAnyMin()));
+        b.anyMax(parseIntField(state.vista.getAnyMax()));
+        b.valoracioMin(parseDoubleField(state.vista.getValoracioMin()));
+        b.valoracioMax(parseDoubleField(state.vista.getValoracioMax()));
+        b.preuMin(parseDoubleField(state.vista.getPreuMin()));
+        b.preuMax(parseDoubleField(state.vista.getPreuMax()));
 
-        if (state.vista.getchckbxLlegit().isSelected())  f.llegit = true;
-        if (state.vista.getchckbxNoLlegit().isSelected()) f.llegit = false;
+        if (state.vista.getchckbxLlegit().isSelected())  b.llegit(Boolean.TRUE);
+        if (state.vista.getchckbxNoLlegit().isSelected()) b.llegit(Boolean.FALSE);
 
         Object selTag = state.vista.getComboTagFilter().getSelectedItem();
-        if (selTag instanceof Tag) f.tagId = ((Tag) selTag).getId();
+        if (selTag instanceof Tag) b.tagId(((Tag) selTag).getId());
 
         String editorial = state.vista.getFilterEditorial().getText().trim();
-        if (!editorial.isEmpty()) f.editorial = editorial;
+        if (!editorial.isEmpty()) b.editorial(editorial);
         String serie = state.vista.getFilterSerie().getText().trim();
-        if (!serie.isEmpty()) f.serie = serie;
+        if (!serie.isEmpty()) b.serie(serie);
         String idioma = state.vista.getFilterIdioma().getText().trim();
-        if (!idioma.isEmpty()) f.idioma = idioma;
+        if (!idioma.isEmpty()) b.idioma(idioma);
         String format = (String) state.vista.getFilterFormat().getSelectedItem();
-        if (format != null && !format.isEmpty()) f.format = format;
+        if (format != null && !format.isEmpty()) b.format(format);
+
+        LlibreFilter f = b.build();
 
         boolean dbPath = state.currentLlistaId == null && state.cd.isLargeLibrary();
         if (dbPath) {
@@ -150,9 +152,9 @@ class FilterController {
 
         Map<Long, Llibre> isbnMap = new HashMap<>();
         if (base != null) for (Llibre l : base) isbnMap.put(l.getISBN(), l);
-        java.util.Set<Long> tagISBNs = f.tagId != null ? state.cd.getLlibresWithTag(f.tagId) : null;
-        java.util.Set<Long> llistaISBNs = f.llistaId != null
-            ? state.cd.getLlibresInLlista(f.llistaId).stream().map(Llibre::getISBN).collect(Collectors.toSet())
+        java.util.Set<Long> tagISBNs = f.getTagId() != null ? state.cd.getLlibresWithTag(f.getTagId()) : null;
+        java.util.Set<Long> llistaISBNs = f.getLlistaId() != null
+            ? state.cd.getLlibresInLlista(f.getLlistaId()).stream().map(Llibre::getISBN).collect(Collectors.toSet())
             : null;
 
         drs.setRowFilter(new javax.swing.RowFilter<javax.swing.table.TableModel, Integer>() {
@@ -162,22 +164,22 @@ class FilterController {
                     long isbn = Long.parseLong(entry.getStringValue(TableController.COL_ISBN));
                     Llibre l = isbnMap.get(isbn);
                     if (l == null) return false;
-                    return (f.autor == null || FiltreUtils.matchString(f.autor, l.getAutor()))
-                        && (f.nom == null || FiltreUtils.matchString(f.nom, l.getNom()))
-                        && (f.isbn == null || FiltreUtils.matchISBN(f.isbn, l.getISBN()))
-                        && (f.anyMin == null || (l.getAny() != null && l.getAny() >= f.anyMin))
-                        && (f.anyMax == null || (l.getAny() != null && l.getAny() <= f.anyMax))
-                        && (f.valoracioMin == null || (l.getValoracio() != null && l.getValoracio() >= f.valoracioMin))
-                        && (f.valoracioMax == null || (l.getValoracio() != null && l.getValoracio() <= f.valoracioMax))
-                        && (f.preuMin == null || (l.getPreu() != null && l.getPreu() >= f.preuMin))
-                        && (f.preuMax == null || (l.getPreu() != null && l.getPreu() <= f.preuMax))
-                        && (f.llegit == null || f.llegit.equals(l.getLlegit()))
+                    return (f.getAutor() == null || FiltreUtils.matchString(f.getAutor(), l.getAutor()))
+                        && (f.getNom() == null || FiltreUtils.matchString(f.getNom(), l.getNom()))
+                        && (f.getIsbn() == null || FiltreUtils.matchISBN(f.getIsbn(), l.getISBN()))
+                        && (f.getAnyMin() == null || (l.getAny() != null && l.getAny() >= f.getAnyMin()))
+                        && (f.getAnyMax() == null || (l.getAny() != null && l.getAny() <= f.getAnyMax()))
+                        && (f.getValoracioMin() == null || (l.getValoracio() != null && l.getValoracio() >= f.getValoracioMin()))
+                        && (f.getValoracioMax() == null || (l.getValoracio() != null && l.getValoracio() <= f.getValoracioMax()))
+                        && (f.getPreuMin() == null || (l.getPreu() != null && l.getPreu() >= f.getPreuMin()))
+                        && (f.getPreuMax() == null || (l.getPreu() != null && l.getPreu() <= f.getPreuMax()))
+                        && (f.getLlegit() == null || f.getLlegit().equals(l.getLlegit()))
                         && (tagISBNs == null || tagISBNs.contains(l.getISBN()))
                         && (llistaISBNs == null || llistaISBNs.contains(l.getISBN()))
-                        && (f.editorial == null || FiltreUtils.matchString(f.editorial, l.getEditorial()))
-                        && (f.serie == null || FiltreUtils.matchString(f.serie, l.getSerie()))
-                        && (f.format == null || f.format.equalsIgnoreCase(l.getFormat()))
-                        && (f.idioma == null || FiltreUtils.matchString(f.idioma, l.getIdioma()));
+                        && (f.getEditorial() == null || FiltreUtils.matchString(f.getEditorial(), l.getEditorial()))
+                        && (f.getSerie() == null || FiltreUtils.matchString(f.getSerie(), l.getSerie()))
+                        && (f.getFormat() == null || f.getFormat().equalsIgnoreCase(l.getFormat()))
+                        && (f.getIdioma() == null || FiltreUtils.matchString(f.getIdioma(), l.getIdioma()));
                 } catch (Exception ignored) { return false; }
             }
         });
