@@ -269,7 +269,7 @@ public class BackupService {
     private static String sqlEsc(String s) {
         if (s == null) return "";
         String out = s.replace("\\", "\\\\").replace("'", "''");
-        out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ");
+        out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ").replace("\u001A", "");
         return out;
     }
 }

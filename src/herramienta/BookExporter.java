@@ -13,34 +13,7 @@ import java.util.stream.Collectors;
 public class BookExporter {
 
     public static void exportCSV(File f, List<Llibre> view, BibliotecaWriter cd) throws Exception {
-        // Build isbn→rows bulk map to avoid N+1 queries
-        java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
-        for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
-        java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
-            llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
-
-        try (PrintWriter pw = new PrintWriter(
-                new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
-            pw.println("ISBN,Nom,Autor,Any,Descripcio,Valoracio,Preu,Llegit,Portada,Llistes");
-            for (Llibre l : view) {
-                try {
-                    List<persistencia.LlibreLlistaRow> rows = llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList());
-                    StringBuilder llistesStr = new StringBuilder();
-                    for (persistencia.LlibreLlistaRow row : rows) {
-                        Llista ll = llistaById.get(row.llistaId());
-                        if (ll == null) continue;
-                        if (llistesStr.length() > 0) llistesStr.append(';');
-                        llistesStr.append(esc(ll.getNom())).append('|')
-                            .append(row.valoracio()).append('|').append(row.llegit());
-                    }
-                    pw.printf("\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
-                        l.getISBN(), esc(l.getNom()), esc(l.getAutor()), l.getAny(),
-                        esc(l.getDescripcio()), l.getValoracio(), l.getPreu(), l.getLlegit(),
-                        esc(l.getImatge()), llistesStr);
-                } catch (Exception ignored) {}
-            }
-        }
+        domini.ShelfParser.exportToCsv(f, view, cd);
     }
 
     public static void exportJSON(File f, BibliotecaWriter cd) throws Exception {
