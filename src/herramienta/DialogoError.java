@@ -10,6 +10,8 @@ import javax.swing.*;
 
 public class DialogoError {
 
+    private static final boolean IS_HEADLESS = GraphicsEnvironment.isHeadless();
+
     private final String titol;
     private final String missatge;
     private final String detalls;
@@ -72,7 +74,7 @@ public class DialogoError {
     public void showErrorMessage() {
         if (Boolean.getBoolean("biblioteca.test")) return;
         writeToLog(titol, missatge, detalls);
-        if (GraphicsEnvironment.isHeadless()) {
+        if (IS_HEADLESS) {
             System.err.println("[" + titol + "] " + missatge);
             return;
         }
@@ -88,9 +90,7 @@ public class DialogoError {
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 11));
         header.setBackground(accent);
 
-        JLabel iconLbl = new JLabel("⚠");
-        iconLbl.setFont(new Font("SansSerif", Font.BOLD, 17));
-        iconLbl.setForeground(Color.WHITE);
+        JLabel iconLbl = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
 
         JLabel titleLbl = new JLabel(titol);
         titleLbl.setFont(UITheme.FONT_BOLD);

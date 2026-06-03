@@ -228,6 +228,8 @@ public class UITheme {
     }
 
     public static void rebuildFonts(String size) {
+        if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
+            System.err.println("[UITheme] rebuildFonts() called off EDT — font changes must happen on the EDT");
         int sz = "small".equals(size) ? 11 : "large".equals(size) ? 16 : 13;
         FONT_BASE  = new Font("SansSerif", Font.PLAIN, sz);
         FONT_BOLD  = new Font("SansSerif", Font.BOLD,  sz);
