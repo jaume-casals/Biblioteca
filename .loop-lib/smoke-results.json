@@ -1,0 +1,30 @@
+[
+    {
+        "name":  "run",
+        "exit":  null,
+        "hasErr":  false,
+        "ok":  false,
+        "snippet":  ""
+    },
+    {
+        "name":  "run2",
+        "exit":  null,
+        "hasErr":  false,
+        "ok":  false,
+        "snippet":  ""
+    },
+    {
+        "name":  "runweb",
+        "exit":  null,
+        "hasErr":  false,
+        "ok":  false,
+        "snippet":  ""
+    },
+    {
+        "name":  "run2web",
+        "exit":  null,
+        "hasErr":  false,
+        "ok":  false,
+        "snippet":  ""
+    }
+]
