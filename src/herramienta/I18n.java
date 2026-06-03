@@ -398,6 +398,7 @@ public class I18n {
         T("lbl_pending", "Pendent", "Pendiente", "Pending");
         T("dlg_export_json_title", "Export JSON complet", "Export JSON completo", "Export JSON complete");
         T("dlg_export_html_title", "Export HTML complet", "Export HTML completo", "Export HTML complete");
+        T("export_html_heading", "La meva biblioteca", "Mi biblioteca", "My library");
         T("html_group_shelf_opt", "Agrupar per prestatgeria", "Agrupar por estantería", "Group by shelf");
         T("html_table_view_opt", "Vista de taula (en lloc de graella)", "Vista de tabla (en lugar de cuadrícula)", "Table view (instead of grid)");
         T("lbl_no_shelf", "Sense prestatgeria", "Sin estantería", "No shelf");

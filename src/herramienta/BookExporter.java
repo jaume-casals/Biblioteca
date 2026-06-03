@@ -109,10 +109,10 @@ public class BookExporter {
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
-            pw.println("<title>La meva biblioteca</title><style>");
+            pw.println("<title>" + htmlEsc(I18n.t("dlg_export_html_title")) + "</title><style>");
             pw.println(HTML_CSS);
             pw.println("</style></head><body>");
-            pw.println("<h1>📚 La meva biblioteca</h1>");
+            pw.println("<h1>" + htmlEsc(I18n.t("export_html_heading")) + "</h1>");
 
             if (groupByShelf) {
                 List<Llista> llistes = cd.getAllLlistes();
