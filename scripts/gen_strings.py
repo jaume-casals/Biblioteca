@@ -3,6 +3,9 @@
 Reads strings/strings.csv and generates:
   src/web/js/i18n.js
   src/herramienta/I18n.java
+  src/herramienta/strings_ca.properties
+  src/herramienta/strings_es.properties
+  src/herramienta/strings_en.properties
 
 CSV format: key,ca,es,en
 Lines starting with # are section comments (skipped).
@@ -18,6 +21,11 @@ CSV_PATH  = os.path.join(STRINGS_DIR, "strings.csv")  # legacy monolith (optiona
 SPLIT_FILES = ["ui.csv", "errors.csv", "csv.csv"]
 JS_PATH   = os.path.join(REPO, "src", "web", "js", "i18n.js")
 JAVA_PATH = os.path.join(REPO, "src", "herramienta", "I18n.java")
+PROP_PATHS = {
+    "ca": os.path.join(REPO, "src", "herramienta", "strings_ca.properties"),
+    "es": os.path.join(REPO, "src", "herramienta", "strings_es.properties"),
+    "en": os.path.join(REPO, "src", "herramienta", "strings_en.properties"),
+}
 
 def read_csv():
     entries = []  # list of (key, ca, es, en)
@@ -41,6 +49,9 @@ def js_str(s):
     return s.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
 
 def java_str(s):
+    return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+
+def java_prop_str(s):
     return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
 
 def gen_js(entries):
@@ -167,6 +178,13 @@ public class I18n {{
 }}
 """
 
+def gen_props(entries, lang_idx):
+    lines = []
+    for key, *vals in entries:
+        val = vals[lang_idx] if lang_idx < len(vals) else vals[0]
+        lines.append(f"{java_str(key)}={java_prop_str(val)}")
+    return '\n'.join(lines)
+
 def main():
     entries = read_csv()
     print(f"Read {len(entries)} string entries from {CSV_PATH}")
@@ -180,6 +198,13 @@ def main():
     with open(JAVA_PATH, 'w', encoding='utf-8') as f:
         f.write(java)
     print(f"Written: {JAVA_PATH}")
+
+    for lang_code, path in PROP_PATHS.items():
+        lang_idx = {"ca": 0, "es": 1, "en": 2}[lang_code]
+        props = gen_props(entries, lang_idx)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(props)
+        print(f"Written: {path}")
 
 if __name__ == '__main__':
     main()
