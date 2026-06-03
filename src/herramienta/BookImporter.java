@@ -13,10 +13,6 @@ public class BookImporter {
     public static ImportResult importCSV(java.io.File file, BibliotecaWriter cd) {
         int ok = 0, skipped = 0, err = 0;
         StringBuilder errors = new StringBuilder();
-        // Llista hardcoded d'estratègies — alternativament, ServiceLoader.load()
-        // amb un fitxer META-INF/services/ que permet afegir noves estratègies
-        // sense tocar aquest mètode. No s'ha fet per evitar un pas més de
-        // complexitat innecessari mentre només hi hagi 3 implementacions.
         java.util.List<herramienta.csv.CsvImportStrategy> strategies = java.util.List.of(
             new herramienta.csv.LibraryThingCsvStrategy(),
             new herramienta.csv.GoodreadsCsvStrategy(),
@@ -56,7 +52,6 @@ public class BookImporter {
     public static ImportResult importCalibre(java.io.File dbFile, String sqlite3, BibliotecaWriter cd) throws Exception {
         String sql = "SELECT b.id, b.title, GROUP_CONCAT(a.name, ', '), i.val, p.name, b.pubdate, b.rating, b.comment, b.series_index, s.name FROM books b LEFT JOIN books_authors_link ba ON b.id=ba.book LEFT JOIN authors a ON ba.author=a.id LEFT JOIN identifiers i ON b.id=i.book AND i.type='isbn' LEFT JOIN publishers p ON b.id=(SELECT book FROM books_publishers_link WHERE book=b.id LIMIT 1) LEFT JOIN books_series_link bs ON b.id=bs.book LEFT JOIN series s ON bs.series=s.id GROUP BY b.id;";
         Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql});
-        // Drain stderr in background so the process doesn't block on a full stderr pipe
         Thread stderrDrain = new Thread(() -> {
             try { proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream()); }
             catch (Exception ignored) {}
@@ -113,9 +108,5 @@ public class BookImporter {
             } catch (Exception ignored) {}
         }
         return null;
-    }
-
-    private static String jsonOptStr(com.google.gson.JsonObject o, String key) {
-        return (o.has(key) && !o.get(key).isJsonNull()) ? o.get(key).getAsString() : "";
     }
 }

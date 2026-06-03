@@ -18,6 +18,9 @@ public class ModeSelectorDialog extends JDialog {
     private ModeSelectorDialog(Frame owner) {
         super(owner, I18n.t("dlg_mode_selector_title"), true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { result = Mode.SWING; }
+        });
         setResizable(false);
         buildUI();
         pack();
