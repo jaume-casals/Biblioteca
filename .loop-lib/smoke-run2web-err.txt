@@ -1,0 +1,1 @@
+No s'ha pogut connectar a la base de dades. Error inicialitzant la base de dades integrada.
