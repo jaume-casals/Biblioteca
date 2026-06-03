@@ -10,6 +10,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 
 import domini.Llibre;
 import domini.LlibreFilter;
@@ -60,18 +61,18 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 		javax.swing.ActionMap am = root.getActionMap();
 
 		libraryPanel.getBtnNouLlibre()
-				.addActionListener(e -> new Thread(this::obrirNouLlibreDialeg).start());
+				.addActionListener(e -> SwingUtilities.invokeLater(this::obrirNouLlibreDialeg));
 
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrl), "nouLlibre");
 		am.put("nouLlibre", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				new Thread(MainFrameControl.this::obrirNouLlibreDialeg).start();
+				SwingUtilities.invokeLater(MainFrameControl.this::obrirNouLlibreDialeg);
 			}
 		});
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlShift), "nouLlibreScan");
 		am.put("nouLlibreScan", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				new Thread(() -> ioCtrl.escanejarISBN()).start();
+				SwingUtilities.invokeLater(() -> ioCtrl.escanejarISBN());
 			}
 		});
 

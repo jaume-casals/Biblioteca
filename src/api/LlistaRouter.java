@@ -42,7 +42,7 @@ public class LlistaRouter {
 
     private void create(HttpCtx ctx) throws Exception {
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
+        if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         Llista created;
         synchronized (cd) { created = cd.addLlista(nom); }
@@ -58,7 +58,7 @@ public class LlistaRouter {
     private void rename(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        if (!j.has("nom") || j.get("nom").isJsonNull()) throw new Exception("Field 'nom' is required");
+        if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         synchronized (cd) { cd.renameLlista(id, nom); }
         ctx.json(JsonMapper.llistaToMap(cd.getLlistaById(id)));
@@ -92,7 +92,7 @@ public class LlistaRouter {
         String fieldsParam = ctx.queryParam("fields");
         ArrayList<Llibre> books = new java.util.ArrayList<>(cd.getLlibresInLlista(id));
         if (fieldsParam != null && !fieldsParam.isBlank()) {
-            Set<String> fields = Set.of(fieldsParam.split(","));
+            Set<String> fields = new java.util.HashSet<>(java.util.List.of(fieldsParam.split(",")));
             ctx.json(JsonMapper.llibresToSlimList(books, fields));
         } else {
             ctx.json(JsonMapper.llibresToList(books));

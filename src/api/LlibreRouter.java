@@ -56,7 +56,7 @@ public class LlibreRouter {
             result = new java.util.ArrayList<>(cd.getAllLlibres());
         }
         if (fieldsParam != null && !fieldsParam.isBlank()) {
-            Set<String> fields = Set.of(fieldsParam.split(","));
+            Set<String> fields = new java.util.HashSet<>(java.util.List.of(fieldsParam.split(",")));
             ctx.json(JsonMapper.llibresToSlimList(result, fields));
         } else {
             ctx.json(JsonMapper.llibresToList(result));
@@ -70,7 +70,9 @@ public class LlibreRouter {
 
     private void add(HttpCtx ctx) throws Exception {
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         Llibre l = JsonMapper.jsonToLlibre(j);
+        if (l == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         Llibre validated = validate(l);
         synchronized (cd) { cd.addLlibre(validated); }
         ctx.status(201).json(JsonMapper.llibreToMap(validated));
@@ -79,7 +81,9 @@ public class LlibreRouter {
     private void update(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         Llibre updated = JsonMapper.jsonToLlibre(j);
+        if (updated == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         updated.setISBN(isbn);
         synchronized (cd) {
             Llibre existing = cd.getLlibre(isbn);

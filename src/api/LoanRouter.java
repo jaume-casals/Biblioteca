@@ -1,6 +1,7 @@
 package api;
 
 import com.google.gson.JsonObject;
+import domini.BibliotecaException;
 import interficie.BibliotecaWriter;
 
 import java.util.Map;
@@ -40,11 +41,10 @@ public class LoanRouter {
         long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
         String persona = j.has("persona") ? j.get("persona").getAsString() : "";
-        if (persona.isBlank()) throw new Exception("Borrower name required");
+        if (persona.isBlank()) throw new IllegalArgumentException("Borrower name required");
         synchronized (cd) {
-            // Cache loaned ISBNs to avoid querying the DB multiple times per request
             var loaned = cd.getLoanedISBNs();
-            if (loaned.contains(isbn)) throw new Exception("Book already on loan");
+            if (loaned.contains(isbn)) throw new BibliotecaException.Duplicate("Book already on loan");
             cd.prestarLlibre(isbn, persona);
         }
         ctx.status(201).json(Map.of("ok", true));

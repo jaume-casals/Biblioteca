@@ -115,15 +115,15 @@ public class ImportExportRouter {
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(4,
             r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
         for (Llibre l : missing) {
+            final Llibre book = l;
             pool.submit(() -> {
                 try {
-                    byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
-                    if (blob != null && blob.length > 0) cd.setLlibreBlob(l.getISBN(), blob);
+                    byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(book.getISBN()));
+                    if (blob != null && blob.length > 0) synchronized (cd) { cd.setLlibreBlob(book.getISBN(), blob); }
                 } catch (Exception ignored) {}
             });
         }
         pool.shutdown();
-        pool.awaitTermination(5, java.util.concurrent.TimeUnit.MINUTES);
     }
 
 }

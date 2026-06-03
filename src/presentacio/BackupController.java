@@ -1,6 +1,7 @@
 package presentacio;
 
 import java.awt.Component;
+import java.awt.Frame;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.*;
@@ -30,15 +31,23 @@ public class BackupController {
         fc.setSelectedFile(new java.io.File("biblioteca_backup.sql"));
         fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQL files", "sql"));
         if (fc.showSaveDialog(parent) != JFileChooser.APPROVE_OPTION) return;
-        java.io.File f = fc.getSelectedFile();
-        if (!f.getName().toLowerCase().endsWith(".sql")) f = new java.io.File(f.getPath() + ".sql");
-        try {
-            cd.backupToSQL(f);
-            JOptionPane.showMessageDialog(parent, I18n.t("dlg_backup_done", f.getAbsolutePath()),
-                I18n.t("dlg_backup_done_title"), JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            new DialogoError(e).showErrorMessage();
-        }
+        java.io.File selectedFile = fc.getSelectedFile();
+        if (!selectedFile.getName().toLowerCase().endsWith(".sql")) selectedFile = new java.io.File(selectedFile.getPath() + ".sql");
+        final java.io.File f = selectedFile;
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_backup_title"));
+        loading.show();
+        new SwingWorker<>() {
+            @Override protected Void doInBackground() throws Exception {
+                cd.backupToSQL(f);
+                return null;
+            }
+            @Override protected void done() {
+                loading.hide();
+                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_backup_done", f.getAbsolutePath()),
+                    I18n.t("dlg_backup_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void restaurarBD(Runnable onSuccess) {
@@ -49,13 +58,23 @@ public class BackupController {
         JFileChooser fc = new JFileChooser();
         fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQL files", "sql"));
         if (fc.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return;
-        try {
-            cd.restoreFromSQL(fc.getSelectedFile());
-            onSuccess.run();
-            JOptionPane.showMessageDialog(parent, I18n.t("dlg_restore_done"),
-                I18n.t("dlg_restore_done_title"), JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            new DialogoError(e).showErrorMessage();
-        }
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_restore_title"));
+        loading.show();
+        final java.io.File selectedFile = fc.getSelectedFile();
+        new SwingWorker<>() {
+            @Override protected Void doInBackground() throws Exception {
+                cd.restoreFromSQL(selectedFile);
+                return null;
+            }
+            @Override protected void done() {
+                loading.hide();
+                try {
+                    get();
+                    SwingUtilities.invokeLater(onSuccess);
+                    JOptionPane.showMessageDialog(parent, I18n.t("dlg_restore_done"),
+                        I18n.t("dlg_restore_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 }

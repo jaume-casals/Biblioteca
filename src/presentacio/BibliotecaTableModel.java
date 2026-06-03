@@ -54,10 +54,24 @@ public class BibliotecaTableModel extends AbstractTableModel {
         return column < COL_TYPES.length ? COL_TYPES[column] : Object.class;
     }
 
-    @Override public boolean isCellEditable(int row, int column) { return false; }
+    @Override public boolean isCellEditable(int row, int column) { return column == COL_LLEGIT; }
 
     @Override public Object getValueAt(int row, int column) {
-        return rowToValues(books.get(row))[column];
+        if (row < 0 || row >= books.size()) return null;
+        Llibre l = books.get(row);
+        return switch (column) {
+            case COL_COVER -> "";
+            case COL_ISBN -> l.getISBN() + "";
+            case COL_NOM -> l.getDisplayNom(Config.getLang());
+            case COL_AUTOR -> l.getAutor();
+            case COL_ANY -> l.getAny();
+            case COL_VALORACIO -> l.getValoracio();
+            case COL_PREU -> l.getPreu();
+            case COL_LLEGIT -> Boolean.TRUE.equals(l.getLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
+            case COL_PROGRES -> l.getPagines() + "/" + l.getPaginesLlegides();
+            case COL_DETALLS -> "";
+            default -> null;
+        };
     }
 
     public void setBooks(List<Llibre> llibres) {

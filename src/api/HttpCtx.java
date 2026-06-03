@@ -71,8 +71,13 @@ public class HttpCtx {
 
     public byte[] bodyBytes() {
         if (cachedBodyBytes != null) return cachedBodyBytes;
-        try { cachedBodyBytes = ex.getRequestBody().readAllBytes(); }
-        catch (IOException e) { cachedBodyBytes = new byte[0]; }
+        try {
+            java.io.InputStream is = ex.getRequestBody();
+            if (is == null) { cachedBodyBytes = new byte[0]; return cachedBodyBytes; }
+            int available = is.available();
+            if (available > 50 * 1024 * 1024) throw new IllegalStateException("Request body too large: " + available + " bytes");
+            cachedBodyBytes = is.readAllBytes();
+        } catch (IOException e) { throw new RuntimeException("Failed to read request body", e); }
         return cachedBodyBytes;
     }
 
@@ -110,10 +115,12 @@ public class HttpCtx {
         if (corsOrigin != null) {
             ex.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
         }
-        ex.sendResponseHeaders(status, body.length == 0 && status == 204 ? -1 : body.length);
+        long bodyLen = body.length == 0 ? -1 : body.length;
+        ex.sendResponseHeaders(status, bodyLen);
         if (body.length > 0) {
             try (var os = ex.getResponseBody()) { os.write(body); }
         }
+        ex.close();
     }
 
     // Duplicate query keys: last value wins. Multi-value params (checkboxes) are not supported.

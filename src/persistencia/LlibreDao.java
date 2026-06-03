@@ -20,8 +20,8 @@ public class LlibreDao {
 
     static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
         Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
-            rs.getInt("any"), null, rs.getDouble("valoracio"),
-            rs.getDouble("preu"), rs.getBoolean("llegit"), rs.getString("imatge"));
+            rs.getObject("any", Integer.class), null, rs.getObject("valoracio", Double.class),
+            rs.getObject("preu", Double.class), rs.getBoolean("llegit"), rs.getString("imatge"));
         l.setHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, false);
         l.setHeavyFieldsLoaded(false);
@@ -30,8 +30,8 @@ public class LlibreDao {
 
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
         Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
-            rs.getInt("any"), rs.getString("descripcio"), rs.getDouble("valoracio"),
-            rs.getDouble("preu"), rs.getBoolean("llegit"), rs.getString("imatge"));
+            rs.getObject("any", Integer.class), rs.getString("descripcio"), rs.getObject("valoracio", Double.class),
+            rs.getObject("preu", Double.class), rs.getBoolean("llegit"), rs.getString("imatge"));
         l.setHasBlob(rs.getBoolean("has_blob"));
         l.setNotes(rs.getString("notes"));
         fillLlibreTail(l, rs, true);
@@ -318,6 +318,7 @@ public class LlibreDao {
                 else if (p instanceof Integer v) ps.setInt(i + 1, v);
                 else if (p instanceof Double v)  ps.setDouble(i + 1, v);
                 else if (p instanceof Boolean v) ps.setBoolean(i + 1, v);
+                else throw new IllegalArgumentException("Unhandled parameter type: " + (p != null ? p.getClass().getName() : "null"));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) result.add(buildLlibre(rs));
@@ -388,60 +389,53 @@ public class LlibreDao {
 
     public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
-            try (java.io.BufferedReader br = new java.io.BufferedReader(
-                    new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
-                 Statement st = con.createStatement()) {
-                StringBuilder stmt = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String trimmed = line.trim();
-                    if (trimmed.isEmpty() || trimmed.startsWith("--")) continue;
-                    int dashIdx = trimmed.indexOf(" --");
-                    if (dashIdx > 0) trimmed = trimmed.substring(0, dashIdx).trim();
-                    stmt.append(trimmed).append('\n');
-                    // Split on a top-level ; — not one inside a single-quoted string.
-                    // (Backup data round-trips through BackupService.sqlEsc, which
-                    // doubles single quotes, so a stringified ';' stays inside the
-                    // literal until the closing quote.)
-                    if (endsStatement(trimmed) && !insideString(trimmed)) {
-                        String sql = stmt.toString().trim();
-                        if (!sql.isEmpty() && !isForbidden(sql)) {
-                            st.execute(sql);
-                        }
-                        stmt = new StringBuilder();
-                    }
-                }
+            byte[] bytes;
+            try {
+                bytes = java.nio.file.Files.readAllBytes(file.toPath());
             } catch (java.io.IOException e) {
                 throw new RuntimeException(e);
+            }
+            String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            content = content.replaceAll("--[^\\n]*\\n", "");
+            java.util.List<String> statements = splitStatements(content);
+            try (Statement st = con.createStatement()) {
+                for (String s : statements) {
+                    String trimmed = s.trim();
+                    if (trimmed.isEmpty()) continue;
+                    if (isForbidden(trimmed)) continue;
+                    st.execute(trimmed);
+                }
             }
         });
     }
 
-    /**
-     * A line that ends the current statement if the last non-space, non-comment
-     * character is a semicolon. We re-evaluate the line's own quote balance to
-     * avoid splitting mid-string on a line that ends with `');`.
-     */
-    private static boolean endsStatement(String trimmed) {
-        for (int i = trimmed.length() - 1; i >= 0; i--) {
-            char c = trimmed.charAt(i);
-            if (c == ' ' || c == '\t') continue;
-            return c == ';';
-        }
-        return false;
-    }
-
-    /** True if the line has more single-quote opens than closes. */
-    private static boolean insideString(String line) {
+    private static java.util.List<String> splitStatements(String sql) {
+        java.util.List<String> stmts = new java.util.ArrayList<>();
+        StringBuilder current = new StringBuilder();
         boolean inString = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '\'') {
-                if (inString && i + 1 < line.length() && line.charAt(i + 1) == '\'') { i++; continue; }
-                inString = !inString;
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+            if (c == '\'' && !inString) {
+                inString = true;
+                current.append(c);
+            } else if (c == '\'' && inString) {
+                if (i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+                    current.append("''");
+                    i++;
+                } else {
+                    inString = false;
+                    current.append(c);
+                }
+            } else if (c == ';' && !inString) {
+                stmts.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
             }
         }
-        return inString;
+        String remaining = current.toString().trim();
+        if (!remaining.isEmpty()) stmts.add(remaining);
+        return stmts;
     }
 
     /**

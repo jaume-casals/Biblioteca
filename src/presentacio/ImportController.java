@@ -1,6 +1,7 @@
 package presentacio;
 
 import java.awt.Component;
+import java.awt.Frame;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.*;
@@ -32,15 +33,27 @@ public class ImportController {
     public void importarCSV() {
         java.io.File f = BookIOController.pickFile(parent, I18n.t("dlg_import_title"), "CSV files", "csv");
         if (f == null) return;
-        BookImporter.ImportResult r = BookImporter.importCSV(f, cd);
-        if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
-            new DialogoError(new Exception(r.errorDetails())).showErrorMessage(); return;
-        }
-        String msg = r.imported() + " llibres importats.";
-        if (r.errors() > 0) msg += "\n" + r.errors() + " errors:" + r.errorDetails();
-        JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_title"),
-            r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-        onDataChanged.run();
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_title"));
+        loading.show();
+        new SwingWorker<BookImporter.ImportResult, Void>() {
+            @Override protected BookImporter.ImportResult doInBackground() {
+                return BookImporter.importCSV(f, cd);
+            }
+            @Override protected void done() {
+                loading.hide();
+                try {
+                    BookImporter.ImportResult r = get();
+                    if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
+                        new DialogoError(new Exception(r.errorDetails())).showErrorMessage(); return;
+                    }
+                    String msg = r.imported() + " llibres importats.";
+                    if (r.errors() > 0) msg += "\n" + r.errors() + " errors:" + r.errorDetails();
+                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_title"),
+                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                    onDataChanged.run();
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void importarCalibre() {
@@ -58,29 +71,49 @@ public class ImportController {
             JOptionPane.showMessageDialog(parent, I18n.t("dlg_calibre_no_sqlite3"),
                 I18n.t("dlg_calibre_choose_title"), JOptionPane.ERROR_MESSAGE); return;
         }
-        try {
-            BookImporter.ImportResult r = BookImporter.importCalibre(dbFile, sqlite3, cd);
-            onDataChanged.run();
-            String msg = r.imported() + " " + I18n.t("lbl_imported_ok");
-            if (r.skipped() > 0) msg += "\n" + r.skipped() + " " + I18n.t("lbl_skipped");
-            if (r.errors() > 0) msg += "\n" + r.errors() + " " + I18n.t("lbl_errors");
-            JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_calibre_choose_title"),
-                r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_calibre_choose_title"));
+        loading.show();
+        new SwingWorker<BookImporter.ImportResult, Void>() {
+            @Override protected BookImporter.ImportResult doInBackground() throws Exception {
+                return BookImporter.importCalibre(dbFile, sqlite3, cd);
+            }
+            @Override protected void done() {
+                loading.hide();
+                try {
+                    BookImporter.ImportResult r = get();
+                    onDataChanged.run();
+                    String msg = r.imported() + " " + I18n.t("lbl_imported_ok");
+                    if (r.skipped() > 0) msg += "\n" + r.skipped() + " " + I18n.t("lbl_skipped");
+                    if (r.errors() > 0) msg += "\n" + r.errors() + " " + I18n.t("lbl_errors");
+                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_calibre_choose_title"),
+                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void importarJSON() {
         java.io.File f = BookIOController.pickFile(parent, I18n.t("dlg_import_json_title"), "JSON files", "json");
         if (f == null) return;
-        BookImporter.ImportResult r;
-        try { r = BookImporter.importJSON(f, cd); }
-        catch (Exception e) { new DialogoError(e).showErrorMessage(); return; }
-        String msg = I18n.t("dlg_import_json_msg", r.imported());
-        if (r.skipped() > 0) msg += "\n" + I18n.t("dlg_import_json_skipped", r.skipped());
-        if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors());
-        JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_json_title"),
-            r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-        onDataChanged.run();
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_json_title"));
+        loading.show();
+        new SwingWorker<BookImporter.ImportResult, Void>() {
+            @Override protected BookImporter.ImportResult doInBackground() throws Exception {
+                return BookImporter.importJSON(f, cd);
+            }
+            @Override protected void done() {
+                loading.hide();
+                try {
+                    BookImporter.ImportResult r = get();
+                    String msg = I18n.t("dlg_import_json_msg", r.imported());
+                    if (r.skipped() > 0) msg += "\n" + I18n.t("dlg_import_json_skipped", r.skipped());
+                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors());
+                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_json_title"),
+                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                    onDataChanged.run();
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void escanejarISBN() {

@@ -73,7 +73,7 @@ public class ControladorPersistencia {
 		return ControladorPersistencia.inst;
 	}
 
-	public static void resetForTest() {
+	public static synchronized void resetForTest() {
         if (inst != null) {
             try { inst.libreDao.clearAllData(); } catch (Exception e) {
                 System.err.println("Warning: failed to clear test data: " + e.getMessage());
@@ -82,7 +82,7 @@ public class ControladorPersistencia {
         inst = null;
     }
 
-	public static void resetForProfileSwitch() {
+	public static synchronized void resetForProfileSwitch() {
 		if (inst != null) {
 			try { inst.sc.closeConection(); } catch (Exception ignored) {}
 		}

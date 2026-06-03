@@ -121,7 +121,7 @@ public class ServerConect {
 			String dir = System.getProperty("user.home") + "/.biblioteca";
 			new File(dir).mkdirs();
 			String profile = props.getProperty("dbProfile", "biblioteca");
- String url = "jdbc:h2:" + dir.trim().replaceAll("\\s+", "") + "/" + profile.trim().replaceAll("\\s+", "") + ";MODE=MySQL;NON_KEYWORDS=VALUE";
+ String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + profile.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + ";MODE=MySQL;NON_KEYWORDS=VALUE";
 			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 		} else {
 			String host = props.getProperty("dbHost", "localhost");
@@ -147,7 +147,7 @@ public class ServerConect {
 			} else if ("h2".equals(cfg.dbType())) {
 				String dir = System.getProperty("user.home") + "/.biblioteca";
 				new File(dir).mkdirs();
-				 String url = "jdbc:h2:" + dir.trim().replaceAll("\\s+", "") + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
+				 String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 			} else {
 				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
@@ -169,9 +169,6 @@ public class ServerConect {
 
 	private void runMigrations() throws SQLException {
 		boolean prevAutoCommit = con.getAutoCommit();
-		// Si la connexió ja està en una transacció aliena (prevAutoCommit == false),
-		// no podem fer rollback de tota la transacció — fem servir un SAVEPOINT
-		// per aïllar el rollback a les migracions.
 		java.sql.Savepoint sp = prevAutoCommit ? null : con.setSavepoint();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
@@ -179,7 +176,7 @@ public class ServerConect {
 			try (ResultSet rs = st.executeQuery("SELECT version FROM schema_version")) {
 				while (rs.next()) applied.add(rs.getInt(1));
 			}
-			con.setAutoCommit(false);
+			if (prevAutoCommit) con.setAutoCommit(false);
 			try (PreparedStatement ins = con.prepareStatement("INSERT INTO schema_version VALUES (?)")) {
 				for (Migration m : MIGRATIONS) {
 					if (!applied.contains(m.version())) {
@@ -192,8 +189,8 @@ public class ServerConect {
 			}
 			con.commit();
 		} catch (SQLException e) {
-			if (prevAutoCommit) { try { con.rollback(); } catch (SQLException ignored) {} }
-			else { try { con.rollback(sp); } catch (SQLException ignored) {} }
+			if (prevAutoCommit) { try { con.rollback(); } catch (SQLException ex) { System.err.println("Migration rollback failed: " + ex.getMessage()); } }
+			else { try { con.rollback(sp); } catch (SQLException ex) { System.err.println("Migration rollback to savepoint failed: " + ex.getMessage()); } }
 			throw e;
 		} finally {
 			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}

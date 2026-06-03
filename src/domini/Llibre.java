@@ -91,7 +91,7 @@ public class Llibre {
 			: new java.util.ArrayList<>();
 	}
 
-	public java.util.List<String> getAutors() { return autors; }
+	public java.util.List<String> getAutors() { return new java.util.ArrayList<>(autors); }
 	public void setAutors(java.util.List<String> autors) {
 		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
 		this.autor = this.autors.isEmpty() ? this.autor : String.join(", ", this.autors);
@@ -192,7 +192,7 @@ public class Llibre {
 		c.idioma = src.idioma; c.format = src.format; c.paisOrigen = src.paisOrigen;
 		c.desitjat = src.desitjat; c.estat = src.estat;
 		c.exemplars = src.exemplars; c.llenguaOriginal = src.llenguaOriginal;
-		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : null;
+		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>();
 		c.nomCa = src.nomCa; c.nomEs = src.nomEs; c.nomEn = src.nomEn;
 		c.hasBlob = src.hasBlob;
 		c.imatgeBlob = src.imatgeBlob;

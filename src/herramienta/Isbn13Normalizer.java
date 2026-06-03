@@ -9,12 +9,11 @@ public final class Isbn13Normalizer {
         if (raw == null) return null;
         String trimmed = raw.trim();
         if (trimmed.isEmpty()) return null;
-        if (Character.toUpperCase(trimmed.charAt(trimmed.length() - 1)) == 'X') {
-            String core = trimmed.substring(0, trimmed.length() - 1).replaceAll("[^0-9]", "");
-            if (core.length() == 9) return convertToIsbn13("978" + core);
+        String digits = trimmed.replaceAll("[^0-9X]", "");
+        if (digits.length() == 10 && (Character.isDigit(digits.charAt(9)) || Character.toUpperCase(digits.charAt(9)) == 'X')) {
+            return convertToIsbn13("978" + digits.substring(0, 9));
         }
-        String digits = trimmed.replaceAll("[^0-9]", "");
-        if (digits.length() == 10 && digits.charAt(0) == '0') return convertToIsbn13("978" + digits.substring(0, 9));
+        if (digits.length() == 13) return digits;
         return digits;
     }
 

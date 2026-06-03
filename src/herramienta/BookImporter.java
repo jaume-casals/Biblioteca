@@ -17,22 +17,25 @@ public class BookImporter {
             new herramienta.csv.LibraryThingCsvStrategy(),
             new herramienta.csv.GoodreadsCsvStrategy(),
             new herramienta.csv.NativeCsvStrategy());
-        try (java.io.BufferedReader br = new java.io.BufferedReader(
+        try (java.io.Reader reader = new java.io.BufferedReader(
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
-            String headerLine = br.readLine();
-            if (headerLine == null) return new ImportResult(0, 0, 0, "");
+            herramienta.csv.Rfc4180Reader br = new herramienta.csv.Rfc4180Reader(reader);
+            if (!br.hasNext()) return new ImportResult(0, 0, 0, "");
+            String[] headerRow = br.next();
+            String headerLine = String.join(",", headerRow);
             if (headerLine.startsWith("\uFEFF")) headerLine = headerLine.substring(1);
-            final String header = headerLine;
-            herramienta.csv.CsvImportStrategy strategy = strategies.stream()
-                .filter(s -> s.canHandle(header)).findFirst()
-                .orElse(new herramienta.csv.NativeCsvStrategy());
-            String[] headerCols = herramienta.csv.CsvUtils.parseLine(header);
+            herramienta.csv.CsvImportStrategy strategy = null;
+            for (herramienta.csv.CsvImportStrategy s : strategies) {
+                if (s.canHandle(headerLine)) { strategy = s; break; }
+            }
+            if (strategy == null) strategy = new herramienta.csv.NativeCsvStrategy();
+            String[] headerCols = herramienta.csv.CsvUtils.parseLine(headerLine);
             java.util.Map<String, Integer> hMap = herramienta.csv.CsvUtils.buildHeaderMap(headerCols);
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.isBlank()) continue;
+            while (br.hasNext()) {
+                String[] row = br.next();
+                if (row == null || row.length == 0 || (row.length == 1 && row[0].isBlank())) continue;
                 try {
-                    if (strategy.parseLine(herramienta.csv.CsvUtils.parseLine(line), hMap, cd)) ok++;
+                    if (strategy.parseLine(row, hMap, cd)) ok++;
                     else skipped++;
                 } catch (Exception ex) {
                     err++;
@@ -61,7 +64,7 @@ public class BookImporter {
         int ok = 0, skipped = 0, err = 0;
         StringBuilder errors = new StringBuilder();
         try (java.io.BufferedReader br = new java.io.BufferedReader(
-                new java.io.InputStreamReader(proc.getInputStream()))) {
+                new java.io.InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.isBlank()) continue;

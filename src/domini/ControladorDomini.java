@@ -30,7 +30,7 @@ public class ControladorDomini implements BibliotecaWriter {
 		};
 
 	private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
-		SortSpec.COL_ISBN,      Comparator.comparing(Llibre::getISBN),
+		SortSpec.COL_ISBN,      compararISBN,
 		SortSpec.COL_NOM,       Comparator.comparing(l -> l.getNom() != null ? l.getNom() : "", String.CASE_INSENSITIVE_ORDER),
 		SortSpec.COL_ANY,       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
 		SortSpec.COL_VALORACIO, Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
@@ -169,6 +169,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	}
 
 	public void deleteLlibre(Long ISBN) {
+		if (ISBN == null) throw new BibliotecaException.NotFound("ISBN és null");
 		int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
 		try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
@@ -207,22 +208,31 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	}
 
 	public void backupToSQL(java.io.File file) {
-		for (Llibre l : bib) loadHeavyFields(l);
-		try { backupService.backupToSQL(file, bib, llistes, tags); }
+		ArrayList<Llibre> bibSnapshot;
+		ArrayList<Llista> llistesSnapshot;
+		ArrayList<Tag> tagsSnapshot;
+		synchronized (this) {
+			for (Llibre l : bib) loadHeavyFields(l);
+			bibSnapshot = new ArrayList<>(bib);
+			llistesSnapshot = new ArrayList<>(llistes);
+			tagsSnapshot = new ArrayList<>(tags);
+		}
+		try { backupService.backupToSQL(file, bibSnapshot, llistesSnapshot, tagsSnapshot); }
 		catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
 	public void restoreFromSQL(java.io.File file) {
 		try {
-			java.io.File backup = new java.io.File(java.io.File.createTempFile("biblioteca_restore_backup_", ".sql").getParent(), "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
+			java.io.File tmpDir = new java.io.File(System.getProperty("java.io.tmpdir"));
+			java.io.File backup = new java.io.File(tmpDir, "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
 			backup.deleteOnExit();
-			backupService.backupToSQL(backup, bib, llistes, tags);
+			backupService.backupToSQL(backup, new ArrayList<>(bib), new ArrayList<>(llistes), new ArrayList<>(tags));
 			try {
 				cp.clearAllData();
 				cp.executeSQLFile(file);
 			} catch (Exception e) {
-				try { cp.executeSQLFile(backup); } catch (Exception ignored) {}
-				throw new BibliotecaException("Restore falldat: " + e.getMessage(), e);
+				try { cp.executeSQLFile(backup); } catch (Exception ex) { throw new BibliotecaException("Restore failed and rollback also failed: " + e.getMessage() + "; rollback error: " + ex.getMessage(), e); }
+				throw new BibliotecaException("Restore failed: " + e.getMessage(), e);
 			}
 		} catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
 		bib = new ArrayList<>(cp.getAllLlibres());
@@ -243,7 +253,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 
 	// ── Llista (shelf) management ──────────────────────────────────────────────
 
-	public java.util.List<Llista> getAllLlistes() { return llistes; }
+	public java.util.List<Llista> getAllLlistes() { return new java.util.ArrayList<>(llistes); }
 
 	public Llista getLlistaById(int id) throws Exception {
 		for (Llista l : llistes) if (l.getId() == id) return l;
@@ -379,7 +389,7 @@ public void setLlibreBlob(long isbn, byte[] blob) {
         try {
             cp.setLlibreBlob(isbn, blob);
             for (Llibre l : bib) {
-                if (l.getISBN() == isbn) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+                if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
             }
         }
         catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
@@ -387,7 +397,7 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	// ── Tag management ─────────────────────────────────────────────────────────
 
-	public java.util.List<Tag> getAllTags() { return tags; }
+	public java.util.List<Tag> getAllTags() { return new java.util.ArrayList<>(tags); }
 
 	public Tag getTagById(int id) throws Exception {
 		for (Tag t : tags) if (t.getId() == id) return t;

@@ -58,6 +58,7 @@ public class TagDao {
             ps.setInt(1, id);
             ps.execute();
         }
+        invalidateLlibreTagCache();
     }
 
     public synchronized void rename(int id, String newNom) throws SQLException {

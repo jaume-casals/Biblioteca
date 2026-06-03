@@ -80,10 +80,10 @@ public final class CsvUtils {
         return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
-    /** Parses an ISBN string, converting ISBN-10 with X check digit to ISBN-13. */
+    /** Parses an ISBN string, converting any valid ISBN-10 to ISBN-13. */
     public static String parseIsbn(String raw) {
-        String s = raw.replaceAll("[^0-9Xx]", "");
-        if (!s.isEmpty() && Character.toUpperCase(s.charAt(s.length() - 1)) == 'X' && s.length() == 10) {
+        String s = raw.replaceAll("[^0-9X]", "");
+        if (s.length() == 10) {
             String base12 = "978" + s.substring(0, 9);
             int sum = 0;
             for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);

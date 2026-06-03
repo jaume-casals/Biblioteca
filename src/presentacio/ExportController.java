@@ -1,6 +1,7 @@
 package presentacio;
 
 import java.awt.Component;
+import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -29,23 +30,43 @@ public class ExportController {
     }
 
     public void exportarCSV() {
-        java.io.File f = chooseExportFile("biblioteca.csv", "csv", "CSV files");
-        if (f == null) return;
-        try {
-            BookExporter.exportCSV(f, currentBooks.get(), cd);
-            JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                I18n.t("dlg_export_title"), JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+        java.io.File chosen = chooseExportFile("biblioteca.csv", "csv", "CSV files");
+        if (chosen == null) return;
+        final java.io.File f = chosen;
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_title"));
+        loading.show();
+        new SwingWorker<>() {
+            @Override protected Void doInBackground() throws Exception {
+                BookExporter.exportCSV(f, currentBooks.get(), cd);
+                return null;
+            }
+            @Override protected void done() {
+                loading.hide();
+                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
+                    I18n.t("dlg_export_title"), JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void exportarJSON() {
-        java.io.File f = chooseExportFile("biblioteca.json", "json", "JSON files");
-        if (f == null) return;
-        try {
-            BookExporter.exportJSON(f, cd);
-            JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                I18n.t("dlg_export_json_title"), JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+        java.io.File chosen = chooseExportFile("biblioteca.json", "json", "JSON files");
+        if (chosen == null) return;
+        final java.io.File f = chosen;
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_json_title"));
+        loading.show();
+        new SwingWorker<>() {
+            @Override protected Void doInBackground() throws Exception {
+                BookExporter.exportJSON(f, cd);
+                return null;
+            }
+            @Override protected void done() {
+                loading.hide();
+                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
+                    I18n.t("dlg_export_json_title"), JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void exportarHTML() {
@@ -54,13 +75,23 @@ public class ExportController {
         int r = JOptionPane.showConfirmDialog(parent, new Object[]{chkShelf, chkTable},
             I18n.t("dlg_export_html_title"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (r != JOptionPane.OK_OPTION) return;
-        java.io.File f = chooseExportFile("biblioteca.html", "html", "HTML files", "htm");
-        if (f == null) return;
-        try {
-            BookExporter.exportHTML(f, currentBooks.get(), cd, chkShelf.isSelected(), chkTable.isSelected());
-            JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                I18n.t("dlg_export_html_title"), JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+        java.io.File chosen = chooseExportFile("biblioteca.html", "html", "HTML files", "htm");
+        if (chosen == null) return;
+        final java.io.File f = chosen;
+        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_html_title"));
+        loading.show();
+        new SwingWorker<>() {
+            @Override protected Void doInBackground() throws Exception {
+                BookExporter.exportHTML(f, currentBooks.get(), cd, chkShelf.isSelected(), chkTable.isSelected());
+                return null;
+            }
+            @Override protected void done() {
+                loading.hide();
+                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
+                    I18n.t("dlg_export_html_title"), JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void exportarPDF() {

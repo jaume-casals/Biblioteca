@@ -7,6 +7,7 @@ import javax.swing.table.*;
 
 import domini.Llibre;
 import herramienta.UITheme;
+import presentacio.BibliotecaTableModel;
 import presentacio.MainFrameControl;
 
 public class ProgressBarRenderer extends JProgressBar implements TableCellRenderer {
@@ -21,8 +22,8 @@ public class ProgressBarRenderer extends JProgressBar implements TableCellRender
     public Component getTableCellRendererComponent(JTable t, Object value,
             boolean selected, boolean focus, int row, int col) {
         try {
-            long isbn = Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN));
-            Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
+            int modelRow = t.convertRowIndexToModel(row);
+            Llibre l = ((BibliotecaTableModel) t.getModel()).getBookAt(modelRow);
             if (l != null && l.getPagines() > 0) {
                 setMaximum(l.getPagines());
                 setValue(l.getPaginesLlegides());

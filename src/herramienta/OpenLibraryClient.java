@@ -52,7 +52,13 @@ public class OpenLibraryClient {
 		Map<String, String> r = new HashMap<>();
 		try {
 			String json = fetchWithRetry(base() + "/api/books?bibkeys=ISBN:" + isbn + "&format=json&jscmd=data");
-			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+			JsonObject root;
+			try {
+				root = JsonParser.parseString(json).getAsJsonObject();
+			} catch (RuntimeException e) {
+				r.put("error", "Malformed JSON response: " + e.getMessage());
+				return r;
+			}
 			JsonObject book = null;
 			for (Map.Entry<String, JsonElement> e : root.entrySet()) {
 				if (e.getValue().isJsonObject()) { book = e.getValue().getAsJsonObject(); break; }
@@ -154,8 +160,10 @@ public class OpenLibraryClient {
 		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return null; }
 		String coverBase = testBaseUrl != null ? testBaseUrl : COVER_BASE;
 		String url = coverBase + "/b/isbn/" + isbn + COVER_SIZE + ".jpg";
+		byte[] result = null;
+		HttpURLConnection conn = null;
 		try {
-			HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
 			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
 			conn.setReadTimeout(READ_TIMEOUT_MS);
 			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
@@ -164,14 +172,19 @@ public class OpenLibraryClient {
 				boolean isGif = ct != null && ct.startsWith("image/gif");
 				if (!isGif) {
 					try (java.io.InputStream is = conn.getInputStream()) {
-						return is.readAllBytes();
+						result = is.readAllBytes();
 					}
 				}
 			}
 		} catch (Exception e) {
 			LOG.log(Level.FINE, "fetchCoverByISBN primary URL failed for " + isbn, e);
+		} finally {
+			if (conn != null) {
+				try { conn.getErrorStream().close(); } catch (Exception ignored) {}
+				conn.disconnect();
+			}
 		}
-		if (testBaseUrl != null) return null;
+		if (result != null || testBaseUrl != null) return result;
 		try {
 			String encoded = java.net.URLEncoder.encode("isbn:" + isbn, StandardCharsets.UTF_8);
 			String meta = fetch("https://www.googleapis.com/books/v1/volumes?q=" + encoded + "&maxResults=1");
@@ -181,12 +194,13 @@ public class OpenLibraryClient {
 			HttpURLConnection c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
 			c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
 			c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
-			if (c2.getResponseCode() != 200) return null;
-			try (java.io.InputStream is = c2.getInputStream()) { return is.readAllBytes(); }
+			if (c2.getResponseCode() != 200) { c2.disconnect(); return null; }
+			try (java.io.InputStream is = c2.getInputStream()) { result = is.readAllBytes(); }
+			c2.disconnect();
 		} catch (Exception e) {
 			LOG.log(Level.FINE, "fetchCoverByISBN google fallback failed for " + isbn, e);
 		}
-		return null;
+		return result;
 	}
 
 	private static String fetchWithRetry(String url) throws java.io.IOException {
@@ -223,10 +237,14 @@ public class OpenLibraryClient {
 		conn.setReadTimeout(READ_TIMEOUT_MS);
 		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 		int code = conn.getResponseCode();
-		if (code != 200) throw new java.io.IOException("HTTP " + code);
+		if (code != 200) {
+			try { conn.getErrorStream().close(); } catch (Exception ignored) {}
+			conn.disconnect();
+			throw new java.io.IOException("HTTP " + code);
+		}
 		try (java.io.InputStream is = conn.getInputStream()) {
 			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-		}
+		} finally { conn.disconnect(); }
 	}
 
 	private static String jsonStr(JsonObject obj, String key) {

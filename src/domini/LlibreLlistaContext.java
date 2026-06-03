@@ -8,7 +8,7 @@ package domini;
  * rating, only the (book, shelf) join does.
  */
 public record LlibreLlistaContext(
-    int isbn,
+    long isbn,
     int llistaId,
     String nom,
     int ordre,
@@ -16,7 +16,7 @@ public record LlibreLlistaContext(
     Double valoracio,
     Boolean llegit
 ) {
-    public static LlibreLlistaContext of(int isbn, int llistaId, String nom, int ordre, String color,
+    public static LlibreLlistaContext of(long isbn, int llistaId, String nom, int ordre, String color,
                                          Double valoracio, Boolean llegit) {
         return new LlibreLlistaContext(isbn, llistaId, nom, ordre, color, valoracio, llegit);
     }

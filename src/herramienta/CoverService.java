@@ -24,6 +24,7 @@ public final class CoverService {
         return t;
     });
 
+    private static final Object L1_LOCK = new Object();
     private static final Map<String, byte[]> L1 = new java.util.LinkedHashMap<>(L1_MAX, 0.75f, true) {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, byte[]> eldest) { return size() > L1_MAX; }
     };
@@ -32,13 +33,15 @@ public final class CoverService {
     private CoverService() {}
 
     public static byte[] getCachedBytes(String isbn) {
-        byte[] mem = L1.get(isbn);
-        if (mem != null) return mem;
+        synchronized (L1_LOCK) {
+            byte[] mem = L1.get(isbn);
+            if (mem != null) return mem;
+        }
         try {
             Path f = DISK_DIR.resolve(isbn + ".jpg");
             if (Files.isRegularFile(f)) {
                 byte[] disk = Files.readAllBytes(f);
-                putL1(isbn, disk);
+                synchronized (L1_LOCK) { putL1(isbn, disk); }
                 return disk;
             }
         } catch (Exception ignored) {}
@@ -87,7 +90,9 @@ public final class CoverService {
         } catch (Exception ignored) {}
     }
 
-    private static void putL1(String isbn, byte[] data) { L1.put(isbn, data); }
+    private static void putL1(String isbn, byte[] data) {
+        synchronized (L1_LOCK) { L1.put(isbn, data); }
+    }
 
     public static int parallelism() { return MAX_PARALLEL; }
 }

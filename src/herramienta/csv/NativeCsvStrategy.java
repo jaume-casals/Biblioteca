@@ -33,14 +33,18 @@ public class NativeCsvStrategy implements CsvImportStrategy {
             throws domini.BibliotecaException {
         if (c.length < 4) throw new domini.BibliotecaException(I18n.t("csv_row_too_short"));
         String isbnRaw = c[COL_ISBN].trim();
-        // Validate ISBN shape (10 or 13 digits, last may be 'X' for ISBN-10). Reject numeric
-        // first columns that aren't actually ISBNs (canHandle is a permissive fallback).
         String digits = isbnRaw.replace("-", "").replace(" ", "");
         if (!(digits.length() == 10 || digits.length() == 13)
                 || !digits.matches("[0-9]{9}[0-9X]|[0-9]{13}")) {
             throw new domini.BibliotecaException(I18n.t("csv_bad_isbn", isbnRaw));
         }
-        long isbn = Long.parseLong(digits.substring(0, Math.min(digits.length(), 13)));
+        String normalizedIsbn = CsvUtils.parseIsbn(isbnRaw);
+        long isbn;
+        try {
+            isbn = Long.parseLong(normalizedIsbn);
+        } catch (NumberFormatException e) {
+            throw new domini.BibliotecaException(I18n.t("csv_bad_isbn", isbnRaw));
+        }
         if (CsvUtils.existsInLibrary(cd, isbn)) return false;
         int any = 0;
         try { any = Integer.parseInt(c[COL_ANY].trim()); } catch (NumberFormatException ignored) {}
