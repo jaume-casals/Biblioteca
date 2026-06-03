@@ -1,1 +1,4 @@
 Starting database...
+Server started on http://localhost:7070
+Biblioteca escoltant a http://localhost:7070
+Prem Ctrl+C per aturar.
