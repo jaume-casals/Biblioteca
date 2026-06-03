@@ -1,0 +1,5 @@
+[I18n] Missing key: btn_ok
+[I18n] Missing key: dlg_error_title
+[I18n] Missing key: dlg_error_title
+
+Exception: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread "AWT-EventQueue-0"

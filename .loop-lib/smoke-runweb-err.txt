@@ -1,1 +1,3 @@
-No s'ha pogut connectar a la base de dades. Error inicialitzant la base de dades integrada.
+[I18n] Missing key: dlg_error_title
+
+Exception: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread "main"

@@ -2,29 +2,29 @@
     {
         "name":  "run",
         "exit":  null,
-        "hasErr":  false,
+        "hasErr":  true,
         "ok":  false,
-        "snippet":  ""
+        "errSnippet":  "[I18n] Missing key: btn_ok\n[I18n] Missing key: dlg_error_title\n[I18n] Missing key: dlg_error_title\n\nException: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread \"AWT-EventQueue-0\""
     },
     {
         "name":  "run2",
         "exit":  null,
-        "hasErr":  false,
+        "hasErr":  true,
         "ok":  false,
-        "snippet":  ""
+        "errSnippet":  "[I18n] Missing key: btn_ok\n[I18n] Missing key: dlg_error_title\n[I18n] Missing key: dlg_error_title\n\nException: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread \"AWT-EventQueue-0\""
     },
     {
         "name":  "runweb",
         "exit":  null,
-        "hasErr":  false,
+        "hasErr":  true,
         "ok":  false,
-        "snippet":  ""
+        "errSnippet":  "[I18n] Missing key: dlg_error_title\n\nException: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread \"main\"Starting database..."
     },
     {
         "name":  "run2web",
         "exit":  null,
-        "hasErr":  false,
+        "hasErr":  true,
         "ok":  false,
-        "snippet":  ""
+        "errSnippet":  "[I18n] Missing key: dlg_error_title\n\nException: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread \"main\"Starting database..."
     }
 ]

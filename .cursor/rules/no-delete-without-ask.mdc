@@ -1,0 +1,19 @@
+---
+description: Never delete or remove files without explicit user approval
+alwaysApply: true
+---
+
+# File deletion — ask first
+
+**Never delete or remove a file without asking the user first and getting explicit approval.**
+
+This applies to every removal path, including:
+
+- The Delete tool
+- Shell commands (`rm`, `del`, `Remove-Item`, etc.)
+- `git rm` or similar version-control deletes
+- "Cleanup" of generated, temporary, or obsolete files
+
+Do not assume the user wants a file gone because it looks unused, redundant, or auto-generated. State which file(s) you would remove and why, then wait for confirmation before acting.
+
+Exception: only proceed without asking when the user has **explicitly** requested that specific deletion in the current task (e.g. "delete `foo.java`").

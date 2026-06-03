@@ -35,6 +35,10 @@ All runtime config in `~/.biblioteca/config.properties` (dbType, darkMode, fontS
 - Each screen has a `*Panel` (Swing layout) + `*Control` (listeners + domain calls)
 - `test/` is gitignored — tests are local-only
 
+## File deletion
+
+**Never delete or remove a file without asking the user first and getting explicit approval.** This includes the Delete tool, shell `rm`/`del`, `git rm`, and cleanup of generated or temporary files. Name the file(s) and reason, then wait for confirmation. Only skip asking when the user has explicitly requested that specific deletion in the current message.
+
 ## Misc
 
 - Language: Catalan/Spanish mixed
