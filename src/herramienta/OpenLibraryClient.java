@@ -143,10 +143,17 @@ public class OpenLibraryClient {
 		return r;
 	}
 
+	// Fallback order for cover images:
+	//   1. OpenLibrary covers.openlibrary.org/b/isbn/{isbn}-L.jpg  (Large, 400px)
+	//   2. Google Books thumbnail (only if OL returns GIF or 404)
+	// Base URLs are overridable via testBaseUrl for test mocking.
+	private static final String COVER_BASE = "https://covers.openlibrary.org";
+	private static final String COVER_SIZE  = "-L"; // Large; -M (Medium) or -S (Small) also available but not tried
+
 	public static byte[] fetchCoverByISBN(String isbn) {
 		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return null; }
-		String coverBase = testBaseUrl != null ? testBaseUrl : "https://covers.openlibrary.org";
-		String url = coverBase + "/b/isbn/" + isbn + "-L.jpg";
+		String coverBase = testBaseUrl != null ? testBaseUrl : COVER_BASE;
+		String url = coverBase + "/b/isbn/" + isbn + COVER_SIZE + ".jpg";
 		try {
 			HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
 			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
