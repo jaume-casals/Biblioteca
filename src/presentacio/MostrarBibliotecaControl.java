@@ -3,7 +3,7 @@ package presentacio;
 import domini.Llibre;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
-import interficie.EnActualizarBBDD;
+import presentacio.listener.EnActualizarBBDD;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;

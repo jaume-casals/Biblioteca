@@ -1,5 +1,6 @@
 package api;
 
+import domini.BibliotecaException;
 import interficie.BibliotecaWriter;
 
 import java.util.Map;
@@ -16,8 +17,8 @@ public class ApiServer {
         router.exception(ctx -> {
             Exception e = ctx.getException();
             if (e == null) { ctx.status(500).json(Map.of("error", "Internal error")); return; }
-            String msg = e.getMessage() != null ? e.getMessage() : "Bad request";
-            ctx.status(isBadInput(e) ? 400 : 500).json(Map.of("error", msg));
+            StatusBody sb = classify(e);
+            ctx.status(sb.status).json(Map.of("error", sb.body));
         });
 
         new LlibreRouter(router, cd);
@@ -31,12 +32,30 @@ public class ApiServer {
         new ImportExportRouter(router, cd);
     }
 
-    private static boolean isBadInput(Throwable t) {
+    private record StatusBody(int status, String body) {}
+
+    /**
+     * Map domain/library exceptions to HTTP statuses. <b>Body messages are
+     * sanitised</b> — only the public-facing constant string is returned for
+     * NotFound/Unknown; for Validation/Duplicate the local message is safe
+     * (catalan/spanish I18n keys) and useful for the caller.
+     */
+    private static StatusBody classify(Throwable t) {
         while (t != null) {
-            if (t instanceof IllegalArgumentException || t instanceof NumberFormatException) return true;
+            if (t instanceof BibliotecaException be) {
+                return switch (be.code()) {
+                    case NOT_FOUND  -> new StatusBody(404, "Not found");
+                    case DUPLICATE  -> new StatusBody(409, be.getMessage() != null ? be.getMessage() : "Duplicate");
+                    case VALIDATION -> new StatusBody(400, be.getMessage() != null ? be.getMessage() : "Validation failed");
+                    case UNKNOWN    -> new StatusBody(500, "Internal error");
+                };
+            }
+            if (t instanceof IllegalArgumentException || t instanceof NumberFormatException) {
+                return new StatusBody(400, t.getMessage() != null ? t.getMessage() : "Bad request");
+            }
             t = t.getCause();
         }
-        return false;
+        return new StatusBody(500, "Internal error");
     }
 
     public void start() throws Exception {

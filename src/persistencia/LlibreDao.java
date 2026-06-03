@@ -394,16 +394,20 @@ public class LlibreDao {
                 StringBuilder stmt = new StringBuilder();
                 String line;
                 while ((line = br.readLine()) != null) {
-                    line = line.trim();
-                    if (line.isEmpty() || line.startsWith("--")) continue;
-                    int dashIdx = line.indexOf(" --");
-                    if (dashIdx > 0) line = line.substring(0, dashIdx).trim();
-                    String upper = line.toUpperCase();
-                    if (upper.startsWith("USE ") || upper.startsWith("CREATE DATABASE")
-                            || upper.startsWith("DROP DATABASE")) continue;
-                    stmt.append(line).append(" ");
-                    if (line.endsWith(";")) {
-                        st.execute(stmt.toString().trim());
+                    String trimmed = line.trim();
+                    if (trimmed.isEmpty() || trimmed.startsWith("--")) continue;
+                    int dashIdx = trimmed.indexOf(" --");
+                    if (dashIdx > 0) trimmed = trimmed.substring(0, dashIdx).trim();
+                    stmt.append(trimmed).append('\n');
+                    // Split on a top-level ; — not one inside a single-quoted string.
+                    // (Backup data round-trips through BackupService.sqlEsc, which
+                    // doubles single quotes, so a stringified ';' stays inside the
+                    // literal until the closing quote.)
+                    if (endsStatement(trimmed) && !insideString(trimmed)) {
+                        String sql = stmt.toString().trim();
+                        if (!sql.isEmpty() && !isForbidden(sql)) {
+                            st.execute(sql);
+                        }
                         stmt = new StringBuilder();
                     }
                 }
@@ -412,6 +416,52 @@ public class LlibreDao {
             }
         });
     }
+
+    /**
+     * A line that ends the current statement if the last non-space, non-comment
+     * character is a semicolon. We re-evaluate the line's own quote balance to
+     * avoid splitting mid-string on a line that ends with `');`.
+     */
+    private static boolean endsStatement(String trimmed) {
+        for (int i = trimmed.length() - 1; i >= 0; i--) {
+            char c = trimmed.charAt(i);
+            if (c == ' ' || c == '\t') continue;
+            return c == ';';
+        }
+        return false;
+    }
+
+    /** True if the line has more single-quote opens than closes. */
+    private static boolean insideString(String line) {
+        boolean inString = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '\'') {
+                if (inString && i + 1 < line.length() && line.charAt(i + 1) == '\'') { i++; continue; }
+                inString = !inString;
+            }
+        }
+        return inString;
+    }
+
+    /**
+     * Block statements that would mutate the schema or change the active DB.
+     * Backup files are user-controlled text — a tampered file could otherwise
+     * drop tables or switch databases. The check is the first non-space token
+     * followed by a space; case-insensitive.
+     */
+    private static boolean isForbidden(String sql) {
+        String upper = sql.toUpperCase(java.util.Locale.ROOT);
+        for (String kw : FORBIDDEN_LEAD) {
+            if (upper.startsWith(kw)) return true;
+        }
+        return false;
+    }
+
+    private static final String[] FORBIDDEN_LEAD = {
+        "USE ", "CREATE DATABASE", "DROP DATABASE", "DROP TABLE", "DROP SCHEMA",
+        "ALTER ", "TRUNCATE ", "RENAME ", "GRANT ", "REVOKE ", "SHUTDOWN"
+    };
 
     @FunctionalInterface private interface SqlWork { void run() throws SQLException; }
 

@@ -88,6 +88,7 @@ public class LlistaRouter {
 
     private void books(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
+        cd.getLlistaById(id);
         String fieldsParam = ctx.queryParam("fields");
         ArrayList<Llibre> books = new java.util.ArrayList<>(cd.getLlibresInLlista(id));
         if (fieldsParam != null && !fieldsParam.isBlank()) {

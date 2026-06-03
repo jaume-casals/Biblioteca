@@ -91,22 +91,7 @@ public class ControladorDomini implements BibliotecaWriter {
 		Set<Long> llistaISBNs = f.getLlistaId() != null ? cp.getISBNsInLlista(f.getLlistaId()) : null;
 		ArrayList<Llibre> resultat = new ArrayList<>();
 		for (Llibre l : font) {
-			if ((f.getAutor() == null || FiltreUtils.matchString(f.getAutor(), l.getAutor()))
-					&& (f.getNom() == null || FiltreUtils.matchString(f.getNom(), l.getNom()))
-					&& (f.getIsbn() == null || FiltreUtils.matchISBN(f.getIsbn(), l.getISBN()))
-					&& (f.getAnyMin() == null || (l.getAny() != null && l.getAny() >= f.getAnyMin()))
-					&& (f.getAnyMax() == null || (l.getAny() != null && l.getAny() <= f.getAnyMax()))
-					&& (f.getValoracioMin() == null || (l.getValoracio() != null && l.getValoracio() >= f.getValoracioMin()))
-					&& (f.getValoracioMax() == null || (l.getValoracio() != null && l.getValoracio() <= f.getValoracioMax()))
-					&& (f.getPreuMin() == null || (l.getPreu() != null && l.getPreu() >= f.getPreuMin()))
-					&& (f.getPreuMax() == null || (l.getPreu() != null && l.getPreu() <= f.getPreuMax()))
-					&& (f.getLlegit() == null || f.getLlegit().equals(l.getLlegit()))
-					&& (tagISBNs == null || tagISBNs.contains(l.getISBN()))
-					&& (llistaISBNs == null || llistaISBNs.contains(l.getISBN()))
-					&& (f.getEditorial() == null || FiltreUtils.matchString(f.getEditorial(), l.getEditorial()))
-					&& (f.getSerie() == null || FiltreUtils.matchString(f.getSerie(), l.getSerie()))
-					&& (f.getFormat() == null || f.getFormat().equalsIgnoreCase(l.getFormat()))
-					&& (f.getIdioma() == null || FiltreUtils.matchString(f.getIdioma(), l.getIdioma()))) {
+			if (FiltreUtils.matches(l, f, tagISBNs, llistaISBNs)) {
 				resultat.add(l);
 			}
 		}
@@ -170,7 +155,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	public void addLlibre(Llibre l) {
 		int pos = Collections.binarySearch(bib, l, compararISBN);
 		if (pos >= 0)
-			throw new BibliotecaException("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
+			throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
 		try { cp.afegirLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		pos = -(pos + 1);
 		bib.add(pos, l);
@@ -178,14 +163,14 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 
 	public void deleteLlibre(Llibre l) {
 		int pos = Collections.binarySearch(bib, l, compararISBN);
-		if (pos < 0) throw new BibliotecaException("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
+		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
 		try { cp.eliminarLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		bib.remove(pos);
 	}
 
 	public void deleteLlibre(Long ISBN) {
 		int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
-		if (pos < 0) throw new BibliotecaException("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
+		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
 		try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		bib.remove(pos);
 	}
@@ -203,7 +188,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	public Llibre getLlibre(long ISBN) {
 		int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 		if (index < 0)
-			throw new BibliotecaException("No existeix el llibre amb ISBN " + ISBN);
+			throw new BibliotecaException.NotFound("No existeix el llibre amb ISBN " + ISBN);
 		Llibre l = bib.get(index);
 		if (!l.isHeavyFieldsLoaded()) loadHeavyFields(l);
 		return l;
@@ -262,7 +247,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 
 	public Llista getLlistaById(int id) throws Exception {
 		for (Llista l : llistes) if (l.getId() == id) return l;
-		throw new Exception("Shelf not found: " + id);
+		throw new BibliotecaException.NotFound("Shelf not found: " + id);
 	}
 
 	public Llista addLlista(String nom) {
@@ -352,7 +337,7 @@ private void swapLlistesOrdre(int i, int j) {
 	}
 
 	public void setLlistaColor(int id, String color) {
-		if (color != null && !color.matches("#[0-9a-fA-F]{3}") && !color.matches("#[0-9a-fA-F]{6}"))
+		if (!Llista.isValidColor(color))
 			throw new BibliotecaException.Validation(herramienta.I18n.t("val_color_invalid", color));
 		try { cp.updateLlistaColor(id, color); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		for (Llista l : llistes) {
@@ -406,7 +391,7 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	public Tag getTagById(int id) throws Exception {
 		for (Tag t : tags) if (t.getId() == id) return t;
-		throw new Exception("Tag not found: " + id);
+		throw new BibliotecaException.NotFound("Tag not found: " + id);
 	}
 
 	public Tag addTag(String nom) {

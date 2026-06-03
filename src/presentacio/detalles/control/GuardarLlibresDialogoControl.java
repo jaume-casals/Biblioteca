@@ -19,7 +19,7 @@ import herramienta.I18n;
 import herramienta.LlibreValidator;
 import herramienta.UITheme;
 import presentacio.FormValidator;
-import interficie.EnActualizarBBDD;
+import presentacio.listener.EnActualizarBBDD;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
 public class GuardarLlibresDialogoControl implements WindowListener {

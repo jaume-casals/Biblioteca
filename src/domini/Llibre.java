@@ -102,6 +102,8 @@ public class Llibre {
 	}
 
 	public void setAny(Integer any) {
+		if (any != null && any < 0)
+			throw new BibliotecaException.Validation(herramienta.I18n.t("val_any_negatiu", any));
 		this.any = any;
 	}
 

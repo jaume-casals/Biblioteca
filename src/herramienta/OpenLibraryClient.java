@@ -10,10 +10,13 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class OpenLibraryClient {
+
+	private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(OpenLibraryClient.class.getName());
 
 	private OpenLibraryClient() {}
 
@@ -63,7 +66,8 @@ public class OpenLibraryClient {
 					Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
 					if (m.find()) r.put("any", m.group(1));
 				}
-				if (book.has("number_of_pages")) r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
+				if (book.has("number_of_pages") && !book.get("number_of_pages").isJsonNull())
+					r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
 				put(r, "editorial", jsonArrayFirstField(book, "publishers", "name"));
 				put(r, "autor",     jsonArrayFirstField(book, "authors",    "name"));
 				if (book.has("languages")) {
@@ -140,7 +144,7 @@ public class OpenLibraryClient {
 	}
 
 	public static byte[] fetchCoverByISBN(String isbn) {
-		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return null; }
 		String coverBase = testBaseUrl != null ? testBaseUrl : "https://covers.openlibrary.org";
 		String url = coverBase + "/b/isbn/" + isbn + "-L.jpg";
 		try {
@@ -157,7 +161,9 @@ public class OpenLibraryClient {
 					}
 				}
 			}
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+			LOG.log(Level.FINE, "fetchCoverByISBN primary URL failed for " + isbn, e);
+		}
 		if (testBaseUrl != null) return null;
 		try {
 			String encoded = java.net.URLEncoder.encode("isbn:" + isbn, StandardCharsets.UTF_8);
@@ -170,14 +176,17 @@ public class OpenLibraryClient {
 			c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
 			if (c2.getResponseCode() != 200) return null;
 			try (java.io.InputStream is = c2.getInputStream()) { return is.readAllBytes(); }
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+			LOG.log(Level.FINE, "fetchCoverByISBN google fallback failed for " + isbn, e);
+		}
 		return null;
 	}
 
 	private static String fetchWithRetry(String url) throws java.io.IOException {
-		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw new java.io.IOException("Interrupted while rate-limiting", ie); }
 		int retries = testMaxRetries >= 0 ? testMaxRetries : MAX_RETRIES;
 		long baseMs = testRetryBaseMs >= 0 ? testRetryBaseMs : RETRY_BASE_MS;
+		if (retries <= 0) return fetch(url);
 		java.io.IOException last = null;
 		for (int i = 0; i < retries; i++) {
 			try {
@@ -186,11 +195,14 @@ public class OpenLibraryClient {
 				last = e;
 				if (i < retries - 1) {
 					try { Thread.sleep(baseMs * (1L << i)); }
-					catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+					catch (InterruptedException ie) {
+						Thread.currentThread().interrupt();
+						throw new java.io.IOException("Interrupted during retry backoff", ie);
+					}
 				}
 			}
 		}
-		throw last;
+		throw last != null ? last : new java.io.IOException("No retries performed for " + url);
 	}
 
 	private static String fetch(String url) throws java.io.IOException {

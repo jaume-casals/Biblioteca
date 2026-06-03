@@ -8,7 +8,7 @@ import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
 import herramienta.LlibreValidator;
-import interficie.EnActualizarBBDD;
+import presentacio.listener.EnActualizarBBDD;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 import presentacio.detalles.vista.LlistesDelLlibreDialog;
 import presentacio.detalles.vista.TagsDelLlibreDialog;

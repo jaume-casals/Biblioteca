@@ -539,6 +539,7 @@ public class I18n {
         T("tip_col_title", "Títol del llibre", "Título del libro", "Book title");
         T("tip_col_year", "Any de publicació", "Año de publicación", "Publication year");
         T("val_any_rang", "L'any ha d'estar entre 1000 i {0}", "El año debe estar entre 1000 y {0}", "Year must be between 1000 and {0}");
+        T("val_any_negatiu", "L'any no pot ser negatiu: {0}", "El año no puede ser negativo: {0}", "Year cannot be negative: {0}");
         T("val_autor_llarg", "L'autor no pot superar 255 caràcters", "El autor no puede superar 255 caracteres", "Author cannot exceed 255 characters");
         T("val_editorial_llarg", "L'editorial no pot superar 255 caràcters", "La editorial no puede superar 255 caracteres", "Publisher cannot exceed 255 characters");
         T("val_format_llarg", "El format no pot superar 50 caràcters", "El formato no puede superar 50 caracteres", "Format cannot exceed 50 characters");

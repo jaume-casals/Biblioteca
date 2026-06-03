@@ -164,22 +164,7 @@ class FilterController {
                     long isbn = Long.parseLong(entry.getStringValue(TableController.COL_ISBN));
                     Llibre l = isbnMap.get(isbn);
                     if (l == null) return false;
-                    return (f.getAutor() == null || FiltreUtils.matchString(f.getAutor(), l.getAutor()))
-                        && (f.getNom() == null || FiltreUtils.matchString(f.getNom(), l.getNom()))
-                        && (f.getIsbn() == null || FiltreUtils.matchISBN(f.getIsbn(), l.getISBN()))
-                        && (f.getAnyMin() == null || (l.getAny() != null && l.getAny() >= f.getAnyMin()))
-                        && (f.getAnyMax() == null || (l.getAny() != null && l.getAny() <= f.getAnyMax()))
-                        && (f.getValoracioMin() == null || (l.getValoracio() != null && l.getValoracio() >= f.getValoracioMin()))
-                        && (f.getValoracioMax() == null || (l.getValoracio() != null && l.getValoracio() <= f.getValoracioMax()))
-                        && (f.getPreuMin() == null || (l.getPreu() != null && l.getPreu() >= f.getPreuMin()))
-                        && (f.getPreuMax() == null || (l.getPreu() != null && l.getPreu() <= f.getPreuMax()))
-                        && (f.getLlegit() == null || f.getLlegit().equals(l.getLlegit()))
-                        && (tagISBNs == null || tagISBNs.contains(l.getISBN()))
-                        && (llistaISBNs == null || llistaISBNs.contains(l.getISBN()))
-                        && (f.getEditorial() == null || FiltreUtils.matchString(f.getEditorial(), l.getEditorial()))
-                        && (f.getSerie() == null || FiltreUtils.matchString(f.getSerie(), l.getSerie()))
-                        && (f.getFormat() == null || f.getFormat().equalsIgnoreCase(l.getFormat()))
-                        && (f.getIdioma() == null || FiltreUtils.matchString(f.getIdioma(), l.getIdioma()));
+                    return FiltreUtils.matches(l, f, tagISBNs, llistaISBNs);
                 } catch (Exception ignored) { return false; }
             }
         });

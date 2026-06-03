@@ -2,7 +2,7 @@ package presentacio;
 
 import domini.Llibre;
 import interficie.BibliotecaWriter;
-import interficie.EnActualizarBBDD;
+import presentacio.listener.EnActualizarBBDD;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

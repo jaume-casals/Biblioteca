@@ -19,7 +19,7 @@ import herramienta.I18n;
 import interficie.BibliotecaWriter;
 import presentacio.listener.EnActualizarBBDD;
 
-public class MainFrameControl implements interficie.EnActualizarBBDD {
+public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 
 	private final BibliotecaWriter cLlibres;
 	private final MostrarBibliotecaPanel libraryPanel;

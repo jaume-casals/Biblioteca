@@ -83,7 +83,6 @@ public class LlibreRouter {
         updated.setISBN(isbn);
         synchronized (cd) {
             Llibre existing = cd.getLlibre(isbn);
-            if (existing == null) throw new IllegalArgumentException("Book not found: " + isbn);
             updated.setHasBlob(existing.hasBlob());
             cd.updateLlibre(updated);
         }
@@ -93,7 +92,9 @@ public class LlibreRouter {
     private void delete(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) {
-            if (cd.getLlibre(isbn) == null) throw new IllegalArgumentException("Book not found: " + isbn);
+            if (!cd.existsLlibre(isbn)) {
+                throw new domini.BibliotecaException.NotFound("Book not found: " + isbn);
+            }
             cd.deleteLlibre(isbn);
         }
         ctx.status(204);
@@ -110,11 +111,23 @@ public class LlibreRouter {
             if (blob == null || blob.length == 0) { ctx.status(404); return; }
             ctx.contentType("image/png");
         } else {
-            boolean isPng = blob.length > 4 && blob[0] == (byte) 0x89 && blob[1] == 0x50;
-            ctx.contentType(isPng ? "image/png" : "image/jpeg");
+            ctx.contentType(sniffImageMime(blob));
         }
         ctx.responseHeader("Cache-Control", "max-age=3600");
         ctx.result(blob);
+    }
+
+    /** Minimal content-type sniff: 8 bytes for PNG signature, 3 for JPEG SOI. */
+    public static String sniffImageMime(byte[] blob) {
+        if (blob.length >= 8
+                && (blob[0] & 0xFF) == 0x89 && blob[1] == 0x50 && blob[2] == 0x4E && blob[3] == 0x47
+                && blob[4] == 0x0D && blob[5] == 0x0A && blob[6] == 0x1A && blob[7] == 0x0A) {
+            return "image/png";
+        }
+        if (blob.length >= 3 && (blob[0] & 0xFF) == 0xFF && (blob[1] & 0xFF) == 0xD8 && (blob[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        return "image/jpeg";
     }
 
     private void uploadImage(HttpCtx ctx) throws Exception {
