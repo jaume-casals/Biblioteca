@@ -443,7 +443,10 @@ public class UIAudit {
 
         cmdScreenshot("99_final");
         log("\n--- I18n static audit ---");
-        I18nAudit.run(reportFile, new int[]{failCount}, new int[]{warnCount});
+        int[] i18nFail = {0}, i18nWarn = {0};
+        I18nAudit.run(reportFile, i18nFail, i18nWarn);
+        failCount += i18nFail[0];
+        warnCount += i18nWarn[0];
         log("\n=== AUTOMATED AUDIT COMPLETE ===");
         log("FAIL: " + failCount + "  WARN: " + warnCount);
         log("Report: checkBiblio/audit_report.txt");

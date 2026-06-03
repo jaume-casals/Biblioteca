@@ -156,6 +156,8 @@ public class StressTest {
         // Misc
         phase("40", "Llibre aleatori dialog",             () -> testAleatori(main));
         phase("41", "Sidebar: all buttons exercised",     () -> testAllSidebarButtons(main));
+        // Data integrity: persistence round-trip via the domain layer (hard asserts)
+        phase("41B", "Data integrity: full DB round-trip", () -> testDataIntegrity(main));
         // Extreme (run2 pushed to the limit) — before cleanup
         if (Boolean.getBoolean("biblioteca.stress.extreme")) {
             phase("43", "Extreme: burst 30 valid books",       () -> testExtreme_burstCreate(main, 30));
@@ -1042,6 +1044,84 @@ public class StressTest {
             }
         }
         goAllBooks(main);
+    }
+
+    // ── DATA INTEGRITY (domain layer, hard asserts) ──────────────────────────────
+
+    /**
+     * Creates a book through the domain layer with EVERY field set (including the
+     * recently-added ones: nom_ca/es/en, estat, exemplars, idioma, format, serie,
+     * volum, pagines), then reloads it STRAIGHT FROM THE DATABASE
+     * ({@link persistencia.ControladorPersistencia#getAllLlibres()}, which rebuilds
+     * each Llibre from the ResultSet) and asserts a true persistence round-trip.
+     * Then exercises a loan create/return round-trip and a tag add/remove
+     * round-trip. Unlike the UI phases, these are hard PASS/FAIL checks.
+     */
+    private static void testDataIntegrity(JFrame main) throws Exception {
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        persistencia.ControladorPersistencia cp = persistencia.ControladorPersistencia.getInstance();
+
+        long isbn = uniqueISBN();
+        domini.Llibre l = new domini.Llibre(isbn, "Integrity_" + isbn, "Autor Integ",
+            2021, "descripcio round-trip", 7.5, 19.99, true, null);
+        l.setNomCa("Títol CA"); l.setNomEs("Título ES"); l.setNomEn("Title EN");
+        l.setEditorial("Edit Integ"); l.setSerie("Serie Integ"); l.setVolum(3);
+        l.setEstat("nou"); l.setExemplars(4); l.setDesitjat(false);
+        l.setIdioma("Català"); l.setFormat("Tapa dura");
+        l.setPagines(320); l.setPaginesLlegides(160);
+
+        domini.Tag tag = null;
+        try {
+            cd.addLlibre(l);
+
+            // Re-read from DB (not the in-memory cache) to prove it persisted.
+            domini.Llibre db = null;
+            for (domini.Llibre b : cp.getAllLlibres())
+                if (b.getISBN() == isbn) { db = b; break; }
+
+            if (db == null) { fail("DataIntegrity: book ISBN=" + isbn + " not found after reload"); return; }
+
+            check("nom persists",       "Integrity_" + isbn, db.getNom());
+            check("nom_ca persists",    "Títol CA",  db.getNomCa());
+            check("nom_es persists",    "Título ES", db.getNomEs());
+            check("nom_en persists",    "Title EN",  db.getNomEn());
+            check("editorial persists", "Edit Integ", db.getEditorial());
+            check("serie persists",     "Serie Integ", db.getSerie());
+            check("volum persists",     3, db.getVolum());
+            check("estat persists",     "nou", db.getEstat());
+            check("exemplars persists", 4, db.getExemplars());
+            check("idioma persists",    "Català", db.getIdioma());
+            check("format persists",    "Tapa dura", db.getFormat());
+            check("pagines persists",   320, db.getPagines());
+            check("pagines_llegides persists", 160, db.getPaginesLlegides());
+            check("llegit persists",    Boolean.TRUE, db.getLlegit());
+
+            // ── Loan round-trip ──────────────────────────────────────────────
+            cd.prestarLlibre(isbn, "Joan Tester");
+            check("loan registered (active)", true, cd.getLoanedISBNs().contains(isbn));
+            check("countLoans >= 1", true, cd.countLoans(isbn) >= 1);
+            cd.retornarLlibre(isbn);
+            check("loan returned (not active)", false, cd.getLoanedISBNs().contains(isbn));
+
+            // ── Tag round-trip ───────────────────────────────────────────────
+            tag = cd.addTag("StressTag_" + (isbnCounter));
+            cd.addLlibreToTag(isbn, tag.getId());
+            check("tag membership added", true, cd.getLlibresWithTag(tag.getId()).contains(isbn));
+            cd.removeLlibreFromTag(isbn, tag.getId());
+            check("tag membership removed", false, cd.getLlibresWithTag(tag.getId()).contains(isbn));
+        } catch (Exception e) {
+            fail("DataIntegrity threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        } finally {
+            // Best-effort teardown — do not let cleanup failures mask the result.
+            try { cd.deleteLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
+            if (tag != null) { try { cd.deleteTag(tag); } catch (Exception ignored) {} }
+        }
+    }
+
+    /** Hard equality assertion used by {@link #testDataIntegrity}. */
+    private static void check(String what, Object expected, Object actual) {
+        if (Objects.equals(expected, actual)) pass("DataIntegrity: " + what);
+        else fail("DataIntegrity: " + what + " — expected <" + expected + "> but was <" + actual + ">");
     }
 
     // ── CLEANUP ─────────────────────────────────────────────────────────────────

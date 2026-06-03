@@ -1,0 +1,126 @@
+================================================================================
+ ULTRA MEGA HYPER REVIEW — checkBiblio/   (the test / audit harness)
+================================================================================
+ Files reviewed: StressTest.java, UIAudit.java, run.sh, run2.sh
+ Format:  File.java:LINE: SEVERITY: problem. Fix: suggested fix.
+ Severity legend: CRITICAL > HIGH > MEDIUM > LOW
+================================================================================
+
+--------------------------------------------------------------------------------
+ SUMMARY (read first)
+--------------------------------------------------------------------------------
+ * CRITICAL: UIAudit.java:446 calls I18nAudit.run(...) but class I18nAudit does
+   NOT exist anywhere in the repo -> `javac checkBiblio/UIAudit.java` in run.sh
+   FAILS to compile, so the entire audit tool is currently dead.
+   >>> FIXED in this pass: added checkBiblio/I18nAudit.java (a real i18n audit).
+ * HIGH: the test classpath in run.sh / run2.sh / file headers requires
+   lib/javalin-6.3.0.jar + lib/kotlin-stdlib-2.0.21.jar, but the app's API layer
+   uses com.sun.net.httpserver (Javalin appears ONLY in pom.xml, used nowhere in
+   src/). The Makefile classpath does NOT include these jars. So the scripts
+   diverge from the real build and abort on the jar-existence guard if the (now
+   unnecessary) jars are absent.
+ * HIGH (philosophy): the suites are extremely lenient — most negative tests
+   downgrade a real failure to warn()/pass() ("accepted silently" -> warn). They
+   prove "no crash" but barely assert correctness, so genuine regressions slip
+   through. To "catch unknown errors" the assertions must be tightened (below).
+ * Coverage gaps: the biggest recently-added features have ZERO automated
+   coverage — Web/API mode (api/*, --web), loans round-trip, tags add/remove,
+   multilingual titles (nom_ca/es/en), reading sessions (lectura), import
+   round-trips, backup->clear->restore round-trip. (Partial fix added: a new
+   domain-level data-integrity phase in StressTest.)
+
+================================================================================
+ BUGS / BLUNDERS IN THE TEST CODE
+================================================================================
+checkBiblio/UIAudit.java:446: CRITICAL: I18nAudit.run(reportFile, new int[]{failCount}, new int[]{warnCount}) references a non-existent class -> compile failure of the whole tool. Fix: add I18nAudit (DONE) or remove the call.
+checkBiblio/UIAudit.java:446: MEDIUM: even with I18nAudit present, fail/warn counts are passed as throwaway anonymous int[] and never read back, so any failures it records are lost before System.exit decides the exit code. Fix: use named arrays and assign failCount/warnCount back (DONE).
+checkBiblio/UIAudit.java:861: LOW: waitForDialog(...) is defined but never used (dead code). Fix: remove or use it instead of the bare getTopDialog polling.
+checkBiblio/UIAudit.java:207: LOW: cmdType overwrites the system clipboard via Ctrl+V and never restores the previous contents. Fix: save/restore clipboard around the paste.
+checkBiblio/UIAudit.java:64: MEDIUM: in INTERACTIVE mode the H2 url is NOT overridden, so the audit runs against the user's real ~/.biblioteca DB and its create/edit/delete commands mutate real data. Fix: always set an in-memory test url (or warn loudly) before launching.
+checkBiblio/UIAudit.java:102: MEDIUM: neither mode calls ControladorDomini.resetForTest()/ControladorPersistencia.resetForTest() (StressTest does). Fresh JVM hides it today, but auto+interactive in one process (cmd "auto") reuses singletons against whatever DB was opened. Fix: reset singletons before launching the app.
+checkBiblio/StressTest.java:1284: MEDIUM: uniqueISBN() = 9780000000000L + (isbnCounter++ % 999_999_990L); isbnCounter seeds from currentTimeMillis()%900_000_000 and the modulo can wrap, so two ISBNs in one run (or across overlapping runs sharing a persistent DB) can collide and make a "valid create" spuriously fail as a duplicate. Fix: use a monotonic counter with a per-run random base and assert uniqueness.
+checkBiblio/StressTest.java:1233: MEDIUM: dismissAllDialogs()'s button list includes "Sí" and "No"; on a destructive confirm (delete) it can click "Sí" and silently confirm an unintended deletion during teardown of an unrelated phase. Fix: for generic dismissal prefer Cancel/Close/Esc only; never auto-click affirmative on confirm dialogs.
+checkBiblio/StressTest.java:997: MEDIUM: testExtreme_concurrent calls findBtnIn(main, ...) (a full Swing component-tree walk) from 50+ worker threads OFF the EDT. Reading the component hierarchy off the EDT is itself a Swing threading violation and can throw / return inconsistent results — the test harness commits the same sin it is meant to detect. Fix: resolve the button once on the EDT, then only invoke doClick via invokeLater from the workers.
+checkBiblio/StressTest.java:319: HIGH: testChaos_longTitle treats BOTH "validation rejected" AND "saved" as pass; nom is VARCHAR(255) so a 500-char title is a real boundary, yet the test can never fail. Fix: decide the contract (reject vs truncate) and assert exactly one outcome.
+checkBiblio/StressTest.java:251: MEDIUM: testValidation_badYear downgrades "non-numeric year accepted" to warn(), so a validator regression that silently accepts garbage years passes CI. Fix: assert rejection (fail on silent accept).
+checkBiblio/StressTest.java:229: MEDIUM: testValidation_negativePrice likewise only warns on silent accept. Fix: assert the documented contract and fail otherwise.
+checkBiblio/StressTest.java:45: LOW: report PrintWriter (auto-flush) is written via log() from the main test thread, the app thread, AND (during phase 47) worker threads; interleaved lines can corrupt the report. Fix: synchronize log() or route through a single-threaded queue.
+checkBiblio/StressTest.java:160: LOW: phase numbers are out of order — extreme phases 43-48 are registered before phase 42 (cleanup). Cosmetic, but the report ordering is confusing. Fix: renumber so cleanup is the last index.
+checkBiblio/StressTest.java:101: LOW: phase() always takes a full-screen screenshot after every phase (40+ phases); on a 1920x1080 Xvfb this is dozens of PNGs and a lot of IO. Fix: screenshot only on FAIL/WARN or when explicitly requested.
+checkBiblio/StressTest.java:36 & UIAudit.java:61: MEDIUM: both call `new Robot()` and use robot key/mouse events; on a truly headless box without Xvfb this throws AWTException at startup with no graceful skip. Fix: guard GraphicsEnvironment.isHeadless() and degrade to action-map-only driving.
+checkBiblio/StressTest.java:1444 & UIAudit.java:240: LOW: screenshots capture only Toolkit.getScreenSize() (primary screen); multi-monitor dialogs are missed. Fix: capture the union of all GraphicsConfiguration bounds, or the specific window bounds.
+checkBiblio/UIAudit.java + StressTest.java: MEDIUM: ~400 lines of helpers (findBtnIn/findButtonContaining, norm, flattenVisible, findTextFieldNear, collectComponents, getTopDialog, waitForMainFrame, screenshot, sleep) are duplicated almost verbatim across the two files. Fix: extract a shared checkBiblio.UiTestSupport base/util class.
+checkBiblio/run.sh:60: HIGH: only UIAudit.java is compiled; with the new I18nAudit.java it must also be on the javac line (or compiled together) or UIAudit still won't resolve it. Fix: `javac ... checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin` (DONE in run.sh).
+checkBiblio/run.sh:29 & run2.sh:8: HIGH: the jar guard hard-requires javalin + kotlin jars that the app does not use; on a clean checkout this aborts both scripts. Fix: drop javalin/kotlin from the required-jar list and from the -cp (DONE).
+checkBiblio/run2.sh:57: LOW: relies on `setsid` + process-group kill; not portable to macOS/BSD (no setsid). Fix: document Linux-only or use a portable timeout (`timeout` / kill fallback).
+
+================================================================================
+ COVERAGE GAPS — features added recently with no / weak automated coverage
+================================================================================
+[GAP] Web / API mode (src/api/*, launched via `Ejecutable --web`): NOT exercised
+      at all. No test starts ApiServer and hits /api/llibres, /api/restore, etc.
+      Recommendation: add an ApiSmokeTest that boots the server on an ephemeral
+      port and asserts status codes + JSON shape (and that /api/restore + /api/clear
+      are protected — see todo1.txt HIGH security findings).
+[GAP] Loans (PrestecDao / prestarLlibre / retornarLlibre / LoanRouter): the UI
+      tests only OPEN the "Historial" dialog; no loan is ever created or returned,
+      and the "book already on loan" 409 path is untested.
+      >>> Partially covered now: new domain-level loan round-trip in StressTest.
+[GAP] Tags add/remove to a book (addLlibreToTag/removeLlibreFromTag): only the
+      Etiquetes dialog is opened, membership is never asserted.
+      >>> Partially covered now: new domain-level tag round-trip in StressTest.
+[GAP] Multilingual titles (nom_ca / nom_es / nom_en, migrations 35-37): never set
+      or read back, so a serialization/column-mapping regression is invisible.
+      >>> Covered now: domain round-trip asserts all three persist.
+[GAP] New scalar fields estat / exemplars / desitjat / idioma / format / pagines /
+      pagines_llegides / serie / volum: not asserted on save+reload.
+      >>> Covered now: domain round-trip asserts these persist.
+[GAP] Reading sessions (lectura table, getAllLectures): no coverage.
+[GAP] Import round-trips (CSV / Calibre / JSON, Goodreads/LibraryThing strategies):
+      StressTest only EXPORTS; nothing imports a known file and verifies row count
+      and ISBN-10->13 normalization (see todo1.txt HIGH on Isbn13Normalizer).
+[GAP] Backup -> clear -> restore round-trip: dialogs are opened but a real
+      backupToSQL + clearAll + restoreFromSQL + count-equality assertion is missing
+      (this is exactly where the DDL-in-transaction / SQL-splitter bugs from
+      todo1.txt would surface).
+[GAP] OpenLibrary cover fetch ("Fetch"/"Escanejar"): clicked but never asserted
+      (and would need a mock/stub to be deterministic offline).
+[GAP] Sort-column persistence (todo1.txt TableController:105 bug) and pagination
+      page-content correctness: only "no crash" is checked, never the actual rows.
+[GAP] Theme variants beyond dark (Sèpia, Oceà) and font-size changes: toggled but
+      not verified to apply/persist.
+[GAP] i18n completeness: there was clearly meant to be an I18nAudit; it was missing.
+      >>> Added now: I18nAudit cross-checks ca/es/en bundles for missing keys,
+      placeholder-arity mismatches, and (when run from repo root) scans src/ for
+      I18n.t("key") literals whose key is absent from the bundles.
+
+================================================================================
+ IMPROVEMENTS APPLIED IN THIS PASS
+================================================================================
+ 1. checkBiblio/I18nAudit.java  (NEW) — real static i18n audit:
+      - loads strings_ca/es/en bundles, reports keys missing from any language,
+      - flags {0}/{1}.. placeholder-arity mismatches across languages,
+      - scans src/**/*.java for t("...")/I18n.t("...") keys missing from bundles,
+      - increments the shared fail[]/warn[] counters used by UIAudit's exit code.
+ 2. checkBiblio/UIAudit.java — fixed the count-readback bug so I18nAudit failures
+    actually affect FAIL/WARN and the process exit code.
+ 3. checkBiblio/StressTest.java — added Phase "41B" testDataIntegrity():
+    creates a book through the domain layer with EVERY new field set, reloads it
+    straight from the DB (ControladorPersistencia.getAllLlibres) and asserts a true
+    persistence round-trip; then exercises a loan create/return round-trip and a
+    tag add/remove round-trip, with hard assertions (real FAILs, not warns).
+ 4. checkBiblio/run.sh — compile UIAudit + I18nAudit together; dropped the unused
+    javalin/kotlin jars from the required-jar guard and the classpath.
+ 5. checkBiblio/run2.sh — dropped the unused javalin/kotlin jars.
+
+================================================================================
+ RECOMMENDED NEXT STEPS (not yet done — larger efforts)
+================================================================================
+ - Add checkBiblio/ApiSmokeTest.java to cover --web / api/* (highest-value gap).
+ - Extract checkBiblio/UiTestSupport for the duplicated Swing-driving helpers.
+ - Tighten the lenient validation phases (08, 07, 11) into hard pass/fail.
+ - Add a backup->clear->restore round-trip phase with a count-equality assertion.
+ - Add a CSV/JSON import round-trip phase using a fixture file under checkBiblio/.
+================================================================================
+ END OF REVIEW
+================================================================================
