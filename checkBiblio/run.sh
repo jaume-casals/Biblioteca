@@ -121,7 +121,11 @@ if [ "$RUN_AUDIT" -eq 1 ]; then
         Xvfb "$DISP" -screen 0 1920x1080x24 &>/dev/null &
         XVFB_PID=$!
         export DISPLAY=$DISP
-        sleep 0.5
+        sleep 1
+        if ! kill -0 "$XVFB_PID" 2>/dev/null; then
+            echo "ERROR: Xvfb failed to start. Install xvfb or set DISPLAY." >&2
+            exit 1
+        fi
         echo "Started Xvfb on $DISP (PID $XVFB_PID)"
     fi
 

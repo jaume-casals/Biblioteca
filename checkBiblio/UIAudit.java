@@ -8,9 +8,9 @@ package checkBiblio;
  * inspect every component, click buttons, fill fields, take screenshots,
  * and run a built-in automated walkthrough.
  *
- * Compile:  javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar \
- *                 checkBiblio/UIAudit.java -d bin
- * Run:      java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar \
+ * Compile:  javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
+ *                 checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
+ * Run:      java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
  *                 checkBiblio.UIAudit [--auto]
  *
  * Commands (interactive mode):
@@ -62,10 +62,13 @@ public class UIAudit {
         boolean autoMode = Arrays.asList(args).contains("--auto");
 
         System.setProperty("biblioteca.test", "true");
-        if (autoMode) {
-            System.setProperty("biblioteca.h2.url",
-                System.getProperty("biblioteca.h2.url",
-                    "jdbc:h2:mem:audit;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"));
+        System.setProperty("biblioteca.h2.url",
+            System.getProperty("biblioteca.h2.url",
+                "jdbc:h2:mem:uiAudit;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"));
+
+        if (GraphicsEnvironment.isHeadless()) {
+            System.err.println("FATAL: Headless environment — Robot required. Install Xvfb or set DISPLAY.");
+            System.exit(1);
         }
 
         Files.createDirectories(Path.of("checkBiblio/screenshots"));

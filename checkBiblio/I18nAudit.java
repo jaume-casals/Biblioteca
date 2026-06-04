@@ -63,10 +63,11 @@ final class I18nAudit {
                     try {
                         String text = Files.readString(f, StandardCharsets.UTF_8);
                         if (text.contains("I18n.t(")) return;
-                        var m = p.matcher(text);
-                        if (m.find()) {
+                        Matcher m = p.matcher(text);
+                        while (m.find()) {
                             warnCount[0]++;
-                            log.println("WARN: possible hardcoded Catalan in " + f + " (" + m.group() + ")");
+                            log.println("WARN: possible hardcoded Catalan in " + f
+                                + " (" + m.group() + " @ " + m.start() + ")");
                         }
                     } catch (IOException ignored) {}
                 });
@@ -101,10 +102,15 @@ final class I18nAudit {
         Map<String, String> firstFile = new HashMap<>();
         try (Stream<Path> paths = Files.list(dir)) {
             for (Path p : paths.filter(f -> f.toString().endsWith(".csv")).toList()) {
+                Set<String> seenInFile = new HashSet<>();
                 for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
                     String s = line.trim();
                     if (s.isEmpty() || s.startsWith("#") || s.startsWith("key,")) continue;
                     String key = s.split(",", 2)[0].trim();
+                    if (!seenInFile.add(key)) {
+                        warnCount[0]++;
+                        log.println("WARN: duplicate i18n key " + key + " in " + p.getFileName());
+                    }
                     String prev = firstFile.putIfAbsent(key, p.getFileName().toString());
                     if (prev != null && !prev.equals(p.getFileName().toString())) {
                         warnCount[0]++;

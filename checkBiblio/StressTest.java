@@ -10,6 +10,8 @@ import java.time.*;
 import java.time.format.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.table.TableModel;
@@ -30,7 +32,9 @@ public class StressTest {
     private static int passCount = 0, failCount = 0, warnCount = 0;
     private static int stressThreads = 50;
     private static final List<Long> createdISBNs = new ArrayList<>();
-    private static long isbnCounter = System.currentTimeMillis() % 900_000_000L;
+    private static final AtomicLong isbnSeq = new AtomicLong(
+        9780000000000L + (new Random().nextLong() & Long.MAX_VALUE) % 900_000_000L);
+    private static final Object LOG_LOCK = new Object();
 
     // ── Entry ─────────────────────────────────────────────────────────────────────
     public static void main(String[] args) throws Exception {
@@ -41,6 +45,11 @@ public class StressTest {
         domini.ControladorDomini.resetForTest();
         persistencia.ControladorPersistencia.resetForTest();
         stressThreads = Integer.getInteger("biblioteca.stress.threads", 50);
+        if (GraphicsEnvironment.isHeadless()) {
+            System.err.println("FATAL: Headless environment — Robot required. Install Xvfb or set DISPLAY.");
+            System.exit(1);
+        }
+
         Files.createDirectories(Path.of("checkBiblio/screenshots"));
         report = new PrintWriter(new FileWriter("checkBiblio/stress_report.txt", false), true);
         robot = new Robot();
@@ -87,6 +96,8 @@ public class StressTest {
     @FunctionalInterface interface TestFn { void run() throws Exception; }
 
     private static void phase(String num, String name, TestFn fn) {
+        int failsBefore = failCount;
+        int warnsBefore = warnCount;
         log("\n══════════════════════════════════════════════════════");
         log("PHASE " + num + ": " + name);
         log("══════════════════════════════════════════════════════");
@@ -98,7 +109,7 @@ public class StressTest {
             fail("Phase threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             dismissAllDialogs();
         }
-        screenshot("p" + num);
+        if (failCount > failsBefore || warnCount > warnsBefore) screenshot("p" + num);
     }
 
     private static void runAllTests(JFrame main) throws Exception {
@@ -243,7 +254,7 @@ public class StressTest {
             pass("Negative price → save rejected (form still open)");
             dismissAllDialogs();
         } else if (after == null) {
-            warn("Negative price accepted silently (validator may allow it)");
+            fail("Negative price accepted silently (expected validation error)");
         } else {
             warn("Negative price → unexpected dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
@@ -265,7 +276,7 @@ public class StressTest {
             pass("Non-numeric year → save rejected (form still open)");
             dismissAllDialogs();
         } else if (after == null) {
-            warn("Non-numeric year accepted (may be parsed as 0 or ignored)");
+            fail("Non-numeric year accepted silently (expected validation error)");
         } else {
             warn("Non-numeric year → unexpected dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
@@ -329,11 +340,15 @@ public class StressTest {
         clickSave(dlg); sleep(800);
         JDialog after = getTopDialog();
         if (after != null && looksLikeError(after)) {
-            pass("500-char title → validation rejected (by design)");
+            pass("500-char title → validation rejected (nom limit 255)");
             dismissAllDialogs();
+        } else if (after != null && isBookFormDialog(after)) {
+            pass("500-char title → save rejected (form still open)");
+            dismissAllDialogs();
+        } else if (after == null) {
+            fail("500-char title accepted silently (nom limit 255)");
         } else {
-            pass("500-char title saved without crash");
-            createdISBNs.add(isbn);
+            warn("500-char title → unexpected dialog: \"" + after.getTitle() + "\"");
             dismissAllDialogs();
         }
     }
@@ -770,8 +785,12 @@ public class StressTest {
                 doClick(delBtn); sleep(400);
                 JDialog confirm = getTopDialogExcept(dlg);
                 if (confirm != null) {
-                    AbstractButton yes = findBtnIn((Container)confirm, "Sí", "Yes", "OK", "Eliminar");
-                    if (yes != null) doClick(yes); else dismissTopDialog();
+                    if (isStressTestListDeleteConfirm(confirm)) {
+                        clickAffirmDelete(confirm);
+                    } else {
+                        warn("Unexpected confirm during list delete — cancelled");
+                        cancelTopDialog();
+                    }
                     sleep(400);
                 }
             }
@@ -985,6 +1004,9 @@ public class StressTest {
     }
 
     private static void testExtreme_concurrent(JFrame main, int threadCount) throws Exception {
+        AtomicReference<AbstractButton> toggleBtn = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() ->
+            toggleBtn.set(findBtnIn(main, "Filtres", "Galeria", "Sèrie")));
         java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
         java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger();
         List<Thread> pool = new ArrayList<>();
@@ -996,7 +1018,7 @@ public class StressTest {
                     for (int i = 0; i < 5; i++) {
                         SwingUtilities.invokeLater(() -> {
                             try {
-                                AbstractButton btn = findBtnIn(main, "Filtres", "Galeria", "Sèrie");
+                                AbstractButton btn = toggleBtn.get();
                                 if (btn != null) btn.doClick();
                             } catch (Exception e) { errors.incrementAndGet(); }
                         });
@@ -1104,7 +1126,7 @@ public class StressTest {
             check("loan returned (not active)", false, cd.getLoanedISBNs().contains(isbn));
 
             // ── Tag round-trip ───────────────────────────────────────────────
-            tag = cd.addTag("StressTag_" + (isbnCounter));
+            tag = cd.addTag("StressTag_" + UUID.randomUUID().toString().substring(0, 8));
             cd.addLlibreToTag(isbn, tag.getId());
             check("tag membership added", true, cd.getLlibresWithTag(tag.getId()).contains(isbn));
             cd.removeLlibreFromTag(isbn, tag.getId());
@@ -1155,10 +1177,17 @@ public class StressTest {
             sleep(600);
             JDialog confirm = getTopDialog();
             if (confirm != null) {
-                AbstractButton yes = findBtnIn((Container)confirm, "Sí", "Yes", "OK", "Eliminar", "Esborrar");
-                if (yes != null) { doClick(yes); sleep(400); deleted++; }
-                else { dismissTopDialog(); }
-            } else deleted++;
+                if (isTestBookDeleteConfirm(confirm)) {
+                    clickAffirmDelete(confirm);
+                    sleep(400);
+                    deleted++;
+                } else {
+                    warn("Unexpected dialog during cleanup delete for ISBN " + isbn + " — cancelled");
+                    cancelTopDialog();
+                }
+            } else {
+                warn("No delete confirm for ISBN " + isbn + " — book may remain");
+            }
         }
         if (sf != null) { setField(sf, ""); sleep(400); }
         goAllBooks(main);
@@ -1314,10 +1343,7 @@ public class StressTest {
         for (int i = 0; i < 8; i++) {
             JDialog d = getTopDialog();
             if (d == null) break;
-            AbstractButton ok = findBtnIn((Container)d, "OK", "Tancar", "Cancel·lar", "Cancelar", "Close", "Sí", "No");
-            if (ok != null) doClick(ok);
-            else SwingUtilities.invokeLater(d::dispose);
-            sleep(300);
+            cancelTopDialog();
         }
     }
 
@@ -1332,11 +1358,46 @@ public class StressTest {
     }
 
     private static void dismissTopDialog() {
+        cancelTopDialog();
+    }
+
+    /** Dismiss without affirming destructive actions (no Sí/Yes/OK). */
+    private static void cancelTopDialog() {
         JDialog d = getTopDialog();
         if (d == null) return;
-        AbstractButton ok = findBtnIn((Container)d, "OK", "Tancar", "Cancel·lar", "Close", "Sí", "No");
-        if (ok != null) doClick(ok); else SwingUtilities.invokeLater(d::dispose);
+        AbstractButton cancel = findBtnIn((Container)d, "Cancel·lar", "Cancelar", "Tancar", "Close", "No");
+        if (cancel != null) doClick(cancel);
+        else {
+            robot.keyPress(KeyEvent.VK_ESCAPE);
+            robot.keyRelease(KeyEvent.VK_ESCAPE);
+            sleep(200);
+            if (getTopDialog() == d) SwingUtilities.invokeLater(d::dispose);
+        }
         sleep(280);
+    }
+
+    private static void clickAffirmDelete(JDialog confirm) {
+        AbstractButton yes = findBtnIn((Container)confirm, "Sí", "Yes", "Eliminar", "Esborrar", "OK");
+        if (yes != null) doClick(yes);
+        else cancelTopDialog();
+    }
+
+    private static boolean isTestBookDeleteConfirm(JDialog d) {
+        String t = norm(d.getTitle());
+        return t.contains("eliminar") || t.contains("esborrar") || t.contains("delete")
+            || t.contains("confirm") || t.contains("segur");
+    }
+
+    private static boolean isStressTestListDeleteConfirm(JDialog d) {
+        if (!isTestBookDeleteConfirm(d)) return false;
+        String body = dialogText(d);
+        return body.contains("stresstestlist");
+    }
+
+    private static String dialogText(JDialog d) {
+        List<String> items = new ArrayList<>();
+        collectComponents((Container)d, "", items);
+        return norm(String.join(" ", items));
     }
 
     private static JTextField findSearchField(JFrame main) {
@@ -1361,7 +1422,11 @@ public class StressTest {
     }
 
     private static long uniqueISBN() {
-        return 9780000000000L + (isbnCounter++ % 999_999_990L);
+        long isbn = isbnSeq.incrementAndGet();
+        if (createdISBNs.contains(isbn)) {
+            fail("ISBN collision detected: " + isbn);
+        }
+        return isbn;
     }
 
     // ── RESULT TRACKING ───────────────────────────────────────────────────────────
@@ -1531,8 +1596,11 @@ public class StressTest {
     }
 
     private static void log(String msg) {
-        String line = "[" + LocalDateTime.now().format(TS) + "] " + msg;
-        report.println(line); System.out.println(line);
+        synchronized (LOG_LOCK) {
+            String line = "[" + LocalDateTime.now().format(TS) + "] " + msg;
+            report.println(line);
+            System.out.println(line);
+        }
     }
 
     private static void closeReport() {
