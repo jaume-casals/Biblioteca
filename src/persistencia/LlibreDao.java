@@ -113,7 +113,7 @@ public class LlibreDao {
                         biblio.add(l);
                     }
                     String autorNom = rs.getString("autor_nom");
-                    if (autorNom != null) l.getAutors().add(autorNom);
+                    if (autorNom != null) l.addAutorNom(autorNom);
                 }
             }
         } catch (SQLException e) {

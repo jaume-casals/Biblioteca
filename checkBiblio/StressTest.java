@@ -17,8 +17,8 @@ import javax.swing.table.TableModel;
 /**
  * Biblioteca StressTest — chaos / edge-case hammerer.
  *
- * Compile: javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar checkBiblio/StressTest.java -d bin
- * Run:     java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar checkBiblio.StressTest
+ * Compile: javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar checkBiblio/StressTest.java -d bin
+ * Run:     java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar checkBiblio.StressTest
  */
 public class StressTest {
 

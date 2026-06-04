@@ -6,7 +6,10 @@ ifeq ($(JAVAC),)
 endif
 
 CP := lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:.
-TEST_CP := $(CP):lib/junit-jupiter-api-5.11.4.jar:lib/junit-jupiter-params-5.11.4.jar:lib/junit-jupiter-engine-5.11.4.jar:lib/junit-platform-launcher-1.11.4.jar:lib/junit-platform-engine-1.11.4.jar:lib/junit-platform-commons-1.11.4.jar:lib/opentest4j-1.3.0.jar:lib/assertj-core-3.26.3.jar:lib/gson-2.11.0.jar
+TEST_CP := $(CP):lib/apiguardian-api-1.1.2.jar:lib/junit-jupiter-api-5.11.4.jar:lib/junit-jupiter-params-5.11.4.jar:lib/junit-jupiter-engine-5.11.4.jar:lib/junit-platform-launcher-1.11.4.jar:lib/junit-platform-engine-1.11.4.jar:lib/junit-platform-commons-1.11.4.jar:lib/opentest4j-1.3.0.jar:lib/assertj-core-3.26.3.jar
+
+APIGUARDIAN_JAR := lib/apiguardian-api-1.1.2.jar
+APIGUARDIAN_URL := https://repo1.maven.org/maven2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar
 
 compile:
 	@if [ ! -f "$(JAVAC)" ]; then \
@@ -37,7 +40,15 @@ run-only:
 
 JUNIT5_STANDALONE := lib/junit-platform-console-standalone-1.11.4.jar
 
-test: compile
+test-deps:
+	@if [ ! -f "$(APIGUARDIAN_JAR)" ]; then \
+		echo "Fetching $(APIGUARDIAN_JAR)..."; \
+		mkdir -p lib; \
+		curl -fsSL -o "$(APIGUARDIAN_JAR)" "$(APIGUARDIAN_URL)" \
+		|| wget -q -O "$(APIGUARDIAN_JAR)" "$(APIGUARDIAN_URL)"; \
+	fi
+
+test: compile test-deps
 	@if [ -f scripts/patch_tests_after_web_removal.py ]; then \
 		python3 scripts/patch_tests_after_web_removal.py 2>/dev/null \
 		|| python scripts/patch_tests_after_web_removal.py; \

@@ -92,6 +92,14 @@ public class Llibre {
 	}
 
 	public java.util.List<String> getAutors() { return new java.util.ArrayList<>(autors); }
+
+	/** Used when loading multiple author rows from SQL (see {@link persistencia.LlibreDao#getAll}). */
+	public void addAutorNom(String nom) {
+		if (nom == null || nom.isBlank()) return;
+		autors.add(nom);
+		autor = String.join(", ", autors);
+	}
+
 	public void setAutors(java.util.List<String> autors) {
 		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
 		this.autor = this.autors.isEmpty() ? this.autor : String.join(", ", this.autors);
