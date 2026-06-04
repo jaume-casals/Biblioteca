@@ -18,7 +18,7 @@ final class I18nAudit {
         Map<String, String[]> keys = loadCsvKeys(stringsDir);
         auditThreeLanguages(keys, log, failCount);
         auditHardcodedCatalan(log, warnCount);
-        auditJavaKeyUsage(keys, log, warnCount);
+        auditJavaKeyUsage(keys, log, failCount, warnCount);
         auditDuplicateKeys(stringsDir, log, warnCount);
     }
 
@@ -73,7 +73,7 @@ final class I18nAudit {
         } catch (IOException ignored) {}
     }
 
-    private static void auditJavaKeyUsage(Map<String, String[]> keys, PrintWriter log, int[] warnCount) {
+    private static void auditJavaKeyUsage(Map<String, String[]> keys, PrintWriter log, int[] failCount, int[] warnCount) {
         Pattern used = Pattern.compile("I18n\\.t\\(\\s*\"([^\"]+)\"");
         Set<String> seen = new HashSet<>();
         try (Stream<Path> walk = Files.walk(Path.of("src"))) {
