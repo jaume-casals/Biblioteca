@@ -1037,6 +1037,7 @@ class BibliotecaJUnit5Test {
         assertThat(new domini.BibliotecaException.Duplicate("x").code()).isEqualTo(domini.BibliotecaException.Code.DUPLICATE);
         assertThat(new domini.BibliotecaException.Validation("x").code()).isEqualTo(domini.BibliotecaException.Code.VALIDATION);
     }
+
     // ── Loan: lend → return → lend roundtrip ─────────────────────────────────
 
     @Test
@@ -1078,7 +1079,7 @@ class BibliotecaJUnit5Test {
         cd.addTag("beta");
         assertThatThrownBy(() -> cd.renameTag(a.getId(), "beta")).isNotNull();
     }
-// ── Backup: empty-DB clear() still writes sentinel ───────────────────────
+
 
     @Test
     @DisplayName("clearAll on empty DB still writes a pre_clear backup")
@@ -1098,7 +1099,7 @@ class BibliotecaJUnit5Test {
             tmp.toFile().delete();
         }
     }
-   // ── TagDao: rename to existing nom should throw ────────────────────────────
+// ── TagDao: rename to existing nom should throw ────────────────────────────
 
     @Test
     @DisplayName("renameTag to existing nom throws SQLException (UNIQUE constraint)")
@@ -1166,7 +1167,7 @@ class BibliotecaJUnit5Test {
         java.util.Map<String, Object> map = row.toDisplayMap();
         assertThat(map.get("dataPrestec")).isNull();
     }
-  // ── OnLlibreDelete.DeleteEvent: cancellable + veto ──────────────────────────
+
 
     @Test
     @DisplayName("DeleteEvent: cancellable=true, veto marks as vetoed")
@@ -1488,7 +1489,7 @@ class BibliotecaJUnit5Test {
         assertThat(cd.getAllTags()).hasSizeGreaterThanOrEqualTo(1);
         assertThat(cd.getAllLlistes()).hasSizeGreaterThanOrEqualTo(1);
     }
-   // ── Export/import roundtrip preserves shelf memberships (JSON) ────────
+// ── Export/import roundtrip preserves shelf memberships (JSON) ────────
 
     @Test
     @DisplayName("JSON export/import roundtrip preserves shelf memberships with valoracio and llegit")
@@ -1666,7 +1667,7 @@ class BibliotecaJUnit5Test {
         assertThat(retrieved.getAutors()).containsExactlyInAnyOrder("New A", "New B");
         assertThat(retrieved.getAutors()).doesNotContain("Old Author");
     }
-  // ── AboutDialog: loads license text from /LICENSE resource ────────
+// ── AboutDialog: loads license text from /LICENSE resource ────────
 
     @Test
     @DisplayName("AboutDialog: /LICENSE resource is loadable and contains GPL text")
@@ -1910,11 +1911,12 @@ class BibliotecaJUnit5Test {
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
-  @Test
+@Test
     @DisplayName("MostrarBibliotecaControl: clearCoverCache is safe to call")
     void clearCoverCacheSmoke() {
         presentacio.MostrarBibliotecaControl.clearCoverCache();
     }
+
     @Test
     @DisplayName("LlegitCheckBoxRenderer: marks read when cell value matches I18n filter_read")
     void llegitRendererShowsReadState() {
