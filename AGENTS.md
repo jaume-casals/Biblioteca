@@ -16,7 +16,7 @@ Trivial exceptions (user explicitly asks to skip planning): one-line typo, comme
 
 ## Parallel AI work (agent briefs)
 
-Backlog split from `tot.txt`: **`agent-briefs/00-INDEX.md`**. One brief per agent session (coordinator, domain/DB, Swing UI, API, herramienta, checkBiblio). After editing `tot.txt`, regenerate with `python scripts/split_agent_briefs.py`.
+Backlog split from `tot.txt`: **`agent-briefs/00-INDEX.md`**. Copy-paste prompts per agent: **`agent-briefs/PROMPTS.md`**. Regenerate briefs after editing `tot.txt`: `python scripts/split_agent_briefs.py`.
 
 ## Build & Test Commands
 

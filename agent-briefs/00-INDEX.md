@@ -6,6 +6,8 @@ agent_brief: 00-INDEX
 
 Split from `tot.txt` for parallel AI work. Load **one** brief per session.
 
+**Copy-paste prompts:** [PROMPTS.md](PROMPTS.md) (one ready-made prompt per agent).
+
 | Brief | File | Best for | Primary code |
 |-------|------|----------|--------------|
 | Coordinator | [01-coordinator.md](01-coordinator.md) | Minimax 2.7 — planning, triage | Cross-cutting, sessions, security overview |
@@ -16,14 +18,6 @@ Split from `tot.txt` for parallel AI work. Load **one** brief per session.
 | QA / checkBiblio | [07-checkbiblio-qa.md](07-checkbiblio-qa.md) | Composer or Minimax | `checkBiblio/`, `run.sh`, `run2.sh` |
 
 `06-todo2-crosscutting.md` is reserved for orphan todo2 items; currently all blocks are routed to 02–05 (skip unless the file lists blocks).
-
-## Suggested prompts
-
-**Minimax 2.7 (planner):** “Read `AGENTS.md` and `agent-briefs/01-coordinator.md`. Propose an order of work across briefs 02–05 and 07; do not implement yet.”
-
-**Composer (implementer):** “Read `AGENTS.md` and `agent-briefs/03-presentacio-swing.md`. Fix CRITICAL/HIGH items in `src/presentacio/` only. Run `make test` when done.”
-
-Swap `03` for `02`, `04`, `05`, or `07` depending on the task.
 
 ## Workflow
 
