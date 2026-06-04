@@ -30,6 +30,8 @@ make run-only         # run without recompile
 
 **Always run `make test` before reporting a task complete. All tests must pass.**
 
+After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types. `make test` runs `scripts/patch_tests_after_web_removal.py` first (idempotent); or run it manually once per machine.
+
 Manual classpath: `lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:.`
 
 ## Test System Properties

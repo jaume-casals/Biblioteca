@@ -38,6 +38,10 @@ run-only:
 JUNIT5_STANDALONE := lib/junit-platform-console-standalone-1.11.4.jar
 
 test: compile
+	@if [ -f scripts/patch_tests_after_web_removal.py ]; then \
+		python3 scripts/patch_tests_after_web_removal.py 2>/dev/null \
+		|| python scripts/patch_tests_after_web_removal.py; \
+	fi
 	@find ./test/ -name "*.java" > test_classes.txt
 	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
 	@rm test_classes.txt

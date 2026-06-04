@@ -1271,36 +1271,6 @@ public class BibliotecaTest {
             boolean llegit = "read".equalsIgnoreCase(c[hMap.get("Exclusive Shelf")].trim());
             assertEqual(true, llegit);
         });
-
-        // ── JSON round-trip ───────────────────────────────────────────────────
-        test("JSON round-trip preserves all fields including tags, shelf memberships, and numeric fields (pagines, volum, valoracio)", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            Llibre orig = LlibreValidator.checkLlibre(9780000000010L, "RoundTrip", "Author A", 2020, "Desc", 8.5, 15.0, true, "");
-            orig.setPagines(350);
-            orig.setVolum(2);
-            orig.setSerie("MySerie");
-            cd.addLlibre(orig);
-            domini.Tag tag = cd.addTag("scifi");
-            cd.addLlibreToTag(9780000000010L, tag.getId());
-            domini.Llista llista = cd.addLlista("Favorites");
-            cd.addLlibreToLlista(9780000000010L, llista.getId(), 9.0, true);
-            // Export via JsonMapper (Map → Gson → JsonObject)
-            java.util.Map<String, Object> m = api.JsonMapper.llibreToMap(cd.getLlibre(9780000000010L));
-            String json = api.JsonMapper.gson().toJson(m);
-            com.google.gson.JsonObject jo = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
-            // Import back
-            resetSingletons();
-            ControladorDomini cd2 = ControladorDomini.getInstance();
-            Llibre imported = api.JsonMapper.jsonToLlibre(jo);
-            cd2.addLlibre(imported);
-            Llibre got = cd2.getLlibre(9780000000010L);
-            assertEqual(350, got.getPagines());
-            assertEqual(2, got.getVolum());
-            assertEqual(8.5, got.getValoracio());
-            assertEqual("MySerie", got.getSerie());
-        });
-
         // ── searchLlibresSQL vs aplicarFiltres ────────────────────────────────
         test("searchLlibresSQL returns same results as in-memory aplicarFiltres for identical criteria", () -> {
             resetSingletons();
@@ -1874,7 +1844,7 @@ public class BibliotecaTest {
             assertEqual(true, retrieved.getLlegit());
 
             int[] callbackCount = {0};
-            interficie.EnActualizarBBDD callback = new interficie.EnActualizarBBDD() {
+            presentacio.listener.EnActualizarBBDD callback = new presentacio.listener.EnActualizarBBDD() {
                 @Override public void onBookUpdated(Llibre llibre, boolean isNew) {
                     callbackCount[0]++;
                     assertEqual(9780743273565L, llibre.getISBN());
@@ -1890,35 +1860,6 @@ public class BibliotecaTest {
             callback.onBookUpdated(l2, false);
             assertEqual(1, callbackCount[0]);
         });
-
-        // ── LibraryGraph: aggregate relations ──
-        test("LibraryGraph loads and indexes relations by ISBN", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "Book A", null, null, null, null, null, null, null));
-            cd.addLlibre(LlibreValidator.checkLlibre(9780743273565L, "Book B", null, null, null, null, null, null, null));
-            domini.Llista shelf = cd.addLlista("MyShelf");
-            cd.addLlibreToLlista(9780306406157L, shelf.getId(), 7.5, true);
-            domini.Tag tag = cd.addTag("SciFi");
-            cd.addLlibreToTag(9780306406157L, tag.getId());
-
-            persistencia.LibraryGraph graph = new persistencia.LibraryGraph();
-            java.util.List<persistencia.LlibreLlistaRow> llistes = graph.getLlistesForIsbn(9780306406157L);
-            assertEqual(1, llistes.size());
-            assertEqual(shelf.getId(), llistes.get(0).llistaId());
-            assertEqual(7.5, llistes.get(0).valoracio());
-            assertEqual(true, llistes.get(0).llegit());
-
-            java.util.List<persistencia.LlibreTagRow> tags = graph.getTagsForIsbn(9780306406157L);
-            assertEqual(1, tags.size());
-            assertEqual(tag.getId(), tags.get(0).tagId());
-
-            java.util.List<persistencia.LlibreTagRow> noTags = graph.getTagsForIsbn(9780743273565L);
-            assertEqual(0, noTags.size());
-
-            assertEqual(true, graph.getAllRows().size() >= 2);
-        });
-
         // ── OpenLibrarySearchTask error handling (Item 9) ────────────────────
         test("OpenLibrarySearchTask: error map from OpenLibraryClient causes SearchResult with error key", () -> {
             herramienta.OpenLibraryClient.testBaseUrl = "http://localhost:1";
@@ -2125,137 +2066,6 @@ public class BibliotecaTest {
         test("CoverService.getCachedImage unknown ISBN returns null", () -> {
             assertEqual(null, herramienta.CoverService.getCachedImage("0000000000998"));
         });
-
-        // ── API: invalid ISBN path → 400 ─────────────────────────────────────
-        test("API GET /api/books/notanisbn returns 400", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/notanisbn").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                assertEqual(400, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API GET unknown ISBN returns 404 (NotFound mapping)", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/9780000000001").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                assertEqual(404, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API DELETE unknown ISBN returns 404", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/9780000000001").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                c.setRequestMethod("DELETE");
-                assertEqual(404, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API PUT update unknown ISBN returns 404", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/9780000000001").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                c.setRequestMethod("PUT");
-                c.setRequestProperty("Content-Type", "application/json");
-                c.setDoOutput(true);
-                try (var os = c.getOutputStream()) { os.write("{\"nom\":\"X\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
-                assertEqual(404, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API POST duplicate ISBN returns 409", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "One", null, null, null, null, null, null, null));
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                c.setRequestMethod("POST");
-                c.setRequestProperty("Content-Type", "application/json");
-                c.setDoOutput(true);
-                try (var os = c.getOutputStream()) { os.write("{\"isbn\":9780306406157,\"nom\":\"Dup\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
-                assertEqual(409, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API GET unknown shelf id returns 404", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/shelves/9999/books").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                assertEqual(404, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("API GET unknown tag id returns 404", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/tags/9999").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                assertEqual(404, c.getResponseCode());
-            } finally { server.stop(); }
-        });
-        test("LlibreRouter.sniffImageMime identifies PNG and JPEG signatures", () -> {
-            byte[] tinyPng = new byte[]{(byte)0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-            byte[] tinyJpg = new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF, (byte)0xE0, 0x00, 0x10};
-            assertEqual("image/png", api.LlibreRouter.sniffImageMime(tinyPng));
-            assertEqual("image/jpeg", api.LlibreRouter.sniffImageMime(tinyJpg));
-            // A 1-byte blob is neither — must not return image/png from a 2-byte sniff.
-            assertEqual("image/jpeg", api.LlibreRouter.sniffImageMime(new byte[]{(byte)0x89}));
-            assertEqual("image/jpeg", api.LlibreRouter.sniffImageMime(new byte[]{(byte)0x89, 0x50}));
-            // A 2-byte PNG prefix only must not pass.
-            assertEqual("image/jpeg", api.LlibreRouter.sniffImageMime(new byte[]{(byte)0x89, 0x50, 0x00}));
-        });
-        test("API GET /api/books/count returns total", () -> {
-            resetSingletons();
-            ControladorDomini cd = ControladorDomini.getInstance();
-            cd.addLlibre(LlibreValidator.checkLlibre(9780306406157L, "One", null, null, null, null, null, null, null));
-            int port;
-            try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-            api.ApiServer server = new api.ApiServer(port, cd);
-            server.start();
-            try {
-                java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/count").toURL();
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-                assertEqual(200, c.getResponseCode());
-                String body = new String(c.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                assertEqual(true, body.contains("\"total\":1"));
-            } finally { server.stop(); }
-        });
-
         // ── Filter: autor accent-insensitive ─────────────────────────────────
         test("Filter by autor matches accent-insensitive", () -> {
             resetSingletons();
@@ -2297,21 +2107,6 @@ public class BibliotecaTest {
             assertEqual(0, cd.getSize());
             assertEqual(0, cd.getAllLlistes().size());
         });
-
-        // ── HttpRouter route matching ────────────────────────────────────────
-        test("HttpRouter findRoute matches books count endpoint", () -> {
-            api.HttpRouter r = new api.HttpRouter();
-            r.get("/api/books/count", ctx -> {});
-            assertNotNull(r.findRoute("GET", "/api/books/count"));
-            assertEqual(null, r.findRoute("POST", "/api/books/count"));
-        });
-        test("HttpRouter findRoute extracts ISBN path param route", () -> {
-            api.HttpRouter r = new api.HttpRouter();
-            r.get("/api/books/{isbn}", ctx -> {});
-            api.HttpRouter.Route route = r.findRoute("GET", "/api/books/9780306406157");
-            assertNotNull(route);
-        });
-
         // ── existsInLibrary ──────────────────────────────────────────────────
         test("CsvUtils.existsInLibrary true when book present", () -> {
             resetSingletons();

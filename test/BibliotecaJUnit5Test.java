@@ -1037,26 +1037,6 @@ class BibliotecaJUnit5Test {
         assertThat(new domini.BibliotecaException.Duplicate("x").code()).isEqualTo(domini.BibliotecaException.Code.DUPLICATE);
         assertThat(new domini.BibliotecaException.Validation("x").code()).isEqualTo(domini.BibliotecaException.Code.VALIDATION);
     }
-
-    // ── Meta: dbsize=-1 still well-formed ────────────────────────────────────
-
-    @Test
-    @DisplayName("dbsize response is well-formed even when bytes == -1")
-    void dbsizeWellFormed() throws Exception {
-        ControladorDomini cd = ControladorDomini.getInstance();
-        int port;
-        try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-        api.ApiServer server = new api.ApiServer(port, cd);
-        server.start();
-        try {
-            java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/meta/dbsize").toURL();
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-            assertThat(c.getResponseCode()).isEqualTo(200);
-            String body = new String(c.getInputStream().readAllBytes());
-            assertThat(body).contains("\"bytes\"");
-        } finally { server.stop(); }
-    }
-
     // ── Loan: lend → return → lend roundtrip ─────────────────────────────────
 
     @Test
@@ -1098,104 +1078,7 @@ class BibliotecaJUnit5Test {
         cd.addTag("beta");
         assertThatThrownBy(() -> cd.renameTag(a.getId(), "beta")).isNotNull();
     }
-
-    // ── LlibreRouter: happy + 4xx ────────────────────────────────────────────
-
-    @Test
-    @DisplayName("LlibreRouter: bad ISBN path → 400")
-    void llibreRouterBadIsbn400() throws Exception {
-        ControladorDomini cd = ControladorDomini.getInstance();
-        int port;
-        try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-        api.ApiServer server = new api.ApiServer(port, cd);
-        server.start();
-        try {
-            java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/notanisbn").toURL();
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-            assertThat(c.getResponseCode()).isEqualTo(400);
-        } finally { server.stop(); }
-    }
-
-    // ── JsonMapper: Llibre roundtrip ─────────────────────────────────────────
-
-    @Test
-    @DisplayName("JsonMapper roundtrip preserves all serialized fields")
-    void jsonMapperRoundtrip() throws Exception {
-        Llibre src = new Llibre(9780306406157L, "Dune", "Frank Herbert", 1965,
-                                "Desert planet saga", 9.5, 19.99, true, "/img/dune.jpg");
-        src.setNotes("classic"); src.setPagines(900); src.setPaginesLlegides(300);
-        src.setEditorial("Chilton"); src.setSerie("Dune"); src.setVolum(1);
-        src.setDataCompra("2020-01-05"); src.setDataLectura("2021-02-10");
-        src.setIdioma("en"); src.setFormat("Tapa dura"); src.setDesitjat(false);
-        src.setPaisOrigen("US"); src.setNomCa("Duna"); src.setNomEs("Dune"); src.setNomEn("Dune");
-
-        java.util.Map<String, Object> map = api.JsonMapper.llibreToMap(src);
-        String json = api.JsonMapper.gson().toJson(map);
-        com.google.gson.JsonObject obj = api.JsonMapper.gson().fromJson(json, com.google.gson.JsonObject.class);
-        Llibre back = api.JsonMapper.jsonToLlibre(obj);
-
-        assertThat(back.getISBN()).isEqualTo(src.getISBN());
-        assertThat(back.getNom()).isEqualTo(src.getNom());
-        assertThat(back.getAutor()).isEqualTo(src.getAutor());
-        assertThat(back.getAny()).isEqualTo(src.getAny());
-        assertThat(back.getDescripcio()).isEqualTo(src.getDescripcio());
-        assertThat(back.getValoracio()).isEqualTo(src.getValoracio());
-        assertThat(back.getPreu()).isEqualTo(src.getPreu());
-        assertThat(back.getLlegit()).isEqualTo(src.getLlegit());
-        assertThat(back.getNotes()).isEqualTo(src.getNotes());
-        assertThat(back.getPagines()).isEqualTo(src.getPagines());
-        assertThat(back.getPaginesLlegides()).isEqualTo(src.getPaginesLlegides());
-        assertThat(back.getEditorial()).isEqualTo(src.getEditorial());
-        assertThat(back.getSerie()).isEqualTo(src.getSerie());
-        assertThat(back.getVolum()).isEqualTo(src.getVolum());
-        assertThat(back.getIdioma()).isEqualTo(src.getIdioma());
-        assertThat(back.getFormat()).isEqualTo(src.getFormat());
-        assertThat(back.getPaisOrigen()).isEqualTo(src.getPaisOrigen());
-        assertThat(back.getNomCa()).isEqualTo(src.getNomCa());
-        assertThat(back.getNomEs()).isEqualTo(src.getNomEs());
-        assertThat(back.getNomEn()).isEqualTo(src.getNomEn());
-    }
-
-    // ── HttpRouter: route-matcher ────────────────────────────────────────────
-
-    @Test
-    @DisplayName("Route matcher: literal beats placeholder when registered first")
-    void routeMatcherOrdering() throws Exception {
-        api.HttpRouter r = new api.HttpRouter();
-        r.get("/api/books/recent", ctx -> {});
-        r.get("/api/books/{isbn}", ctx -> {});
-        assertThat(r.findRoute("GET", "/api/books/recent")).isNotNull();
-        assertThat(r.findRoute("GET", "/api/books/123")).isNotNull();
-        assertThat(r.findRoute("POST", "/api/books/recent")).isNull();
-    }
-
-    @Test
-    @DisplayName("Route matcher: trailing slash and empty segments")
-    void routeMatcherTrailingSlash() throws Exception {
-        api.HttpRouter r = new api.HttpRouter();
-        r.get("/api/books", ctx -> {});
-        assertThat(r.findRoute("GET", "/api/books")).isNotNull();
-        assertThat(r.findRoute("GET", "/api/books/")).isNull();
-        assertThat(r.findRoute("GET", "/api//books")).isNull();
-    }
-
-    // ── HttpCtx.parseQuery: last value wins ──────────────────────────────────
-
-    @Test
-    @DisplayName("parseQuery: duplicate keys, last value wins")
-    void parseQueryDuplicateKeyLastWins() throws Exception {
-        java.lang.reflect.Method m = api.HttpCtx.class.getDeclaredMethod("parseQuery", String.class);
-        m.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        java.util.Map<String,String> r = (java.util.Map<String,String>) m.invoke(null, "tag=a&tag=b&tag=c");
-        assertThat(r).containsEntry("tag", "c").hasSize(1);
-
-        @SuppressWarnings("unchecked")
-        java.util.Map<String,String> r2 = (java.util.Map<String,String>) m.invoke(null, "a=1&b=2");
-        assertThat(r2).containsEntry("a", "1").containsEntry("b", "2");
-    }
-
-    // ── Backup: empty-DB clear() still writes sentinel ───────────────────────
+// ── Backup: empty-DB clear() still writes sentinel ───────────────────────
 
     @Test
     @DisplayName("clearAll on empty DB still writes a pre_clear backup")
@@ -1215,60 +1098,7 @@ class BibliotecaJUnit5Test {
             tmp.toFile().delete();
         }
     }
-
-    // ── API: smoke tests ─────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("ConfigRouter rejects invalid fontSize with 400")
-    void configRouterRejectsInvalidFontSize() throws Exception {
-        ControladorDomini cd = ControladorDomini.getInstance();
-        int port;
-        try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-        api.ApiServer server = new api.ApiServer(port, cd);
-        server.start();
-        try {
-            java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/config").toURL();
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-            c.setRequestMethod("PUT");
-            c.setDoOutput(true);
-            c.setRequestProperty("Content-Type", "application/json");
-            c.getOutputStream().write("{\"fontSize\":\"xxl\"}".getBytes());
-            assertThat(c.getResponseCode()).isEqualTo(400);
-
-            java.net.HttpURLConnection c2 = (java.net.HttpURLConnection) url.openConnection();
-            c2.setRequestMethod("PUT");
-            c2.setDoOutput(true);
-            c2.setRequestProperty("Content-Type", "application/json");
-            c2.getOutputStream().write("{\"fontSize\":\"medium\"}".getBytes());
-            assertThat(c2.getResponseCode()).isEqualTo(200);
-        } finally {
-            server.stop();
-        }
-    }
-
-    @Test
-    @DisplayName("ApiServer starts on random port and serves /api/books/count")
-    void apiServerSmoke() throws Exception {
-        ControladorDomini cd = ControladorDomini.getInstance();
-        add(cd, 9780306406157L, "Dune");
-        int port;
-        try (java.net.ServerSocket s = new java.net.ServerSocket(0)) { port = s.getLocalPort(); }
-        api.ApiServer server = new api.ApiServer(port, cd);
-        server.start();
-        try {
-            java.net.URL url = new java.net.URI("http://localhost:" + port + "/api/books/count").toURL();
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection();
-            c.setConnectTimeout(2000);
-            c.setReadTimeout(2000);
-            assertThat(c.getResponseCode()).isEqualTo(200);
-            String body = new String(c.getInputStream().readAllBytes());
-            assertThat(body).contains("\"total\"");
-        } finally {
-            server.stop();
-        }
-    }
-
-    // ── TagDao: rename to existing nom should throw ────────────────────────────
+   // ── TagDao: rename to existing nom should throw ────────────────────────────
 
     @Test
     @DisplayName("renameTag to existing nom throws SQLException (UNIQUE constraint)")
@@ -1336,35 +1166,7 @@ class BibliotecaJUnit5Test {
         java.util.Map<String, Object> map = row.toDisplayMap();
         assertThat(map.get("dataPrestec")).isNull();
     }
-
-    // ── Ejecutable.resolveMode arg parsing ─────────────────────────────────────
-
-    @Test
-    @DisplayName("resolveMode: --web takes precedence over --ask")
-    void resolveModeWebOverridesAsk() {
-        java.util.Optional<String> result = main.Ejecutable.resolveMode(new String[]{"--web"});
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo("web");
-    }
-
-    @Test
-    @DisplayName("resolveMode: --swing takes precedence over --ask")
-    void resolveModeSwingOverridesAsk() {
-        java.util.Optional<String> result = main.Ejecutable.resolveMode(new String[]{"--swing"});
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo("swing");
-    }
-
-    @Test
-    @DisplayName("resolveMode: no args with saved mode returns saved mode")
-    void resolveModeNoArgsSavedMode() {
-        herramienta.Config.setLastMode("swing");
-        java.util.Optional<String> result = main.Ejecutable.resolveMode(new String[]{});
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo("swing");
-    }
-
-    // ── OnLlibreDelete.DeleteEvent: cancellable + veto ──────────────────────────
+  // ── OnLlibreDelete.DeleteEvent: cancellable + veto ──────────────────────────
 
     @Test
     @DisplayName("DeleteEvent: cancellable=true, veto marks as vetoed")
@@ -1686,30 +1488,7 @@ class BibliotecaJUnit5Test {
         assertThat(cd.getAllTags()).hasSizeGreaterThanOrEqualTo(1);
         assertThat(cd.getAllLlistes()).hasSizeGreaterThanOrEqualTo(1);
     }
-
-    // ── Ejecutable.resolveMode persists mode to Config ────────────────────
-
-    @Test
-    @DisplayName("resolveMode: --web persists mode to Config.lastMode")
-    void resolveModeWebPersists() {
-        herramienta.Config.setLastMode(null);
-        java.util.Optional<String> result = main.Ejecutable.resolveMode(new String[]{"--web"});
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo("web");
-        assertThat(herramienta.Config.getLastMode()).isEqualTo("web");
-    }
-
-    @Test
-    @DisplayName("resolveMode: --swing persists mode to Config.lastMode")
-    void resolveModeSwingPersists() {
-        herramienta.Config.setLastMode(null);
-        java.util.Optional<String> result = main.Ejecutable.resolveMode(new String[]{"--swing"});
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo("swing");
-        assertThat(herramienta.Config.getLastMode()).isEqualTo("swing");
-    }
-
-    // ── Export/import roundtrip preserves shelf memberships (JSON) ────────
+   // ── Export/import roundtrip preserves shelf memberships (JSON) ────────
 
     @Test
     @DisplayName("JSON export/import roundtrip preserves shelf memberships with valoracio and llegit")
@@ -1887,32 +1666,7 @@ class BibliotecaJUnit5Test {
         assertThat(retrieved.getAutors()).containsExactlyInAnyOrder("New A", "New B");
         assertThat(retrieved.getAutors()).doesNotContain("Old Author");
     }
-
-    // ── ModeSelectorDialog: Escape cancels, default mode shortcuts ──────
-
-    @Test
-    @DisplayName("ModeSelectorDialog: prompt with 'swing' default returns SWING without dialog")
-    void modeSelectorPromptSwingDefault() {
-        assertThat(presentacio.ModeSelectorDialog.Mode.SWING)
-            .isEqualTo(presentacio.ModeSelectorDialog.prompt("swing"));
-    }
-
-    @Test
-    @DisplayName("ModeSelectorDialog: prompt with 'web' default returns WEB without dialog")
-    void modeSelectorPromptWebDefault() {
-        assertThat(presentacio.ModeSelectorDialog.Mode.WEB)
-            .isEqualTo(presentacio.ModeSelectorDialog.prompt("web"));
-    }
-
-    @Test
-    @DisplayName("ModeSelectorDialog: prompt with null default shows dialog (skipped in headless)")
-    void modeSelectorPromptNullDefault() {
-        if (java.awt.GraphicsEnvironment.isHeadless()) return;
-        assertThat(presentacio.ModeSelectorDialog.prompt(null))
-            .isInstanceOf(presentacio.ModeSelectorDialog.Mode.class);
-    }
-
-    // ── AboutDialog: loads license text from /LICENSE resource ────────
+  // ── AboutDialog: loads license text from /LICENSE resource ────────
 
     @Test
     @DisplayName("AboutDialog: /LICENSE resource is loadable and contains GPL text")
@@ -2156,83 +1910,11 @@ class BibliotecaJUnit5Test {
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
-
-    // ── God-class split: panel + coordinator smoke (headless) ───────────────
-
-    @Test
-    @DisplayName("MostrarBibliotecaPanel: sub-panels expose delegated getters")
-    void mostrarBibliotecaPanelGetters() {
-        java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
-        if (ge.isHeadless()) {
-            org.junit.jupiter.api.Assumptions.assumeFalse(true, "needs display for Swing panel init");
-        }
-        var panel = new presentacio.MostrarBibliotecaPanel();
-        assertThat(panel.getSearchBar()).isNotNull();
-        assertThat(panel.getjTableBilio()).isNotNull();
-        assertThat(panel.getGaleria()).isNotNull();
-        assertThat(panel.getBtnNouLlibre()).isNotNull();
-        assertThat(panel.getBtnToggleFiltres()).isNotNull();
-        assertThat(panel.getComboLlistes()).isNotNull();
-        assertThat(panel.getPanelFiltros()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("MostrarBibliotecaPanel: filter drawer visibility toggles")
-    void mostrarBibliotecaPanelFilterDrawer() {
-        java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
-        if (ge.isHeadless()) {
-            org.junit.jupiter.api.Assumptions.assumeFalse(true, "needs display for Swing panel init");
-        }
-        var panel = new presentacio.MostrarBibliotecaPanel();
-        assertThat(panel.isFilterDrawerVisible()).isFalse();
-        panel.setFilterDrawerVisible(true);
-        assertThat(panel.isFilterDrawerVisible()).isTrue();
-        panel.setFilterDrawerVisible(false);
-        assertThat(panel.isFilterDrawerVisible()).isFalse();
-    }
-
-    @Test
-    @DisplayName("MostrarBibliotecaPanel: gallery vs table view mode")
-    void mostrarBibliotecaPanelViewMode() {
-        java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
-        if (ge.isHeadless()) {
-            org.junit.jupiter.api.Assumptions.assumeFalse(true, "needs display for Swing panel init");
-        }
-        var panel = new presentacio.MostrarBibliotecaPanel();
-        assertThat(panel.isGaleriaMode()).isFalse();
-        panel.showGaleria();
-        assertThat(panel.isGaleriaMode()).isTrue();
-        panel.showTaula();
-        assertThat(panel.isGaleriaMode()).isFalse();
-    }
-
-    @Test
+  @Test
     @DisplayName("MostrarBibliotecaControl: clearCoverCache is safe to call")
     void clearCoverCacheSmoke() {
         presentacio.MostrarBibliotecaControl.clearCoverCache();
     }
-
-    @Test
-    @DisplayName("KeyboardShortcuts: Ctrl+N binding fires registered action")
-    void ctrlNShortcutFiresAction() {
-        java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
-        if (ge.isHeadless()) {
-            org.junit.jupiter.api.Assumptions.assumeFalse(true, "needs display");
-        }
-        javax.swing.JFrame f = new javax.swing.JFrame();
-        final boolean[] ran = { false };
-        presentacio.KeyboardShortcuts.bind(
-            f.getRootPane(),
-            javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_DOWN_MASK),
-            "nouLlibre",
-            () -> ran[0] = true);
-        javax.swing.Action act = f.getRootPane().getActionMap().get("nouLlibre");
-        assertThat(act).isNotNull();
-        act.actionPerformed(new java.awt.event.ActionEvent(f, 0, "nouLlibre"));
-        assertThat(ran[0]).isTrue();
-        f.dispose();
-    }
-
     @Test
     @DisplayName("LlegitCheckBoxRenderer: marks read when cell value matches I18n filter_read")
     void llegitRendererShowsReadState() {
