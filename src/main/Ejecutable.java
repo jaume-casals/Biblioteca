@@ -22,6 +22,7 @@ public class Ejecutable {
     private static volatile boolean webMode;
 
     public static void main(String[] args) throws Exception {
+        boolean isWeb = "--web".equals(args.length > 0 ? args[0] : null);
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             if (webMode) {
                 System.err.println("Fatal error on thread " + t.getName() + ": " + e.getMessage());
@@ -29,6 +30,10 @@ public class Ejecutable {
                 System.exit(1);
             }
             if (splashRef != null) splashRef.forceHide();
+            if (isWeb || java.awt.GraphicsEnvironment.isHeadless()) {
+                System.err.println("Fatal error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                System.exit(1);
+            }
             herramienta.DialogoError err = e instanceof Exception ? new herramienta.DialogoError((Exception) e) : new herramienta.DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
             err.showErrorMessage();
         });
@@ -83,12 +88,9 @@ public class Ejecutable {
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
         System.out.println("Biblioteca escoltant a http://localhost:" + port);
         System.out.println("Prem Ctrl+C per aturar.");
-        try {
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(new URI("http://localhost:" + port));
-            }
-        } catch (Exception e) {
-            System.out.println("Could not open browser: " + e.getMessage());
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try { Desktop.getDesktop().browse(new URI("http://localhost:" + port)); }
+            catch (Exception ignored) {}
         }
     }
 
@@ -104,7 +106,7 @@ public class Ejecutable {
                 UIManager.put("nimbusFocus",               UITheme.ACCENT);
                 UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
                 UIManager.put("nimbusSelectedText",        Color.WHITE);
-                UIManager.put("defaultFont",               UITheme.FONT_BASE);
+                UIManager.put("defaultFont",              UITheme.FONT_BASE);
                 UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
                 UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
 
@@ -112,7 +114,6 @@ public class Ejecutable {
                 splashRef = splash;
                 splash.show();
 
-                // Load DB in background, then open main window
                 Thread loader = new Thread(() -> {
                     java.util.concurrent.atomic.AtomicReference<BibliotecaWriter> cdRef = new java.util.concurrent.atomic.AtomicReference<>();
                     try {

@@ -41,7 +41,9 @@ public class LlistaRouter {
     }
 
     private void create(HttpCtx ctx) throws Exception {
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         Llista created;
@@ -57,7 +59,9 @@ public class LlistaRouter {
 
     private void rename(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         String nom = j.get("nom").getAsString();
         synchronized (cd) { cd.renameLlista(id, nom); }

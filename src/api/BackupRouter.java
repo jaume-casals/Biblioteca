@@ -50,20 +50,24 @@ public class BackupRouter {
 
     private void restore(HttpCtx ctx) throws Exception {
         byte[] data = ctx.bodyBytes();
-        if (data.length == 0) throw new IllegalArgumentException("Empty SQL body");
+if (data.length == 0) throw new IllegalArgumentException("Empty SQL body");
+        if (data.length > 100 * 1024 * 1024) throw new IllegalStateException("SQL body too large: " + data.length + " bytes");
+        String csrf = ctx.header("X-CSRF-Token");
+        if (csrf == null || csrf.isBlank()) throw new IllegalArgumentException("Missing X-CSRF-Token header");
         File tmp = File.createTempFile("biblioteca_restore_", ".sql");
         tmp.deleteOnExit();
         try {
             Files.write(tmp.toPath(), data);
             synchronized (cd) { cd.restoreFromSQL(tmp); }
-        } finally {
-            try { java.nio.file.Files.deleteIfExists(tmp.toPath()); }
-            catch (IOException e) { System.err.println("Failed to delete restore temp file: " + tmp); }
+} finally {
+            Files.deleteIfExists(tmp.toPath());
         }
         ctx.json(Map.of("ok", true));
     }
 
     private void clear(HttpCtx ctx) throws Exception {
+        String csrf = ctx.header("X-CSRF-Token");
+        if (csrf == null || csrf.isBlank()) throw new IllegalArgumentException("Missing X-CSRF-Token header");
         File dir = Config.getBackupDir();
         dir.mkdirs();
         String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));

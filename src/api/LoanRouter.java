@@ -39,8 +39,9 @@ public class LoanRouter {
 
     private void loan(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         String persona = j.has("persona") ? j.get("persona").getAsString() : "";
         if (persona.isBlank()) throw new IllegalArgumentException("Borrower name required");
         synchronized (cd) {
@@ -54,7 +55,6 @@ public class LoanRouter {
     private void returnBook(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) {
-            // Cache loaned ISBNs to avoid querying the DB multiple times per request
             var loaned = cd.getLoanedISBNs();
             if (!loaned.contains(isbn)) {
                 ctx.status(404).json(Map.of("error", "Book is not on loan"));

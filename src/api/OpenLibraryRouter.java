@@ -12,29 +12,22 @@ public class OpenLibraryRouter {
     }
 
     private void openLibraryIsbn(HttpCtx ctx) throws Exception {
-        String isbn = ctx.pathParam("isbn").trim();
-        if (isbn.isEmpty()) throw new IllegalArgumentException("ISBN is required");
+        String isbn = ctx.pathParam("isbn");
+        if (isbn == null || isbn.isBlank()) throw new IllegalArgumentException("ISBN is required");
         try {
             ctx.json(OpenLibraryClient.lookupByISBN(isbn));
         } catch (Exception e) {
-            throw new OpenLibraryUpstreamException(e);
+            ctx.status(502).json(Map.of("error", "OpenLibrary request failed", "detail", e.getMessage()));
         }
     }
 
     private void openLibraryTitle(HttpCtx ctx) throws Exception {
-        String title = ctx.pathParam("title").trim();
-        if (title.isEmpty()) throw new IllegalArgumentException("Title is required");
+        String title = ctx.pathParam("title");
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
         try {
             ctx.json(OpenLibraryClient.lookupByTitle(title));
         } catch (Exception e) {
-            throw new OpenLibraryUpstreamException(e);
-        }
-    }
-
-    /** Mapped to HTTP 502 in {@link ApiServer#classify}. */
-    static final class OpenLibraryUpstreamException extends RuntimeException {
-        OpenLibraryUpstreamException(Throwable cause) {
-            super("Open Library request failed", cause);
+            ctx.status(502).json(Map.of("error", "OpenLibrary request failed", "detail", e.getMessage()));
         }
     }
 }

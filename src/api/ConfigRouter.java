@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/**
- * REST endpoints for application configuration.
- * <p>UI settings: {@code GET/PUT /api/config/ui} — theme, font, view mode (no restart).
- * DB settings: {@code GET/PUT /api/config/db} — dbType/host/user/password (restart to reconnect).
- * Legacy {@code /api/config} returns the union of both.
- */
 public class ConfigRouter {
 
     private static final Set<String> RESTART_KEYS = Set.of("dbType", "dbHost", "dbUser", "dbPassword");
@@ -101,9 +95,10 @@ public class ConfigRouter {
         return m;
     }
 
-    private void setConfig(HttpCtx ctx, Map<String, Consumer<JsonElement>> setters) throws Exception {
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
+    private void setConfig(HttpCtx ctx, Map<String, Consumer<JsonElement>> setters) {
+        String body = ctx.body();
+        if (body == null || body.isBlank()) { ctx.status(400).json(Map.of("error", "Empty body")); return; }
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         List<String> unknown = new ArrayList<>();
         for (String key : j.keySet()) {
             if (!setters.containsKey(key)) unknown.add(key);
@@ -113,12 +108,8 @@ public class ConfigRouter {
             return;
         }
         for (String key : j.keySet()) {
-            if (!j.has(key)) continue;
-            try {
-                setters.get(key).accept(j.get(key));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Invalid value for config key: " + key);
-            }
+            try { setters.get(key).accept(j.get(key)); }
+            catch (Exception e) { ctx.status(400).json(Map.of("error", "Invalid value for key: " + key, "detail", e.getMessage())); return; }
         }
         boolean needsRestart = j.keySet().stream().anyMatch(RESTART_KEYS::contains);
         ctx.json(Map.of("ok", true, "requiresRestart", needsRestart));

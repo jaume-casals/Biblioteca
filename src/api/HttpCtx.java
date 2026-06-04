@@ -58,18 +58,16 @@ public class HttpCtx {
     public Integer queryParamInt(String key) {
         String v = queryParamOrNull(key);
         if (v == null) return null;
-        try { return Integer.parseInt(v); }
-        catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid integer query param '" + key + "': " + v);
+        try { return Integer.parseInt(v); } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid integer for '" + key + "': " + v);
         }
     }
 
     public Double queryParamDbl(String key) {
         String v = queryParamOrNull(key);
         if (v == null) return null;
-        try { return Double.parseDouble(v); }
-        catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid number query param '" + key + "': " + v);
+        try { return Double.parseDouble(v); } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid double for '" + key + "': " + v);
         }
     }
 
@@ -80,27 +78,14 @@ public class HttpCtx {
 
     public byte[] bodyBytes() {
         if (cachedBodyBytes != null) return cachedBodyBytes;
+        java.io.InputStream is = ex.getRequestBody();
+        if (is == null) { cachedBodyBytes = new byte[0]; return cachedBodyBytes; }
         try {
-            String cl = ex.getRequestHeaders().getFirst("Content-Length");
-            if (cl != null && !cl.isBlank()) {
-                long len = Long.parseLong(cl.trim());
-                if (len > MAX_BODY_BYTES) {
-                    throw new IllegalArgumentException("Request body too large: " + len + " bytes");
-                }
-            }
-            InputStream is = ex.getRequestBody();
-            if (is == null) {
-                cachedBodyBytes = new byte[0];
-                return cachedBodyBytes;
-            }
-            cachedBodyBytes = is.readNBytes(MAX_BODY_BYTES + 1);
-            if (cachedBodyBytes.length > MAX_BODY_BYTES) {
-                throw new IllegalArgumentException("Request body too large");
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read request body", e);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid Content-Length header");
+            int available = is.available();
+            if (available > 50 * 1024 * 1024) throw new IllegalStateException("Request body too large: " + available + " bytes");
+            cachedBodyBytes = is.readAllBytes();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read request body: " + e.getMessage(), e);
         }
         return cachedBodyBytes;
     }
@@ -114,7 +99,7 @@ public class HttpCtx {
     public String header(String name) { return ex.getRequestHeaders().getFirst(name); }
 
     public HttpCtx status(int code) {
-        if (code < 100 || code > 599) throw new IllegalArgumentException("Invalid HTTP status: " + code);
+        if (code < 100 || code > 599) throw new IllegalArgumentException("Invalid HTTP status code: " + code);
         this.status = code;
         return this;
     }
@@ -146,15 +131,13 @@ public class HttpCtx {
             ex.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
             ex.getResponseHeaders().set("Vary", "Origin");
         }
-        long bodyLen = body.length == 0 ? -1 : body.length;
-        ex.sendResponseHeaders(status, bodyLen);
+        ex.sendResponseHeaders(status, body.length);
         if (body.length > 0) {
             try (var os = ex.getResponseBody()) { os.write(body); }
         }
         ex.close();
     }
 
-    // Duplicate query keys: last value wins. Multi-value params (checkboxes) are not supported.
     private static Map<String, String> parseQuery(String raw) {
         Map<String, String> m = new LinkedHashMap<>();
         if (raw == null || raw.isBlank()) return m;

@@ -25,7 +25,9 @@ public class TagRouter {
     }
 
     private void create(HttpCtx ctx) throws Exception {
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         Tag created;
         synchronized (cd) { created = cd.addTag(j.get("nom").getAsString()); }
@@ -34,7 +36,9 @@ public class TagRouter {
 
     private void rename(HttpCtx ctx) throws Exception {
         int id = ctx.pathParamInt("id");
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null || !j.has("nom") || j.get("nom").isJsonNull()) throw new IllegalArgumentException("Field 'nom' is required");
         cd.getTagById(id);
         synchronized (cd) { cd.renameTag(id, j.get("nom").getAsString()); }

@@ -36,12 +36,6 @@ public class ApiServer {
 
     private record StatusBody(int status, String body) {}
 
-    /**
-     * Map domain/library exceptions to HTTP statuses. <b>Body messages are
-     * sanitised</b> — only the public-facing constant string is returned for
-     * NotFound/Unknown; for Validation/Duplicate the local message is safe
-     * (catalan/spanish I18n keys) and useful for the caller.
-     */
     private static StatusBody classify(Throwable t) {
         while (t != null) {
             if (t instanceof BibliotecaException be) {
@@ -55,11 +49,8 @@ public class ApiServer {
             if (t instanceof ApiAuth.UnauthorizedException) {
                 return new StatusBody(401, "Unauthorized");
             }
-            if (t instanceof OpenLibraryRouter.OpenLibraryUpstreamException) {
-                return new StatusBody(502, "Upstream service error");
-            }
             if (t instanceof IllegalArgumentException || t instanceof NumberFormatException
-                    || t instanceof JsonSyntaxException || t instanceof IllegalStateException) {
+                    || t instanceof com.google.gson.JsonSyntaxException || t instanceof IllegalStateException) {
                 return new StatusBody(400, t.getMessage() != null ? t.getMessage() : "Bad request");
             }
             t = t.getCause();

@@ -17,7 +17,6 @@ public class LlibreRouter {
 
     public LlibreRouter(HttpRouter app, BibliotecaWriter cd) {
         this.cd = cd;
-        // Specific paths before parameterised ones
         app.get("/api/books/count",             ctx -> count(ctx));
         app.get("/api/books/recent",            ctx -> recent(ctx));
         app.get("/api/books/{isbn}/image",      ctx -> image(ctx));
@@ -72,7 +71,9 @@ public class LlibreRouter {
     }
 
     private void add(HttpCtx ctx) throws Exception {
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty or malformed JSON body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         Llibre l = JsonMapper.jsonToLlibre(j);
         if (l == null) throw new IllegalArgumentException("Empty or malformed JSON body");
@@ -83,7 +84,9 @@ public class LlibreRouter {
 
     private void update(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
-        JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        String body = ctx.body();
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty or malformed JSON body");
+        JsonObject j = JsonMapper.gson().fromJson(body, JsonObject.class);
         if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         Llibre updated = JsonMapper.jsonToLlibre(j);
         if (updated == null) throw new IllegalArgumentException("Empty or malformed JSON body");
@@ -124,7 +127,6 @@ public class LlibreRouter {
         ctx.result(blob);
     }
 
-    /** Minimal content-type sniff: 8 bytes for PNG signature, 3 for JPEG SOI. */
     public static String sniffImageMime(byte[] blob) {
         if (blob.length >= 8
                 && (blob[0] & 0xFF) == 0x89 && blob[1] == 0x50 && blob[2] == 0x4E && blob[3] == 0x47
@@ -175,8 +177,6 @@ public class LlibreRouter {
     }
 
     private static Llibre validate(Llibre l) {
-        // validates required fields (throws IllegalArgumentException on error)
-        // copyOf() carries all fields, so adding new fields to Llibre doesn't silently drop them here
         LlibreValidator.checkLlibre(
             l.getISBN(), l.getNom(), l.getAutor(), l.getAny(), l.getDescripcio(),
             l.getValoracio(), l.getPreu(), l.getLlegit(), l.getImatge());
@@ -186,12 +186,7 @@ public class LlibreRouter {
     private static LlibreFilter buildFilter(HttpCtx ctx) {
         domini.LlibreFilterBuilder b = domini.LlibreFilterBuilder.of();
         String isbnStr = ctx.queryParamOrNull("isbn");
-        if (isbnStr != null) {
-            try { b.isbn(Long.parseLong(isbnStr)); }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid isbn query param: " + isbnStr);
-            }
-        }
+        if (isbnStr != null) { b.isbn(Long.parseLong(isbnStr)); }
         b.autor(ctx.queryParamOrNull("author"));
         b.nom(ctx.queryParamOrNull("title"));
         b.anyMin(ctx.queryParamInt("yearMin"));

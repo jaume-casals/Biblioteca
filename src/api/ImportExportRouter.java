@@ -32,7 +32,6 @@ public class ImportExportRouter {
     }
 
     private void exportJson(HttpCtx ctx) throws Exception {
-        // Build isbn→llistes and isbn→tags maps with bulk queries to avoid N+1
         Map<Long, List<Map<String, Object>>> llistaMap = new HashMap<>();
         Map<Long, List<Map<String, Object>>> tagMap = new HashMap<>();
         if (cd instanceof ControladorDomini dom) {
@@ -66,14 +65,7 @@ public class ImportExportRouter {
     private void importJson(HttpCtx ctx) throws Exception {
         String body = ctx.body();
         if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
-        com.google.gson.JsonElement parsed;
-        try {
-            parsed = JsonParser.parseString(body);
-        } catch (com.google.gson.JsonSyntaxException e) {
-            throw new IllegalArgumentException("Malformed JSON");
-        }
-        if (!parsed.isJsonObject()) throw new IllegalArgumentException("JSON body must be an object");
-        ImportResult r = JsonImporter.run(parsed.getAsJsonObject(), cd);
+        ImportResult r = JsonImporter.run(JsonParser.parseString(body).getAsJsonObject(), cd);
         ctx.json(Map.of("ok", r.imported(), "skipped", r.skipped(), "errors", r.errors(), "errorDetails", r.errorDetails()));
     }
 
@@ -108,11 +100,7 @@ public class ImportExportRouter {
             try {
                 if (strategy.parseLine(CsvUtils.parseLine(lines[i]), hMap, cd)) ok++;
                 else skipped++;
-            } catch (Exception e) {
-                err++;
-                String msg = e.getMessage();
-                errDetails.add(msg != null ? msg : e.getClass().getSimpleName());
-            }
+            } catch (Exception e) { err++; errDetails.add(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()); }
         }
         ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err, "errorDetails", errDetails));
     }
@@ -130,7 +118,9 @@ public class ImportExportRouter {
             pool.submit(() -> {
                 try {
                     byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(book.getISBN()));
-                    if (blob != null && blob.length > 0) synchronized (cd) { cd.setLlibreBlob(book.getISBN(), blob); }
+                    if (blob != null && blob.length > 0) {
+                        synchronized (cd) { cd.setLlibreBlob(book.getISBN(), blob); }
+                    }
                 } catch (Exception ignored) {}
             });
         }

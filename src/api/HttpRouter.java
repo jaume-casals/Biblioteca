@@ -81,7 +81,6 @@ public class HttpRouter {
 
     public void stop() { if (server != null) server.stop(0); }
 
-    /** Test helper: returns the matched route or null if no route matches. */
     public Route findRoute(String method, String path) {
         String[] pathParts = path.split("/", -1);
         for (Route route : routes) {
@@ -111,17 +110,13 @@ public class HttpRouter {
                 }
                 ex.sendResponseHeaders(204, -1);
                 ex.close();
-            } catch (IOException e) {
-                LOG.fine("CORS preflight failed: " + e.getMessage());
-            }
+            } catch (IOException e) { LOG.warning("CORS preflight send failed: " + e); }
             return;
         }
 
         String upperMethod = method.toUpperCase(java.util.Locale.ROOT);
         String[] pathParts = rawPath.split("/", -1);
-
-        Route pathMatch = null;
-        StringBuilder allow = new StringBuilder();
+        Route matchedPath = null;
         for (Route route : routes) {
             if (!route.pathMatches(pathParts)) continue;
             if (route.matches(upperMethod, pathParts)) {
@@ -136,30 +131,23 @@ public class HttpRouter {
                 }
                 return;
             }
-            pathMatch = route;
-            if (allow.length() > 0) allow.append(", ");
-            allow.append(route.method);
-        }
-
-        if (pathMatch != null) {
-            try {
-                ex.getResponseHeaders().set("Allow", allow.toString());
-                if (allowedOrigin) ex.getResponseHeaders().set("Access-Control-Allow-Origin", origin);
-                ex.sendResponseHeaders(405, -1);
-                ex.close();
-            } catch (IOException e) {
-                LOG.fine("405 response failed: " + e.getMessage());
+            if (route.parts.length == pathParts.length) {
+                boolean pathMatches = true;
+                for (int i = 0; i < route.parts.length; i++) {
+                    if (!route.parts[i].startsWith("{") && !route.parts[i].equals(pathParts[i])) { pathMatches = false; break; }
+                }
+                if (pathMatches) matchedPath = route;
             }
-            return;
         }
 
         if (rawPath.startsWith("/api/")) {
-            try {
-                ex.sendResponseHeaders(404, -1);
-                ex.close();
-            } catch (IOException e) {
-                LOG.fine("404 response failed: " + e.getMessage());
+            if (matchedPath != null) {
+                String allow = matchedPath.method + ",OPTIONS";
+                ex.getResponseHeaders().set("Allow", allow);
+                try { ex.sendResponseHeaders(405, 0); ex.close(); } catch (IOException ignored) {}
+                return;
             }
+            try { ex.sendResponseHeaders(404, 0); ex.close(); } catch (IOException ignored) {}
             return;
         }
         try {
@@ -225,7 +213,6 @@ public class HttpRouter {
         ex.close();
     }
 
-    /** Maps URL path to classpath /web/... rejecting traversal. */
     static String resolveWebResource(String rawPath) {
         if (rawPath == null || rawPath.isBlank()) return "/web/index.html";
         String path = rawPath.replace('\\', '/');
