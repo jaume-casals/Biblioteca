@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## Plan before code (required)
+
+**Do not write or edit production code until you have a short plan the user can follow.** This is the highest-priority rule for every task, including small fixes.
+
+Before the first line of code:
+
+1. **Understand** — Read relevant files and trace how the feature or bug fits the MVC layers (`presentacio/`, `domini/`, `persistencia/`).
+2. **Plan** — State goal, files to touch, approach, risks (migrations, singletons, tests), and how you will verify (`make test`).
+3. **Confirm scope** — If requirements are ambiguous or the change is large, align with the user before implementing.
+
+Only then implement. If exploration reveals the plan was wrong, stop, revise the plan, then continue.
+
+Trivial exceptions (user explicitly asks to skip planning): one-line typo, comment-only edits, or a change they fully specified file-by-file.
+
+## Parallel AI work (agent briefs)
+
+Backlog split from `tot.txt`: **`agent-briefs/00-INDEX.md`**. One brief per agent session (coordinator, domain/DB, Swing UI, API, herramienta, checkBiblio). After editing `tot.txt`, regenerate with `python scripts/split_agent_briefs.py`.
+
 ## Build & Test Commands
 
 ```bash
@@ -43,4 +61,4 @@ All runtime config in `~/.biblioteca/config.properties` (dbType, darkMode, fontS
 
 - Language: Catalan/Spanish mixed
 - `lib/junit-platform-console-standalone-1.11.4.jar` used for JUnit 5 console launch
-- `opencode.json` is minimal (`lsp: true`) — most config is in Makefile and CLAUDE.md
+- `opencode.json` sets `instructions: ["AGENTS.md"]`, `lsp`, and bash `rm` permissions — most config is in Makefile

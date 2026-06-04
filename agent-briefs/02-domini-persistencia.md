@@ -1,5 +1,106 @@
-ULTRA MEGA HYPER REVIEW - ALL ISSUES FOUND
-==========================================
+---
+agent_brief: 02-domini-persistencia.md
+recommended_models: Minimax 2.7; Composer for straightforward fixes
+primary_paths: `src/domini/`, `src/persistencia/`, `src/interficie/`
+---
+
+# Domain + persistence agent
+
+> Read `AGENTS.md` at repo root first (`make test` before marking work complete).
+> Coordinator: `agent-briefs/01-coordinator.md` | Index: `agent-briefs/00-INDEX.md`
+
+## Your role
+
+Domain model, DAO, migrations, ISBN/long, caches, ControladorDomini threading.
+
+## Scope
+
+Everything under domini/, persistencia/, interficie/ (see review + todo2 below).
+
+## Out of scope
+
+Swing (`presentacio/`), HTTP (`api/`) except types shared with domain.
+
+
+## Top issues (read first)
+
+SUMMARY OF HIGHEST-IMPACT ISSUES (read these first)
+--------------------------------------------------------------------------------
+ 1. CRITICAL: ProgressBarRenderer does a DB lookup on EVERY cell paint (EDT).
+ 2. HIGH:     Whole presentacio layer runs file/DB/network work ON the EDT
+              (Import/Export/Backup/Filter controllers, detail dialogs).
+ 3. HIGH:     BibliotecaTableModel.isCellEditable() always false -> read
+              checkbox editor is dead.
+ 4. HIGH:     ServerConect migrations rely on transactional rollback, but DDL
+              auto-commits on MariaDB -> partial-migration / data-loss risk
+              (esp. migration 32-34 author backfill then DROP COLUMN autor).
+ 5. HIGH:     CoverService L1 cache = unsynchronized access-order LinkedHashMap
+              shared across the cover-fetch thread pool + EDT -> corruption.
+ 6. HIGH:     BookImporter.importCSV parses physical lines (breaks quoted
+              embedded newlines) and Calibre import uses platform charset.
+ 7. HIGH:     ISBN-10 -> ISBN-13 normalization is incomplete/inconsistent in
+              several places -> wrong/duplicate ISBN keys.
+ 8. HIGH:     api/HttpCtx empty-body responses never terminate the exchange
+              (client hangs / leak); /api/restore + /api/clear are unauth'd.
+ 9. HIGH:     LlibreLlistaContext.isbn typed int -> ISBN-13 overflow/truncation.
+================================================================================
+
+
+================================================================================
+
+## Review — domini + interficie
+
+PACKAGE: domini/  +  interficie/
+================================================================================
+src/domini/LlibreLlistaContext.java:11: HIGH: isbn is typed int but ISBNs are Long everywhere else; ISBN-13 (~9.78e12) overflows Integer.MAX and is silently truncated. Fix: change isbn field to long.
+src/domini/LlibreLlistaContext.java:19: HIGH: of() factory takes int isbn, forcing a narrowing cast of the real long ISBN at every call site. Fix: change parameter to long.
+src/domini/ControladorDomini.java:33: MEDIUM: SORT_BY COL_ISBN uses Comparator.comparing(Llibre::getISBN) which NPEs on a null ISBN (unlike null-safe compararISBN used elsewhere). Fix: wrap with Comparator.nullsFirst or reuse compararISBN.
+src/domini/ControladorDomini.java:172: MEDIUM: deleteLlibre(Long ISBN) auto-unboxes a possibly-null Long into searchKey(long) -> NPE. Fix: null-check before unboxing.
+src/domini/ControladorDomini.java:382: MEDIUM: l.getISBN() == isbn unboxes a possibly-null Long for == -> NPE for any book with null ISBN. Fix: use Objects.equals / guard null.
+src/domini/ControladorDomini.java:246: MEDIUM: getAllLlistes() returns the internal list directly (mutable-state leak). Fix: return a copy or Collections.unmodifiableList.
+src/domini/ControladorDomini.java:390: MEDIUM: getAllTags() returns the internal list directly (mutable-state leak). Fix: return a copy/unmodifiable view.
+src/domini/ControladorDomini.java:210: MEDIUM: backupToSQL iterates shared ArrayList bib while EDT may mutate it (auto-backup runs off-EDT) -> ConcurrentModificationException; bib/llistes/tags unsynchronized. Fix: snapshot under lock before iterating.
+src/domini/ControladorDomini.java:217: LOW: File.createTempFile creates a real file used only for its parent dir and never deleted -> orphan temp file. Fix: delete it or derive temp dir without creating a file.
+src/domini/ControladorDomini.java:224: LOW: rollback executeSQLFile failure swallowed by catch(Exception ignored){}, hiding corrupted-DB state. Fix: log/attach rollback failure to rethrown exception.
+src/domini/ControladorDomini.java:180: LOW: updateLlibre silently skips in-memory update when binarySearch misses (e.g. ISBN changed) and never re-sorts -> stale/unsorted bib. Fix: handle key changes explicitly or assert ISBN immutability.
+src/domini/Llibre.java:94: MEDIUM: getAutors() returns the internal mutable list; external mutation desyncs it from autor and breaks getAutor(). Fix: return new ArrayList<>(autors) or unmodifiable view.
+src/domini/Llibre.java:195: LOW: copyOf sets c.autors=null when src.autors is null, violating the never-null invariant (NPE on isEmpty()). Fix: default to a new empty ArrayList.
+src/domini/ShelfParser.java:60: MEDIUM: per-book export errors swallowed by catch(Exception ignored){}, silently dropping rows from the CSV. Fix: collect/log failures or fail loudly.
+src/domini/ShelfParser.java:17: LOW: condition parts.length < 1 is always false (split returns >= 1 element) -- dead branch. Fix: remove; rely on parts[0].isBlank().
+src/domini/SortSpec.java:39: LOW: toSql() default "`ISBN`" omits the "l." table prefix used by all map entries -> inconsistent ORDER BY. Fix: default to "l.`ISBN`".
+src/interficie/InMemoryBibliotecaReader.java:26: LOW: l.getISBN() == isbn (also lines 30, 79, 85) unboxes a possibly-null Long -> NPE. Fix: guard null / use Objects.equals.
+src/interficie/OnLlibreAdded.java:1: LOW: empty (0-byte) placeholder file declaring nothing. Fix: remove or implement.
+src/interficie/OnLlibreUpdate.java:1: LOW: empty file; LibraryEvents imports presentacio.listener.OnLlibreUpdate instead (name collision / unused). Fix: remove.
+src/interficie/OnLlibreDelete.java:1: LOW: empty file; LibraryEvents imports presentacio.listener.OnLlibreDelete instead (name collision). Fix: remove.
+src/interficie/OnLlibreBlobChanged.java:1: LOW: empty (0-byte) dead file. Fix: remove or implement.
+src/interficie/OnLlistaMembershipChanged.java:1: LOW: empty (0-byte) dead file. Fix: remove or implement.
+src/interficie/EnActualizarBBDD.java:1: LOW: empty (0-byte) dead file. Fix: remove.
+
+
+================================================================================
+
+## Review — persistencia
+
+PACKAGE: persistencia/
+================================================================================
+src/persistencia/ServerConect.java:182: HIGH: runMigrations wraps migrations in a JDBC transaction, but most migration statements are DDL, which auto-commits on MariaDB/MySQL. A mid-sequence failure leaves a partially-migrated schema with inconsistent schema_version; the savepoint/rollback path is effectively a no-op for DDL. Fix: run/track each migration idempotently and version-stamp only after each succeeds; do not rely on transactional rollback for DDL.
+src/persistencia/ServerConect.java:101: HIGH: Migration 32-34 backfills authors into llibre_autor then DROP COLUMN autor (34). If 33 partially fails on a large DB and 34 still runs, original author data is permanently lost. Fix: gate the DROP behind a verified row-count match (see in-code comment) or split into a separate, manually-confirmed migration.
+src/persistencia/ServerConect.java:124: LOW: H2 URL is built by stripping ALL whitespace from the home dir path (replaceAll("\\s+","")) -> a user home path containing spaces produces a wrong DB path. Fix: do not strip interior spaces from the path; quote/escape instead.
+src/persistencia/LlibreDao.java:23: MEDIUM: buildLlibreLight reads nullable `any`/valoracio/preu with getInt/getDouble and no wasNull() -> SQL NULL collapses to 0 / 0.0, indistinguishable from a real zero. Fix: read as object / check wasNull() and pass null.
+src/persistencia/LlibreDao.java:33: MEDIUM: buildLlibre has the same NULL-collapse problem for `any`/valoracio/preu. Fix: use wasNull() and set null on the Llibre.
+src/persistencia/LlibreDao.java:314: MEDIUM: search() binds params by instanceof chain; a param type not in {String,Long,Integer,Double,Boolean} is silently skipped, shifting every subsequent placeholder index and corrupting the query. Fix: throw on unhandled type, or bind via a typed param object.
+src/persistencia/LlibreDao.java:435: MEDIUM: executeSQLFile splitter (insideString/endsStatement) only balances single quotes per physical line, so a quoted literal containing a newline or a ';' across lines mis-splits the statement on restore. Fix: tokenize across the full buffer, not line-by-line.
+src/persistencia/LlibreDao.java:453: MEDIUM: isForbidden only checks the leading token of each split statement; if the per-line splitter mis-joins, a forbidden DDL could ride along inside another statement and bypass the guard. Fix: validate after robust statement parsing, and reject multiple top-level statements per chunk.
+src/persistencia/LlibreDao.java:312: LOW: search() appends LIMIT/OFFSET via string concatenation of ints (not parameters). Safe today (ints) but fragile. Fix: bind as parameters.
+src/persistencia/TagDao.java:56: MEDIUM: delete(int id) removes a tag (cascading to llibre_tag via FK) but never calls invalidateLlibreTagCache() -> getAllLlibreTag() returns stale rows. Fix: invalidate cache on tag delete.
+src/persistencia/TagDao.java:124: MEDIUM: llibreTagCache is also stale after LlibreDao.delete() cascades llibre_tag rows (LlibreDao cannot see TagDao's cache). Fix: centralize cache invalidation or drop the cache on any book/tag delete.
+src/persistencia/ControladorPersistencia.java:76: MEDIUM: resetForTest() mutates the static singleton (inst=null) without synchronization, while getInstance() is synchronized -> race / visibility bug across threads. Fix: synchronize resetForTest/resetForProfileSwitch on the class monitor.
+src/persistencia/ControladorPersistencia.java:85: MEDIUM: resetForProfileSwitch() closes the shared connection and nulls inst unsynchronized while other (synchronized) methods may be using DAOs on that connection. Fix: synchronize and ensure no in-flight DB ops.
+
+
+================================================================================
+
+## todo2 deep-dive
 
 [FILE: src/persistencia/LlibreDao.java:208]
 Problem: ISBN is cast to int, truncating the long value. The cast `(int) isbn` will silently lose data for ISBNs > 2^31.
@@ -8,6 +109,9 @@ Code: out.add(domini.LlibreLlistaContext.of(
     rs.getInt(1),
     ...
 Fix: Cast to long: `isbn` is already long, no cast needed. Remove the `(int)` cast.
+
+---
+
 
 ---
 
@@ -32,54 +136,6 @@ Actually let me just focus on the REAL issues I found.
 
 ---
 
-[FILE: src/herramienta/BookImporter.java:55-64]
-Problem: `importCalibre` uses `Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql})` - command injection risk if sqlite3 path contains spaces or special chars. Also, `proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream())` is Java 9+ only; will throw `UnsupportedOperationException` on Java 8.
-Code: Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql});
-    Thread stderrDrain = new Thread(() -> {
-        try { proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream()); }
-        catch (Exception ignored) {}
-    });
-Fix: Use ProcessBuilder with proper escaping; for stderr drain use a BufferedReader and drain manually for Java 8 compatibility.
-
----
-
-[FILE: src/herramienta/BookExporter.java:221]
-Problem: `getEditorial() != null ? getEditorial() : ""` - returns "" but shows as empty string in HTML, but `editorial` column may have "0" or " " as default which displays incorrectly. Also, for number columns like `any`, it outputs `0` when any is 0, causing "0" to appear in HTML where blank was intended.
-Code: pw.println("<td>" + (l.getAny() > 0 ? l.getAny() : "") + "</td>");
-Fix: Change to `(l.getAny() != null && l.getAny() > 0) ? l.getAny() : ""`
-
----
-
-[FILE: src/api/ImportExportRouter.java:115-126]
-Problem: ExecutorService is created but never explicitly shut down. If the application shuts down while covers are still being fetched, threads may not terminate cleanly. Also uses `pool.shutdown()` (善良) not `pool.shutdownNow()`.
-Code: java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(4,
-    r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
-    ...
-    pool.shutdown();
-Fix: Register the pool with ShutdownHooks or use try-finally to ensure shutdown, or let the daemon threads die naturally with JVM.
-
----
-
-[FILE: src/presentacio/ExportController.java:127-154]
-Problem: The ExecutorService `pool` is used but never shut down. The `pool.shutdown()` is only called inside `SwingUtilities.invokeLater` callback after all covers are fetched, but if an exception occurs before that point, the pool never shuts down. Also `pool` is a local variable - if done >= total before all tasks complete (due to exception), pool never shut down.
-Code: java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8,
-    r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
-    // pool submitted to but no guaranteed shutdown
-Fix: Use try-finally or track better; use a single shared executor in CoverService instead of creating per-operation.
-
----
-
-[FILE: src/api/HttpRouter.java:101]
-Problem: Empty catch block for CORS preflight response sending - silently swallows IOException.
-Code: } catch (IOException ignored) {}
-Fix: At minimum log the exception, even if at FINE level.
-
----
-
-[FILE: src/api/HttpRouter.java:93]
-Problem: CORS origin check only allows `http://localhost:*` and `http://127.0.0.1:*` - does not allow `https://` origins or other loopback variants. Useful for local development but prevents production deployment with reverse proxy.
-Code: boolean allowedOrigin = origin != null && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
-Fix: Either extend to allow https or make the allowed origins configurable.
 
 ---
 
@@ -93,15 +149,6 @@ Fix: Consider parallelizing cover loading or streaming covers directly from DB t
 
 ---
 
-[FILE: src/herramienta/BackupService.java:269-273]
-Problem: `sqlEsc` replaces newlines with spaces but not other control characters like `\t`. Also `\u001A` (substitute character) is handled but other control characters (SOH, STX, etc.) are not stripped.
-Code: private static String sqlEsc(String s) {
-    if (s == null) return "";
-    String out = s.replace("\\", "\\\\").replace("'", "''");
-    out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ").replace("\u001A", "");
-    return out;
-}
-Fix: Replace all characters where `ch < 0x20` with space, not just specific ones.
 
 ---
 
@@ -120,6 +167,9 @@ Fix: After batch INSERT to autor (step 2), add a flush/clear to ensure generated
 
 ---
 
+
+---
+
 [FILE: src/persistencia/LlibreDao.java:133-178]
 Problem: In `insert`, on line 174-176, when syncing authors, if `autorsSync` is empty (no authors), the sync step is skipped but the new book has no authors linked. The fallback `ll.getAutor()` is only used if `getAutors().isEmpty()`. If both `autors` and `autor` are empty, no author link is created. This is correct behavior for new books. SKIP.
 
@@ -127,22 +177,6 @@ Actually wait - if someone calls `addLlibre(l)` where l has autor="John Doe" but
 
 ---
 
-[FILE: src/herramienta/Config.java:287-292]
-Problem: `SAVE_SCHEDULER` is a static single-threaded executor but never shut down - if the application runs for very long periods without exit, the thread holds memory. More importantly, if `save()` is called many times rapidly, only the last pending save runs (line 312 `pendingSave.cancel(false)`), which is intentional, but the Runnable holds references to captured objects.
-Code: private static final ScheduledExecutorService SAVE_SCHEDULER =
-    Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "config-save");
-        t.setDaemon(true);
-        return t;
-    });
-Fix: Register with ShutdownHooks to ensure clean shutdown, or switch to a lighter mechanism (e.g., Timer).
-
----
-
-[FILE: src/herramienta/BookExporter.java:127]
-Problem: Uses `★`.repeat((int) Math.round(val))` which is Java 11+. If running on Java 8, this will fail at compile time or runtime. String.repeat() is Java 11+.
-Code: String stars = val > 0 ? "★".repeat((int) Math.round(val)) : "-";
-Fix: Use Apache Commons or Guava's StringUtils.repeat, or manual loop.
 
 ---
 
@@ -153,10 +187,16 @@ Fix: Use a single trim and single replace chain. Profile could be validated to n
 
 ---
 
+
+---
+
 [FILE: src/persistencia/ServerConect.java:124]
 Problem: Same URL construction issue for test connection. Path separator injection possible if profile contains `\` or `/`.
 Code: String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + profile.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "");
 Fix: Validate/sanitize profile name before use in path.
+
+---
+
 
 ---
 
@@ -171,6 +211,9 @@ So actually no bug here.
 
 ---
 
+
+---
+
 [FILE: src/domini/Llibre.java:166]
 Problem: `setVolum` uses `Math.max(0, volum)` - same analysis. OK.
 
@@ -178,30 +221,6 @@ Actually let me find REAL issues.
 
 ---
 
-[FILE: src/api/LlibreRouter.java:134]
-Problem: `sniffImageMime` defaults to "image/jpeg" for unknown formats, but this could serve a PNG or GIF as "image/jpeg" causing browser to misinterpret. The method only handles PNG (8-byte signature) and JPEG (3-byte SOI), but if a WebP image is stored as blob, it would be served as JPEG incorrectly.
-Code: return "image/jpeg";  // fallback for unknown
-Fix: Return "application/octet-stream" for unknown formats instead of assuming JPEG.
-
----
-
-[FILE: src/herramienta/OpenLibraryClient.java:271]
-Problem: `encode` uses `URLEncoder.encode` which encodes spaces as `+` instead of `%20`. While technically valid for `application/x-www-form-urlencoded`, some servers expect `%20`. This affects `lookupByTitle` and `lookupByAutor` searches.
-Code: return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
-Fix: Use `URI.create(url).toURL()` or replace `+` with `%20` after encoding, or use `java.net.URI` with explicit encoding.
-
----
-
-[FILE: src/presentacio/ImportController.java:134-157]
-Problem: `fetchThread` is a daemon thread that updates the UI when done. If the user closes the dialog before the thread completes, `cancelled.set(true)` is set (line 136) and the update is skipped. But if the dialog is closed and then another dialog is opened quickly, the old `fetchThread` might still run and try to update the new dialog. This is unlikely but possible.
-Code: Thread fetchThread = new Thread(() -> {
-    ...
-    SwingUtilities.invokeLater(() -> {
-        if (!dialeg.isVisible()) return;  // checks visibility but dialog might have been replaced
-        ...
-    });
-});
-Fix: Use a WeakReference to the dialog, or use a CancellationToken pattern.
 
 ---
 
@@ -214,12 +233,6 @@ Fix: More robust path parsing for H2 URL format; handle both `file:` and `nio:fi
 
 ---
 
-[FILE: src/herramienta/BackupService.java:56-68]
-Problem: `autoBackup` creates a timestamp-based filename every time but only runs once per day. If the backup fails mid-way or the file is deleted, there's no retry until next day. Also no check for disk space before backup.
-Code: String ts = java.time.LocalDateTime.now()
-    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-    File out = new File(dir, "biblioteca_" + ts + ".sql");
-Fix: Add retry logic or at least check for last successful backup timestamp before attempting new one.
 
 ---
 
@@ -230,20 +243,6 @@ Fix: Use a separate transaction with SERIALIZABLE isolation, or use INSERT ... O
 
 ---
 
-[FILE: src/api/LlistaRouter.java:54]
-Problem: In `delete`, if `cd.getLlistaById(id)` throws NotFound, it's silently swallowed by the method because it only uses `cd.deleteLlista(...)` which would also throw if not found. Actually it rethrows - let me check. The delete does `cd.deleteLlista(cd.getLlistaById(id))` - if getLlistaById throws, the exception propagates. OK - no issue.
-
-Actually wait - looking at line 54: `cd.deleteLlista(cd.getLlistaById(id));` - if getLlistaById throws NotFound, delete is never called. This is correct behavior - if the shelf doesn't exist, return 404. But actually the exception from getLlistaById is caught by the caller (LlibreRouter's dispatch) and converted to 404. OK.
-
-Actually looking more carefully at line 54, the code says:
-```java
-private void delete(HttpCtx ctx) throws Exception {
-    int id = ctx.pathParamInt("id");
-    synchronized (cd) { cd.deleteLlista(cd.getLlistaById(id)); }
-    ctx.status(204);
-}
-```
-If `getLlistaById` throws NotFound, it's wrapped by the API framework into a 404. Correct. SKIP.
 
 ---
 
@@ -254,6 +253,9 @@ Code: public Llista getLlistaById(int id) throws Exception {
     throw new BibliotecaException.NotFound("Shelf not found: " + id);
 }
 Fix: Could be optimized with a Map<Integer, Llista> lookup but not critical.
+
+---
+
 
 ---
 
@@ -269,39 +271,6 @@ Fix: Track and close the previous connection before creating a new one, or retur
 
 ---
 
-[FILE: src/herramienta/LlibreValidator.java:79-81]
-Problem: Year validation rejects any year > currentYear+5, but allows 0 as a valid year (line 92 passes `any != null ? any : 0`). A book with year=0 is probably a placeholder and shouldn't be allowed.
-Code: if (any != null && any != 0 && (any < 1000 || any > currentYear + 5))
-Fix: Either remove the `any != 0` exception or validate year 0 separately with different limits.
-
----
-
-[FILE: src/herramienta/LlibreValidator.java:67-68]
-Problem: `countDig(isbn)` uses `String.valueOf(n).length()` which will fail for Long.MAX_VALUE (20 digits). Also if isbn is negative, this breaks.
-Code: int digits = isbn == null ? 0 : countDig(isbn);
-private static int countDig(long n) {
-    return String.valueOf(n).length();
-}
-Fix: Handle null and negative ISBNs; for very large values use `Long.toString(n).length()`.
-
----
-
-[FILE: src/api/HttpCtx.java:78]
-Problem: Request body size limit of 50MB (`50 * 1024 * 1024`) is hardcoded and could cause OOM if multiple large requests come in simultaneously. Also the check happens after reading all bytes with `readAllBytes()`.
-Code: if (available > 50 * 1024 * 1024) throw new IllegalStateException("Request body too large: " + available + " bytes");
-Fix: Consider streaming for large uploads, or use a configurable limit with a default.
-
----
-
-[FILE: src/api/ImportExportRouter.java:48-54]
-Problem: In `exportJson`, if `cd instanceof ControladorDomini dom`, it calls `dom.getAllLlibreLlistaRows()` and `dom.getAllLlibreTagRows()` - but these are fetched for all books in memory before looping. If library is large, this creates two large maps in memory.
-Code: Map<Long, List<Map<String, Object>>> llistaMap = new HashMap<>();
-Map<Long, List<Map<String, Object>>> tagMap = new HashMap<>();
-for (persistencia.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
-    llistaMap.computeIfAbsent(row.isbn(), k -> new ArrayList<>())
-        .add(Map.of("id", row.llistaId(), "valoracio", row.valoracio(), "llegit", row.llegit()));
-}
-Fix: Consider streaming the export or fetching only for the books being exported.
 
 ---
 
@@ -313,6 +282,9 @@ Code: if (f.hasAnyFilter()) {
     // pagination used
 }
 Fix: `hasAnyFilter()` should also return true if sort is non-default, or the caller should separately check for sort.
+
+---
+
 
 ---
 
@@ -365,10 +337,16 @@ Let me focus on the actual confirmed bugs.
 
 ---
 
+
+---
+
 [FILE: src/persistencia/LlibreDao.java:295]
 Problem: In search, `f.getNom()` is used with LIKE but not null-checked - if f.getNom() is an empty string "", the condition `f.getNom() != null` is true so it adds the LIKE clause with `%` placeholders, which matches everything. This might cause unexpected behavior - searching with empty title returns all books.
 Code: if (f.getNom() != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
 Fix: Check `!f.getNom().isEmpty()` in addition to `!= null`.
+
+---
+
 
 ---
 
@@ -381,21 +359,6 @@ Actually for H2 with MySQL mode (as configured in connection string), backticks 
 
 ---
 
-[FILE: src/api/LlibreRouter.java:171-178]
-Problem: `validate` creates a copy via `Llibre.copyOf(l)` but then the validated copy is returned and later added with `cd.addLlibre(validated)`. The copy includes all fields but the `autors` list is copied as reference (line 195 `c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>()` - this creates a NEW ArrayList so it's a deep copy of the list, not a shallow copy). The items (Strings) in the list are immutable so OK. But `imatgeBlob` and `hasBlob` are copied by reference at line 198-199. This could be an issue if the original Llibre is modified later. But since we just created it and are about to add it, it's fine.
-
-Actually wait - `c.imatgeBlob = src.imatgeBlob;` is a reference copy of the byte array. If the source `l` is used again and its `imatgeBlob` is modified, the copy would also see the change. But in this flow, we just validated and are adding. Not a real issue in this context.
-
-Actually I notice that in `copyOf`, the `autors` is properly copied: `c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>();`. So that's fine.
-
-OK - no issue here.
-
----
-
-[FILE: src/api/LlibreRouter.java:180-203]
-Problem: In `buildFilter`, when a NumberFormatException is caught for isbn parsing at line 183, it's silently ignored. This means an invalid ISBN string in the query param results in no isbn filter being applied. Could lead to unexpected results where bad param values cause filters to be skipped.
-Code: if (isbnStr != null) { try { b.isbn(Long.parseLong(isbnStr)); } catch (NumberFormatException ignored) {} }
-Fix: Either throw a 400 Bad Request, or at least log at DEBUG level.
 
 ---
 
@@ -406,32 +369,6 @@ Fix: Throw IllegalArgumentException or BibliotecaException.Validation instead.
 
 ---
 
-[FILE: src/herramienta/BookExporter.java:190]
-Problem: MIME type detection for cover images is overly simplistic: `blob[0] == (byte)0x89` checks for PNG header but this could incorrectly match other binary data that happens to start with 0x89.
-Code: String mime = (blob.length > 4 && blob[0] == (byte)0x89) ? "image/png" : "image/jpeg";
-Fix: Use a more robust method like `java.nio.file.Files.probeContentType()` or a library like Apache Tika for reliable MIME detection.
-
----
-
-[FILE: src/api/HttpRouter.java:145-164]
-Problem: In `serveStatic`, the file content is read and then the stream closed, but if an exception occurs during reading, the response is never sent and the connection may hang.
-Code: try (InputStream in = rawIn) { data = in.readAllBytes(); }
-Fix: Add proper error handling for failed static file reads.
-
----
-
-[FILE: src/api/ConfigRouter.java:105]
-Problem: In `setConfig`, if the JSON body has duplicate keys, only the last value is kept (because JsonObject.get(key) returns last). This could be confusing if a client sends duplicate keys - no error is raised.
-Code: JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-Fix: Consider detecting duplicate keys in the JSON and returning a 400 error.
-
----
-
-[FILE: src/herramienta/OpenLibraryClient.java:160]
-Problem: `rateLimit` uses `Thread.sleep(wait)` and if interrupted, sets `Thread.currentThread().interrupt()` flag and returns. The caller `fetchCoverByISBN` checks for interrupt and returns null. But other callers of `rateLimit` (like `fetchWithRetry`) may not handle interrupts properly - they re-throw as IOException. This is inconsistent.
-Code: if (wait > 0) Thread.sleep(wait);
-    lastRequestMs = System.currentTimeMillis();
-Fix: Ensure all callers of rateLimit handle InterruptedException consistently.
 
 ---
 
@@ -439,6 +376,9 @@ Fix: Ensure all callers of rateLimit handle InterruptedException consistently.
 Problem: The `maxIndex100Llibres()` method uses integer division which could return wrong values for edge cases. For example, if bib.size() = 1, maxIndex = (1-1)/100 = 0. If size=100, (100-1)/100 = 0 (should be 0 since index 0 gets first 100, index 1 gets second 100). If size=101, (101-1)/100 = 1. This is actually correct - for 101 books, page 0 returns first 100, page 1 returns the remaining 1. So max index that can be specified is 0 for 100 books or less, 1 for 101-200 books. This is correct.
 
 Actually wait: with 100 books, maxIndex = 0. You can ask for page 0. With 101 books, maxIndex = 1. You can ask for page 0 or page 1. This is correct. NOT A BUG.
+
+---
+
 
 ---
 
@@ -451,10 +391,6 @@ Fix: Set con=null only if close succeeded, or not at all since instance will be 
 
 ---
 
-[FILE: src/herramienta/BackupService.java:67]
-Problem: In autoBackup, when deleting old backups, it uses `backups[i].delete()` which could fail silently if the file is locked or read-only. No error is reported.
-Code: for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
-Fix: Check return value of delete() and log warnings for failed deletions.
 
 ---
 
@@ -462,6 +398,9 @@ Fix: Check return value of delete() and log warnings for failed deletions.
 Problem: In `getBlob`, if the blob is empty (length 0), it returns null. But the calling code at `LlibreRouter.image` checks `blob == null || blob.length == 0` and shows default image. This is correct behavior. However, there could be a stored empty blob (not null, but 0 bytes) which would be treated as "no image". This might not be the user's intent.
 Code: if (rs.next()) return rs.getBytes(1);  // returns 0-length byte[] if blob is empty
 Fix: Consider storing 0-length as null, or differentiate between "no image" and "image is empty".
+
+---
+
 
 ---
 
@@ -473,26 +412,6 @@ Fix: Consider deriving the whitelist from a single source of truth or documentin
 
 ---
 
-[FILE: src/presentacio/MainFrameControl.java:182-189]
-Problem: `getInstance(panel, cd)` creates a new instance if `instance == null` AND `panel != null`, but doesn't check if `instance` already exists with a DIFFERENT panel. This could lead to using an old panel or the new panel being ignored.
-Code: public static MainFrameControl getInstance(MainFramePanel panel, BibliotecaWriter cd) {
-    if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
-    return instance;
-}
-Fix: Either throw if instance exists and panel differs, or add a check to reuse existing instance.
-
----
-
-[FILE: src/api/BackupRouter.java:53-60]
-Problem: In `restore`, the temp file is created with `File.createTempFile` and deleted in finally, but if the JVM exits abnormally before the finally runs, the temp file persists.
-Code: File tmp = File.createTempFile("biblioteca_restore_", ".sql");
-    try {
-        Files.write(tmp.toPath(), data);
-        synchronized (cd) { cd.restoreFromSQL(tmp); }
-    } finally {
-        tmp.delete();
-    }
-Fix: Use `tmp.deleteOnExit()` in addition to the finally block, or use a shutdown hook to clean up temp files.
 
 ---
 
@@ -510,10 +429,6 @@ Fix: Either throw the exception after cleanup failure, or use a different reset 
 
 ---
 
-[FILE: src/herramienta/BookExporter.java:233]
-Problem: HTML escaping function handles `&`, `<`, `>`, `"`, `'` but not `&amp;` if the input already contains `&amp;` it becomes `&amp;amp;` which is wrong - actually no, the input "A & B" becomes "A &amp; B" which is correct. The function is applied to already-escaped text? Actually the input may already have HTML entities. If input is "A &amp; B", it becomes "A &amp;amp; B" which double-encodes. But this is a minor issue since the source data is not expected to have pre-encoded entities.
-Code: return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
-Fix: Use a library like Apache Commons Text StringEscapeUtils or OWASP ESAPI for proper HTML escaping.
 
 ---
 
@@ -549,10 +464,6 @@ Actually the REAL issue is that for `buildLlibre`, the constructor receives `rs.
 
 ---
 
-[FILE: src/api/HttpCtx.java:92]
-Problem: The `status` method returns `this` for chaining, but doesn't validate the status code is in valid HTTP range. Negative or out-of-range codes are accepted.
-Code: public HttpCtx status(int code) { this.status = code; return this; }
-Fix: Validate 100-599 range.
 
 ---
 
@@ -659,3 +570,10 @@ Actually let me re-count. The issue count was requested. Let me finalize with cl
 Total issues found: 20
 
 Let me now write the output file with all issues.
+
+
+################################################################################
+
+## Backlog [1][2][3]
+
+[3] [refactor] ServerConect MIGRATIONS is String[][] — if migration entry accidentally has 3 elements or wrong index, silently misbehaves; use Migration record(int version, String sql) with explicit fields

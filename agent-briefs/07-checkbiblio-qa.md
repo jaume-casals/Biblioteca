@@ -1,3 +1,29 @@
+---
+agent_brief: 07-checkbiblio-qa.md
+recommended_models: Composer (tests); Minimax 2.7
+primary_paths: `checkBiblio/`, `run.sh`, `run2.sh`
+---
+
+# checkBiblio / QA harness agent
+
+> Read `AGENTS.md` at repo root first (`make test` before marking work complete).
+> Coordinator: `agent-briefs/01-coordinator.md` | Index: `agent-briefs/00-INDEX.md`
+
+## Your role
+
+Fix StressTest/UIAudit/I18nAudit, run scripts, headless guards; implement IMP-* harness improvements.
+
+## Scope
+
+`checkBiblio/*.java`, `run.sh`, `run2.sh` (see full review below).
+
+## Out of scope
+
+Unrelated production `src/` except minimal hooks required by tests.
+
+
+## checkBiblio review (full)
+
 ULTRA MEGA HYPER REVIEW — checkBiblio/ (all files)
 ==================================================
 Compiled: 2025-06-03
@@ -647,3 +673,14 @@ TOTAL: 9 CRITICAL, 10 HIGH, 11 MEDIUM, 11 LOW = 41 issues
 ═══════════════════════════════════════════════════════
 END OF REVIEW
 ═══════════════════════════════════════════════════════
+
+================================================================================
+ AGENT BRIEFS: see agent-briefs/00-INDEX.md (split for AI agents)
+================================================================================
+
+## Backlog [1][2][3]
+
+[1] [refactor] UIAudit expand to check for duplicate I18n keys and unused keys (keys defined in I18n.java but never called)
+[1] [refactor] UIAudit add check for hard-coded Catalan strings in .java files (grep for common Catalan words that should be I18n keys)
+[1] [refactor] run.sh and run2.sh likely different modes — name run-swing.sh and run-web.sh for clarity
+[1] [refactor] run2.sh likely duplicates most of run.sh — consolidate into one script with --web / --swing argument
