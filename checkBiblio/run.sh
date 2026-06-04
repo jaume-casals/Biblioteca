@@ -26,7 +26,7 @@ for arg in "$@"; do
 done
 
 if ! command -v java &>/dev/null; then echo "ERROR: java not found in PATH" >&2; exit 1; fi
-for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar; do
+for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar; do
     [ -f "$jar" ] || { echo "ERROR: missing $jar" >&2; exit 1; }
 done
 
@@ -42,7 +42,7 @@ if [ "$RUN_AUDIT" -eq 0 ]; then
     exit 0
 fi
 
-CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar"
+CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar"
 
 # Auto-start Xvfb if no display is available
 if [ -z "$DISPLAY" ]; then
