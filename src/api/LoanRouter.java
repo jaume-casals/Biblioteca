@@ -40,6 +40,7 @@ public class LoanRouter {
     private void loan(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         String persona = j.has("persona") ? j.get("persona").getAsString() : "";
         if (persona.isBlank()) throw new IllegalArgumentException("Borrower name required");
         synchronized (cd) {

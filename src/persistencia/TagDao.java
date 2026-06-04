@@ -26,7 +26,7 @@ public class TagDao {
 
     TagDao(Connection con) { this.con = con; }
 
-    private void invalidateLlibreTagCache() { llibreTagCache = null; }
+    void invalidateLlibreTagCache() { llibreTagCache = null; }
 
     public synchronized ArrayList<Tag> getAll() {
         ArrayList<Tag> tags = new ArrayList<>();

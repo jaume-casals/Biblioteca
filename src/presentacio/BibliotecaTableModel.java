@@ -86,12 +86,4 @@ public class BibliotecaTableModel extends AbstractTableModel {
 
     /** Mutable backing list (package-private use by {@link TableController} only). */
     List<Llibre> getBooks() { return books; }
-
-    private static Object[] rowToValues(Llibre l) {
-        String estat = Boolean.TRUE.equals(l.getLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
-        return new Object[] {
-            "", l.getISBN() + "", l.getDisplayNom(Config.getLang()), l.getAutor(), l.getAny(),
-            l.getValoracio(), l.getPreu(), estat, l.getPagines() + "/" + l.getPaginesLlegides(), ""
-        };
-    }
 }

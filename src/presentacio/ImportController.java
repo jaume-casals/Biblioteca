@@ -46,8 +46,8 @@ public class ImportController {
                     if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
                         new DialogoError(new Exception(r.errorDetails())).showErrorMessage(); return;
                     }
-                    String msg = r.imported() + " llibres importats.";
-                    if (r.errors() > 0) msg += "\n" + r.errors() + " errors:" + r.errorDetails();
+                    String msg = I18n.t("dlg_import_json_msg", r.imported());
+                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors()) + r.errorDetails();
                     JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_title"),
                         r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
                     onDataChanged.run();

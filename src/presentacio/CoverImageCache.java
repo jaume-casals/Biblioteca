@@ -8,7 +8,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** LRU cover icons for table + gallery (shared across main screen). */
-final class CoverImageCache {
+public final class CoverImageCache {
+    /** Cached marker: no cover available (avoids re-fetch on every repaint). */
+    public static final ImageIcon NO_COVER = new ImageIcon(
+        new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB));
+
     private static final Map<Long, ImageIcon> CACHE =
         Collections.synchronizedMap(new LinkedHashMap<>(200, 0.75f, true) {
             @Override protected boolean removeEldestEntry(Map.Entry<Long, ImageIcon> e) {

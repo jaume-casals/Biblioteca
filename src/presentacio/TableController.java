@@ -46,6 +46,7 @@ class TableController {
     private final MostrarBibliotecaPanel vista;
     private final BibliotecaTableModel tableModel = new BibliotecaTableModel();
     private boolean columnsInstalled;
+    private boolean sortListenerAttached;
     private TableCellComponents.SearchHighlightRenderer highlightRenderer;
     private final java.util.TreeMap<Integer, TableColumn> hiddenCols = new java.util.TreeMap<>();
 
@@ -64,7 +65,9 @@ class TableController {
         if (t.getModel() != tableModel) {
             t.setModel(tableModel);
             columnsInstalled = false;
+            sortListenerAttached = false;
         }
+        attachSortPersistenceListener(t);
         if (!columnsInstalled) installColumns(t, cd, detallesBtn, coverCache, coverLoading, loanedIsbns, onRowUpdated);
     }
 
@@ -84,8 +87,10 @@ class TableController {
                 if (!e.isControlDown() || e.getClickCount() != 1) return;
                 int col = table.columnAtPoint(e.getPoint());
                 int row = table.rowAtPoint(e.getPoint());
-                if (col != COL_AUTOR || row < 0) return;
-                Object val = table.getValueAt(row, COL_AUTOR);
+                if (row < 0 || col < 0) return;
+                if (table.convertColumnIndexToModel(col) != COL_AUTOR) return;
+                int modelRow = table.convertRowIndexToModel(row);
+                Object val = table.getModel().getValueAt(modelRow, COL_AUTOR);
                 if (val == null) return;
                 String autor = val.toString().trim();
                 if (autor.isEmpty()) return;
@@ -99,15 +104,6 @@ class TableController {
         table.getActionMap().put("obrirDetalls", new AbstractAction() {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (table.getSelectedRow() >= 0) onOpenDetails.run();
-            }
-        });
-
-        table.getRowSorter().addRowSorterListener(e -> {
-            var keys = table.getRowSorter().getSortKeys();
-            if (keys.isEmpty()) Config.setSortColumn(-1);
-            else {
-                Config.setSortColumn(keys.get(0).getColumn());
-                Config.setSortOrder(keys.get(0).getSortOrder().name());
             }
         });
 
@@ -219,6 +215,21 @@ class TableController {
             }
         }
         columnsInstalled = true;
+    }
+
+    private void attachSortPersistenceListener(JTable table) {
+        if (sortListenerAttached) return;
+        javax.swing.RowSorter<?> sorter = table.getRowSorter();
+        if (sorter == null) return;
+        sorter.addRowSorterListener(e -> {
+            var keys = sorter.getSortKeys();
+            if (keys.isEmpty()) Config.setSortColumn(-1);
+            else {
+                Config.setSortColumn(keys.get(0).getColumn());
+                Config.setSortOrder(keys.get(0).getSortOrder().name());
+            }
+        });
+        sortListenerAttached = true;
     }
 
     private static TableColumn columnByModelIndex(JTable t, int modelIndex) {

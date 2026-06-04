@@ -1,6 +1,0 @@
-{
-"version":1,
-"llibres":[{"isbn":9780000000050,"nom":"GoldenBook","autor":"Author X","any":2020,"descripcio":"A description","valoracio":7.5,"preu":0.0,"llegit":true,"desitjat":false,"imatge":null,"notes":"","pagines":0,"paginesLlegides":0,"editorial":"","serie":"","volum":0,"dataCompra":null,"dataLectura":null,"idioma":null,"format":null,"paisOrigen":null,"llistes":[{"id":1,"valoracio":8.0,"llegit":true}],"tags":[1]}],
-"llistes":[{"id":1,"nom":"Fav"}],
-"tags":[{"id":1,"nom":"fiction"}]
-}

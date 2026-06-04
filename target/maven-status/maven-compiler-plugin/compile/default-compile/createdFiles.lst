@@ -12,6 +12,7 @@ domini\BibliotecaException.class
 presentacio\detalles\vista\DetallesLlibrePanel.class
 presentacio\GaleriaCobertesPanel$10.class
 persistencia\LlibreLlistaRow.class
+presentacio\detalles\control\DetallesLlibrePanelControl$5.class
 herramienta\DateUtils.class
 presentacio\GaleriaCobertesPanel$WrapLayout.class
 persistencia\ConnectionConfig.class
@@ -46,6 +47,7 @@ herramienta\Completer.class
 presentacio\LlibreFormBinder.class
 herramienta\OpenLibraryClient.class
 presentacio\detalles\control\DetallesLlibrePanelControl$HistoryHandler.class
+api\ApiAuth.class
 herramienta\OpenLibraryParser.class
 herramienta\BackupService.class
 herramienta\DbConfig.class
@@ -255,6 +257,8 @@ presentacio\ContextMenuController$1.class
 herramienta\FontSize.class
 api\MetaRouter.class
 presentacio\detalles\vista\GuardarLlibresDialogo$1.class
+presentacio\detalles\control\DetallesLlibrePanelControl$4.class
+presentacio\FilterController$4.class
 persistencia\LlibreTagRow.class
 domini\SortSpec.class
 presentacio\GaleriaCobertesPanel$11.class
@@ -277,6 +281,7 @@ presentacio\ImportController.class
 presentacio\MainFrameControl$2.class
 presentacio\detalles\control\TagsDelLlibreControl.class
 presentacio\GaleriaCobertesPanel$3.class
+api\ApiAuth$UnauthorizedException.class
 domini\ShelfParser$ShelfEntry.class
 presentacio\EstadistiquesHelper$BookStats.class
 presentacio\BackupController$1.class
@@ -311,6 +316,8 @@ presentacio\MainFrameControl$1.class
 api\HttpRouter.class
 herramienta\BookExporter.class
 herramienta\export\GoodreadsExportService.class
+presentacio\detalles\control\DetallesLlibrePanelControl$6.class
 presentacio\detalles\vista\LlistesDelLlibreDialog.class
 api\LlibreRouter.class
+api\OpenLibraryRouter$OpenLibraryUpstreamException.class
 interficie\BookReader.class

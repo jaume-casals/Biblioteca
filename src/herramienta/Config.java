@@ -171,6 +171,17 @@ public class Config {
     public static int getApiPort() { return parseInt(props.get("apiPort"), 7070); }
     public static void setApiPort(int port) { props.put("apiPort", String.valueOf(port)); save(); }
 
+    /** Secret for local HTTP API mutating requests (generated once, persisted). */
+    public static String getApiToken() {
+        String t = props.get("apiToken");
+        if (t == null || t.isBlank()) {
+            t = java.util.UUID.randomUUID().toString();
+            props.put("apiToken", t);
+            save();
+        }
+        return t;
+    }
+
     public static String getLastMode() { return props.get("lastMode"); }
     public static void setLastMode(String mode) {
         if (mode == null) props.remove("lastMode");

@@ -101,8 +101,9 @@ public class ConfigRouter {
         return m;
     }
 
-    private void setConfig(HttpCtx ctx, Map<String, Consumer<JsonElement>> setters) {
+    private void setConfig(HttpCtx ctx, Map<String, Consumer<JsonElement>> setters) throws Exception {
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
+        if (j == null) throw new IllegalArgumentException("Empty or malformed JSON body");
         List<String> unknown = new ArrayList<>();
         for (String key : j.keySet()) {
             if (!setters.containsKey(key)) unknown.add(key);
@@ -111,7 +112,14 @@ public class ConfigRouter {
             ctx.status(400).json(Map.of("error", "Unknown config keys", "keys", unknown));
             return;
         }
-        setters.forEach((key, setter) -> { if (j.has(key)) setter.accept(j.get(key)); });
+        for (String key : j.keySet()) {
+            if (!j.has(key)) continue;
+            try {
+                setters.get(key).accept(j.get(key));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid value for config key: " + key);
+            }
+        }
         boolean needsRestart = j.keySet().stream().anyMatch(RESTART_KEYS::contains);
         ctx.json(Map.of("ok", true, "requiresRestart", needsRestart));
     }

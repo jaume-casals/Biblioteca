@@ -36,6 +36,6 @@ public final class SortSpec {
 
     /** SQL ORDER BY expression fragment, e.g. "l.`ISBN` ASC" */
     public String toSql() {
-        return SQL_COLS.getOrDefault(column, "`ISBN`") + (ascending ? " ASC" : " DESC");
+        return SQL_COLS.getOrDefault(column, "l.`ISBN`") + (ascending ? " ASC" : " DESC");
     }
 }

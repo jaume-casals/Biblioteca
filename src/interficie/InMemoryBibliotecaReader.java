@@ -23,11 +23,11 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
 
     @Override public List<Llibre> getAllLlibres() { return new ArrayList<>(books); }
     @Override public Llibre getLlibre(long isbn) throws Exception {
-        for (Llibre l : books) if (l.getISBN() == isbn) return l;
+        for (Llibre l : books) if (java.util.Objects.equals(l.getISBN(), isbn)) return l;
         throw new Exception("Not found: " + isbn);
     }
     @Override public int getSize() { return books.size(); }
-    @Override public boolean existsLlibre(long isbn) { return books.stream().anyMatch(l -> l.getISBN() == isbn); }
+    @Override public boolean existsLlibre(long isbn) { return books.stream().anyMatch(l -> java.util.Objects.equals(l.getISBN(), isbn)); }
     @Override public List<Llibre> get10Llibres() { return new ArrayList<>(books.subList(0, Math.min(10, books.size()))); }
     @Override public List<Llibre> get100Llibres(int index) {
         int from = index * 100, to = Math.min(from + 100, books.size());
@@ -82,7 +82,7 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     @Override public List<Object[]> getAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
     @Override public int countLoans(long isbn) {
         int c = 0;
-        for (PrestecRow r : loans) if (r.isbn() == isbn) c++;
+        for (PrestecRow r : loans) if (java.util.Objects.equals(r.isbn(), isbn)) c++;
         return c;
     }
     @Override public byte[] getLlibreBlob(long isbn) { return null; }

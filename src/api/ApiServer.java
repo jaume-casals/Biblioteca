@@ -1,5 +1,6 @@
 package api;
 
+import com.google.gson.JsonSyntaxException;
 import domini.BibliotecaException;
 import interficie.BibliotecaWriter;
 
@@ -13,6 +14,7 @@ public class ApiServer {
     public ApiServer(int port, BibliotecaWriter cd) {
         this.port = port;
         this.router = new HttpRouter();
+        ApiAuth.registerRoutes(router);
 
         router.exception(ctx -> {
             Exception e = ctx.getException();
@@ -50,7 +52,14 @@ public class ApiServer {
                     case UNKNOWN    -> new StatusBody(500, "Internal error");
                 };
             }
-            if (t instanceof IllegalArgumentException || t instanceof NumberFormatException) {
+            if (t instanceof ApiAuth.UnauthorizedException) {
+                return new StatusBody(401, "Unauthorized");
+            }
+            if (t instanceof OpenLibraryRouter.OpenLibraryUpstreamException) {
+                return new StatusBody(502, "Upstream service error");
+            }
+            if (t instanceof IllegalArgumentException || t instanceof NumberFormatException
+                    || t instanceof JsonSyntaxException || t instanceof IllegalStateException) {
                 return new StatusBody(400, t.getMessage() != null ? t.getMessage() : "Bad request");
             }
             t = t.getCause();

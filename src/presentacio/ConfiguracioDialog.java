@@ -512,18 +512,20 @@ public class ConfiguracioDialog extends JDialog {
 		btnGuardar.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			String prevDbType = Config.getDbType();
+			if (external) {
+				String host = txtHost.getText().trim();
+				String user = txtUser.getText().trim();
+				if (host.isEmpty() || user.isEmpty()) {
+					JOptionPane.showMessageDialog(ConfiguracioDialog.this,
+						t("dlg_db_validation"),
+						t("dlg_error_title"), JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+			}
 			Config.withBatch(() -> {
 				if (external) {
-					String host = txtHost.getText().trim();
-					String user = txtUser.getText().trim();
-					if (host.isEmpty() || user.isEmpty()) {
-						JOptionPane.showMessageDialog(ConfiguracioDialog.this,
-							t("dlg_db_validation"),
-							t("dlg_error_title"), JOptionPane.ERROR_MESSAGE);
-						return;
-					}
-					Config.setDbHost(host);
-					Config.setDbUser(user);
+					Config.setDbHost(txtHost.getText().trim());
+					Config.setDbUser(txtUser.getText().trim());
 					Config.setDbPassword(new String(txtPass.getPassword()));
 				}
 				Config.setDbType(external ? "mariadb" : "h2");

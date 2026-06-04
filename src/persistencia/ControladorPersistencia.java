@@ -121,8 +121,14 @@ public class ControladorPersistencia {
 	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDao.getAll(); }
 
 	public synchronized void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.insert(llibre); }
-	public synchronized void eliminarLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.delete(llibre); }
-	public synchronized void eliminarLlibre(long ISBN) throws java.sql.SQLException { libreDao.delete(ISBN); }
+	public synchronized void eliminarLlibre(Llibre llibre) throws java.sql.SQLException {
+		libreDao.delete(llibre);
+		tagDao.invalidateLlibreTagCache();
+	}
+	public synchronized void eliminarLlibre(long ISBN) throws java.sql.SQLException {
+		libreDao.delete(ISBN);
+		tagDao.invalidateLlibreTagCache();
+	}
 	public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDao.executeSQLFile(file); }
 	public synchronized void updateLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.update(llibre); }
 	public synchronized ArrayList<Llibre> getRecentlyAdded(int n) { return libreDao.getRecentlyAdded(n); }
@@ -132,7 +138,10 @@ public class ControladorPersistencia {
 		libreDao.loadHeavyFields(isbn, target);
 	}
 	public synchronized void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreDao.setBlob(isbn, blob); }
-	public synchronized void clearAllData() throws java.sql.SQLException { libreDao.clearAllData(); }
+	public synchronized void clearAllData() throws java.sql.SQLException {
+		libreDao.clearAllData();
+		tagDao.invalidateLlibreTagCache();
+	}
 	public synchronized long getDbSizeBytes() { return libreDao.getDbSizeBytes(); }
 	public synchronized int countLlibres() { return libreDao.count(); }
 

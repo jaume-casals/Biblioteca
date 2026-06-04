@@ -49,7 +49,7 @@ public class ControladorDomini implements BibliotecaWriter {
 
 	public static synchronized void resetForTest() { inst = null; }
 
-	public static void resetForProfileSwitch() {
+	public static synchronized void resetForProfileSwitch() {
 		inst = null;
 		ControladorPersistencia.resetForProfileSwitch();
 	}

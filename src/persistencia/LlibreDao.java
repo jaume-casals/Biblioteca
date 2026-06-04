@@ -292,8 +292,8 @@ public class LlibreDao {
         java.util.List<Object> params = new java.util.ArrayList<>();
         if (f.getLlistaId() != null) params.add(f.getLlistaId());
         if (f.getTagId()    != null) params.add(f.getTagId());
-        if (f.getNom()          != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
-        if (f.getAutor()        != null) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.getAutor() + "%"); }
+        if (f.getNom()          != null && !f.getNom().isBlank()) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
+        if (f.getAutor()        != null && !f.getAutor().isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.getAutor() + "%"); }
         if (f.getIsbn()         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.getIsbn()); }
         if (f.getAnyMin()       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.getAnyMin()); }
         if (f.getAnyMax()       != null) { sql.append(" AND l.`any` <= ?");        params.add(f.getAnyMax()); }
@@ -302,10 +302,10 @@ public class LlibreDao {
         if (f.getPreuMin()      != null) { sql.append(" AND l.preu >= ?");         params.add(f.getPreuMin()); }
         if (f.getPreuMax()      != null) { sql.append(" AND l.preu <= ?");         params.add(f.getPreuMax()); }
         if (f.getLlegit()       != null) { sql.append(" AND l.llegit = ?");        params.add(f.getLlegit()); }
-        if (f.getEditorial()    != null) { sql.append(" AND l.editorial LIKE ?");  params.add("%" + f.getEditorial() + "%"); }
-        if (f.getSerie()        != null) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.getSerie() + "%"); }
-        if (f.getFormat()       != null) { sql.append(" AND l.format = ?");        params.add(f.getFormat()); }
-        if (f.getIdioma()       != null) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.getIdioma() + "%"); }
+        if (f.getEditorial()    != null && !f.getEditorial().isBlank()) { sql.append(" AND l.editorial LIKE ?");  params.add("%" + f.getEditorial() + "%"); }
+        if (f.getSerie()        != null && !f.getSerie().isBlank()) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.getSerie() + "%"); }
+        if (f.getFormat()       != null && !f.getFormat().isBlank()) { sql.append(" AND l.format = ?");        params.add(f.getFormat()); }
+        if (f.getIdioma()       != null && !f.getIdioma().isBlank()) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.getIdioma() + "%"); }
         domini.SortSpec sort = f.getSort();
         if (sort == null) sort = domini.SortSpec.defaultAsc();
         sql.append(" ORDER BY ").append(sort.toSql());

@@ -6,10 +6,11 @@ import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.table.*;
 
+import domini.Llibre;
 import herramienta.UITheme;
+import presentacio.BibliotecaTableModel;
 
 public class SearchHighlightRenderer extends DefaultTableCellRenderer {
-    private static final int COLUMNA_ISBN = 1;
     private String searchText = "";
     private final Supplier<Set<Long>> loanedISBNs;
 
@@ -23,10 +24,11 @@ public class SearchHighlightRenderer extends DefaultTableCellRenderer {
     public Component getTableCellRendererComponent(JTable t, Object value,
             boolean selected, boolean focus, int row, int col) {
         super.getTableCellRendererComponent(t, value, selected, focus, row, col);
-        if (!selected) {
+        if (!selected && t.getModel() instanceof BibliotecaTableModel model) {
             try {
-                long isbn = Long.parseLong((String) t.getValueAt(row, COLUMNA_ISBN));
-                if (loanedISBNs.get().contains(isbn)) {
+                int modelRow = t.convertRowIndexToModel(row);
+                Llibre l = model.getBookAt(modelRow);
+                if (l != null && loanedISBNs.get().contains(l.getISBN())) {
                     setBackground(UITheme.isDark() ? new java.awt.Color(0x5C3A00) : new java.awt.Color(0xFFF3CD));
                 }
             } catch (Exception ignored) {}

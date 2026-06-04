@@ -157,7 +157,7 @@ public class GaleriaCobertesPanel extends JPanel {
         selectedISBNs.add(currentLlibres.get(focusedIdx).getISBN());
         wrap.repaint();
         JPanel card = cardMap.get(currentLlibres.get(focusedIdx).getISBN());
-        if (card != null) card.scrollRectToVisible(card.getBounds());
+        if (card != null) card.scrollRectToVisible(new java.awt.Rectangle(0, 0, card.getWidth(), card.getHeight()));
     }
 
     public void setOnCardClick(java.util.function.Consumer<Llibre> cb)  { this.onCardClick = cb; }
@@ -258,7 +258,10 @@ public void updateLlibres(java.util.List<Llibre> llibres) {
     private void hideZoomPopup() {
         if (zoomOverlay != null) {
             java.awt.Container parent = zoomOverlay.getParent();
-            if (parent != null) parent.remove(zoomOverlay);
+            if (parent != null) {
+                parent.remove(zoomOverlay);
+                parent.repaint();
+            }
             zoomOverlay = null;
         }
     }

@@ -9,6 +9,7 @@ import herramienta.I18n;
 
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.SwingWorker;
 import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -128,7 +129,21 @@ class FilterController {
 
         boolean dbPath = state.currentLlistaId == null && state.cd.isLargeLibrary();
         if (dbPath) {
-            host.setTable(new ArrayList<>(MainFrameControl.getInstance().aplicarFiltres(f)));
+            final LlibreFilter filter = f;
+            state.vista.getbtnFiltrar().setEnabled(false);
+            new SwingWorker<ArrayList<Llibre>, Void>() {
+                @Override protected ArrayList<Llibre> doInBackground() {
+                    return new ArrayList<>(MainFrameControl.getInstance().aplicarFiltres(filter));
+                }
+                @Override protected void done() {
+                    state.vista.getbtnFiltrar().setEnabled(true);
+                    try {
+                        host.setTable(get());
+                    } catch (Exception ex) {
+                        new herramienta.DialogoError(ex).showErrorMessage();
+                    }
+                }
+            }.execute();
             return;
         }
 

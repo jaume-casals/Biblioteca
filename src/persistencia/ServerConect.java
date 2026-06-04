@@ -120,8 +120,9 @@ public class ServerConect {
 		if ("h2".equals(dbType)) {
 			String dir = System.getProperty("user.home") + "/.biblioteca";
 			new File(dir).mkdirs();
-			String profile = props.getProperty("dbProfile", "biblioteca");
- String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + profile.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + ";MODE=MySQL;NON_KEYWORDS=VALUE";
+			String profile = sanitizeH2Profile(props.getProperty("dbProfile", "biblioteca"));
+			String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "")
+				+ "/" + profile + ";MODE=MySQL;NON_KEYWORDS=VALUE";
 			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 		} else {
 			String host = props.getProperty("dbHost", "localhost");
@@ -147,7 +148,8 @@ public class ServerConect {
 			} else if ("h2".equals(cfg.dbType())) {
 				String dir = System.getProperty("user.home") + "/.biblioteca";
 				new File(dir).mkdirs();
-				 String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
+				String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "")
+					+ "/" + sanitizeH2Profile(cfg.profile()) + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 			} else {
 				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
@@ -167,33 +169,87 @@ public class ServerConect {
 		}
 	}
 
+	/** Rejects path separators in H2 file profile names (jdbc:h2:dir/profile). */
+	static String sanitizeH2Profile(String profile) {
+		if (profile == null || profile.isBlank()) return "biblioteca";
+		String p = profile.trim();
+		if (p.contains("/") || p.contains("\\") || p.contains(".."))
+			throw new IllegalArgumentException("Invalid H2 db profile name: " + profile);
+		return p;
+	}
+
 	private void runMigrations() throws SQLException {
 		boolean prevAutoCommit = con.getAutoCommit();
-		java.sql.Savepoint sp = prevAutoCommit ? null : con.setSavepoint();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
 			java.util.Set<Integer> applied = new java.util.HashSet<>();
 			try (ResultSet rs = st.executeQuery("SELECT version FROM schema_version")) {
 				while (rs.next()) applied.add(rs.getInt(1));
 			}
-			if (prevAutoCommit) con.setAutoCommit(false);
 			try (PreparedStatement ins = con.prepareStatement("INSERT INTO schema_version VALUES (?)")) {
 				for (Migration m : MIGRATIONS) {
-					if (!applied.contains(m.version())) {
-						st.executeUpdate(m.sql());
+					if (applied.contains(m.version())) continue;
+					boolean prev = con.getAutoCommit();
+					try {
+						con.setAutoCommit(false);
+						if (m.version() == 34) {
+							if (!applyMigration34DropAutor(st)) {
+								con.rollback();
+								continue;
+							}
+						} else {
+							st.executeUpdate(m.sql());
+						}
 						ins.setInt(1, m.version());
 						ins.execute();
+						con.commit();
 						applied.add(m.version());
+					} catch (SQLException e) {
+						try { con.rollback(); } catch (SQLException ex) {
+							System.err.println("Migration " + m.version() + " rollback failed: " + ex.getMessage());
+						}
+						throw e;
+					} finally {
+						con.setAutoCommit(prev);
 					}
 				}
 			}
-			con.commit();
-		} catch (SQLException e) {
-			if (prevAutoCommit) { try { con.rollback(); } catch (SQLException ex) { System.err.println("Migration rollback failed: " + ex.getMessage()); } }
-			else { try { con.rollback(sp); } catch (SQLException ex) { System.err.println("Migration rollback to savepoint failed: " + ex.getMessage()); } }
-			throw e;
 		} finally {
 			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}
+		}
+	}
+
+	/**
+	 * Drops {@code llibre.autor} only when every non-empty legacy author row has a
+	 * matching {@code llibre_autor} link. Skips (returns false) if unmigrated rows remain.
+	 */
+	private boolean applyMigration34DropAutor(Statement st) throws SQLException {
+		if (!columnExists("llibre", "autor")) return true;
+		int unmigrated;
+		try (ResultSet rs = st.executeQuery(
+				"SELECT COUNT(*) FROM llibre l WHERE TRIM(l.autor) IS NOT NULL AND TRIM(l.autor) != '' " +
+				"AND l.ISBN NOT IN (SELECT isbn FROM llibre_autor)")) {
+			rs.next();
+			unmigrated = rs.getInt(1);
+		}
+		if (unmigrated > 0) {
+			System.err.println("Migration 34: skipping DROP COLUMN autor — " + unmigrated
+				+ " book(s) still lack llibre_autor rows (re-run after fixing data)");
+			return false;
+		}
+		st.executeUpdate("ALTER TABLE llibre DROP COLUMN autor");
+		return true;
+	}
+
+	private boolean columnExists(String table, String column) throws SQLException {
+		java.sql.DatabaseMetaData meta = con.getMetaData();
+		String catalog = con.getCatalog();
+		try (ResultSet rs = meta.getColumns(catalog, null, table, column)) {
+			if (rs.next()) return true;
+		}
+		try (ResultSet rs = meta.getColumns(catalog, null, table.toUpperCase(java.util.Locale.ROOT),
+				column.toUpperCase(java.util.Locale.ROOT))) {
+			return rs.next();
 		}
 	}
 

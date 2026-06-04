@@ -21,8 +21,6 @@ import interficie.BibliotecaWriter;
  */
 public class TableCellComponents {
 
-    private static final int COLUMNA_ISBN = 1;
-
     // ── Re-exports for backward compatibility ─────────────────────────────────
 
     public static class CoverCellRenderer extends presentacio.renderers.CoverCellRenderer {

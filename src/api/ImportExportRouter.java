@@ -65,8 +65,15 @@ public class ImportExportRouter {
 
     private void importJson(HttpCtx ctx) throws Exception {
         String body = ctx.body();
-        if (body == null || body.isBlank()) throw new Exception("Empty body");
-        ImportResult r = JsonImporter.run(JsonParser.parseString(body).getAsJsonObject(), cd);
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
+        com.google.gson.JsonElement parsed;
+        try {
+            parsed = JsonParser.parseString(body);
+        } catch (com.google.gson.JsonSyntaxException e) {
+            throw new IllegalArgumentException("Malformed JSON");
+        }
+        if (!parsed.isJsonObject()) throw new IllegalArgumentException("JSON body must be an object");
+        ImportResult r = JsonImporter.run(parsed.getAsJsonObject(), cd);
         ctx.json(Map.of("ok", r.imported(), "skipped", r.skipped(), "errors", r.errors(), "errorDetails", r.errorDetails()));
     }
 
@@ -80,9 +87,9 @@ public class ImportExportRouter {
 
     private void importCsv(HttpCtx ctx) throws Exception {
         String body = ctx.body();
-        if (body == null || body.isBlank()) throw new Exception("Empty body");
+        if (body == null || body.isBlank()) throw new IllegalArgumentException("Empty body");
         String[] lines = body.split("\r?\n", -1);
-        if (lines.length < 2) throw new Exception("CSV has no data rows");
+        if (lines.length < 2) throw new IllegalArgumentException("CSV has no data rows");
         String headerLine = lines[0];
         String[] headers = CsvUtils.parseLine(headerLine);
         Map<String, Integer> hMap = new HashMap<>();
@@ -101,7 +108,11 @@ public class ImportExportRouter {
             try {
                 if (strategy.parseLine(CsvUtils.parseLine(lines[i]), hMap, cd)) ok++;
                 else skipped++;
-            } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
+            } catch (Exception e) {
+                err++;
+                String msg = e.getMessage();
+                errDetails.add(msg != null ? msg : e.getClass().getSimpleName());
+            }
         }
         ctx.json(Map.of("ok", ok, "skipped", skipped, "errors", err, "errorDetails", errDetails));
     }

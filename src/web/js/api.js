@@ -1,7 +1,21 @@
 const API_BASE = '/api';
 
+let apiToken = null;
+
+async function ensureApiToken() {
+    if (apiToken) return apiToken;
+    const r = await fetch(API_BASE + '/auth/token');
+    if (!r.ok) throw new Error('Failed to obtain API token');
+    const j = JSON.parse(await r.text());
+    apiToken = j.token;
+    return apiToken;
+}
+
 async function req(method, path, body, opts_extra) {
     const opts = { method, headers: {}, ...opts_extra };
+    if (method !== 'GET') {
+        opts.headers['X-Biblioteca-Token'] = await ensureApiToken();
+    }
     if (body !== undefined && body !== null) {
         if (body instanceof ArrayBuffer || body instanceof Uint8Array) {
             // raw binary (image upload)
@@ -92,7 +106,9 @@ const api = {
 
     importexport: {
         exportJson: async () => {
-            const r = await fetch(API_BASE + '/export/json');
+            const r = await fetch(API_BASE + '/export/json', {
+                headers: { 'X-Biblioteca-Token': await ensureApiToken() },
+            });
             if (!r.ok) throw new Error('Export failed');
             const blob = await r.blob();
             const url = URL.createObjectURL(blob);
@@ -110,7 +126,9 @@ const api = {
         },
         fetchCovers: () => api.post('/covers/fetch'),
         exportGoodreads: async () => {
-            const r = await fetch(API_BASE + '/export/csv/goodreads');
+            const r = await fetch(API_BASE + '/export/csv/goodreads', {
+                headers: { 'X-Biblioteca-Token': await ensureApiToken() },
+            });
             if (!r.ok) throw new Error('Export failed');
             const blob = await r.blob();
             const url = URL.createObjectURL(blob);

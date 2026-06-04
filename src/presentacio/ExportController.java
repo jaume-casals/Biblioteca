@@ -126,31 +126,34 @@ public class ExportController {
         java.util.concurrent.atomic.AtomicInteger fetched = new java.util.concurrent.atomic.AtomicInteger(0);
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8,
             r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
-        for (Llibre l : missing) {
-            pool.submit(() -> {
-                try {
-                    byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
-                    if (blob != null && blob.length > 0) {
-                        cd.setLlibreBlob(l.getISBN(), blob);
-                        fetched.incrementAndGet();
-                    }
-                } catch (Exception ignored) {} finally {
-                    int d = done.incrementAndGet();
-                    SwingUtilities.invokeLater(() -> {
-                        bar.setValue(d);
-                        lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
-                        if (d >= total) {
-                            pool.shutdown();
-                            dlg.dispose();
-                            if (fetchBtn != null) fetchBtn.setEnabled(true);
-                            JOptionPane.showMessageDialog(parent,
-                                I18n.t("dlg_fetch_portades_done", fetched.get(), total),
-                                I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
-                            onDataChanged.run();
+        try {
+            for (Llibre l : missing) {
+                pool.submit(() -> {
+                    try {
+                        byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
+                        if (blob != null && blob.length > 0) {
+                            cd.setLlibreBlob(l.getISBN(), blob);
+                            fetched.incrementAndGet();
                         }
-                    });
-                }
-            });
+                    } catch (Exception ignored) {} finally {
+                        int d = done.incrementAndGet();
+                        SwingUtilities.invokeLater(() -> {
+                            bar.setValue(d);
+                            lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
+                            if (d >= total) {
+                                dlg.dispose();
+                                if (fetchBtn != null) fetchBtn.setEnabled(true);
+                                JOptionPane.showMessageDialog(parent,
+                                    I18n.t("dlg_fetch_portades_done", fetched.get(), total),
+                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                onDataChanged.run();
+                            }
+                        });
+                    }
+                });
+            }
+        } finally {
+            pool.shutdown();
         }
     }
 

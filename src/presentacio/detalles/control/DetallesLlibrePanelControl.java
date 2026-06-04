@@ -19,7 +19,7 @@ public class DetallesLlibrePanelControl {
 	private BibliotecaWriter cLlibres;
 	private EnActualizarBBDD enActualizarBBDD;
 	private byte[] pendingBlob;
-	private java.util.concurrent.Future<byte[]> imageFuture;
+	private javax.swing.SwingWorker<byte[], Void> imageWorker;
 	private static final java.util.concurrent.ExecutorService IMAGE_EXECUTOR =
 		java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
 			Thread t = new Thread(r, "image-loader");
@@ -47,14 +47,24 @@ public class DetallesLlibrePanelControl {
 
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
-				if (imageFuture != null) imageFuture.cancel(true);
+				if (imageWorker != null) imageWorker.cancel(true);
 			}
 		});
 
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
 		if (l != null && !l.isHeavyFieldsLoaded()) {
-			try { cLlibres.loadHeavyFields(l); } catch (Exception ignored) {}
+			final Llibre book = l;
+			new javax.swing.SwingWorker<Void, Void>() {
+				@Override protected Void doInBackground() {
+					try { cLlibres.loadHeavyFields(book); } catch (Exception ignored) {}
+					return null;
+				}
+				@Override protected void done() {
+					vista.getTextDescripcio().setText(java.util.Objects.toString(book.getDescripcio(), ""));
+					vista.getTextNotes().setText(book.getNotes() != null ? book.getNotes() : "");
+				}
+			}.execute();
 		}
 
 		pendingBlob = l.getImatgeBlob();
@@ -83,10 +93,27 @@ public class DetallesLlibrePanelControl {
 			public void changedUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
 		});
 
-		FieldAutoComplete.attach(this.vista.getTextAutor(),    cLlibres.getDistinctAutorNames());
-		FieldAutoComplete.attach(this.vista.getTextEditorial(), cLlibres.getDistinctValues("editorial"));
-		FieldAutoComplete.attach(this.vista.getTextSerie(),     cLlibres.getDistinctValues("serie"));
-		FieldAutoComplete.attach(this.vista.getTextIdioma(),    cLlibres.getDistinctValues("idioma"));
+		new javax.swing.SwingWorker<java.util.List<String>[], Void>() {
+			@Override protected java.util.List<String>[] doInBackground() {
+				@SuppressWarnings("unchecked")
+				java.util.List<String>[] lists = new java.util.List[] {
+					cLlibres.getDistinctAutorNames(),
+					cLlibres.getDistinctValues("editorial"),
+					cLlibres.getDistinctValues("serie"),
+					cLlibres.getDistinctValues("idioma")
+				};
+				return lists;
+			}
+			@Override protected void done() {
+				try {
+					java.util.List<String>[] lists = get();
+					FieldAutoComplete.attach(vista.getTextAutor(), lists[0]);
+					FieldAutoComplete.attach(vista.getTextEditorial(), lists[1]);
+					FieldAutoComplete.attach(vista.getTextSerie(), lists[2]);
+					FieldAutoComplete.attach(vista.getTextIdioma(), lists[3]);
+				} catch (Exception ignored) {}
+			}
+		}.execute();
 
 		this.vista.getTextAny().setText(java.util.Objects.toString(l.getAny(), ""));
 		this.vista.getTextAutor().setText(java.util.Objects.toString(l.getAutor(), ""));
@@ -149,20 +176,25 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void startImatgeWorker(java.util.concurrent.Callable<byte[]> loader) {
-		if (imageFuture != null) imageFuture.cancel(true);
-		java.util.concurrent.Callable<byte[]> task = loader;
-		imageFuture = IMAGE_EXECUTOR.submit(task);
-		javax.swing.SwingUtilities.invokeLater(() -> {
-			try {
-				byte[] data = imageFuture.get();
-				if (data != null) {
-					pendingBlob = data;
-					carregarImatgeBlob(data);
-				}
-			} catch (Exception ignored) {
-				vista.getLabelIcono().setIcon(null);
+		if (imageWorker != null) imageWorker.cancel(true);
+		imageWorker = new javax.swing.SwingWorker<byte[], Void>() {
+			@Override protected byte[] doInBackground() throws Exception {
+				return loader.call();
 			}
-		});
+			@Override protected void done() {
+				if (isCancelled()) return;
+				try {
+					byte[] data = get();
+					if (data != null) {
+						pendingBlob = data;
+						carregarImatgeBlob(data);
+					}
+				} catch (Exception ignored) {
+					vista.getLabelIcono().setIcon(null);
+				}
+			}
+		};
+		imageWorker.execute();
 	}
 
 	private void carregarImatgeBlob(byte[] data) {

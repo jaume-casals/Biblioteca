@@ -8,10 +8,8 @@ import javax.swing.table.*;
 import domini.Llibre;
 import herramienta.UITheme;
 import presentacio.BibliotecaTableModel;
-import presentacio.MainFrameControl;
 
 public class ProgressBarRenderer extends JProgressBar implements TableCellRenderer {
-    private static final int COLUMNA_ISBN = 1;
 
     public ProgressBarRenderer() {
         setMinimum(0);

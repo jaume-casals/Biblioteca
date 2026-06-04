@@ -57,7 +57,9 @@ public final class ShelfParser {
                         l.getISBN(), esc(l.getNom()), esc(l.getAutor()), l.getAny(),
                         esc(l.getDescripcio()), l.getValoracio(), l.getPreu(), l.getLlegit(),
                         esc(l.getImatge()), llistesStr);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    System.err.println("ShelfParser.exportToCsv: skipped ISBN " + l.getISBN() + ": " + e.getMessage());
+                }
             }
         }
     }

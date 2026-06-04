@@ -103,8 +103,8 @@ public class LlistaRouter {
         int id    = ctx.pathParamInt("id");
         long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        double valoracio = j.has("valoracio") ? j.get("valoracio").getAsDouble() : 0.0;
-        boolean llegit   = j.has("llegit") && j.get("llegit").getAsBoolean();
+        double valoracio = jsonDouble(j, "valoracio", 0.0);
+        boolean llegit   = jsonBool(j, "llegit", false);
         synchronized (cd) { cd.addLlibreToLlista(isbn, id, valoracio, llegit); }
         ctx.status(201).json(Map.of("ok", true));
     }
@@ -113,8 +113,8 @@ public class LlistaRouter {
         int id    = ctx.pathParamInt("id");
         long isbn = ctx.pathParamLong("isbn");
         JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-        double valoracio = j.has("valoracio") ? j.get("valoracio").getAsDouble() : 0.0;
-        boolean llegit   = j.has("llegit") && j.get("llegit").getAsBoolean();
+        double valoracio = jsonDouble(j, "valoracio", 0.0);
+        boolean llegit   = jsonBool(j, "llegit", false);
         synchronized (cd) { cd.updateLlibreInLlista(isbn, id, valoracio, llegit); }
         ctx.json(Map.of("ok", true));
     }
@@ -124,5 +124,17 @@ public class LlistaRouter {
         long isbn = ctx.pathParamLong("isbn");
         synchronized (cd) { cd.removeLlibreFromLlista(isbn, id); }
         ctx.status(204);
+    }
+
+    private static double jsonDouble(JsonObject j, String key, double defaultVal) {
+        if (j == null || !j.has(key) || j.get(key).isJsonNull()) return defaultVal;
+        try { return j.get(key).getAsDouble(); }
+        catch (Exception e) { throw new IllegalArgumentException("Invalid number for '" + key + "'"); }
+    }
+
+    private static boolean jsonBool(JsonObject j, String key, boolean defaultVal) {
+        if (j == null || !j.has(key) || j.get(key).isJsonNull()) return defaultVal;
+        try { return j.get(key).getAsBoolean(); }
+        catch (Exception e) { throw new IllegalArgumentException("Invalid boolean for '" + key + "'"); }
     }
 }

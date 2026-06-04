@@ -4,6 +4,7 @@ import herramienta.Config;
 import interficie.BibliotecaWriter;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -49,13 +50,15 @@ public class BackupRouter {
 
     private void restore(HttpCtx ctx) throws Exception {
         byte[] data = ctx.bodyBytes();
-        if (data.length == 0) throw new Exception("Empty SQL body");
+        if (data.length == 0) throw new IllegalArgumentException("Empty SQL body");
         File tmp = File.createTempFile("biblioteca_restore_", ".sql");
+        tmp.deleteOnExit();
         try {
             Files.write(tmp.toPath(), data);
             synchronized (cd) { cd.restoreFromSQL(tmp); }
         } finally {
-            tmp.delete();
+            try { java.nio.file.Files.deleteIfExists(tmp.toPath()); }
+            catch (IOException e) { System.err.println("Failed to delete restore temp file: " + tmp); }
         }
         ctx.json(Map.of("ok", true));
     }

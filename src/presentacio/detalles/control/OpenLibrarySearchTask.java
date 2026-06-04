@@ -93,9 +93,9 @@ public class OpenLibrarySearchTask extends SwingWorker<OpenLibrarySearchTask.Sea
                 return;
             }
 
-            if (meta.containsKey("title"))
+            if (meta.containsKey("title") && vista.getTextNom().getText().isEmpty())
                 vista.getTextNom().setText(meta.get("title"));
-            if (meta.containsKey("autor"))
+            if (meta.containsKey("autor") && vista.getTextAutor().getText().isEmpty())
                 vista.getTextAutor().setText(meta.get("autor"));
             if (meta.containsKey("any") && vista.getTextAny().getText().isEmpty())
                 vista.getTextAny().setText(meta.get("any"));

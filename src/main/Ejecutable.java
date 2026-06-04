@@ -19,9 +19,15 @@ import javax.swing.UIManager;
 public class Ejecutable {
 
     private static SplashScreen splashRef;
+    private static volatile boolean webMode;
 
     public static void main(String[] args) throws Exception {
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            if (webMode) {
+                System.err.println("Fatal error on thread " + t.getName() + ": " + e.getMessage());
+                e.printStackTrace(System.err);
+                System.exit(1);
+            }
             if (splashRef != null) splashRef.forceHide();
             herramienta.DialogoError err = e instanceof Exception ? new herramienta.DialogoError((Exception) e) : new herramienta.DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
             err.showErrorMessage();
@@ -38,6 +44,7 @@ public class Ejecutable {
             persistencia.ControladorPersistencia::resetForProfileSwitch));
 
         if ("web".equals(modeStr)) {
+            webMode = true;
             System.out.println("Starting database...");
             try {
                 ControladorDomini.getInstance();
@@ -76,8 +83,12 @@ public class Ejecutable {
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
         System.out.println("Biblioteca escoltant a http://localhost:" + port);
         System.out.println("Prem Ctrl+C per aturar.");
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-            Desktop.getDesktop().browse(new URI("http://localhost:" + port));
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new URI("http://localhost:" + port));
+            }
+        } catch (Exception e) {
+            System.out.println("Could not open browser: " + e.getMessage());
         }
     }
 

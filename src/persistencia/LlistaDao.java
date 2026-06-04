@@ -205,12 +205,12 @@ public class LlistaDao {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         out.add(domini.LlibreLlistaContext.of(
-                            (int) isbn,
+                            isbn,
                             rs.getInt(1),
                             rs.getString(2),
                             rs.getInt(5),
                             rs.getString(6),
-                            rs.getDouble(3),
+                            rs.getObject(3, Double.class),
                             rs.getBoolean(4)
                         ));
                     }

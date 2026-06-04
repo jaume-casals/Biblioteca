@@ -49,8 +49,11 @@ public class LlibreRouter {
         if (f.hasAnyFilter()) {
             result = new java.util.ArrayList<>(cd.aplicarFiltres(f));
         } else if (notBlank(pageStr)) {
-            int page = 0;
-            try { page = Integer.parseInt(pageStr); } catch (NumberFormatException ignored) {}
+            int page;
+            try { page = Integer.parseInt(pageStr); }
+            catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid page: " + pageStr);
+            }
             result = new java.util.ArrayList<>(cd.get100Llibres(page));
         } else {
             result = new java.util.ArrayList<>(cd.getAllLlibres());
@@ -131,13 +134,16 @@ public class LlibreRouter {
         if (blob.length >= 3 && (blob[0] & 0xFF) == 0xFF && (blob[1] & 0xFF) == 0xD8 && (blob[2] & 0xFF) == 0xFF) {
             return "image/jpeg";
         }
-        return "image/jpeg";
+        return "application/octet-stream";
     }
+
+    private static final int MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
     private void uploadImage(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         byte[] bytes = ctx.bodyBytes();
-        if (bytes.length == 0) throw new Exception("Empty image body");
+        if (bytes.length == 0) throw new IllegalArgumentException("Empty image body");
+        if (bytes.length > MAX_IMAGE_BYTES) throw new IllegalArgumentException("Image too large");
         cd.setLlibreBlob(isbn, bytes);
         try { cd.getLlibre(isbn).setHasBlob(true); } catch (Exception ignored) {}
         ctx.json(Map.of("ok", true));
@@ -180,7 +186,12 @@ public class LlibreRouter {
     private static LlibreFilter buildFilter(HttpCtx ctx) {
         domini.LlibreFilterBuilder b = domini.LlibreFilterBuilder.of();
         String isbnStr = ctx.queryParamOrNull("isbn");
-        if (isbnStr != null) { try { b.isbn(Long.parseLong(isbnStr)); } catch (NumberFormatException ignored) {} }
+        if (isbnStr != null) {
+            try { b.isbn(Long.parseLong(isbnStr)); }
+            catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid isbn query param: " + isbnStr);
+            }
+        }
         b.autor(ctx.queryParamOrNull("author"));
         b.nom(ctx.queryParamOrNull("title"));
         b.anyMin(ctx.queryParamInt("yearMin"));

@@ -51,8 +51,10 @@ public class TagRouter {
     private void addToBook(HttpCtx ctx) throws Exception {
         long isbn = ctx.pathParamLong("isbn");
         int id    = ctx.pathParamInt("id");
-        if (!cd.existsLlibre(isbn)) { ctx.status(404).json(Map.of("error", "Book not found")); return; }
-        synchronized (cd) { cd.addLlibreToTag(isbn, id); }
+        synchronized (cd) {
+            if (!cd.existsLlibre(isbn)) { ctx.status(404).json(Map.of("error", "Book not found")); return; }
+            cd.addLlibreToTag(isbn, id);
+        }
         ctx.status(201).json(Map.of("ok", true));
     }
 

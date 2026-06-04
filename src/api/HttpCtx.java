@@ -3,9 +3,12 @@ package api;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 public class HttpCtx {
+
+    private static final int MAX_BODY_BYTES = 50 * 1024 * 1024;
 
     private final HttpExchange ex;
     private final Map<String, String> pathParams;
@@ -55,13 +58,19 @@ public class HttpCtx {
     public Integer queryParamInt(String key) {
         String v = queryParamOrNull(key);
         if (v == null) return null;
-        try { return Integer.parseInt(v); } catch (NumberFormatException e) { return null; }
+        try { return Integer.parseInt(v); }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid integer query param '" + key + "': " + v);
+        }
     }
 
     public Double queryParamDbl(String key) {
         String v = queryParamOrNull(key);
         if (v == null) return null;
-        try { return Double.parseDouble(v); } catch (NumberFormatException e) { return null; }
+        try { return Double.parseDouble(v); }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid number query param '" + key + "': " + v);
+        }
     }
 
     public Boolean queryParamBool(String key) {
@@ -72,12 +81,27 @@ public class HttpCtx {
     public byte[] bodyBytes() {
         if (cachedBodyBytes != null) return cachedBodyBytes;
         try {
-            java.io.InputStream is = ex.getRequestBody();
-            if (is == null) { cachedBodyBytes = new byte[0]; return cachedBodyBytes; }
-            int available = is.available();
-            if (available > 50 * 1024 * 1024) throw new IllegalStateException("Request body too large: " + available + " bytes");
-            cachedBodyBytes = is.readAllBytes();
-        } catch (IOException e) { throw new RuntimeException("Failed to read request body", e); }
+            String cl = ex.getRequestHeaders().getFirst("Content-Length");
+            if (cl != null && !cl.isBlank()) {
+                long len = Long.parseLong(cl.trim());
+                if (len > MAX_BODY_BYTES) {
+                    throw new IllegalArgumentException("Request body too large: " + len + " bytes");
+                }
+            }
+            InputStream is = ex.getRequestBody();
+            if (is == null) {
+                cachedBodyBytes = new byte[0];
+                return cachedBodyBytes;
+            }
+            cachedBodyBytes = is.readNBytes(MAX_BODY_BYTES + 1);
+            if (cachedBodyBytes.length > MAX_BODY_BYTES) {
+                throw new IllegalArgumentException("Request body too large");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read request body", e);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid Content-Length header");
+        }
         return cachedBodyBytes;
     }
 
@@ -89,7 +113,11 @@ public class HttpCtx {
 
     public String header(String name) { return ex.getRequestHeaders().getFirst(name); }
 
-    public HttpCtx status(int code) { this.status = code; return this; }
+    public HttpCtx status(int code) {
+        if (code < 100 || code > 599) throw new IllegalArgumentException("Invalid HTTP status: " + code);
+        this.status = code;
+        return this;
+    }
 
     public void json(Object obj) {
         this.contentType = "application/json; charset=utf-8";
@@ -101,6 +129,8 @@ public class HttpCtx {
     public HttpCtx contentType(String ct) { this.contentType = ct; return this; }
 
     public HttpCtx responseHeader(String name, String value) { responseHeaders.put(name, value); return this; }
+
+    public boolean isCommitted() { return committed; }
 
     private Exception storedEx;
     void setException(Exception e) { this.storedEx = e; }
@@ -114,6 +144,7 @@ public class HttpCtx {
         responseHeaders.forEach((k, v) -> ex.getResponseHeaders().set(k, v));
         if (corsOrigin != null) {
             ex.getResponseHeaders().set("Access-Control-Allow-Origin", corsOrigin);
+            ex.getResponseHeaders().set("Vary", "Origin");
         }
         long bodyLen = body.length == 0 ? -1 : body.length;
         ex.sendResponseHeaders(status, bodyLen);

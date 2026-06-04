@@ -48,6 +48,7 @@
           </includes>
           <systemPropertyVariables>
             <biblioteca.test>true</biblioteca.test>
+            <biblioteca.h2.url>jdbc:h2:mem:junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1</biblioteca.h2.url>
           </systemPropertyVariables>
         </configuration>
       </plugin>
