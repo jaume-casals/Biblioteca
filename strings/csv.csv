@@ -30,7 +30,6 @@ lbl_csv_files,CSV files,CSV files,CSV files
 # ── Java: GestioLlistesDialog ─────────────────────────────────────────────────
 # ── Java: ConfiguracioDialog profile management ───────────────────────────────
 # ── Java: GuardarLlibresDialogoControl (internet search) ─────────────────────
-# ── Java: ModeSelectorDialog ──────────────────────────────────────────────────
 # ── Java: TagsDelLlibreDialog ─────────────────────────────────────────────────
 # ── Java: GuardarLlibresDialogo (add book dialog) ────────────────────────────
 # ── Java: MostrarBibliotecaPanel sidebar/toolbar ─────────────────────────────

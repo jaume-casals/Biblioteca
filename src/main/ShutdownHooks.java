@@ -1,6 +1,6 @@
 package main;
 
-/** Centralized shutdown-hook registration shared by web and swing modes. */
+/** Centralized application shutdown-hook registration. */
 public final class ShutdownHooks {
     private ShutdownHooks() {}
 

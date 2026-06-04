@@ -13,7 +13,6 @@ Split from `tot.txt` for parallel AI work. Load **one** brief per session.
 | Coordinator | [01-coordinator.md](01-coordinator.md) | Minimax 2.7 — planning, triage | Cross-cutting, sessions, security overview |
 | Domain + DB | [02-domini-persistencia.md](02-domini-persistencia.md) | Minimax / Composer | `src/domini/`, `src/persistencia/`, `src/interficie/` |
 | Swing UI | [03-presentacio-swing.md](03-presentacio-swing.md) | **Composer** (UI-heavy) | `src/presentacio/` |
-| HTTP API | [04-api-http.md](04-api-http.md) | Minimax / Composer | `src/api/`, `src/main/` |
 | Import/export/tools | [05-herramienta-io.md](05-herramienta-io.md) | Minimax / Composer | `src/herramienta/` |
 | QA / checkBiblio | [07-checkbiblio-qa.md](07-checkbiblio-qa.md) | Composer or Minimax | `checkBiblio/`, `run.sh`, `run2.sh` |
 

@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Importador JSON compartit per {@link BookImporter#importJSON(File, BibliotecaWriter)}
- * i {@code api.ImportExportRouter#importJson}. Lònica deduplicada — un
+ * Importador JSON compartit per {@link BookImporter#importJSON(File, BibliotecaWriter)}.
+ * Lònica deduplicada — un
  * canvi en el format d'entrada només cal aplicar-lo aquí.
  */
 public final class JsonImporter {

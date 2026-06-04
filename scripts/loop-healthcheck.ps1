@@ -27,29 +27,6 @@ else {
   }
 }
 
-$cpFile = Join-Path $base '.loop-lib\classpath.txt'
-if ((Test-Path $mv) -and -not (Test-Path $cpFile)) {
-  & $mv -f (Join-Path $base 'pom.xml') -q dependency:build-classpath "-Dmdep.outputFile=$cpFile" "-Dmdep.pathSeparator=;" | Out-Null
-  & $mv -f (Join-Path $base 'pom.xml') -q compile | Out-Null
-}
-if (Test-Path $cpFile) {
-  $cp = (Join-Path $base 'target\classes') + ';' + (Get-Content $cpFile -Raw).Trim()
-  $h2 = 'jdbc:h2:mem:loopcheck;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1'
-  $errLog = Join-Path $base '.loop-lib\loop-web-err.txt'
-  Remove-Item $errLog -ErrorAction SilentlyContinue
-  $argList = @('-Dbiblioteca.test=true', "-Dbiblioteca.h2.url=$h2", '-cp', $cp, 'main.WebLauncher', '--web')
-  $p = Start-Process java -ArgumentList $argList -PassThru -RedirectStandardError $errLog -NoNewWindow
-  Start-Sleep -Seconds 6
-  if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
-  $err = (Get-Content $errLog -ErrorAction SilentlyContinue) -join ' '
-  if ($err -match 'Error inicialitzant|No s''ha pogut connectar') {
-    $lines += "[bug] WebLauncher still fails DB init at $stamp"
-  }
-  else {
-    $lines += "[runweb] WebLauncher smoke OK at $stamp (in-memory H2)"
-  }
-}
-
 $todo = Join-Path $base 'todo.txt'
 Add-Content -Path $todo -Value ($lines -join "`n") -Encoding UTF8
 Write-Host ($lines -join "`n")

@@ -3,10 +3,8 @@ domini\LlibreCore.class
 presentacio\GaleriaCobertesPanel$1.class
 presentacio\detalles\vista\LlistesDelLlibreTableModel.class
 presentacio\EstadistiquesHelper$1.class
-api\ApiServer$1.class
 presentacio\renderers\TableCellComponents$ProgressBarRenderer.class
 herramienta\UITheme.class
-api\HttpRouter$Handler.class
 presentacio\ConfiguracioDialogListener.class
 domini\BibliotecaException.class
 presentacio\detalles\vista\DetallesLlibrePanel.class
@@ -36,7 +34,6 @@ presentacio\TableController.class
 interficie\TagReader.class
 herramienta\csv\LibraryThingCsvStrategy.class
 persistencia\package-info.class
-presentacio\ModeSelectorDialog$3.class
 persistencia\AutorRow.class
 presentacio\MainFrameControl$6.class
 herramienta\RelationRemapper$ShelfIdRemapper.class
@@ -47,12 +44,9 @@ herramienta\Completer.class
 presentacio\LlibreFormBinder.class
 herramienta\OpenLibraryClient.class
 presentacio\detalles\control\DetallesLlibrePanelControl$HistoryHandler.class
-api\ApiAuth.class
 herramienta\OpenLibraryParser.class
 herramienta\BackupService.class
 herramienta\DbConfig.class
-main\WebLauncher.class
-presentacio\ModeSelectorDialog$Mode.class
 herramienta\csv\CsvUtils.class
 presentacio\ShelfController.class
 herramienta\csv\ShelfMembershipParser$Entry.class
@@ -60,7 +54,6 @@ presentacio\detalles\vista\EntityComboUtils.class
 domini\Tag.class
 presentacio\TableController$3.class
 herramienta\RelationRemapper$TagIdRemapper.class
-presentacio\ModeSelectorDialog$2.class
 presentacio\GaleriaCobertesPanel$2.class
 presentacio\MainFrameControl$5.class
 presentacio\GaleriaCobertesPanel$7.class
@@ -88,7 +81,6 @@ presentacio\detalles\control\DetallesLlibrePanelControl$1.class
 presentacio\MainFrameControl$7.class
 herramienta\BookImporter.class
 presentacio\TableController$4.class
-api\ImportExportRouter.class
 presentacio\GaleriaCobertesPanel$8.class
 presentacio\detalles\vista\DetallesLlibrePanel$1.class
 herramienta\ColorUtils.class
@@ -100,7 +92,6 @@ herramienta\CoverService$1.class
 presentacio\detalles\control\TagsDelLlibreControl$1.class
 persistencia\LlibreDao.class
 herramienta\package-info.class
-api\ApiServer$StatusBody.class
 presentacio\GestioLlistesDialog$1.class
 presentacio\renderers\BotonDetallesRenderer.class
 persistencia\JarLocator$Strategy.class
@@ -109,7 +100,6 @@ presentacio\renderers\BotonDetallesEditor.class
 persistencia\RowMappers$PsBinder.class
 presentacio\EstadistiquesHelper$2.class
 presentacio\ExportController$2.class
-api\JsonMapper.class
 presentacio\MainFramePanel.class
 domini\package-info.class
 herramienta\FieldAutoComplete$FieldAutoCompletionAttachment.class
@@ -132,7 +122,6 @@ herramienta\csv\GoodreadsCsvStrategy.class
 domini\BibliotecaException$NotFound.class
 presentacio\EstadistiquesHelper.class
 presentacio\ImportController$3.class
-presentacio\ModeSelectorDialog.class
 main\ShutdownHooks.class
 herramienta\AutoCompletion$2.class
 presentacio\detalles\control\DetallesLlibrePanelControl.class
@@ -153,10 +142,8 @@ presentacio\detalles\control\DetallesLlibrePanelControl$DeleteHandler.class
 presentacio\TableController$5.class
 interficie\ShelfReader.class
 presentacio\ImportController$4.class
-api\ApiServer.class
 presentacio\detalles\vista\DetallesLlibrePanel$2.class
 presentacio\detalles\control\OpenLibrarySearchTask.class
-api\LoanRouter.class
 presentacio\renderers\TableCellComponents$LlegitCheckBoxRenderer.class
 presentacio\BookActionsController.class
 herramienta\Config.class
@@ -166,7 +153,6 @@ presentacio\LoadingDialog.class
 presentacio\MainFrameControl$12.class
 presentacio\CenterTablePanel$1.class
 presentacio\BackupController.class
-api\HttpRouter$Route.class
 interficie\ExportSnapshot.class
 interficie\LibraryEvents.class
 main\SwingLauncher.class
@@ -179,7 +165,6 @@ domini\SqlOp.class
 herramienta\FieldAutoComplete$2.class
 presentacio\ContextMenuController.class
 presentacio\renderers\TableCellComponents$SearchHighlightRenderer.class
-api\HttpCtx.class
 persistencia\JarLocator.class
 presentacio\MainFrameControl$8.class
 presentacio\PaginationModel.class
@@ -200,12 +185,9 @@ presentacio\MainFrameControl$10.class
 presentacio\TablePageController.class
 herramienta\export\HtmlExporter.class
 presentacio\detalles\control\GuardarLlibresDialogoControl$2.class
-api\TagRouter.class
-api\LlistaRouter.class
 presentacio\GaleriaCobertesPanel$9.class
 herramienta\csv\ShelvesHelper.class
 presentacio\LibraryScreenHost.class
-presentacio\ModeButton.class
 presentacio\listener\OnLlibreDelete.class
 presentacio\FilterController$3.class
 presentacio\detalles\control\DetallesLlibrePanelControl$3.class
@@ -220,7 +202,6 @@ persistencia\TagDao.class
 interficie\BookWriter.class
 presentacio\ExportController.class
 presentacio\listener\LibraryChangeListener$1.class
-api\OpenLibraryRouter.class
 persistencia\RowMappers.class
 presentacio\CenterTablePanel$2.class
 presentacio\detalles\control\OpenLibrarySearchTask$SearchResult.class
@@ -237,8 +218,6 @@ presentacio\FormFieldRegistry.class
 herramienta\PresetStore.class
 presentacio\KeyboardShortcuts$1.class
 presentacio\MainFrameControl$4.class
-presentacio\ModeSelectorDialog$1.class
-api\BackupRouter.class
 persistencia\RelationRow.class
 presentacio\LeftSidebarPanel$1.class
 presentacio\CoverDisplayHelper.class
@@ -255,7 +234,6 @@ presentacio\GaleriaCobertesPanel$5.class
 presentacio\TableController$1.class
 presentacio\ContextMenuController$1.class
 herramienta\FontSize.class
-api\MetaRouter.class
 presentacio\detalles\vista\GuardarLlibresDialogo$1.class
 presentacio\detalles\control\DetallesLlibrePanelControl$4.class
 presentacio\FilterController$4.class
@@ -281,7 +259,6 @@ presentacio\ImportController.class
 presentacio\MainFrameControl$2.class
 presentacio\detalles\control\TagsDelLlibreControl.class
 presentacio\GaleriaCobertesPanel$3.class
-api\ApiAuth$UnauthorizedException.class
 domini\ShelfParser$ShelfEntry.class
 presentacio\EstadistiquesHelper$BookStats.class
 presentacio\BackupController$1.class
@@ -296,7 +273,6 @@ presentacio\listener\OnLlibreUpdate.class
 presentacio\UIComponents.class
 presentacio\renderers\TableCellComponents$LlegitCheckBoxEditor.class
 presentacio\listener\OnLlibreAdded.class
-api\ConfigRouter.class
 presentacio\BookActionsController$1.class
 herramienta\csv\AbstractMappingCsvStrategy.class
 herramienta\csv\ShelfMembershipParser.class
@@ -313,11 +289,8 @@ persistencia\ServerConect$Migration.class
 presentacio\GaleriaCobertesPanel$4.class
 presentacio\package-info.class
 presentacio\MainFrameControl$1.class
-api\HttpRouter.class
 herramienta\BookExporter.class
 herramienta\export\GoodreadsExportService.class
 presentacio\detalles\control\DetallesLlibrePanelControl$6.class
 presentacio\detalles\vista\LlistesDelLlibreDialog.class
-api\LlibreRouter.class
-api\OpenLibraryRouter$OpenLibraryUpstreamException.class
 interficie\BookReader.class

@@ -35,7 +35,6 @@ dlg_network_error_title,Error de xarxa,Error de red,Network error
 # ── Java: GestioLlistesDialog ─────────────────────────────────────────────────
 # ── Java: ConfiguracioDialog profile management ───────────────────────────────
 # ── Java: GuardarLlibresDialogoControl (internet search) ─────────────────────
-# ── Java: ModeSelectorDialog ──────────────────────────────────────────────────
 # ── Java: TagsDelLlibreDialog ─────────────────────────────────────────────────
 # ── Java: GuardarLlibresDialogo (add book dialog) ────────────────────────────
 # ── Java: MostrarBibliotecaPanel sidebar/toolbar ─────────────────────────────

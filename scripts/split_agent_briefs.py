@@ -53,8 +53,8 @@ def route_todo2(block: str) -> str:
         return "domini"
     if "/presentacio/" in path:
         return "presentacio"
-    if "/api/" in path or "/main/" in path:
-        return "api"
+    if "/main/" in path:
+        return "crosscutting"
     if "/herramienta/" in path:
         return "herramienta"
     return "crosscutting"
@@ -80,23 +80,6 @@ def route_priority(ln: str) -> str:
         )
     ):
         return "presentacio"
-    if any(
-        x in low
-        for x in (
-            "llibrerouter",
-            "httprouter",
-            "httpctx",
-            "configrouter",
-            "tagrouter",
-            "loanrouter",
-            "listarouter",
-            "importexportrouter",
-            "backuprouter",
-            "apiserver",
-            "jsonmapper",
-        )
-    ):
-        return "api"
     if "run.sh" in low or "run2.sh" in low or "uiaudit" in low:
         return "checkbiblio"
     if any(
@@ -203,7 +186,7 @@ def main():
     if current:
         todo2_blocks.append("\n".join(current))
 
-    todo2_by_agent = {k: [] for k in ("domini", "presentacio", "api", "herramienta", "crosscutting")}
+    todo2_by_agent = {k: [] for k in ("domini", "presentacio", "herramienta", "crosscutting")}
     for b in todo2_blocks:
         todo2_by_agent[route_todo2(b)].append(b)
 
@@ -212,7 +195,7 @@ def main():
     priority_lines = [
         ln for ln in combined_body.splitlines() if re.match(r"^\[[123]\]", ln.strip())
     ]
-    priority_by = {k: [] for k in ("coordinator", "domini", "presentacio", "api", "herramienta", "checkbiblio")}
+    priority_by = {k: [] for k in ("coordinator", "domini", "presentacio", "herramienta", "checkbiblio")}
     for ln in priority_lines:
         priority_by[route_priority(ln)].append(ln)
 
@@ -252,7 +235,6 @@ Split from `tot.txt` for parallel AI work. Load **one** brief per session.
 | Coordinator | [01-coordinator.md](01-coordinator.md) | Minimax 2.7 — planning, triage | Cross-cutting, sessions, security overview |
 | Domain + DB | [02-domini-persistencia.md](02-domini-persistencia.md) | Minimax / Composer | `src/domini/`, `src/persistencia/`, `src/interficie/` |
 | Swing UI | [03-presentacio-swing.md](03-presentacio-swing.md) | **Composer** (UI-heavy) | `src/presentacio/` |
-| HTTP API | [04-api-http.md](04-api-http.md) | Minimax / Composer | `src/api/`, `src/main/` |
 | Import/export/tools | [05-herramienta-io.md](05-herramienta-io.md) | Minimax / Composer | `src/herramienta/` |
 | Cross-cutting fixes | [06-todo2-crosscutting.md](06-todo2-crosscutting.md) | Either model | Multi-package todo2 items |
 | QA / checkBiblio | [07-checkbiblio-qa.md](07-checkbiblio-qa.md) | Composer or Minimax | `checkBiblio/`, `run.sh`, `run2.sh` |
@@ -300,7 +282,7 @@ Generated from `tot.txt` by `scripts/split_agent_briefs.py`.
         "`src/domini/`, `src/persistencia/`, `src/interficie/`",
         "Domain model, DAO, migrations, ISBN/long, caches, ControladorDomini threading.",
         "Everything under domini/, persistencia/, interficie/ (see review + todo2 below).",
-        "Swing (`presentacio/`), HTTP (`api/`) except types shared with domain.",
+        "Swing (`presentacio/`) except types shared with domain.",
         [
             ("Top issues (read first)", packages.get("_summary", "")),
             ("Review — domini + interficie", "\n".join(packages.get("domini", []))),
@@ -323,22 +305,6 @@ Generated from `tot.txt` by `scripts/split_agent_briefs.py`.
             ("Review — presentacio", "\n".join(packages.get("presentacio", []))),
             ("todo2 deep-dive", "\n\n---\n\n".join(todo2_by_agent["presentacio"])),
             ("Backlog [1][2][3]", "\n".join(priority_by["presentacio"])),
-        ],
-    )
-
-    write_brief(
-        "04-api-http.md",
-        "HTTP API + main agent",
-        "Minimax 2.7; Composer",
-        "`src/api/`, `src/main/`",
-        "HttpCtx lifecycle, auth/CSRF, status codes, CORS, static traversal, router validation.",
-        "All of `src/api/` and `src/main/Ejecutable.java`.",
-        "Swing UI; DAO implementation (coordinate with 02); CSV/ISBN in herramienta (05).",
-        [
-            ("Top issues (read first)", packages.get("_summary", "")),
-            ("Review — api + main", "\n".join(packages.get("api", []))),
-            ("todo2 deep-dive", "\n\n---\n\n".join(todo2_by_agent["api"])),
-            ("Backlog [1][2][3]", "\n".join(priority_by["api"])),
         ],
     )
 

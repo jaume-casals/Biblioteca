@@ -305,13 +305,6 @@ dlg_search_hint_msg,Introdueix un ISBN un títol o un autor per cercar.,Introduc
 dlg_search_internet_title,Cerca a Internet,Buscar en Internet,Internet Search
 btn_searching,Cercant...,Buscando...,Searching...
 dlg_no_results_msg,No s'han trobat resultats a OpenLibrary.,No se encontraron resultados en OpenLibrary.,No results found on OpenLibrary.
-# ── Java: ModeSelectorDialog ──────────────────────────────────────────────────
-dlg_mode_selector_title,Biblioteca — Tria el mode d'inici,Biblioteca — Elige el modo de inicio,Biblioteca — Choose startup mode
-lbl_mode_selector_subtitle,Com vols obrir l'aplicació?,¿Cómo quieres abrir la aplicación?,How do you want to open the app?
-mode_web,Web,Web,Web
-mode_web_sub,Obre al navegador,Abrir en el navegador,Open in browser
-mode_desktop,Escriptori,Escritorio,Desktop
-mode_desktop_sub,Finestra Java nativa,Ventana Java nativa,Native Java window
 # ── Java: TagsDelLlibreDialog ─────────────────────────────────────────────────
 "dlg_tags_for_book","Etiquetes de: {0}","Etiquetas de: {0}","Tags for: {0}"
 col_tag_name,Etiqueta,Etiqueta,Tag

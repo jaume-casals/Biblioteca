@@ -1,8 +1,7 @@
 package herramienta;
 
 /**
- * Shared DTO for shipping configuration between the Swing settings dialog and the
- * {@code /api/config} HTTP endpoint. The record only mirrors fields exposed in both surfaces;
+ * DTO for the Swing settings dialog. Mirrors fields exposed in configuration UI;
  * persistent state still lives in {@link Config}.
  */
 public record ConfigDTO(

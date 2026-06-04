@@ -1,17 +1,3 @@
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\ApiAuth.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\ApiServer.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\BackupRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\ConfigRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\HttpCtx.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\HttpRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\ImportExportRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\JsonMapper.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\LlibreRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\LlistaRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\LoanRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\MetaRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\OpenLibraryRouter.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\api\TagRouter.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\domini\BibliotecaException.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\domini\ControladorDomini.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\domini\Llibre.java
@@ -93,7 +79,6 @@ C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\interficie\TagWriter.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\main\Ejecutable.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\main\ShutdownHooks.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\main\SwingLauncher.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\main\WebLauncher.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\persistencia\AutorDao.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\persistencia\AutorRow.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\persistencia\ConnectionConfig.java
@@ -169,8 +154,6 @@ C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\LlistaTableModel.j
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\LoadingDialog.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\MainFrameControl.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\MainFramePanel.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\ModeButton.java
-C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\ModeSelectorDialog.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\MostrarBibliotecaControl.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\MostrarBibliotecaPanel.java
 C:\Users\jakkodis\Documents\GitHub\Biblioteca\src\presentacio\package-info.java
