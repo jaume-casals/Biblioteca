@@ -28,16 +28,6 @@ hs_err_pid*
 .
 
 # Project-local files not for version control
-CLAUDE.md
-Makefile
-todo.txt
-install.exe
-install.sh
-Biblioteca.html
-components.jsx
-checkBiblio/
-audits/
-implementation_log.txt
 
 # Generated packaging artifacts (source files in packaging/ ARE tracked)
 packaging/Biblioteca.ico
@@ -50,4 +40,4 @@ biblioteca-fat.jar
 .vscode/
 
 # Test sources
-test/
+

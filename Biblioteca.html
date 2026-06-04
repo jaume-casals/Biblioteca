@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblioteca</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:            oklch(97% 0.008 65);
+    --surface:       #ffffff;
+    --text:          oklch(18% 0.022 55);
+    --text-muted:    oklch(52% 0.015 55);
+    --accent:        oklch(46% 0.14 34);
+    --accent2:       oklch(46% 0.14 184);
+    --border:        oklch(89% 0.012 65);
+    --sidebar-bg:    oklch(16% 0.018 50);
+    --sidebar-accent: oklch(72% 0.12 34);
+  }
+  html, body, #root {
+    height: 100%; width: 100%;
+    overflow: hidden;
+  }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: oklch(80% 0.01 55); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(65% 0.01 55); }
+  input, textarea, select { font-family: 'Outfit', sans-serif; }
+  textarea { font-family: 'Outfit', sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="components.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+// ── Sample data ───────────────────────────────────────────────────────────────
+const SEED_BOOKS = [
+  { isbn: "9780451524935", nom: "Nineteen Eighty-Four", autor: "George Orwell",         any: 1949, descripcio: "Winston Smith works for the Ministry of Truth in Oceania, a totalitarian superstate where Big Brother sees all. A masterwork of dystopian fiction.", valoracio: 9,   preu: 9.99,  llegit: true,  pagines: 328, paginesLlegides: 328, notes: "One of the most important books ever written. Re-read every few years." },
+  { isbn: "9780743273565", nom: "The Great Gatsby",     autor: "F. Scott Fitzgerald",   any: 1925, descripcio: "Nick Carraway narrates the story of Jay Gatsby's obsessive pursuit of Daisy Buchanan against the backdrop of the roaring twenties.", valoracio: 8,   preu: 7.99,  llegit: true,  pagines: 180, paginesLlegides: 180, notes: "" },
+  { isbn: "9780062316097", nom: "The Alchemist",        autor: "Paulo Coelho",          any: 1988, descripcio: "A young Andalusian shepherd embarks on a journey to find worldly treasure, discovering far more than he bargained for.", valoracio: 7.5, preu: 11.99, llegit: false, pagines: 197, paginesLlegides: 87,  notes: "Beautiful fable. On my list for a while." },
+  { isbn: "9780525559474", nom: "The Midnight Library",  autor: "Matt Haig",            any: 2020, descripcio: "Between life and death there is a library, and within that library the shelves go on forever. A novel about regret, hope and second chances.", valoracio: 8.5, preu: 14.99, llegit: true,  pagines: 304, paginesLlegides: 304, notes: "Quietly moved me. Highly recommended." },
+  { isbn: "9780385490818", nom: "The Handmaid's Tale",  autor: "Margaret Atwood",       any: 1985, descripcio: "Set in a near-future theocratic dictatorship where women are stripped of their rights, Offred's harrowing account is chilling and essential.", valoracio: 9.5, preu: 12.99, llegit: true,  pagines: 311, paginesLlegides: 311, notes: "Chilling and essential reading." },
+  { isbn: "9780679745587", nom: "One Hundred Years of Solitude", autor: "Gabriel García Márquez", any: 1967, descripcio: "The multi-generational story of the Buendía family in the fictional town of Macondo — a cornerstone of magical realism.", valoracio: 8,   preu: 15.99, llegit: false, pagines: 417, paginesLlegides: 120, notes: "Beautiful but dense. Taking it slowly." },
+  { isbn: "9780316769174", nom: "The Catcher in the Rye", autor: "J.D. Salinger",       any: 1951, descripcio: "Holden Caulfield, a troubled teenager, narrates his journey through New York City after being expelled from prep school.", valoracio: 7,   preu: 8.99,  llegit: true,  pagines: 277, paginesLlegides: 277, notes: "" },
+  { isbn: "9780142000670", nom: "Pride and Prejudice",  autor: "Jane Austen",           any: 1813, descripcio: "The spirited Elizabeth Bennet navigates family, society, and her feelings for the proud Mr. Darcy in Regency-era England.", valoracio: 9,   preu: 6.99,  llegit: true,  pagines: 432, paginesLlegides: 432, notes: "Timeless. Austen's best." },
+  { isbn: "9780140449136", nom: "Crime and Punishment", autor: "Fyodor Dostoevsky",     any: 1866, descripcio: "Raskolnikov, an impoverished student in St. Petersburg, commits a murder and is tormented by guilt and paranoia.", valoracio: 9,   preu: 10.99, llegit: false, pagines: 551, paginesLlegides: 0,   notes: "" },
+  { isbn: "9780374528379", nom: "Beloved",              autor: "Toni Morrison",         any: 1987, descripcio: "A former enslaved woman is haunted by the spirit of her deceased daughter in post-Civil War Ohio.", valoracio: 9,   preu: 13.99, llegit: true,  pagines: 324, paginesLlegides: 324, notes: "Devastating and essential." },
+  { isbn: "9780553211405", nom: "Brave New World",      autor: "Aldous Huxley",         any: 1932, descripcio: "A dystopian vision of a future society where people are engineered and conditioned for consumerism and stability.", valoracio: 8.5, preu: 9.99,  llegit: true,  pagines: 311, paginesLlegides: 311, notes: "Eerily prescient." },
+  { isbn: "9780007117116", nom: "The Lord of the Rings", autor: "J.R.R. Tolkien",       any: 1954, descripcio: "Frodo Baggins and the Fellowship of the Ring must destroy the One Ring to save Middle-earth from the Dark Lord Sauron.", valoracio: 10,  preu: 24.99, llegit: true,  pagines: 1178, paginesLlegides: 1178, notes: "The gold standard of fantasy." },
+];
+
+const SEED_SHELVES = [
+  { id: 1, nom: "Favourites" },
+  { id: 2, nom: "To Read" },
+  { id: 3, nom: "Classics" },
+  { id: 4, nom: "Sci-Fi & Dystopia" },
+];
+
+const SEED_SHELF_BOOKS = {
+  1: ["9780451524935", "9780385490818", "9780142000670", "9780007117116"],
+  2: ["9780062316097", "9780679745587", "9780140449136"],
+  3: ["9780743273565", "9780316769174", "9780142000670", "9780140449136"],
+  4: ["9780451524935", "9780385490818", "9780553211405"],
+};
+
+// ── Persistence helpers ───────────────────────────────────────────────────────
+const load = (key, fallback) => {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+};
+const save = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [books,      setBooks]      = useState(() => load('bib_books',       SEED_BOOKS));
+  const [shelves,    setShelves]    = useState(() => load('bib_shelves',     SEED_SHELVES));
+  const [shelfBooks, setShelfBooks] = useState(() => load('bib_shelf_books', SEED_SHELF_BOOKS));
+  const [shelf,      setShelf]      = useState(null);   // null | 'read' | 'unread' | shelfId
+  const [selected,   setSelected]   = useState(null);   // book object
+  const [showAdd,    setShowAdd]    = useState(false);
+  const [editBook,   setEditBook]   = useState(null);
+  const [query,      setQuery]      = useState('');
+  const [filterRead, setFilterRead] = useState('all');
+  const [viewMode,   setViewMode]   = useState(() => load('bib_view', 'grid'));
+  const [showStats,  setShowStats]  = useState(false);
+
+  // Persist
+  useEffect(() => save('bib_books',       books),      [books]);
+  useEffect(() => save('bib_shelves',     shelves),    [shelves]);
+  useEffect(() => save('bib_shelf_books', shelfBooks), [shelfBooks]);
+  useEffect(() => save('bib_view',        viewMode),   [viewMode]);
+
+  // ── Filtered book list ──────────────────────────────────────────────────────
+  const visibleBooks = useMemo(() => {
+    let list = books;
+    if (shelf === 'read')   list = list.filter(b => b.llegit);
+    if (shelf === 'unread') list = list.filter(b => !b.llegit);
+    if (typeof shelf === 'number') {
+      const ids = shelfBooks[shelf] || [];
+      list = list.filter(b => ids.includes(b.isbn));
+    }
+    if (filterRead === 'read')   list = list.filter(b => b.llegit);
+    if (filterRead === 'unread') list = list.filter(b => !b.llegit);
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(b =>
+        (b.nom   || '').toLowerCase().includes(q) ||
+        (b.autor || '').toLowerCase().includes(q) ||
+        (b.isbn  || '').includes(q) ||
+        (b.notes || '').toLowerCase().includes(q) ||
+        String(b.any || '').includes(q)
+      );
+    }
+    return list;
+  }, [books, shelf, shelfBooks, filterRead, query]);
+
+  const shelfName = useMemo(() => {
+    if (shelf === null)    return 'All Books';
+    if (shelf === 'read')  return 'Read';
+    if (shelf === 'unread') return 'Unread';
+    return shelves.find(s => s.id === shelf)?.nom || 'Shelf';
+  }, [shelf, shelves]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+  const addBook = (book, shelfIds) => {
+    setBooks(prev => {
+      const exists = prev.findIndex(b => b.isbn === book.isbn);
+      if (exists >= 0) { const next = [...prev]; next[exists] = book; return next; }
+      return [...prev, book];
+    });
+    if (shelfIds?.length) {
+      setShelfBooks(prev => {
+        const next = { ...prev };
+        shelfIds.forEach(id => {
+          const cur = next[id] || [];
+          if (!cur.includes(book.isbn)) next[id] = [...cur, book.isbn];
+        });
+        return next;
+      });
+    }
+    setShowAdd(false);
+  };
+
+  const saveBook = (book) => {
+    setBooks(prev => prev.map(b => b.isbn === book.isbn ? book : b));
+    setSelected(book);
+  };
+
+  const deleteBook = (isbn) => {
+    setBooks(prev => prev.filter(b => b.isbn !== isbn));
+    setShelfBooks(prev => {
+      const next = {};
+      for (const [k, v] of Object.entries(prev)) next[k] = v.filter(i => i !== isbn);
+      return next;
+    });
+    setSelected(null);
+  };
+
+  const addShelf = (nom) => {
+    const id = Date.now();
+    setShelves(prev => [...prev, { id, nom }]);
+  };
+
+  const deleteShelf = (id) => {
+    setShelves(prev => prev.filter(s => s.id !== id));
+    setShelfBooks(prev => { const next = { ...prev }; delete next[id]; return next; });
+    if (shelf === id) setShelf(null);
+  };
+
+  const toggleShelf = (isbn, shelfId) => {
+    setShelfBooks(prev => {
+      const cur = prev[shelfId] || [];
+      return { ...prev, [shelfId]: cur.includes(isbn) ? cur.filter(i => i !== isbn) : [...cur, isbn] };
+    });
+  };
+
+  // ── Tweaks ──────────────────────────────────────────────────────────────────
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "accentHue": 34,
+    "sidebarWidth": 220,
+    "cardColumns": 5,
+    "showPrice": true
+  }/*EDITMODE-END*/;
+
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [tweakOpen, setTweakOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode')   setTweakOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweakOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const setTweak = (k, v) => {
+    setTweaks(t => {
+      const next = { ...t, [k]: v };
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: next }, '*');
+      return next;
+    });
+  };
+
+  const accentColor = `oklch(46% 0.14 ${tweaks.accentHue})`;
+  const accent2Color = `oklch(46% 0.14 ${(tweaks.accentHue + 150) % 360})`;
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      {/* Dynamic CSS overrides for tweaks */}
+      <style>{`
+        :root {
+          --accent: ${accentColor};
+          --accent2: ${accent2Color};
+          --sidebar-width: ${tweaks.sidebarWidth}px;
+        }
+      `}</style>
+
+      {/* Sidebar */}
+      <Sidebar
+        shelves={shelves}
+        selectedShelf={shelf}
+        onSelectShelf={s => { setShelf(s); setSelected(null); }}
+        onAddShelf={addShelf}
+        onDeleteShelf={deleteShelf}
+        books={books}
+        onShowStats={() => setShowStats(true)}
+      />
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <TopBar
+          query={query}
+          onQuery={setQuery}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+          onAdd={() => setShowAdd(true)}
+          filterRead={filterRead}
+          onFilterRead={setFilterRead}
+          shelfName={shelfName}
+          count={visibleBooks.length}
+        />
+
+        {/* Shelf heading */}
+        <div style={{ padding: '16px 24px 0', display: 'flex', alignItems: 'baseline', gap: 10, background: '#fff', borderBottom: '1px solid var(--border)' }}>
+          <h1 style={{ fontFamily: 'Lora, serif', fontStyle: 'italic', fontSize: 22, fontWeight: 400, color: 'var(--text)' }}>{shelfName}</h1>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, color: 'var(--text-muted)', marginBottom: 1 }}>
+            {visibleBooks.length} {visibleBooks.length === 1 ? 'book' : 'books'}
+            {query && ` matching "${query}"`}
+          </span>
+          {/* List header (list mode) */}
+          {viewMode === 'list' && visibleBooks.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '40px 1fr 180px 60px 120px 70px 60px',
+              gap: 12, padding: '10px 20px',
+              marginTop: 8,
+            }}>
+            </div>
+          )}
+        </div>
+
+        {/* List view header row */}
+        {viewMode === 'list' && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '40px 1fr 180px 60px 120px 70px 60px',
+            gap: 12, padding: '8px 20px',
+            borderBottom: '1px solid var(--border)',
+            background: '#faf8f5',
+          }}>
+            {['', 'Title', 'Author', 'Year', 'Rating', 'Status', 'Price'].map((h, i) => (
+              <div key={i} style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{h}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Book grid / list */}
+        <div style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: viewMode === 'grid' ? 24 : 0,
+          background: viewMode === 'grid' ? 'var(--bg)' : '#fff',
+        }}>
+          {visibleBooks.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 48 }}>📚</div>
+              <div style={{ fontFamily: 'Lora, serif', fontStyle: 'italic', fontSize: 20 }}>
+                {query ? `No books match "${query}"` : 'This shelf is empty'}
+              </div>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14 }}>
+                {query ? <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 14, textDecoration: 'underline' }}>Clear search</button>
+                       : <button onClick={() => setShowAdd(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 14, textDecoration: 'underline' }}>Add your first book</button>}
+              </div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${tweaks.cardColumns}, minmax(130px, 1fr))`,
+              gap: 16,
+            }}>
+              {visibleBooks.map(book => (
+                <BookCard
+                  key={book.isbn}
+                  book={book}
+                  onClick={() => setSelected(book)}
+                  isSelected={selected?.isbn === book.isbn}
+                />
+              ))}
+            </div>
+          ) : (
+            visibleBooks.map(book => (
+              <BookRow
+                key={book.isbn}
+                book={book}
+                onClick={() => setSelected(book)}
+                isSelected={selected?.isbn === book.isbn}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Detail panel */}
+      {selected && (
+        <BookDetailPanel
+          book={selected}
+          onClose={() => setSelected(null)}
+          onSave={saveBook}
+          onDelete={deleteBook}
+          shelves={shelves}
+          shelfBooks={shelfBooks}
+          onToggleShelf={toggleShelf}
+        />
+      )}
+
+      {/* Add modal */}
+      {showAdd && (
+        <AddBookModal
+          onClose={() => setShowAdd(false)}
+          onSave={addBook}
+          shelves={shelves}
+        />
+      )}
+
+      {/* Stats modal */}
+      {showStats && (
+        <StatsModal
+          books={books}
+          shelves={shelves}
+          shelfBooks={shelfBooks}
+          onClose={() => setShowStats(false)}
+        />
+      )}
+
+      {/* Tweaks panel */}
+      {tweakOpen && (
+        <div style={{
+          position: 'fixed', bottom: 20, right: 20,
+          background: '#fff', borderRadius: 10, padding: '18px 20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          zIndex: 200, width: 240,
+          border: '1px solid var(--border)',
+          fontFamily: 'Outfit, sans-serif',
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 14, color: 'var(--text)' }}>Tweaks</div>
+
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Accent hue ({tweaks.accentHue}°)</label>
+          <input type="range" min={0} max={360} value={tweaks.accentHue} onChange={e => setTweak('accentHue', +e.target.value)} style={{ width: '100%', marginBottom: 12 }} />
+
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Grid columns ({tweaks.cardColumns})</label>
+          <input type="range" min={2} max={8} step={1} value={tweaks.cardColumns} onChange={e => setTweak('cardColumns', +e.target.value)} style={{ width: '100%', marginBottom: 12 }} />
+
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Sidebar width ({tweaks.sidebarWidth}px)</label>
+          <input type="range" min={160} max={300} step={10} value={tweaks.sidebarWidth} onChange={e => setTweak('sidebarWidth', +e.target.value)} style={{ width: '100%', marginBottom: 4 }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
