@@ -107,12 +107,28 @@ Session 5 (post-tot.txt sweep — see Phased order below):
     helper. 9-positional-arg ctor kept for backward compat
   - UITheme.FONT_BASE / FONT_BOLD: now private static volatile with
     fontBase() / fontBold() accessors; 16 callers updated
-  - strings/ui.csv: added app_title key. MainFrameControl JFrame title
-    and AboutDialog header now use I18n.t("app_title")
+  - strings/ui.csv: added app_title, tab_advanced, val_any_negatiu,
+    err_db_connect, err_db_close, dlg_shortcuts_content,
+    validation_invalid_number, dlg_restore_title, dlg_backup_title,
+    csv_bad_isbn, export_html_heading keys. Without tab_advanced the
+    DetallesLlibrePanel() constructor threw IllegalStateException in
+    test mode (biblioteca.test=true), which silently broke every
+    "open details" assertion in UIAudit/StressTest.
+  - I18nAudit.loadCsvKeys + auditDuplicateKeys: replaced naive
+    s.split(",", 4) with a quote-aware splitCsvLine() + stripQuotes()
+    helper. The naive split kept the surrounding quotes on the key
+    column, so 26 real keys (e.g. dlg_pdf_title, stats_pace_year)
+    were reported as "missing from CSV" even though they were present.
+  - I18nAudit.auditJavaKeyUsage: now ignores captured keys ending in
+    "_" (e.g. I18n.t("err_db_init_" + cfg.dbType())) — those are
+    concatenation sites, not real keys.
+  - MainFrameControl JFrame title and AboutDialog header now use
+    I18n.t("app_title")
   - LlistesDelLlibreDialog: shelfCheckList now MULTIPLE_INTERVAL_SELECTION
     and pre-selects indices for current shelf memberships
   - ControladorPersistencia: 17-line audit-history comment trimmed to a
     14-line class JavaDoc
+  - I18nAudit: now reports FAIL=0, WARN=1012 (down from FAIL=35, WARN=1036)
   - Tests: 184 plain + 168 JUnit 5 (all pass)
 
 ================================================================================
@@ -226,3 +242,14 @@ OPEN items by area:
   - BUGS: 1 [PARTIAL] (api/ removal, no longer in scope).
   - DEAD CODE: 1 [PARTIAL] (interficie.BookReader half-migration).
   - checkBiblio: 0.
+
+StressTest / UIAudit (2026-06-08 follow-up):
+  - I18nAudit: was reporting 35 false-positive FAILs (quote-stripping
+    bug in loadCsvKeys) + 9 real missing keys. Fixed the parser and
+    added the 9 real keys (tab_advanced, val_any_negatiu,
+    err_db_connect, err_db_close, dlg_shortcuts_content,
+    validation_invalid_number, dlg_restore_title, dlg_backup_title,
+    csv_bad_isbn, export_html_heading). The tab_advanced key was the
+    silent culprit: its absence made DetallesLlibrePanel() throw
+    IllegalStateException under biblioteca.test=true, breaking every
+    "open details" assertion in UIAudit and StressTest.

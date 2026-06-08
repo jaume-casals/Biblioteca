@@ -580,3 +580,13 @@ val_valoracio_rang,"La valoració ha d'estar entre 0 i 10","La valoración debe 
 app_title,Biblioteca,Biblioteca,Biblioteca
 # ── Java: LlistesDelLlibreDialog label ────────────────────────────────────────
 lbl_llistes,Llistes,Listas,Lists
+tab_advanced,Avançat,Avanzado,Advanced
+val_any_negatiu,L'any no pot ser negatiu: {0},El año no puede ser negativo: {0},Year cannot be negative: {0}
+err_db_connect,Error de connexió amb la base de dades,Error de conexión con la base de datos,Database connection error
+err_db_close,Error tancant la base de dades: {0},Error cerrando la base de datos: {0},Error closing database: {0}
+dlg_shortcuts_content,"Ctrl+N: Nou llibre\nF1: Dreceres\nEsc: Tancar","Ctrl+N: Nuevo libro\nF1: Atajos\nEsc: Cerrar","Ctrl+N: New book\nF1: Shortcuts\nEsc: Close"
+validation_invalid_number,Valor no vàlid: cal un nombre,Valor no válido: requiere un número,Invalid value: a number is required
+dlg_restore_title,Restaurar base de dades,Restaurar base de datos,Restore database
+dlg_backup_title,Còpia de seguretat,Copia de seguridad,Backup
+csv_bad_isbn,ISBN invàlid: {0},ISBN inválido: {0},Invalid ISBN: {0}
+export_html_heading,La meva biblioteca,Mi biblioteca,My library

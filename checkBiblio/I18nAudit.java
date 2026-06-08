@@ -29,14 +29,53 @@ final class I18nAudit {
                 for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
                     String s = line.trim();
                     if (s.isEmpty() || s.startsWith("#") || s.startsWith("key,")) continue;
-                    String[] row = s.split(",", 4);
-                    if (row.length >= 4) out.put(row[0].trim(), new String[]{row[1], row[2], row[3]});
+                    String[] row = splitCsvLine(s);
+                    if (row.length >= 4) {
+                        String key = stripQuotes(row[0]);
+                        if (!key.isEmpty()) out.put(key, new String[]{stripQuotes(row[1]), stripQuotes(row[2]), stripQuotes(row[3])});
+                    }
                 }
             }
         } catch (IOException e) {
             out.clear();
         }
         return out;
+    }
+
+    /** Parses a single CSV line honouring double-quoted fields. Returns the fields in order. */
+    private static String[] splitCsvLine(String line) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        boolean inQuote = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuote) {
+                if (c == '"' && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    cur.append('"'); i++;
+                } else if (c == '"') {
+                    inQuote = false;
+                } else {
+                    cur.append(c);
+                }
+            } else if (c == '"') {
+                inQuote = true;
+            } else if (c == ',') {
+                out.add(cur.toString()); cur = new StringBuilder();
+            } else {
+                cur.append(c);
+            }
+        }
+        out.add(cur.toString());
+        return out.toArray(new String[0]);
+    }
+
+    private static String stripQuotes(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.length() >= 2 && s.charAt(0) == '"' && s.charAt(s.length() - 1) == '"') {
+            return s.substring(1, s.length() - 1);
+        }
+        return s;
     }
 
     private static void auditThreeLanguages(Map<String, String[]> keys, PrintWriter log, int[] failCount) {
@@ -81,7 +120,11 @@ final class I18nAudit {
             for (Path f : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
                 String text = Files.readString(f, StandardCharsets.UTF_8);
                 Matcher m = used.matcher(text);
-                while (m.find()) seen.add(m.group(1));
+                while (m.find()) {
+                    String k = m.group(1);
+                    if (k.endsWith("_")) continue;
+                    seen.add(k);
+                }
             }
         } catch (IOException ignored) {}
         for (String k : keys.keySet()) {
@@ -106,7 +149,7 @@ final class I18nAudit {
                 for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
                     String s = line.trim();
                     if (s.isEmpty() || s.startsWith("#") || s.startsWith("key,")) continue;
-                    String key = s.split(",", 2)[0].trim();
+                    String key = stripQuotes(splitCsvLine(s)[0]);
                     if (!seenInFile.add(key)) {
                         warnCount[0]++;
                         log.println("WARN: duplicate i18n key " + key + " in " + p.getFileName());

@@ -547,6 +547,16 @@ public class I18n {
         T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10", "La valoración debe estar entre 0 y 10", "Rating must be between 0 and 10");
         T("app_title", "Biblioteca", "Biblioteca", "Biblioteca");
         T("lbl_llistes", "Llistes", "Listas", "Lists");
+        T("tab_advanced", "Avançat", "Avanzado", "Advanced");
+        T("val_any_negatiu", "L'any no pot ser negatiu: {0}", "El año no puede ser negativo: {0}", "Year cannot be negative: {0}");
+        T("err_db_connect", "Error de connexió amb la base de dades", "Error de conexión con la base de datos", "Database connection error");
+        T("err_db_close", "Error tancant la base de dades: {0}", "Error cerrando la base de datos: {0}", "Error closing database: {0}");
+        T("dlg_shortcuts_content", "Ctrl+N: Nou llibre\\nF1: Dreceres\\nEsc: Tancar", "Ctrl+N: Nuevo libro\\nF1: Atajos\\nEsc: Cerrar", "Ctrl+N: New book\\nF1: Shortcuts\\nEsc: Close");
+        T("validation_invalid_number", "Valor no vàlid: cal un nombre", "Valor no válido: requiere un número", "Invalid value: a number is required");
+        T("dlg_restore_title", "Restaurar base de dades", "Restaurar base de datos", "Restore database");
+        T("dlg_backup_title", "Còpia de seguretat", "Copia de seguridad", "Backup");
+        T("csv_bad_isbn", "ISBN invàlid: {0}", "ISBN inválido: {0}", "Invalid ISBN: {0}");
+        T("export_html_heading", "La meva biblioteca", "Mi biblioteca", "My library");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
         T("err_causa", "Causa:", "Causa:", "Cause:");
         T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");

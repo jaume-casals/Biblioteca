@@ -20,17 +20,43 @@ The single source of truth for open work is **`tot.txt`** at the repo root. It i
 
 ## Build & Test Commands
 
+The Makefile is the source of truth on Linux/macOS. On Windows, use the
+matching `.bat` files in `scripts/` (they use the same classpath layout
+with `;` separators and `dir /s /b` instead of `find`).
+
+### Linux / macOS
+
 ```bash
 make compile          # compile src/ → bin/ (uses classes.txt, not glob)
 make test             # runs BibliotecaTest (plain Java) + BibliotecaJUnit5Test (JUnit 5)
 make clean            # rm -rf bin/*
 make run              # clean + compile + run GUI
 make run-only         # run without recompile
+./checkBiblio/run.sh           # tests + UIAudit (uses Xvfb if no DISPLAY)
+./checkBiblio/run2.sh          # compile + StressTest (uses Xvfb if no DISPLAY)
 ```
 
-**Always run `make test` before reporting a task complete. All tests must pass.**
+### Windows (cmd / PowerShell)
 
-After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types. `make test` runs `scripts/patch_tests_after_web_removal.py` first (idempotent); or run it manually once per machine.
+```bat
+scripts\compile.bat            # compile src/ → bin\ (uses classes.txt, not glob)
+scripts\test.bat               # runs BibliotecaTest (plain Java) + BibliotecaJUnit5Test (JUnit 5)
+scripts\trace_run.bat          # ad-hoc TraceRoundtrip with H2 in-memory DB
+powershell -File checkBiblio\run.ps1            # tests + UIAudit (no Xvfb needed)
+powershell -File checkBiblio\run2.ps1           # compile + StressTest
+```
+
+Run from the project root. `test.bat` calls `compile.bat` first, so a clean
+clone only needs `scripts\test.bat`. Requires `python` in PATH for the
+post-removal test patch (it is a no-op if already applied). The `run.ps1`
+/ `run2.ps1` PowerShell scripts mirror the Linux `checkBiblio/run*.sh`
+scripts; they assume a real Windows display (UIAudit/StressTest use
+`java.awt.Robot` and abort on `GraphicsEnvironment.isHeadless()`).
+
+**Always run `make test` (Linux) or `scripts\test.bat` (Windows) before
+reporting a task complete. All tests must pass.**
+
+After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types. `make test` / `scripts\test.bat` runs `scripts/patch_tests_after_web_removal.py` first (idempotent); or run it manually once per machine.
 
 Manual classpath: `lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:.`
 
