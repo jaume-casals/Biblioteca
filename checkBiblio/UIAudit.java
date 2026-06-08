@@ -387,7 +387,7 @@ public class UIAudit {
         testIoButtons(mainFrame);
 
         // Seed library for isolated audit DB, then exercise table/details
-        testCreateBook(mainFrame);
+        boolean bookCreated = testCreateBook(mainFrame);
 
         // Reset to all books before table inspection
         AbstractButton allBtn = findButtonContaining((Container)mainFrame, "Tots els");
@@ -407,7 +407,7 @@ public class UIAudit {
         }
 
         // --- Open first book ---
-        if (table != null && table.getRowCount() > 0) {
+        if (bookCreated && table != null && table.getRowCount() > 0) {
             log("\n--- BOOK DETAILS (row 0) ---");
             cmdOpenRow(mainFrame, 0);
             JDialog detailsDlg = getTopDialog();
@@ -437,12 +437,14 @@ public class UIAudit {
             } else {
                 warn("No dialog appeared after opening row 0");
             }
+        } else if (!bookCreated) {
+            warn("Create-book failed, skipping book detail test");
         } else {
             warn("Table empty, skipping book detail test");
         }
 
         // --- Edit first book, change all fields ---
-        testEditBook(mainFrame);
+        if (bookCreated) testEditBook(mainFrame);
 
         cmdScreenshot("99_final");
         log("\n--- I18n static audit ---");
@@ -609,16 +611,32 @@ public class UIAudit {
         return prefix + "_" + Integer.toHexString(RNG.nextInt(0xFFFF));
     }
 
-    /** Open new-book dialog, fill every field with random data, save. */
-    private static void testCreateBook(JFrame mainFrame) throws Exception {
+    /** Dot-decimal strings — GuardarLlibresDialogoControl uses Double.parseDouble (locale-independent). */
+    private static String randDecimal(int scale, double max) {
+        return String.format(Locale.US, "%." + scale + "f", RNG.nextDouble() * max);
+    }
+
+    /** True once no visible dialog has the given title (save succeeded and dialog closed). */
+    private static boolean waitForDialogTitleGone(String title, int maxMs) throws Exception {
+        for (int waited = 0; waited < maxMs; waited += 100) {
+            JDialog d = getTopDialog();
+            if (d == null || !title.equals(d.getTitle())) return true;
+            sleep(100);
+        }
+        return false;
+    }
+
+    /** Open new-book dialog, fill every field with random data, save. Returns true if a row appears in the table. */
+    private static boolean testCreateBook(JFrame mainFrame) throws Exception {
         log("\n--- CREATE BOOK (random data) ---");
         AbstractButton nouBtn = findButtonContaining((Container)mainFrame, "Afegir", "Nou", "New");
-        if (nouBtn == null) { log("WARN: Add-book button not found"); return; }
+        if (nouBtn == null) { warn("Add-book button not found"); return false; }
 
         SwingUtilities.invokeLater(nouBtn::doClick); sleep(900);
         JDialog dlg = getTopDialog();
-        if (dlg == null) { log("WARN: New-book dialog did not appear"); return; }
-        log("Dialog: \"" + dlg.getTitle() + "\"");
+        if (dlg == null) { warn("New-book dialog did not appear"); return false; }
+        String dlgTitle = dlg.getTitle();
+        log("Dialog: \"" + dlgTitle + "\"");
         cmdScreenshot("create_book_empty");
 
         // ISBN must be numeric and unique — use timestamp suffix
@@ -630,8 +648,8 @@ public class UIAudit {
             {"Autor",      rand("Autor")},
             {"Any",        String.valueOf(1900 + RNG.nextInt(125))},
             {"Descripció", rand("Desc")},
-            {"Valoració",  String.format("%.1f", RNG.nextDouble() * 10)},
-            {"Preu",       String.format("%.2f", RNG.nextDouble() * 50)},
+            {"Valoració",  randDecimal(1, 10)},
+            {"Preu",       randDecimal(2, 50)},
             {"Editorial",  rand("Edit")},
             {"Sèrie",      rand("Serie")},
             {"Volum",      String.valueOf(RNG.nextInt(10) + 1)},
@@ -654,22 +672,25 @@ public class UIAudit {
         log("Fields filled. Clicking Save...");
 
         AbstractButton saveBtn = findButtonContaining((Container)dlg, "Desa", "Guardar", "Save");
-        if (saveBtn == null) { log("WARN: Save button not found — cancelling"); SwingUtilities.invokeLater(dlg::dispose); return; }
-        SwingUtilities.invokeLater(saveBtn::doClick); sleep(1000);
-
-        JDialog afterDlg = getTopDialog();
-        if (afterDlg != null) {
-            log("RESULT dialog after save: \"" + afterDlg.getTitle() + "\"");
-            collectAndLog((Container)afterDlg);
-            cmdScreenshot("create_book_result");
-            SwingUtilities.invokeLater(afterDlg::dispose); sleep(400);
-        } else {
-            log("OK: No error dialog — book likely saved (ISBN=" + testIsbn + ")");
+        if (saveBtn == null) {
+            warn("Save button not found — cancelling");
+            SwingUtilities.invokeLater(dlg::dispose);
+            return false;
         }
-        // If main dialog still open, close it
-        JDialog still = getTopDialog();
-        if (still != null) { SwingUtilities.invokeLater(still::dispose); sleep(300); }
+        SwingUtilities.invokeLater(saveBtn::doClick);
+        if (!waitForDialogTitleGone(dlgTitle, 2500)) {
+            warn("Create-book dialog still open after save (validation may have failed silently in test mode)");
+            cmdScreenshot("create_book_result");
+            collectAndLog((Container)dlg);
+            SwingUtilities.invokeLater(dlg::dispose);
+            sleep(400);
+            log("CREATE BOOK test failed. ISBN=" + testIsbn);
+            return false;
+        }
+        sleep(400);
+        log("OK: Book saved (ISBN=" + testIsbn + ")");
         log("CREATE BOOK test done. ISBN=" + testIsbn);
+        return true;
     }
 
     /** Open row 0, enter edit mode, change every editable field with random data, save. */
@@ -696,8 +717,8 @@ public class UIAudit {
             {"Autor",      rand("Autor")},
             {"Any",        String.valueOf(1900 + RNG.nextInt(125))},
             {"Descripció", rand("Desc")},
-            {"Valoració",  String.format("%.1f", RNG.nextDouble() * 10)},
-            {"Preu",       String.format("%.2f", RNG.nextDouble() * 50)},
+            {"Valoració",  randDecimal(1, 10)},
+            {"Preu",       randDecimal(2, 50)},
             {"Editorial",  rand("Edit")},
             {"Sèrie",      rand("Serie")},
             {"Volum",      String.valueOf(RNG.nextInt(10) + 1)},

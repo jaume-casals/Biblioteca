@@ -590,3 +590,9 @@ dlg_restore_title,Restaurar base de dades,Restaurar base de datos,Restore databa
 dlg_backup_title,Còpia de seguretat,Copia de seguridad,Backup
 csv_bad_isbn,ISBN invàlid: {0},ISBN inválido: {0},Invalid ISBN: {0}
 export_html_heading,La meva biblioteca,Mi biblioteca,My library
+dlg_connection_title,Connexió,Conexión,Connection
+dlg_db_restart_msg,Canvis de BD aplicats. Reiniciar ara?,Cambios de BD aplicados. ¿Reiniciar ahora?,DB changes applied. Restart now?
+dlg_db_restart_title,Reiniciar aplicació,Reiniciar aplicación,Restart application
+dlg_connection_ok,Connexió exitosa,Conexión exitosa,Connection successful
+dlg_connection_fail,Connexió fallida,Conexión fallida,Connection failed
+btn_test_connection,Prova connexió,Probar conexión,Test connection

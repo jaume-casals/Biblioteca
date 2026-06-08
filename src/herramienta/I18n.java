@@ -557,6 +557,12 @@ public class I18n {
         T("dlg_backup_title", "Còpia de seguretat", "Copia de seguridad", "Backup");
         T("csv_bad_isbn", "ISBN invàlid: {0}", "ISBN inválido: {0}", "Invalid ISBN: {0}");
         T("export_html_heading", "La meva biblioteca", "Mi biblioteca", "My library");
+        T("dlg_connection_title", "Connexió", "Conexión", "Connection");
+        T("dlg_db_restart_msg", "Canvis de BD aplicats. Reiniciar ara?", "Cambios de BD aplicados. ¿Reiniciar ahora?", "DB changes applied. Restart now?");
+        T("dlg_db_restart_title", "Reiniciar aplicació", "Reiniciar aplicación", "Restart application");
+        T("dlg_connection_ok", "Connexió exitosa", "Conexión exitosa", "Connection successful");
+        T("dlg_connection_fail", "Connexió fallida", "Conexión fallida", "Connection failed");
+        T("btn_test_connection", "Prova connexió", "Probar conexión", "Test connection");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
         T("err_causa", "Causa:", "Causa:", "Cause:");
         T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");

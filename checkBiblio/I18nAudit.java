@@ -92,7 +92,7 @@ final class I18nAudit {
     }
 
     private static void auditHardcodedCatalan(PrintWriter log, int[] warnCount) {
-        Pattern p = Pattern.compile(
+        Pattern wordP = Pattern.compile(
             "\\b(llista|llibre|afegir|eliminar|guardar|tancar|biblioteca|prestatge|etiqueta)\\b",
             Pattern.CASE_INSENSITIVE);
         try (Stream<Path> walk = Files.walk(Path.of("src"))) {
@@ -102,19 +102,45 @@ final class I18nAudit {
                     try {
                         String text = Files.readString(f, StandardCharsets.UTF_8);
                         if (text.contains("I18n.t(")) return;
-                        Matcher m = p.matcher(text);
+                        Matcher m = wordP.matcher(text);
                         while (m.find()) {
+                            int start = m.start();
+                            int end = m.end();
+                            if (!isInsideStringLiteral(text, start, end)) continue;
+                            String word = m.group(1);
+                            if (text.contains("I18n.t(\"" + word + "\"")
+                                || text.contains("t(\"" + word + "\"")) continue;
                             warnCount[0]++;
                             log.println("WARN: possible hardcoded Catalan in " + f
-                                + " (" + m.group() + " @ " + m.start() + ")");
+                                + " (" + word + " in " + literalContext(text, start, end) + " @ " + start + ")");
                         }
                     } catch (IOException ignored) {}
                 });
         } catch (IOException ignored) {}
     }
 
+    private static boolean isInsideStringLiteral(String text, int wordStart, int wordEnd) {
+        int openQuote = text.lastIndexOf('"', wordStart);
+        if (openQuote < 0) return false;
+        int closeQuote = text.indexOf('"', wordEnd);
+        return closeQuote > openQuote && (closeQuote - openQuote) < 200;
+    }
+
+    private static String literalContext(String text, int wordStart, int wordEnd) {
+        int openQuote = text.lastIndexOf('"', wordStart);
+        int closeQuote = text.indexOf('"', wordEnd);
+        if (openQuote < 0 || closeQuote < 0) return "";
+        String lit = text.substring(openQuote, closeQuote + 1);
+        return truncate(lit, 60);
+    }
+
+    private static String truncate(String s, int max) {
+        if (s.length() <= max) return s;
+        return s.substring(0, max - 1) + "…";
+    }
+
     private static void auditJavaKeyUsage(Map<String, String[]> keys, PrintWriter log, int[] failCount, int[] warnCount) {
-        Pattern used = Pattern.compile("I18n\\.t\\(\\s*\"([^\"]+)\"");
+        Pattern used = Pattern.compile("\\b(?:I18n\\.t|t)\\(\\s*\"([^\"]+)\"");
         Set<String> seen = new HashSet<>();
         try (Stream<Path> walk = Files.walk(Path.of("src"))) {
             for (Path f : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
