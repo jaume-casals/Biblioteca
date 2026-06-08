@@ -14,46 +14,19 @@ import herramienta.Config;
  * callers (ControladorDomini and the API layer) get thread-safe access without needing
  * to lock individual DAOs.
  *
- * <p>Per què existeix aquest wrapper si la majoria de mètodes són delegació
- * pura als DAOs? Tres motius:
- * <ol>
- *   <li><b>Lifecycle</b>: el singleton, el reset entre tests
- *   ({@link #resetForTest()}), el reset quan l'usuari canvia de perfil
- *   ({@link #resetForProfileSwitch()}) i el shutdown hook viuen aquí — no
- *   als DAOs individuals, que només consumeixen una {@code Connection}.</li>
- *   <li><b>Punt d'entrada únic per la capa de domini</b>: {@code ControladorDomini}
- *   col·labora amb UNA classe ({@code ControladorPersistencia}), no amb 5 DAOs
- *   separats. Si volem intercanviar la persistència (per exemple, un
- *   {@code InMemoryPersistencia} per a tests purs), només cal implementar
- *   aquesta classe — no cal tocar {@code ControladorDomini}.</li>
- *   <li><b>Sincronització global</b>: el {@code synchronized} per mètode serialitza
- *   totes les operacions de BD a través d'un sol lock. Això evita races
- *   entre DAOs diferents que comparteixen la mateixa connexió. Veure el
- *   TODO sobre {@code ReadWriteLock} més avall.</li>
- * </ol>
+ * <p>This wrapper exists to centralise lifecycle (singleton, test reset, profile
+ * switch, shutdown hook) and to give {@code ControladorDomini} a single dependency.
+ * DAOs are not individually synchronised — every call path goes through a
+ * {@code synchronized} method here, so DAO-level {@code synchronized} would be
+ * redundant double-locking.
  *
- * <p>Lifecycle:
- * <ul>
- *   <li>{@link #getInstance()} — creates the singleton, opens a JDBC connection and
- *       initialises DAOs. Called once at startup.</li>
- *   <li>{@link #resetForTest()} — clears all data and discards the instance; for
- *       integration tests that need a clean slate between test groups.</li>
- *   <li>{@link #resetForProfileSwitch()} — closes the JDBC connection and discards the
- *       instance; called when the user switches DB profile (H2 ↔ MariaDB).</li>
- * </ul>
- *
- * <p>DAOs are <em>not</em> individually synchronised because every call path goes through
- * a {@code synchronized} method on this class. Adding {@code synchronized} on DAO methods
- * would be redundant double-locking.
+ * <p>Lifecycle: {@link #getInstance()} opens a JDBC connection and initialises DAOs;
+ * {@link #resetForTest()} clears data and discards the instance (between test groups);
+ * {@link #resetForProfileSwitch()} closes the connection (H2 ↔ MariaDB profile switch).
  *
  * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un
- * {@link java.util.concurrent.locks.ReadWriteLock}. Mètodes de lectura
- * (getAllLlibres, getAllLlistes, getDistinctValues, getLlistesForLlibre, etc.)
- * haurien d'agafar el readLock per permetre lectures concurrents; mètodes
- * d'escriptura (addLlibre, updateLlibre, deleteLlibre, addLlista, etc.) el
- * writeLock. La conversió és mecànica però tediosa — un cop feta,
- * la GUI pot refrescar el llistat de llibres mentre el backend encara
- * processa una escriptura sense bloquejar.
+ * {@link java.util.concurrent.locks.ReadWriteLock} (lectures concurrents, escriptures
+ * exclusives). Conversió mecànica però tediosa.
  */
 public class ControladorPersistencia {
 

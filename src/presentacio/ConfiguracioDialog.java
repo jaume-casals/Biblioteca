@@ -7,6 +7,7 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.SwingWorker;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
@@ -128,7 +129,7 @@ public class ConfiguracioDialog extends JDialog {
 		gl.setAutoCreateContainerGaps(true);
 
 		JLabel lblSeccio = new JLabel(t("lbl_database"));
-		lblSeccio.setFont(UITheme.FONT_BOLD);
+		lblSeccio.setFont(UITheme.fontBold());
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblTipus = new JLabel(t("lbl_type"));
@@ -137,7 +138,7 @@ public class ConfiguracioDialog extends JDialog {
 			t("opt_h2_full"), t("opt_mariadb_full")
 		});
 		cmbType.setSelectedIndex("h2".equals(Config.getDbType()) ? 0 : 1);
-		cmbType.setFont(UITheme.FONT_BASE);
+		cmbType.setFont(UITheme.fontBase());
 		cmbType.putClientProperty("id", "cmbType");
 
 		JLabel lblHost = new JLabel(t("lbl_server"));
@@ -236,7 +237,7 @@ public class ConfiguracioDialog extends JDialog {
 		gl.setAutoCreateContainerGaps(true);
 
 		JLabel lblSeccio = new JLabel(t("lbl_images"));
-		lblSeccio.setFont(UITheme.FONT_BOLD);
+		lblSeccio.setFont(UITheme.fontBold());
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblImgDir = new JLabel(t("lbl_default_folder"));
@@ -280,7 +281,7 @@ public class ConfiguracioDialog extends JDialog {
 		gl.setAutoCreateContainerGaps(true);
 
 		JLabel lblSeccio = new JLabel(t("lbl_appearance"));
-		lblSeccio.setFont(UITheme.FONT_BOLD);
+		lblSeccio.setFont(UITheme.fontBold());
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblTheme = new JLabel(t("lbl_theme"));
@@ -292,7 +293,7 @@ public class ConfiguracioDialog extends JDialog {
 		herramienta.UITheme.Theme curTheme = Config.getTheme();
 		for (int i = 0; i < themeValues.length; i++)
 			if (themeValues[i] == curTheme) { cmbTheme.setSelectedIndex(i); break; }
-		cmbTheme.setFont(UITheme.FONT_BASE);
+		cmbTheme.setFont(UITheme.fontBase());
 		cmbTheme.putClientProperty("id", "cmbTheme");
 
 		JLabel lblFont = new JLabel(t("lbl_font_size"));
@@ -303,14 +304,14 @@ public class ConfiguracioDialog extends JDialog {
 		String curSize = Config.getFontSize();
 		for (int i = 0; i < fontSizeKeys.length; i++)
 			if (fontSizeKeys[i].equals(curSize)) { cmbFont.setSelectedIndex(i); break; }
-		cmbFont.setFont(UITheme.FONT_BASE);
+		cmbFont.setFont(UITheme.fontBase());
 		cmbFont.putClientProperty("id", "cmbFont");
 
 		JLabel lblCurrency = new JLabel(t("lbl_currency_symbol"));
 		UITheme.styleLabel(lblCurrency);
 		String[] currencySymbols = {"€", "$", "£", "¥", "CHF"};
 		JComboBox<String> cmbCurrency = new JComboBox<>(currencySymbols);
-		cmbCurrency.setFont(UITheme.FONT_BASE);
+		cmbCurrency.setFont(UITheme.fontBase());
 		String curCurrency = Config.getCurrencySymbol();
 		for (int i = 0; i < currencySymbols.length; i++)
 			if (currencySymbols[i].equals(curCurrency)) { cmbCurrency.setSelectedIndex(i); break; }
@@ -373,7 +374,7 @@ public class ConfiguracioDialog extends JDialog {
 		String curLang = Config.getLang();
 		for (int i = 0; i < langKeys.length; i++)
 			if (langKeys[i].equals(curLang)) { cmbLang.setSelectedIndex(i); break; }
-		cmbLang.setFont(UITheme.FONT_BASE);
+		cmbLang.setFont(UITheme.fontBase());
 		cmbLang.putClientProperty("id", "cmbLang");
 
 		gl.setHorizontalGroup(gl.createSequentialGroup()
@@ -397,24 +398,34 @@ public class ConfiguracioDialog extends JDialog {
 		gl.setAutoCreateContainerGaps(true);
 
 		JLabel lblSeccio = new JLabel(t("lbl_data"));
-		lblSeccio.setFont(UITheme.FONT_BOLD);
+		lblSeccio.setFont(UITheme.fontBold());
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblDbSize = new JLabel(t("lbl_db_size"));
 		UITheme.styleLabel(lblDbSize);
-		long dbBytes = cd.getDbSizeBytes();
-		String dbSizeStr = dbBytes < 0 ? "N/D" :
-			dbBytes < 1024 * 1024 ? String.format("%.1f KB", dbBytes / 1024.0) :
-			String.format("%.2f MB", dbBytes / (1024.0 * 1024.0));
-		JLabel lblDbSizeVal = new JLabel(dbSizeStr);
-		lblDbSizeVal.setFont(UITheme.FONT_BASE);
+		JLabel lblDbSizeVal = new JLabel("...");
+		lblDbSizeVal.setFont(UITheme.fontBase());
 		lblDbSizeVal.setForeground(UITheme.TEXT_DARK);
+		new SwingWorker<Long, Void>() {
+			@Override protected Long doInBackground() { return cd.getDbSizeBytes(); }
+			@Override protected void done() {
+				try {
+					long dbBytes = get();
+					String dbSizeStr = dbBytes < 0 ? "N/D" :
+						dbBytes < 1024 * 1024 ? String.format(java.util.Locale.ROOT, "%.1f KB", dbBytes / 1024.0) :
+						String.format(java.util.Locale.ROOT, "%.2f MB", dbBytes / (1024.0 * 1024.0));
+					lblDbSizeVal.setText(dbSizeStr);
+				} catch (Exception ignored) {
+					lblDbSizeVal.setText("N/D");
+				}
+			}
+		}.execute();
 
 		JButton btnBuidar = new JButton(t("btn_clear_library"));
 		btnBuidar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
 		btnBuidar.setBackground(UITheme.DANGER);
 		btnBuidar.setForeground(java.awt.Color.WHITE);
-		btnBuidar.setFont(UITheme.FONT_BOLD);
+		btnBuidar.setFont(UITheme.fontBold());
 		btnBuidar.setFocusPainted(false);
 		btnBuidar.setBorderPainted(false);
 		btnBuidar.setOpaque(true);

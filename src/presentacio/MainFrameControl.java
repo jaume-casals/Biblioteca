@@ -20,6 +20,12 @@ import herramienta.I18n;
 import interficie.BibliotecaWriter;
 import presentacio.listener.EnActualizarBBDD;
 
+/**
+ * Facade over the 6 sub-controllers (bookActions, bookIO, contextMenu, filter,
+ * shelf, tablePage) for the main screen. MostrarBibliotecaControl owns the
+ * table/list rendering; this class owns the top-level frame, menubar, and
+ * orchestration.
+ */
 public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 
 	private final BibliotecaWriter cLlibres;
@@ -43,7 +49,7 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 		this.panel = panel;
 		this.libraryPanel = panel.getMostrarBibliotecaPanel();
 		this.cLlibres = cd;
-		this.frame = new JFrame("Biblioteca");
+		this.frame = new JFrame(I18n.t("app_title"));
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.setBounds(Config.getWindowX(), Config.getWindowY(),
 				Config.getWindowWidth(), Config.getWindowHeight());

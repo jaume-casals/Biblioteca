@@ -23,7 +23,7 @@ public class LoadingDialog {
             BorderFactory.createEmptyBorder(16, 24, 16, 24)));
 
         label = new JLabel(message, SwingConstants.CENTER);
-        label.setFont(UITheme.FONT_BASE);
+        label.setFont(UITheme.fontBase());
         label.setForeground(UITheme.TEXT_DARK);
 
         bar = new JProgressBar();

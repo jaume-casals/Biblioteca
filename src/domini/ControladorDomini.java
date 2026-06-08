@@ -38,7 +38,8 @@ public class ControladorDomini implements BibliotecaWriter {
 	);
 
 	private static Llibre searchKey(long isbn) {
-		return new Llibre(isbn, "", "", 0, "", 0.0, 0.0, false, "");
+		return Llibre.builder().isbn(isbn).nom("").autor("").any(0)
+			.descripcio("").valoracio(0.0).preu(0.0).llegit(false).imatge("").build();
 	}
 
 	public static synchronized ControladorDomini getInstance() {
@@ -152,6 +153,18 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		return bib.size();
 	}
 
+	/**
+	 * Afegeix un llibre a la biblioteca.
+	 *
+	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
+	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
+	 * no és atòmica. Dos fils podrien inserir el mateix ISBN (un passa el
+	 * {@code binarySearch}, l'altre encara no ha acabat la DB), o un altre
+	 * fil pot modificar {@code bib} entre el {@code binarySearch} i el
+	 * {@code bib.add}, resultant en una posició incorrecta. Per tancar la
+	 * finestra cal un lock global o una clau única a la DB amb detecció
+	 * de duplicats a nivell d'INSERT.
+	 */
 	public void addLlibre(Llibre l) {
 		int pos = Collections.binarySearch(bib, l, compararISBN);
 		if (pos >= 0)
@@ -161,6 +174,13 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		bib.add(pos, l);
 	}
 
+	/**
+	 * Elimina un llibre de la biblioteca.
+	 *
+	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
+	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
+	 * no és atòmica — veure {@link #addLlibre(Llibre)}.
+	 */
 	public void deleteLlibre(Llibre l) {
 		int pos = Collections.binarySearch(bib, l, compararISBN);
 		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
@@ -168,8 +188,15 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		bib.remove(pos);
 	}
 
+	/**
+	 * Elimina un llibre donat el seu ISBN.
+	 *
+	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
+	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
+	 * no és atòmica — veure {@link #addLlibre(Llibre)}.
+	 */
 	public void deleteLlibre(Long ISBN) {
-		if (ISBN == null) throw new BibliotecaException.NotFound("ISBN és null");
+		if (ISBN == null) throw new BibliotecaException.Validation("ISBN no pot ser null");
 		int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
 		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
 		try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
@@ -207,12 +234,25 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		}
 	}
 
+	/**
+	 * Serialitza l'estat de la biblioteca a un fitxer SQL.
+	 *
+	 * <p>Ordre d'operacions (intencionat): (1) els camps pesats
+	 * ({@code descripcio}, {@code notes}, blob) es pre-carreguen per a tots
+	 * els llibres ABANS del snapshot — fora del bloc sincronitzat perquè
+	 * cada {@code loadHeavyFields} fa una volta a la DB i el I/O no ha de
+	 * bloquejar la resta d'operacions; (2) el snapshot de {@code bib},
+	 * {@code llistes} i {@code tags} es pren atòmicament dins del
+	 * {@code synchronized} (còpies defensives, mutacions posteriors no
+	 * afecten la còpia); (3) l'escriptura al fitxer es delega a
+	 * {@link BackupService#backupToSQL} sense mantenir cap lock.
+	 */
 	public void backupToSQL(java.io.File file) {
+		for (Llibre l : bib) loadHeavyFields(l);
 		ArrayList<Llibre> bibSnapshot;
 		ArrayList<Llista> llistesSnapshot;
 		ArrayList<Tag> tagsSnapshot;
 		synchronized (this) {
-			for (Llibre l : bib) loadHeavyFields(l);
 			bibSnapshot = new ArrayList<>(bib);
 			llistesSnapshot = new ArrayList<>(llistes);
 			tagsSnapshot = new ArrayList<>(tags);
@@ -330,14 +370,15 @@ private void swapLlistesOrdre(int i, int j) {
         int ordreA = a.getOrdre();
         int ordreB = b.getOrdre();
         try {
-            cp.updateLlistaOrdre(a.getId(), ordreB);
-            cp.updateLlistaOrdre(b.getId(), ordreA);
             a.setOrdre(ordreB);
             b.setOrdre(ordreA);
             Collections.swap(llistes, i, j);
+            cp.updateLlistaOrdre(a.getId(), ordreB);
+            cp.updateLlistaOrdre(b.getId(), ordreA);
         } catch (java.sql.SQLException e) {
             a.setOrdre(ordreA);
             b.setOrdre(ordreB);
+            Collections.swap(llistes, i, j);
             throw new BibliotecaException(e.getMessage(), e);
         }
     }

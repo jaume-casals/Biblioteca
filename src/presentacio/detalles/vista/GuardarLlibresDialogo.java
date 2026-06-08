@@ -123,7 +123,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		comboFormat    = new JComboBox<>(herramienta.FormatOptions.withBlank());
 		comboFormat.setBackground(UITheme.BG_MAIN);
 		comboFormat.setForeground(UITheme.TEXT_DARK);
-		comboFormat.setFont(UITheme.FONT_BASE);
+		comboFormat.setFont(UITheme.fontBase());
 		chckDesitjat   = new JCheckBox("");
 		chckDesitjat.setBackground(UITheme.BG_PANEL);
 		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);

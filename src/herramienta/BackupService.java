@@ -44,7 +44,6 @@ public class BackupService {
     }
 
     private void autoBackup() {
-        try { Thread.sleep(30_000); } catch (InterruptedException e) { return; }
         List<Llibre> bib = cp.getAllLlibres();
         if (bib.isEmpty()) return;
         try {

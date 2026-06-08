@@ -86,7 +86,7 @@ class ViewModeController {
         state.groupBySeries = !state.groupBySeries;
         state.vista.getBtnGroupSeries().setFont(state.groupBySeries
             ? state.vista.getBtnGroupSeries().getFont().deriveFont(java.awt.Font.BOLD)
-            : UITheme.FONT_BOLD);
+            : UITheme.fontBold());
         if (state.groupBySeries && state.biblio != null) {
             state.biblio.sort(Comparator
                 .comparing((Llibre l) -> l.getSerie() == null || l.getSerie().isBlank() ? "￿" : l.getSerie())
@@ -102,7 +102,7 @@ class ViewModeController {
         int total = state.biblio != null ? state.biblio.size() : 0;
         java.awt.Window w = SwingUtilities.getWindowAncestor(state.vista);
         if (w instanceof JFrame frame && frame.getContentPane() instanceof MainFramePanel mfp) {
-            frame.setTitle("Biblioteca");
+            frame.setTitle(I18n.t("app_title"));
             String shelf = state.currentLlistaId == null ? I18n.t("lbl_all_lists") : currentShelfName();
             String count = shown == total
                 ? total + " llibres"

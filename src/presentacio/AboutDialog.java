@@ -49,8 +49,8 @@ public class AboutDialog extends JDialog {
 		main.setBorder(new EmptyBorder(24, 32, 16, 32));
 
 		// App name
-		JLabel lblApp = new JLabel("Biblioteca " + getVersion());
-		lblApp.setFont(UITheme.FONT_BOLD.deriveFont(22f));
+		JLabel lblApp = new JLabel(I18n.t("app_title") + " " + getVersion());
+		lblApp.setFont(UITheme.fontBold().deriveFont(22f));
 		lblApp.setForeground(UITheme.ACCENT);
 		lblApp.setAlignmentX(Component.CENTER_ALIGNMENT);
 		main.add(lblApp);
@@ -138,7 +138,7 @@ public class AboutDialog extends JDialog {
 		k.setPreferredSize(new Dimension(80, 0));
 		k.setHorizontalAlignment(SwingConstants.RIGHT);
 		JLabel v = new JLabel(value);
-		v.setFont(UITheme.FONT_BASE);
+		v.setFont(UITheme.fontBase());
 		v.setForeground(UITheme.TEXT_DARK);
 		row.add(k, BorderLayout.WEST);
 		row.add(v, BorderLayout.CENTER);

@@ -153,7 +153,7 @@ class BookActionsController {
 
         javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
         txtSummary.setEditable(false);
-        txtSummary.setFont(UITheme.FONT_BASE);
+        txtSummary.setFont(UITheme.fontBase());
         txtSummary.setBackground(UITheme.BG_PANEL);
         txtSummary.setForeground(UITheme.TEXT_DARK);
         txtSummary.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8));
@@ -185,12 +185,12 @@ class BookActionsController {
         }
 
         JTable shelfTable = new JTable(shelfModel);
-        shelfTable.setFont(UITheme.FONT_BASE);
+        shelfTable.setFont(UITheme.fontBase());
         shelfTable.setBackground(UITheme.BG_PANEL);
         shelfTable.setForeground(UITheme.TEXT_DARK);
         shelfTable.setRowHeight(26);
         shelfTable.setEnabled(false);
-        shelfTable.getTableHeader().setFont(UITheme.FONT_BOLD);
+        shelfTable.getTableHeader().setFont(UITheme.fontBold());
         javax.swing.JScrollPane shelfScroll = new javax.swing.JScrollPane(shelfTable);
         shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
         shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("lbl_per_list")));
@@ -202,16 +202,16 @@ class BookActionsController {
         goalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
             javax.swing.BorderFactory.createLineBorder(UITheme.BORDER_CLR),
             I18n.t("lbl_reading_goal_section"), javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP, UITheme.FONT_BOLD, UITheme.TEXT_MID));
+            javax.swing.border.TitledBorder.TOP, UITheme.fontBold(), UITheme.TEXT_MID));
 
         javax.swing.JProgressBar goalBar = new javax.swing.JProgressBar(0, Math.max(savedGoal, 1));
         goalBar.setValue(Math.min(totalLlegits, Math.max(savedGoal, 1)));
         goalBar.setStringPainted(true);
-        goalBar.setFont(UITheme.FONT_BASE);
+        goalBar.setFont(UITheme.fontBase());
 
         javax.swing.JSpinner goalSpinner = new javax.swing.JSpinner(
             new javax.swing.SpinnerNumberModel(Math.max(savedGoal, 1), 1, 9999, 1));
-        goalSpinner.setFont(UITheme.FONT_BASE);
+        goalSpinner.setFont(UITheme.fontBase());
         goalSpinner.setPreferredSize(new java.awt.Dimension(70, 28));
         goalSpinner.addChangeListener(ev -> {
             int goal = (int) goalSpinner.getValue();

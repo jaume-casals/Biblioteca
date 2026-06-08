@@ -1,4 +1,0 @@
-./test/PopulateDB.java
-./test/BibliotecaTest.java
-./test/BibliotecaJUnit5Test.java
-./test/DominiPersistenciaJUnit5Test.java

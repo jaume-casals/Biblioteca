@@ -306,12 +306,45 @@ public class Config {
                 f.getParentFile().mkdirs();
                 java.util.Properties tmp = new java.util.Properties();
                 props.forEach((k, v) -> tmp.put(k, v));
-                try (FileOutputStream out = new FileOutputStream(f)) {
+                File tmpFile = new File(f.getParentFile(), f.getName() + ".tmp");
+                try (FileOutputStream out = new FileOutputStream(tmpFile)) {
                     tmp.store(out, "Biblioteca configuration");
                 }
+                java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE);
             } catch (IOException e) {
                 System.err.println("Config save failed: " + e.getMessage());
             }
         }, 300, TimeUnit.MILLISECONDS);
+    }
+
+    public static void flushNow() {
+        if (pendingSave != null) {
+            pendingSave.cancel(false);
+            pendingSave = null;
+        }
+        try {
+            File f = currentFile();
+            f.getParentFile().mkdirs();
+            java.util.Properties tmp = new java.util.Properties();
+            props.forEach((k, v) -> tmp.put(k, v));
+            File tmpFile = new File(f.getParentFile(), f.getName() + ".tmp");
+            try (FileOutputStream out = new FileOutputStream(tmpFile)) {
+                tmp.store(out, "Biblioteca configuration");
+            }
+            java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            System.err.println("Config flush failed: " + e.getMessage());
+        }
+    }
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            flushNow();
+            SAVE_SCHEDULER.shutdownNow();
+        }, "config-shutdown"));
     }
 }

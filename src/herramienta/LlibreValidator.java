@@ -86,30 +86,24 @@ public class LlibreValidator {
 		if (preu != null && preu < 0)
 			throw new IllegalArgumentException(I18n.t("val_preu_negatiu"));
 
-		return new Llibre(
-			isbn, nom,
-			autor != null ? autor : "",
-			any != null ? any : 0,
-			descripcio != null ? descripcio : "",
-			valoracio != null ? valoracio : 0.0,
-			preu != null ? preu : 0.0,
-			llegit != null ? llegit : false,
-			portada != null ? portada : "");
+		return Llibre.builder()
+			.isbn(isbn).nom(nom)
+			.autor(autor != null ? autor : "")
+			.any(any != null ? any : 0)
+			.descripcio(descripcio != null ? descripcio : "")
+			.valoracio(valoracio != null ? valoracio : 0.0)
+			.preu(preu != null ? preu : 0.0)
+			.llegit(llegit != null ? llegit : false)
+			.imatge(portada != null ? portada : "")
+			.build();
 	}
 
 	/** Validates core fields and writes normalized values into {@code target}; extras (notes, pagines, …) stay on target. */
 	public static void validateInto(Llibre target, Long isbn, String nom, String autor, Integer any,
 			String descripcio, Double valoracio, Double preu, Boolean llegit, String portada) {
 		Llibre v = checkLlibre(isbn, nom, autor, any, descripcio, valoracio, preu, llegit, portada);
-		target.setISBN(v.getISBN());
-		target.setNom(v.getNom());
-		target.setAutor(v.getAutor());
-		target.setAny(v.getAny());
-		target.setDescripcio(v.getDescripcio());
-		target.setValoracio(v.getValoracio());
-		target.setPreu(v.getPreu());
-		target.setLlegit(v.getLlegit());
-		target.setImatge(v.getImatge());
+		Llibre.bindUpdateableFields(target, v.getISBN(), v.getNom(), v.getAutor(), v.getAny(),
+			v.getDescripcio(), v.getValoracio(), v.getPreu(), v.getLlegit(), v.getImatge());
 	}
 
 	/** Validates optional string fields that have a DB VARCHAR limit. Throws if over limit. */
@@ -133,6 +127,20 @@ public class LlibreValidator {
 	}
 
 	private static int countDig(long n) {
-		return String.valueOf(n).length();
+		if (n < 0) n = -n;
+		if (n < 10L) return 1;
+		if (n < 100L) return 2;
+		if (n < 1_000L) return 3;
+		if (n < 10_000L) return 4;
+		if (n < 100_000L) return 5;
+		if (n < 1_000_000L) return 6;
+		if (n < 10_000_000L) return 7;
+		if (n < 100_000_000L) return 8;
+		if (n < 1_000_000_000L) return 9;
+		if (n < 10_000_000_000L) return 10;
+		if (n < 100_000_000_000L) return 11;
+		if (n < 1_000_000_000_000L) return 12;
+		if (n < 10_000_000_000_000L) return 13;
+		return 19;
 	}
 }

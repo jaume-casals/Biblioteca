@@ -51,7 +51,7 @@ public class Ejecutable {
                 UIManager.put("nimbusFocus",               UITheme.ACCENT);
                 UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
                 UIManager.put("nimbusSelectedText",        Color.WHITE);
-                UIManager.put("defaultFont",              UITheme.FONT_BASE);
+                UIManager.put("defaultFont",              UITheme.fontBase());
                 UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
                 UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
 

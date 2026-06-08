@@ -23,7 +23,7 @@ public class MainFramePanel extends JPanel {
 		add(mostrarBibliotecaPanel, BorderLayout.CENTER);
 
 		statusBar = new JLabel(" ");
-		statusBar.setFont(UITheme.FONT_BASE);
+		statusBar.setFont(UITheme.fontBase());
 		statusBar.setForeground(UITheme.TEXT_MID);
 		statusBar.getAccessibleContext().setAccessibleName(I18n.t("acc_status_bar"));
 		statusBar.setBorder(BorderFactory.createCompoundBorder(

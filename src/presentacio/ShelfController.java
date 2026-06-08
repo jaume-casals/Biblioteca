@@ -69,62 +69,87 @@ class ShelfController {
         java.awt.event.ActionListener[] listeners = combo.getActionListeners();
         for (java.awt.event.ActionListener al : listeners) combo.removeActionListener(al);
         combo.removeAllItems();
+        combo.addItem(I18n.t("lbl_all_lists") + " (...)");
 
-        Map<Integer, Integer> counts = state.cd.getAllCountsInLlistes();
-        combo.addItem(I18n.t("lbl_all_lists") + " (" + state.cd.getAllLlibres().size() + ")");
-        for (Llista l : state.cd.getAllLlistes()) combo.addItem(l);
-        combo.setRenderer(new javax.swing.DefaultListCellRenderer() {
-            @Override
-            public java.awt.Component getListCellRendererComponent(
-                    javax.swing.JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                javax.swing.Icon icon = null;
-                if (value instanceof Llista ll) {
-                    if (ll.getColor() != null) {
-                        try {
-                            java.awt.Color c = java.awt.Color.decode(ll.getColor());
-                            icon = new javax.swing.Icon() {
-                                public int getIconWidth()  { return 12; }
-                                public int getIconHeight() { return 12; }
-                                public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
-                                    g.setColor(c);
-                                    g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
-                                    g.setColor(c.darker());
-                                    g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
+        new javax.swing.SwingWorker<java.util.List<Object>, Void>() {
+            @Override protected java.util.List<Object> doInBackground() {
+                java.util.List<Object> out = new java.util.ArrayList<>();
+                Map<Integer, Integer> counts = state.cd.getAllCountsInLlistes();
+                int total = state.cd.getAllLlibres().size();
+                java.util.List<Llista> llistes = new ArrayList<>(state.cd.getAllLlistes());
+                out.add(counts); out.add(total); out.add(llistes);
+                if (state.currentLlistaId != null) {
+                    out.add(new ArrayList<>(state.cd.getLlibresInLlista(state.currentLlistaId)));
+                } else {
+                    out.add(new ArrayList<>(state.cd.getAllLlibres()));
+                }
+                out.add(state.cd.isLargeLibrary());
+                return out;
+            }
+            @Override protected void done() {
+                try {
+                    java.util.List<Object> data = get();
+                    @SuppressWarnings("unchecked") Map<Integer, Integer> counts = (Map<Integer, Integer>) data.get(0);
+                    int total = (Integer) data.get(1);
+                    @SuppressWarnings("unchecked") java.util.List<Llista> llistes = (java.util.List<Llista>) data.get(2);
+                    @SuppressWarnings("unchecked") java.util.List<domini.Llibre> biblio = (java.util.List<domini.Llibre>) data.get(3);
+                    boolean largeLib = (Boolean) data.get(4);
+
+                    combo.removeAllItems();
+                    combo.addItem(I18n.t("lbl_all_lists") + " (" + total + ")");
+                    for (Llista l : llistes) combo.addItem(l);
+                    combo.setRenderer(new javax.swing.DefaultListCellRenderer() {
+                        @Override
+                        public java.awt.Component getListCellRendererComponent(
+                                javax.swing.JList<?> list, Object value, int index,
+                                boolean isSelected, boolean cellHasFocus) {
+                            javax.swing.Icon icon = null;
+                            if (value instanceof Llista ll) {
+                                if (ll.getColor() != null) {
+                                    try {
+                                        java.awt.Color c = java.awt.Color.decode(ll.getColor());
+                                        icon = new javax.swing.Icon() {
+                                            public int getIconWidth()  { return 12; }
+                                            public int getIconHeight() { return 12; }
+                                            public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
+                                                g.setColor(c);
+                                                g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
+                                                g.setColor(c.darker());
+                                                g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
+                                            }
+                                        };
+                                    } catch (Exception ignored) {}
                                 }
-                            };
-                        } catch (Exception ignored) {}
+                                value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
+                            }
+                            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                            setIcon(icon);
+                            return this;
+                        }
+                    });
+                    int selectIdx = 0;
+                    if (state.currentLlistaId != null) {
+                        for (int i = 1; i < combo.getItemCount(); i++) {
+                            Object item = combo.getItemAt(i);
+                            if (item instanceof Llista ll && ll.getId() == state.currentLlistaId) {
+                                selectIdx = i;
+                                break;
+                            }
+                        }
+                        if (selectIdx == 0) state.currentLlistaId = null;
                     }
-                    value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
-                }
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setIcon(icon);
-                return this;
-            }
-        });
-        int selectIdx = 0;
-        if (state.currentLlistaId != null) {
-            for (int i = 1; i < combo.getItemCount(); i++) {
-                Object item = combo.getItemAt(i);
-                if (item instanceof Llista ll && ll.getId() == state.currentLlistaId) {
-                    selectIdx = i;
-                    break;
+                    combo.setSelectedIndex(selectIdx);
+                    for (java.awt.event.ActionListener al : listeners) combo.addActionListener(al);
+                    state.vista.rebuildSidebarShelves(llistes, counts, ShelfController.this::onDragToShelf, ShelfController.this::inlineRenameShelf);
+                    state.biblio = biblio;
+                    host.pageCtrl().setUseDBPagination(state.currentLlistaId == null && largeLib);
+                    host.pageCtrl().setCurrentPage(0);
+                    host.showPage(0);
+                } catch (Exception ex) {
+                    new herramienta.DialogoError(ex).showErrorMessage();
                 }
             }
-            if (selectIdx == 0) state.currentLlistaId = null;
-        }
-        combo.setSelectedIndex(selectIdx);
-        for (java.awt.event.ActionListener al : listeners) combo.addActionListener(al);
-        state.vista.rebuildSidebarShelves(state.cd.getAllLlistes(), counts, this::onDragToShelf, this::inlineRenameShelf);
-        if (state.currentLlistaId != null) {
-            state.biblio = new ArrayList<>(state.cd.getLlibresInLlista(state.currentLlistaId));
-            host.pageCtrl().setUseDBPagination(false);
-        } else {
-            state.biblio = new ArrayList<>(state.cd.getAllLlibres());
-            host.pageCtrl().setUseDBPagination(state.cd.isLargeLibrary());
-        }
-        host.pageCtrl().setCurrentPage(0);
-        host.showPage(0);
+        }.execute();
     }
 
     void refreshComboTags() {

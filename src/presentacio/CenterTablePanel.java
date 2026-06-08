@@ -83,7 +83,7 @@ public class CenterTablePanel extends JPanel {
 		jTableBilio.setSelectionForeground(Color.WHITE);
 		jTableBilio.setGridColor(UITheme.TABLE_GRID);
 		jTableBilio.setRowHeight(32);
-		jTableBilio.setFont(UITheme.FONT_BASE);
+		jTableBilio.setFont(UITheme.fontBase());
 		jTableBilio.setShowGrid(true);
 		jTableBilio.setIntercellSpacing(new Dimension(0, 1));
 		jTableBilio.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -98,7 +98,7 @@ public class CenterTablePanel extends JPanel {
 				JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, c);
 				lbl.setBackground(UITheme.HEADER_BG);
 				lbl.setForeground(UITheme.HEADER_FG);
-				lbl.setFont(UITheme.FONT_BOLD);
+				lbl.setFont(UITheme.fontBold());
 				lbl.setOpaque(true);
 				lbl.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createMatteBorder(0, 0, 2, 1, UITheme.BORDER_CLR),

@@ -122,6 +122,13 @@ public class LlistesDelLlibreControl {
         javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
         for (Llista l : allLlistesCache) model.addElement(l);
         vista.getShelfCheckList().setModel(model);
+        java.util.List<Integer> memberIdx = new java.util.ArrayList<>();
+        for (int i = 0; i < allLlistesCache.size(); i++) {
+            if (memberIds.contains(allLlistesCache.get(i).getId())) memberIdx.add(i);
+        }
+        int[] memberIdxArr = new int[memberIdx.size()];
+        for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
+        vista.getShelfCheckList().setSelectedIndices(memberIdxArr);
         vista.getShelfCheckList().setCellRenderer(new javax.swing.DefaultListCellRenderer() {
             @Override
             public java.awt.Component getListCellRendererComponent(

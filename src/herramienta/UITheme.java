@@ -144,11 +144,28 @@ public class UITheme {
     private static final Color OC_NIMBUS_BG     = new Color(0x0077A8);
 
     // ── Fonts (rebuilt by rebuildFonts) ──────────────────────────────────────
-    public static Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
-    public static Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
     public static Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
     public static Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
     public static Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+
+    /**
+     * Base font, rebuilt by {@link #rebuildFonts(String)} when the configured
+     * font size changes. Held as {@code private static volatile} so external
+     * code must go through {@link #fontBase()} to read the current value,
+     * preventing races with {@code rebuildFonts} on the EDT.
+     */
+    private static volatile Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
+
+    /**
+     * Bold base font, rebuilt by {@link #rebuildFonts(String)} when the
+     * configured font size changes. Held as {@code private static volatile}
+     * so external code must go through {@link #fontBold()} to read the
+     * current value, preventing races with {@code rebuildFonts} on the EDT.
+     */
+    private static volatile Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
+
+    public static Font fontBase() { return FONT_BASE; }
+    public static Font fontBold() { return FONT_BOLD; }
 
     static { setTheme(Theme.LIGHT); }
 

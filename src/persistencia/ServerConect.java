@@ -178,7 +178,34 @@ public class ServerConect {
 		return p;
 	}
 
+	/**
+	 * Applies pending schema migrations and records each completed version in
+	 * {@code schema_version}. The transaction strategy depends on the connected
+	 * engine, detected via {@link java.sql.DatabaseMetaData#getDatabaseProductName()}.
+	 *
+	 * <p><b>H2</b> supports transactional DDL. The DDL statement and the matching
+	 * {@code schema_version} INSERT run inside a single JDBC transaction
+	 * ({@code setAutoCommit(false)} → execute → {@code commit}, or
+	 * {@code rollback} on failure). A mid-sequence failure on H2 leaves the
+	 * schema unchanged and the migration is re-attempted on the next startup.
+	 *
+	 * <p><b>MariaDB / MySQL</b> do not support transactional DDL: every DDL
+	 * statement implicitly commits and cannot be rolled back. On these engines
+	 * the {@code setAutoCommit(false)} wrapper is intentionally skipped and
+	 * each migration is applied as two independent atomic operations: the DDL
+	 * (auto-committed) followed by the {@code schema_version} INSERT (its own
+	 * auto-commit transaction). If the INSERT fails it is logged and the
+	 * migration is left unrecorded so the next startup will retry it. If the
+	 * DDL itself fails, the connection may have partially-migrated state:
+	 * operators must inspect {@code schema_version} (which lists the
+	 * migrations recorded as applied) and the live schema to determine which
+	 * statements completed and finish the migration manually. All DDL in
+	 * {@link #MIGRATIONS} is written to be idempotent (guards such as
+	 * {@code IF NOT EXISTS}), so a retry against a partially-migrated schema
+	 * is safe.
+	 */
 	private void runMigrations() throws SQLException {
+		boolean isH2 = isH2Connection();
 		boolean prevAutoCommit = con.getAutoCommit();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
@@ -189,33 +216,61 @@ public class ServerConect {
 			try (PreparedStatement ins = con.prepareStatement("INSERT INTO schema_version VALUES (?)")) {
 				for (Migration m : MIGRATIONS) {
 					if (applied.contains(m.version())) continue;
-					boolean prev = con.getAutoCommit();
-					try {
-						con.setAutoCommit(false);
-						if (m.version() == 34) {
-							if (!applyMigration34DropAutor(st)) {
-								con.rollback();
-								continue;
-							}
-						} else {
-							st.executeUpdate(m.sql());
-						}
-						ins.setInt(1, m.version());
-						ins.execute();
-						con.commit();
-						applied.add(m.version());
-					} catch (SQLException e) {
-						try { con.rollback(); } catch (SQLException ex) {
-							System.err.println("Migration " + m.version() + " rollback failed: " + ex.getMessage());
-						}
-						throw e;
-					} finally {
-						con.setAutoCommit(prev);
-					}
+					boolean recorded = isH2
+						? runMigrationH2(st, ins, m)
+						: runMigrationNonTransactional(st, ins, m);
+					if (recorded) applied.add(m.version());
 				}
 			}
 		} finally {
 			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}
+		}
+	}
+
+	private boolean isH2Connection() throws SQLException {
+		String productName = con.getMetaData().getDatabaseProductName();
+		return productName != null && productName.toLowerCase(java.util.Locale.ROOT).startsWith("h2");
+	}
+
+	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migration m) throws SQLException {
+		boolean prev = con.getAutoCommit();
+		try {
+			con.setAutoCommit(false);
+			if (m.version() == 34) {
+				if (!applyMigration34DropAutor(st)) {
+					con.rollback();
+					return false;
+				}
+			} else {
+				st.executeUpdate(m.sql());
+			}
+			ins.setInt(1, m.version());
+			ins.execute();
+			con.commit();
+			return true;
+		} catch (SQLException e) {
+			try { con.rollback(); } catch (SQLException ex) {
+				System.err.println("Migration " + m.version() + " rollback failed: " + ex.getMessage());
+			}
+			throw e;
+		} finally {
+			con.setAutoCommit(prev);
+		}
+	}
+
+	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migration m) throws SQLException {
+		if (m.version() == 34) {
+			applyMigration34DropAutor(st);
+		} else {
+			st.executeUpdate(m.sql());
+		}
+		try {
+			ins.setInt(1, m.version());
+			ins.execute();
+			return true;
+		} catch (SQLException e) {
+			System.err.println("Migration " + m.version() + " schema_version insert failed: " + e.getMessage());
+			return false;
 		}
 	}
 

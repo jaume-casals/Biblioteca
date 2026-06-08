@@ -80,7 +80,7 @@ public class FilterDrawerPanel extends JPanel {
 		presetBar.add(lblPresets);
 
 		comboPresets = new JComboBox<>();
-		comboPresets.setFont(UITheme.FONT_BASE);
+		comboPresets.setFont(UITheme.fontBase());
 		comboPresets.setToolTipText(I18n.t("tip_combo_presets"));
 		comboPresets.setBounds(62, 6, 150, 26);
 		presetBar.add(comboPresets);
@@ -114,14 +114,14 @@ public class FilterDrawerPanel extends JPanel {
 		row1.setBackground(UITheme.BG_PANEL);
 
 		chckbxLlegit = new JCheckBox(I18n.t("filter_llegit_chk"));
-		chckbxLlegit.setFont(UITheme.FONT_BASE);
+		chckbxLlegit.setFont(UITheme.fontBase());
 		chckbxLlegit.setBackground(UITheme.BG_PANEL);
 		chckbxLlegit.setForeground(UITheme.TEXT_DARK);
 		chckbxLlegit.setToolTipText(I18n.t("tip_filter_llegit"));
 		row1.add(chckbxLlegit);
 
 		chckbxNoLlegit = new JCheckBox(I18n.t("filter_no_llegit_chk"));
-		chckbxNoLlegit.setFont(UITheme.FONT_BASE);
+		chckbxNoLlegit.setFont(UITheme.fontBase());
 		chckbxNoLlegit.setBackground(UITheme.BG_PANEL);
 		chckbxNoLlegit.setForeground(UITheme.TEXT_DARK);
 		chckbxNoLlegit.setToolTipText(I18n.t("tip_filter_no_llegit"));
@@ -139,7 +139,7 @@ public class FilterDrawerPanel extends JPanel {
 		UITheme.styleLabel(lblTag);
 		row1.add(lblTag);
 		comboTagFilter = new JComboBox<>();
-		comboTagFilter.setFont(UITheme.FONT_BASE);
+		comboTagFilter.setFont(UITheme.fontBase());
 		comboTagFilter.setToolTipText(I18n.t("tip_filter_tag"));
 		comboTagFilter.setPreferredSize(new Dimension(140, 28));
 		row1.add(comboTagFilter);
@@ -155,7 +155,7 @@ public class FilterDrawerPanel extends JPanel {
 		UITheme.styleLabel(lblFormat);
 		row1b.add(lblFormat);
 		filterFormat = new JComboBox<>(new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
-		filterFormat.setFont(UITheme.FONT_BASE);
+		filterFormat.setFont(UITheme.fontBase());
 		filterFormat.setPreferredSize(new Dimension(130, 28));
 		row1b.add(filterFormat);
 		panelFiltros.add(row1b);
@@ -279,7 +279,7 @@ public class FilterDrawerPanel extends JPanel {
 		UITheme.styleAccentButton(btnCarregaPreset);
 		UITheme.styleSecondaryButton(btnDesaPreset);
 		UITheme.styleSecondaryButton(btnEsborraPreset);
-		comboPresets.setFont(UITheme.FONT_BASE);
+		comboPresets.setFont(UITheme.fontBase());
 		setBackground(UITheme.BG_MAIN);
 	}
 
@@ -346,7 +346,7 @@ public class FilterDrawerPanel extends JPanel {
 					if (c instanceof JCheckBox) {
 						((JCheckBox) c).setBackground(UITheme.BG_PANEL);
 						((JCheckBox) c).setForeground(UITheme.TEXT_DARK);
-						((JCheckBox) c).setFont(UITheme.FONT_BASE);
+						((JCheckBox) c).setFont(UITheme.fontBase());
 					} else if (c instanceof JLabel) {
 						UITheme.styleLabel((JLabel) c);
 					} else if (c instanceof JTextField) {

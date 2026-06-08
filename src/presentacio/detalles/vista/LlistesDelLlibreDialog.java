@@ -60,7 +60,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         table.setBackground(UITheme.BG_PANEL);
         table.setForeground(UITheme.TEXT_DARK);
         table.setRowHeight(30);
-        table.setFont(UITheme.FONT_BASE);
+        table.setFont(UITheme.fontBase());
         table.setSelectionBackground(UITheme.ACCENT);
         table.setSelectionForeground(Color.WHITE);
         table.getColumnModel().getColumn(LlistesDelLlibreTableModel.COL_NOM).setPreferredWidth(200);
@@ -70,10 +70,10 @@ public class LlistesDelLlibreDialog extends JDialog {
 
         shelfCheckList = new JList<>();
         shelfCheckList.setVisibleRowCount(8);
-        shelfCheckList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        shelfCheckList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         shelfCheckList.setBackground(UITheme.BG_PANEL);
         shelfCheckList.setForeground(UITheme.TEXT_DARK);
-        shelfCheckList.setFont(UITheme.FONT_BASE);
+        shelfCheckList.setFont(UITheme.fontBase());
         JPanel west = new JPanel(new BorderLayout(4, 4));
         west.setBackground(UITheme.BG_PANEL);
         west.setPreferredSize(new Dimension(180, 0));
@@ -98,7 +98,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         chkLlegit = new JCheckBox(I18n.t("col_read"));
         chkLlegit.setBackground(UITheme.BG_PANEL);
         chkLlegit.setForeground(UITheme.TEXT_DARK);
-        chkLlegit.setFont(UITheme.FONT_BASE);
+        chkLlegit.setFont(UITheme.fontBase());
 
         btnAfegir = new JButton(I18n.t("btn_afegir_llista"));
         UITheme.styleAccentButton(btnAfegir);

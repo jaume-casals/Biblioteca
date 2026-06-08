@@ -46,7 +46,7 @@ public class GestioLlistesDialog extends JDialog {
 
         jList.setBackground(UITheme.BG_MAIN);
         jList.setForeground(UITheme.TEXT_DARK);
-        jList.setFont(UITheme.FONT_BASE);
+        jList.setFont(UITheme.fontBase());
         panel.add(new JScrollPane(jList), BorderLayout.CENTER);
 
         JPanel bottom = new JPanel(new BorderLayout(4, 6));

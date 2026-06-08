@@ -79,7 +79,7 @@ public class TagsDelLlibreDialog extends JDialog {
         table.setBackground(UITheme.BG_PANEL);
         table.setForeground(UITheme.TEXT_DARK);
         table.setRowHeight(28);
-        table.setFont(UITheme.FONT_BASE);
+        table.setFont(UITheme.fontBase());
         table.setSelectionBackground(UITheme.ACCENT);
         table.setSelectionForeground(Color.WHITE);
         panel.add(new JScrollPane(table), BorderLayout.CENTER);

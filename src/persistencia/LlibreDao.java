@@ -19,9 +19,17 @@ public class LlibreDao {
     LlibreDao(Connection con) { this.con = con; }
 
     static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
-        Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
-            rs.getObject("any", Integer.class), null, rs.getObject("valoracio", Double.class),
-            rs.getObject("preu", Double.class), rs.getBoolean("llegit"), rs.getString("imatge"));
+        Llibre l = Llibre.builder()
+            .isbn(rs.getLong("ISBN"))
+            .nom(rs.getString("nom"))
+            .autor(rs.getString("autor"))
+            .any(rs.getObject("any", Integer.class))
+            .descripcio(null)
+            .valoracio(rs.getObject("valoracio", Double.class))
+            .preu(rs.getObject("preu", Double.class))
+            .llegit(rs.getBoolean("llegit"))
+            .imatge(rs.getString("imatge"))
+            .build();
         l.setHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, false);
         l.setHeavyFieldsLoaded(false);
@@ -29,9 +37,17 @@ public class LlibreDao {
     }
 
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
-        Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
-            rs.getObject("any", Integer.class), rs.getString("descripcio"), rs.getObject("valoracio", Double.class),
-            rs.getObject("preu", Double.class), rs.getBoolean("llegit"), rs.getString("imatge"));
+        Llibre l = Llibre.builder()
+            .isbn(rs.getLong("ISBN"))
+            .nom(rs.getString("nom"))
+            .autor(rs.getString("autor"))
+            .any(rs.getObject("any", Integer.class))
+            .descripcio(rs.getString("descripcio"))
+            .valoracio(rs.getObject("valoracio", Double.class))
+            .preu(rs.getObject("preu", Double.class))
+            .llegit(rs.getBoolean("llegit"))
+            .imatge(rs.getString("imatge"))
+            .build();
         l.setHasBlob(rs.getBoolean("has_blob"));
         l.setNotes(rs.getString("notes"));
         fillLlibreTail(l, rs, true);
@@ -312,13 +328,7 @@ public class LlibreDao {
         if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
-                Object p = params.get(i);
-                if (p instanceof String s)   ps.setString(i + 1, s);
-                else if (p instanceof Long v)    ps.setLong(i + 1, v);
-                else if (p instanceof Integer v) ps.setInt(i + 1, v);
-                else if (p instanceof Double v)  ps.setDouble(i + 1, v);
-                else if (p instanceof Boolean v) ps.setBoolean(i + 1, v);
-                else throw new IllegalArgumentException("Unhandled parameter type: " + (p != null ? p.getClass().getName() : "null"));
+                bindParam(ps, i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) result.add(buildLlibre(rs));
@@ -327,6 +337,33 @@ public class LlibreDao {
             throw new domini.BibliotecaException("Error en searchLlibres: " + e.getMessage(), e);
         }
         return result;
+    }
+
+    /**
+     * Binds a single filter parameter to a {@link PreparedStatement} slot.
+     * <p>Supported types (Java 21 pattern-matching switch):
+     * <ul>
+     *   <li>{@code String}  — bound as VARCHAR via {@code setString}.</li>
+     *   <li>{@code Long}    — bound as BIGINT via {@code setLong}.</li>
+     *   <li>{@code Integer} — bound as INT via {@code setInt}.</li>
+     *   <li>{@code Double}  — bound as DOUBLE via {@code setDouble}.</li>
+     *   <li>{@code Boolean} — bound as BIT via {@code setBoolean}.</li>
+     *   <li>{@code null}    — bound as SQL NULL via {@code setObject(i, null)}.</li>
+     * </ul>
+     * Any other runtime type throws {@link IllegalArgumentException} with the
+     * offending class name, so the caller sees exactly which filter value was
+     * unhandled instead of silently producing a malformed query.
+     */
+    private static void bindParam(PreparedStatement ps, int index, Object p) throws SQLException {
+        switch (p) {
+            case String  s -> ps.setString(index, s);
+            case Long    l -> ps.setLong(index, l);
+            case Integer i -> ps.setInt(index, i);
+            case Double  d -> ps.setDouble(index, d);
+            case Boolean b -> ps.setBoolean(index, b);
+            case null      -> ps.setObject(index, null);
+            default        -> throw new IllegalArgumentException("Unsupported filter parameter type: " + p.getClass().getName());
+        }
     }
 
     public synchronized int count() {
@@ -409,24 +446,29 @@ public class LlibreDao {
         });
     }
 
+    /**
+     * Splits a SQL script into individual statements. The whole file is scanned
+     * in a single pass; a state flag tracks whether the cursor is inside a
+     * single-quoted string literal so that a {@code ;} or newline inside the
+     * literal does not terminate the statement. Two consecutive single quotes
+     * inside a literal (the standard SQL escape for one quote) are kept
+     * verbatim and do not close the literal.
+     */
     private static java.util.List<String> splitStatements(String sql) {
         java.util.List<String> stmts = new java.util.ArrayList<>();
         StringBuilder current = new StringBuilder();
-        boolean inString = false;
+        boolean inQuote = false;
         for (int i = 0; i < sql.length(); i++) {
             char c = sql.charAt(i);
-            if (c == '\'' && !inString) {
-                inString = true;
-                current.append(c);
-            } else if (c == '\'' && inString) {
-                if (i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+            if (c == '\'') {
+                if (inQuote && i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
                     current.append("''");
                     i++;
                 } else {
-                    inString = false;
+                    inQuote = !inQuote;
                     current.append(c);
                 }
-            } else if (c == ';' && !inString) {
+            } else if (c == ';' && !inQuote) {
                 stmts.add(current.toString());
                 current = new StringBuilder();
             } else {

@@ -93,7 +93,7 @@ public class DialogoError {
         JLabel iconLbl = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
 
         JLabel titleLbl = new JLabel(titol);
-        titleLbl.setFont(UITheme.FONT_BOLD);
+        titleLbl.setFont(UITheme.fontBold());
         titleLbl.setForeground(Color.WHITE);
 
         header.add(iconLbl);
@@ -101,7 +101,7 @@ public class DialogoError {
 
         JLabel msgLbl = new JLabel(
             "<html><body style='width:300px'>" + escHtml(missatge) + "</body></html>");
-        msgLbl.setFont(UITheme.FONT_BASE);
+        msgLbl.setFont(UITheme.fontBase());
         msgLbl.setForeground(UITheme.TEXT_DARK);
         msgLbl.setBorder(BorderFactory.createEmptyBorder(18, 22, 10, 22));
 
@@ -109,7 +109,7 @@ public class DialogoError {
         btnOk.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnOk.setBackground(accent);
         btnOk.setForeground(Color.WHITE);
-        btnOk.setFont(UITheme.FONT_BOLD);
+        btnOk.setFont(UITheme.fontBold());
         btnOk.setFocusPainted(false);
         btnOk.setBorderPainted(false);
         btnOk.setOpaque(true);
@@ -151,7 +151,7 @@ public class DialogoError {
 
     private void showSystemErrorDialog() {
         JLabel lblTitol = new JLabel(titol, SwingConstants.LEFT);
-        lblTitol.setFont(UITheme.FONT_BOLD);
+        lblTitol.setFont(UITheme.fontBold());
         lblTitol.setForeground(UITheme.DANGER);
         lblTitol.setBorder(BorderFactory.createEmptyBorder(8, 10, 4, 10));
 

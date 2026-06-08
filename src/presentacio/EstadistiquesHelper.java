@@ -55,7 +55,7 @@ public class EstadistiquesHelper {
     }
 
     static javax.swing.JPanel buildReadingChart(java.util.Map<Integer, Long> perYear) {
-        java.awt.Font chartFont9 = herramienta.UITheme.FONT_BASE.deriveFont(9f);
+        java.awt.Font chartFont9 = herramienta.UITheme.fontBase().deriveFont(9f);
         return new javax.swing.JPanel() {
             { setPreferredSize(new java.awt.Dimension(560, 180)); setBackground(herramienta.UITheme.BG_PANEL); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_books_year"))); }
             @Override protected void paintComponent(java.awt.Graphics g) {
@@ -93,7 +93,7 @@ public class EstadistiquesHelper {
         java.util.List<java.util.Map.Entry<String, Long>> top = byPublisher.entrySet().stream()
             .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
             .limit(10).collect(Collectors.toList());
-        java.awt.Font chartFont10 = herramienta.UITheme.FONT_BASE.deriveFont(10f);
+        java.awt.Font chartFont10 = herramienta.UITheme.fontBase().deriveFont(10f);
         return new javax.swing.JPanel() {
             { setPreferredSize(new java.awt.Dimension(560, 200)); setBackground(herramienta.UITheme.BG_PANEL); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_publishers"))); }
             @Override protected void paintComponent(java.awt.Graphics g) {
@@ -147,7 +147,7 @@ public class EstadistiquesHelper {
             .forEach(e -> {
                 float size = 11f + 14f * e.getValue() / maxCount;
                 javax.swing.JLabel lbl = new javax.swing.JLabel(e.getKey() + " (" + e.getValue() + ")");
-                lbl.setFont(herramienta.UITheme.FONT_BASE.deriveFont(size));
+                lbl.setFont(herramienta.UITheme.fontBase().deriveFont(size));
                 lbl.setForeground(herramienta.UITheme.ACCENT);
                 lbl.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
                 lbl.setToolTipText(e.getValue() + " " + I18n.t("stats_books_with_tag"));

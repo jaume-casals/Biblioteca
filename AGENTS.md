@@ -14,9 +14,9 @@ Only then implement. If exploration reveals the plan was wrong, stop, revise the
 
 Trivial exceptions (user explicitly asks to skip planning): one-line typo, comment-only edits, or a change they fully specified file-by-file.
 
-## Parallel AI work (agent briefs)
+## Backlog
 
-Backlog split from `tot.txt`: **`agent-briefs/00-INDEX.md`**. Copy-paste prompts per agent: **`agent-briefs/PROMPTS.md`**. Regenerate briefs after editing `tot.txt`: `python scripts/split_agent_briefs.py`.
+The single source of truth for open work is **`tot.txt`** at the repo root. It includes current DONE / OPEN status for every phase, bug, anti-pattern, and cross-cutting item.
 
 ## Build & Test Commands
 

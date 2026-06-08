@@ -1,1739 +1,228 @@
 ================================================================================
- COMBINED TODO FILES (tot.txt) — FULL UNION
- Generated: 2026-06-04 (merged with COMBINED_TODO.md)
- Sources: COMBINED_TODO.md + todo1.txt + todo2.txt + todo3.txt
+ BACKLOG (tot.txt) — Biblioteca
+ Generated: 2026-06-08  (replaces separate todo.txt, SESSION4_PLAN.md,
+                        PLAN-REMOVE-WEB.md, plans/remove-web-mode.md, agent-briefs/)
+ Status legend: [OPEN] = not yet fixed, [PARTIAL] = partially fixed,
+                [WONT] = out of scope / not pursued.
+ Cleanup 2026-06-08: all [DONE] items removed (verified against src/).
 ================================================================================
 
-################################################################################
-# SOURCE: COMBINED_TODO.md (sessions, priorities, architecture backlog)
-################################################################################
+Web mode removal: DONE in commits 877f163 / fa32d64. `src/api/` and `src/web/`
+removed; `ModeSelectorDialog`, `ModeButton`, `WebLauncher` deleted. `Ejecutable`
+rejects `--web` and starts Swing. `ConfigDTO.java` kept, Javadoc trimmed.
 
-# Combined TODO files - 2025-06-04
+Priority scale: [1] critical / [2] important / [3] nice-to-have
 
-# Priority scale: [1] critical / [2] important / [3] nice-to-have
-# Format: [priority] [tag] description
-#
-# ~60 items remain, mostly:
-#   - Big architectural refactors (god classes, controler extraction)
-#   - I18n properties migration (big refactor)
-#   - ConfiguracioDialog tabs split
-#   - TagsDelLlibreDialog refactor (search, count, consistency)
-#   - DetallesLlibrePanel tab split
+================================================================================
+ SESSIONS — ALREADY DONE  (historical record; see git log for current state)
+================================================================================
 
-Session 2 (done previously):
-  - LlibreRouter update/delete/image: 404 instead of 500, PNG MIME sniff fix
-  - ApiServer.classify: 404/409/400/500 mapping, no Catalan leak
-  - OpenLibraryClient: empty catch→LOG, interrupt re-thrown, null guard for pages
+Session 2 (bugs + dead code + test harness):
+  - LlibreRouter update/delete/image: 404 not 500, PNG MIME sniff
+  - ApiServer.classify: 404/409/400/500 mapping (now obsolete — api/ removed)
+  - OpenLibraryClient: empty catch → LOG, interrupt re-thrown, pages null guard
   - TagDao AUTOCOMPLETE_COLUMNS whitelist verified
   - Dead code deleted: 6 interficie, 6 persistencia, 4 api files
-  - Makefile test target: classpath and -jar launcher fixed
-  - Llista.setColor: centralized isValidColor(), BibliotecaException.Validation
-  - Llibre.setAny: negative year guard
+  - Makefile test target: classpath + -jar launcher
+  - Llista.setColor: isValidColor() + BibliotecaException.Validation
+  - Llibre.setAny: negative-year guard
   - LlibreDao.executeSQLFile: quote-aware split + FORBIDDEN_LEAD blocklist
-  - FiltreUtils.matches(): single predicate source of truth
+  - FiltreUtils.matches(): single predicate source
   - Tests: 7 plain + 10 JUnit 5 (all pass)
 
-Session 3 (done this session):
-  - OpenLibraryClient: COVER_BASE/COVER_SIZE constants + javadoc fallback order
-  - DialogoError: IS_HEADLESS cached at class level (not per-call)
-  - DialogoError: ⚠ emoji → UIManager.getIcon("OptionPane.warningIcon")
-  - install.sh: Java check + version validation + -Xmx512m heap
-  - ModeSelectorDialog: window X button → SWING default
-  - BookExporter.exportHTML: hardcoded Catalan "La meva biblioteca" → I18n key
-    (dlg_export_html_title + new export_html_heading key)
-  - ShelfParser (domini): extracted parseShelfEntries/exportToCsv/joinShelfEntries
-  - BookExporter.exportCSV → delegates to ShelfParser
-  - BookExporter.exportPDF dead wrappers deleted (BookPdfPrinter, PdfExporter)
-  - UITheme.rebuildFonts: EDT assertion added (was missing)
-  - HttpRouter: duplicate errCtx.commit() removed (was calling commit twice)
-  - BackupService.sqlEsc: \u001A (EOF) now stripped in addition to \n/\r/\u0000
-  - GoodreadsCsvStrategy: Private Notes field now mapped alongside My Review
-  - AutoCompletion: noted as dead (Completer.attach never called from presentacio)
-  - AutoCompletion: lambdas not needed (class has no anonymous inner classes)
+Session 3 (refactors + I18n + backups):
+  - OpenLibraryClient: COVER_BASE/COVER_SIZE + javadoc
+  - DialogoError: IS_HEADLESS cached, UIManager warning icon
+  - install.sh: Java check + -Xmx512m
+  - ModeSelectorDialog: window-X button SWING default (then file deleted)
+  - BookExporter.exportHTML: "La meva biblioteca" → I18n key
+  - ShelfParser extracted to domini; BookExporter.exportCSV delegates
+  - BookExporter.exportPDF dead wrappers deleted
+  - UITheme.rebuildFonts: EDT assertion
+  - HttpRouter: duplicate errCtx.commit() removed (now obsolete — api/ removed)
+  - BackupService.sqlEsc: \u001A stripped
+  - GoodreadsCsvStrategy: Private Notes mapped
+  - AutoCompletion: noted dead, lambdas not needed
   - I18n: export_html_heading + dlg_export_html_title keys added
-  - tests: all passing (197 plain + 184 JUnit 5)
+  - Tests: 197 plain + 184 JUnit 5
+
+Session 4 (mostly post-SESSION4_PLAN — see Phased order below):
+  - LlibreLlistaContext.isbn → long, of(...) signature long
+  - LlibreDao.java empty-nom !isBlank() guard
+  - CoverService L1 synchronized via L1_LOCK
+  - CoverCellRenderer NO_COVER sentinel + convertColumnIndexToView
+  - ProgressBarRenderer passes Llibre via model, no DB in paint
+  - BibliotecaTableModel.isCellEditable returns column == COL_LLEGIT
+  - ImportController / ExportController / BackupController / FilterController
+    all use SwingWorker for I/O
+  - DetallesLlibrePanelControl: get() inside done() (non-blocking)
+  - TagDao.invalidateLlibreTagCache called from delete / deleteFromLlibre /
+    deleteAllFromLlibre
+  - ControladorDomini: getAllLlistes / getAllTags return new ArrayList copy;
+    setLlibreBlob uses Objects.equals; backupToSQL takes snapshot under lock
+  - ControladorPersistencia.resetForTest() now synchronized
+  - Isbn13Normalizer.toIsbn13 converts any valid 10-digit ISBN to 13
+  - CsvUtils.parseIsbn converts any valid 10-digit ISBN to 13 (not just X)
+  - BookImporter.importCSV uses Rfc4180Reader + StandardCharsets.UTF_8
+  - BookImporter.importCalibre uses StandardCharsets.UTF_8
+  - OpenLibraryClient: errorStream drained + disconnect() in finally
+  - run.sh: I18nAudit in javac, javalin/kotlin-stdlib removed
+  - run2.sh: same fixes
+  - StressTest: GraphicsEnvironment.isHeadless() guard, ISBN collision
+    detection, log() synchronized, screenshot only on fail/warn
+  - UIAudit: biblioteca.h2.url always set, headless guard, copy-paste run
+  - ServerConect.MIGRATIONS uses record Migration(int version, String sql)
+  - BookExporter: any>0 ? any : "" (HTML)
+
+Session 5 (post-tot.txt sweep — see Phased order below):
+  - ShelfParser.exportToCsv: pw.printf now uses Locale.ROOT (es-ES locale
+    was emitting "7,5" / "19,99" which broke re-import to 0.0)
+  - Config.save: atomic write via Files.move (REPLACE_EXISTING + ATOMIC_MOVE);
+    new flushNow() public method; shutdown hook registered for SAVE_SCHEDULER
+  - ConfiguracioDialog: db-size query moved off EDT to SwingWorker
+  - ShelfController.refreshComboLlistes: DB calls now in SwingWorker
+  - ControladorDomini.deleteLlibre(Long): null ISBN now throws Validation
+    (not NotFound) per I18n audit
+  - ControladorDomini.backupToSQL: loadHeavyFields() moved OUTSIDE the
+    synchronized block; snapshot taken atomically inside the lock
+  - ControladorDomini.swapLlistesOrdre: in-memory swap moved BEFORE the DB
+    write, with symmetric undo in the catch block
+  - LlibreValidator.countDig: replaced String.valueOf(n).length() with a
+    branchless threshold chain (correct for Long.MAX_VALUE, negative, etc.)
+  - LlibreDao.search: instanceof chain replaced with bindParam() pattern-
+    matching switch (null is bound as SQL NULL; unknown types throw with
+    class name)
+  - LlibreDao.executeSQLFile: splitStatements() now scans the whole file
+    in one pass with inQuote state, so ';' inside string literals across
+    lines no longer mis-splits
+  - ServerConect.runMigrations: per-engine dispatch (H2 keeps the
+    setAutoCommit(false)/commit/rollback wrapper; MariaDB/MySQL takes a
+    non-transactional path because DDL auto-commits there); Javadoc
+    explains the manual-cleanup requirement on a mid-sequence MariaDB
+    failure and the idempotency guarantee
+  - BackupService.autoBackup: removed redundant Thread.sleep(30_000) —
+    scheduleWithFixedDelay already has the 30s initial delay
+  - Llibre: new Builder and bindUpdateableFields() helper; all internal
+    callers (LlibreValidator, LlibreDao) now use the builder or the
+    helper. 9-positional-arg ctor kept for backward compat
+  - UITheme.FONT_BASE / FONT_BOLD: now private static volatile with
+    fontBase() / fontBold() accessors; 16 callers updated
+  - strings/ui.csv: added app_title key. MainFrameControl JFrame title
+    and AboutDialog header now use I18n.t("app_title")
+  - LlistesDelLlibreDialog: shelfCheckList now MULTIPLE_INTERVAL_SELECTION
+    and pre-selects indices for current shelf memberships
+  - ControladorPersistencia: 17-line audit-history comment trimmed to a
+    14-line class JavaDoc
+  - Tests: 184 plain + 168 JUnit 5 (all pass)
 
 ================================================================================
-HIGH-PRIORITY (do first)
+ BUGS (residual)
 ================================================================================
 
-[1] [refactor] exportCSV() and ImportExportRouter.GoodreadsCsvExport separate implementations — unify into one — DONE: BookExporter.exportCSV delegates to ShelfParser; Goodreads has separate service
-[1] [refactor] exportPDF() uses AWT printing with manual text layout — no real PDF output; rename to printBooks() or add proper PDF via PDFBox/iText — PARTIAL: dead wrappers (BookPdfPrinter, PdfExporter) deleted; AWT print kept; consider adding PDF lib if needed
-[1] [refactor] DialogoError two completely different dialog UIs in one class — split into ValidationDialog and SystemErrorDialog or use factory method — NOT DONE (kept as single class, documented)
-[1] [refactor] DialogoError showErrorMessage() checks GraphicsEnvironment.isHeadless() on every error — cache at startup — DONE: IS_HEADLESS cached at class level
-[1] [refactor] DialogoError validationDialog uses "⚠" emoji — on some systems renders as empty box; use ImageIcon or UIManager.getIcon("OptionPane.warningIcon") — DONE: now uses UIManager.getIcon("OptionPane.warningIcon")
-[1] [refactor] DateUtils normalizeDate() only replaces '/' with '-' — doesn't handle "DD-MM-YYYY" vs "YYYY-MM-DD" ambiguity; add parseDateToIso(String) trying multiple formats — NOT DONE
-[1] [refactor] DateUtils both methods are one-liners too thin — merge into fuller DateUtils or inline callers and delete the class — NOT DONE (keep for now)
-[1] [refactor] DateUtils add formatDateForDisplay(String isoDate, Locale locale) — currently dates displayed as raw ISO strings everywhere in UI — NOT DONE
-[1] [refactor] DateUtils no tests for DateUtils — edge cases like null, empty string, partial dates all need coverage — NOT DONE
-[1] [refactor] I18n AUTO-GENERATED with 200+ T() calls in static block — use Java ResourceBundle (.properties files) so system supports external translation files without recompilation — NOT DONE
-[1] [refactor] I18n t(key, args...) format uses String.format() — if key has no %s/%d placeholders and args passed, they're silently ignored; add debug assertion in dev mode — NOT DONE
-[1] [refactor] I18n language index (0=ca, 1=es, 2=en) is magic number — use enum Lang and look up by ordinal; adding new language requires changing every T() call — NOT DONE
-[1] [refactor] I18n if key is missing, t() returns the key itself — should fail loudly in dev mode; add assertion or missing-key list — NOT DONE
-[1] [refactor] UITheme static Color fields mutated by setDark() — not thread-safe; theme changes should happen on EDT only; add EDT assertion — DONE: setTheme has EDT warning; rebuildFonts now also has EDT warning
-[1] [refactor] UITheme theme enum has 4 values but only 2 surfaced in mode selector UI — document which themes are "public" vs internal — NOT DONE
-[1] [refactor] UITheme rebuildFonts() builds fonts from "small"/"medium"/"large" string — use FontSize enum to avoid typos and enable exhaustive switch — NOT DONE
-[1] [refactor] UITheme styleAccentButton()/styleSecondaryButton()/styleLabel() used exclusively in presentacio — consider UIComponents factory in presentacio using UITheme constants — NOT DONE
-[1] [refactor] OpenLibraryClient fetchCoverByISBN() tries multiple cover sizes — document fallback order and add constant for base URL for test mocking — DONE: COVER_BASE/COVER_SIZE constants + javadoc
-[1] [refactor] AutoCompletion uses old anonymous class style for listeners — convert to lambdas for readability — DONE: no anonymous inner classes; lambdas not needed
-[1] [refactor] AutoCompletion class in herramienta but only used in DetallesLlibrePanel — consider whether FieldAutoComplete.attach() can replace all usages and delete AutoCompletion — DONE: AutoCompletion dead (Completer.attach never called), noted in session notes
-[1] [refactor] NativeCsvStrategy shelf parsing logic (c[9] pipe-split) same as BookExporter export — extract ShelfParser; if format changes both must be updated — DONE: ShelfParser extracted to domini
-[1] [refactor] GoodreadsCsvStrategy canHandle() checks for "Book Id" OR "Exclusive Shelf" — brittle string matching; add minimum column count check — NOT DONE
-[1] [refactor] MainFrameControl actualitzarLlibre() calls addLlibreToLlista when nuevo=true and currentLlistaId != null — shelf auto-assignment buried in callback; make explicit — NOT DONE
-[1] [refactor] MainFrameControl getInstance() has 3 overloads with complex guard logic — use proper initialization-on-demand holder or document call order clearly — NOT DONE
-[1] [refactor] UIAudit expand to check for duplicate I18n keys and unused keys (keys defined in I18n.java but never called)
-[1] [refactor] UIAudit add check for hard-coded Catalan strings in .java files (grep for common Catalan words that should be I18n keys)
-[1] [refactor] run.sh and run2.sh likely different modes — name run-swing.sh and run-web.sh for clarity
-[1] [refactor] Shell scripts should validate java and required JARs exist before running with helpful error message
-[1] [refactor] Shell scripts don't set JAVA_OPTS for heap size — on large libraries (>10k books) default heap may be insufficient; add -Xmx512m
-[1] [refactor] run2.sh likely duplicates most of run.sh — consolidate into one script with --web / --swing argument
-[1] [refactor] MainFramePanel extends JFrame directly — MVC split means panel should be JPanel embedded in JFrame owned by MainFrameControl; mix of layout and window lifecycle couples view
-[1] [refactor] MainFramePanel title hardcoded as "Biblioteca" — use I18n key or constant
-[1] [refactor] MainFramePanel statusBar is JLabel — for screen readers has no accessible role or live region; use JPanel with accessible description
-[1] [refactor] GuardarLlibresDialogo addFieldEntry/addComboEntry/addCheckEntry builder methods near-identical to DetallesLlibrePanel — extract shared FormEntryBuilder utility class
-[1] [refactor] GuardarLlibresDialogo setSize(600, 720) at end of constructor overrides setPreferredSize — use pack() + enforce minimumSize in componentResized listener
-[1] [refactor] GuardarLlibresDialogo missing fields vs DetallesLlibrePanel: no paisOrigen, estat, notes, nomCa/nomEs/nomEn, exemplars — new-book dialog silently drops these; add at minimum notes field
+[PARTIAL] BackupRouter / api/* — REMOVED, no longer in scope (was HIGH security: restore/clear
+       unauth'd; PII in JSON error; CSRF from local page). If a new HTTP layer is ever
+       reintroduced, these must be re-applied.
 
 ================================================================================
-MEDIUM-PRIORITY (do when convenient)
+  DEAD CODE
 ================================================================================
 
-[2] [clean] GoodreadsCsvStrategy notes mapped from "My Review" but Goodreads also has "Private Notes" — map both fields, appending if both present
-[2] [clean] LlibreValidator checkLlibreFromString() converts string to digits and delegates — if ISBN starts with 0 (valid ISBN-10), leading zero lost before passing to checkLlibre; this is only place preserving leading-zero matters
-[2] [clean] DateUtils both methods are one-liners too thin — either merge into fuller DateUtils with more methods or inline callers and delete class
-[2] [clean] DateUtils no tests for DateUtils — edge cases like null, empty string, partial dates all need coverage
-[2] [clean] I18n strings.csv source file not committed (gitignored) but I18n.java is generated from it — add comment in I18n.java with path and generation command
-[2] [clean] MainFrameControl mostrarLlegitsRecentment() hardcodes "Cap llibre marcat com a llegit." and "Llegits" instead of I18n keys
-[2] [clean] MostrarBibliotecaControl galeria context menu has hard-coded Catalan strings ("Obrir detalls", "Eliminar", "Copiar ISBN", "Confirmar eliminació") — use I18n.t() keys
-[2] [clean] MostrarBibliotecaControl undoDelete() shows JOptionPane confirmation ("restaurat.") — hardcoded Catalan string not in I18n; move to I18n
-[2] [clean] GestioLlistesDialog no confirmation on shelf delete — data loss risk if user misclicks; add confirmation dialog like book delete
-[2] [clean] LlistesDelLlibreDialog hard-coded column names ("Prestatge", "Valoració", "Llegit") — use I18n keys
-[2] [clean] LlistesDelLlibreDialog no way to see which shelf book is already in before opening dialog — table should pre-select current shelves
-[2] [clean] BookExporter.exportHTML() has 200 lines of inline CSS — extract to a template or resource file
-[2] [clean] BookExporter.exportCSV() and ImportExportRouter.GoodreadsCsvExport separate implementations — unify into one
-[2] [clean] BookExporter.exportPDF() uses AWT printing with manual text layout — no real PDF output; rename to printBooks() or add proper PDF via PDFBox/iText
-[2] [clean] CsvUtils buildHeaderMap() trims header names but parseLine() doesn't trim field values — trimming happens in colVal(); this inconsistency can cause "Author " != "Author" bugs
-[2] [clean] MainFramePanel title hardcoded as "Biblioteca" — use I18n key or constant; if app name changes only one place needs updating
-[2] [clean] MainFramePanel MostrarBibliotecaPanel constructed eagerly in field declaration before constructor configures frame — lazy-init inside constructor
-[2] [clean] MainFramePanel statusBar is JLabel — for screen readers has no accessible role or live region; use JPanel with accessible description
-[2] [clean] GuardarLlibresDialogo missing fields vs DetallesLlibrePanel: no paisOrigen, estat, notes, nomCa/nomEs/nomEn, exemplars — new-book dialog silently drops these; add at minimum notes field
-[2] [clean] GuardarLlibresDialogo comboFormat items string array built inline from I18n.t() calls — if format options change this array and the one in DetallesLlibrePanel must be updated in sync; extract to shared getFormatOptions() helper
+[PARTIAL] interficie.BookReader — HALF-MIGRATED: 8 @Deprecated ArrayList methods, ArrayList
+      fields in domain objects. Left untouched (interface change risks breaking callers).
+      Marked as accepted debt.
 
 ================================================================================
-LOW-PRIORITY (nice to have)
+  ANTI-PATTERNS  (status update)
 ================================================================================
 
-[3] [refactor] ConfigRouter move port to constant or Config property instead of constructor parameter
-[3] [refactor] ConfigRouter constructor wires all routes eagerly — consider lazy init or explicit register() call to make startup order obvious
-[3] [refactor] ConfigRouter extract RouterRegistry interface so ApiServer doesn't need to import every Router class directly
-[3] [refactor] HttpCtx CORS headers set in HttpRouter.dispatch() but response headers like Cache-Control set in individual routers via responseHeader() — centralize CORS header addition in commit()
-[3] [refactor] JsonMapper llibreToMap() manually sets 25 fields — when Llibre gains a field, this silently omits it; use Gson.toJson(l) with custom exclusion strategy
-[3] [refactor] LlibreRouter list() builds LlibreFilter from query params with 15+ explicit field assignments — extract to LlibreFilterParser.fromQuery(HttpCtx) helper
-[3] [refactor] ConfigRouter split DB config with UI config; split into /api/config/ui and /api/config/db or document which fields require restart
-[3] [refactor] LoanRouter loan() re-reads getLoanedISBNs() to check for duplicates — this is a Set lookup but queries DB each time; cache or use cd.existsLlibre() pattern
-[3] [refactor] LlistaRouter books() returns full libro JSON including all 25 fields — for shelf view client usually only needs title, author, ISBN; add ?fields= param or slim projection
-[3] [refactor] TagRouter findById() linear scan — same issue as LlistaRouter; extract to TagDao or use Map
-[3] [refactor] Llibre toString() doesn't include nomCa/nomEs/nomEn, autors list, imatgeBlob status — gets out of date every time fields added
-[3] [refactor] Llibre imatgeBlob byte[] stored in-memory on domain object and loaded on demand — for large libraries this wastes heap; mark as lazy-loaded and add clear comment
-[3] [refactor] Llibre 34 getters/setters make this class 203 lines — use Lombok @Data or records for immutable parts; extract LlibreDetails value object for optional metadata fields
-[3] [refactor] Tag consider unifying Tag and Llista into Label/Collection hierarchy if feature set remains similar (both have id+nom, both relate to books many-to-many)
-[3] [refactor] LlistaLlistaRow/LlibreTagRow/PrestecRow moved to persistencia package — consider merging three relation rows under sealed interface RelationRow
-[3] [refactor] ServerConect MIGRATIONS is String[][] — if migration entry accidentally has 3 elements or wrong index, silently misbehaves; use Migration record(int version, String sql) with explicit fields
-[3] [refactor] LlistaDao all methods synchronized but called through ControladorPersistencia which is also synchronized — double locking; remove synchronized from DAO methods
-[3] [refactor] DialogoError showErrorMessage() checks GraphicsEnvironment.isHeadless() on every error — DONE: IS_HEADLESS cached at class level
-[3] [refactor] DialogoError validationDialog uses "⚠" emoji as label character — DONE: uses UIManager.getIcon("OptionPane.warningIcon")
-[3] [refactor] DateUtils normalizeDate() only replaces '/' with '-' — doesn't handle "DD-MM-YYYY" vs "YYYY-MM-DD" ambiguity; add parseDateToIso(String) that tries multiple formats — NOT DONE
-[3] [refactor] DateUtils both methods are one-liners; this class is too thin — NOT DONE
-[3] [refactor] DateUtils add formatDateForDisplay(String isoDate, Locale locale) — currently dates displayed as raw ISO strings everywhere in UI — NOT DONE
-[3] [refactor] DateUtils no tests for DateUtils — edge cases like null, empty string, partial dates all need coverage — NOT DONE
+[HIGH] Singleton god-object — ControladorDomini — STILL OPEN (60+ public methods,
+       in-memory ArrayList, only path from UI to data).  [OPEN — needs major refactor;
+       documented in Javadoc; sub-facade for navigation would help but not started]
+[HIGH] Singleton god-object — ControladorPersistencia — STILL OPEN but the previous
+       "double-locking" critique was wrong: methods are now uniformly synchronized
+       on the controller, and DAOs do not double-lock.  [OPEN — facade is fine,
+       but no sub-facade for navigation]
+[HIGH] Mutable statics — UITheme.BG_MAIN, ACCENT etc. — STILL OPEN; theme switching
+       reassigns these fields at runtime so they can't be `final`. Marked accepted
+       debt; a Map<Theme, Palette> refactor would touch 273+ call sites.  [OPEN]
+[HIGH] Anemic domain model — Llibre is a pure bean — STILL OPEN.  [OPEN]
+[MED]  Inverted dependency — Llista.setColor / ControladorDomini.setLlistaColor
+       uses FQN `herramienta.I18n.t` rather than an import; coupling is real but
+       minimized. Full fix would move the i18n to the UI caller.  [OPEN — accepted]
+[MED]  Inverted dependency — BackupService (herramienta) uses ControladorPersistencia.
+       Util reaching into persistence.  [OPEN — accepted]
+[MED]  Layer inversion — presentacio/detalles/control/ vs presentacio root vs
+       presentacio/listener/ — inconsistent sub-packages.  [OPEN — accepted]
+[LOW]  Manual re-implementation of Properties in Config.props — STILL OPEN.
+       The ConcurrentHashMap-based props are read often (every Config getter
+       call) and the boot path stays simple; java.util.Properties would
+       need explicit synchronization for the same use.  [OPEN — accepted]
 
 ================================================================================
-CROSS-CUTTING
+  CROSS-CUTTING / NICE-TO-HAVE  (most still OPEN)
 ================================================================================
 
-[2] [refactor] Mixed language: method names Catalan (addLlibre, getLlibres), variable names Spanish (cLlibres, nuevo, enActualizarBBDD), class names Catalan/Spanish mixed — pick one language for code and document convention in CLAUDE.md
-[2] [refactor] ISBN used as both Long (domain) and String (table cells, JSON) — pick one canonical representation and convert only at boundaries
-[2] [refactor] BibliotecaWriter is single interface for everything — API, UI, and backup all depend on it; create narrower read-only snapshots for export/backup to avoid accidental mutations
-[2] [perf] On startup, getAllLlibres() loads all books including metadata (notes, descriptions) but table only shows 6 columns — lazy-load heavy fields (notes, descripcio, imatgeBlob) on first access
-[2] [refactor] Duplicate utility methods scattered: parseDoubleOrZero() in CsvUtils + ImportExportRouter; csvQ() in ImportExportRouter + CsvUtils-equivalent; parseIsbnParam() in 4 router files — consolidate
+[OPEN] Mixed language: method names Catalan, variable names Spanish
+[OPEN] ISBN used as both Long (domain) and String (table/JSON)
+[OPEN] BibliotecaWriter — single interface for everything
+[OPEN] Perf: getAllLlibres() loads notes/descripcio/imatgeBlob eagerly
+       (loadHeavyFields is the on-demand path; getAll still materialises a list)
+[OPEN] Duplicate utility methods: parseDoubleOrZero, csvQ, parseIsbnParam
+[PARTIAL] Hardcoded Catalan strings check across .java files — I18nAudit
+       flags them with regex; full pass leaves ~30 warning sites
+       (UITheme labels, hex colors, etc.). New occurrences replaced with
+       I18n.t as they're touched.
+[OPEN] ConfigRouter / LlistaRouter / TagRouter long methods
+[PARTIAL] MostrarBibliotecaControl 6 sub-controllers wiring dense — Javadoc
+       on MainFrameControl documents the split; the wiring itself is still
+       dense but each sub-controller is single-purpose
+[OPEN] JsonMapper.llibreToMap duplicates LLIBRE_FIELD_EXTRACTORS
+[OPEN] ServerConect.MIGRATIONS now uses record — but inline SQL strings remain
+       (acceptable; migrations are read rarely and append-only)
+[OPEN] I18n.java 535+ lines of T() calls — should be ResourceBundle
+       (auto-generated from strings/strings.csv; ResourceBundle migration is
+       a generator-script change, not the Java file itself)
+[OPEN] LoanRouter / LlistaRouter / TagRouter getById linear scans
+[OPEN] DateUtils — small class, mostly one-liners; consider inline or expand
+[OPEN] I18n Lang enum / Lang ordinal lookup (magic numbers 0/1/2) — internal
+       switch on `lang` string in langIndex() returns 0/1/2 directly
+[PARTIAL] I18n missing key returns key silently — logs to stderr AND throws
+       IllegalStateException when `biblioteca.test=true` is set
+       (I18n.java:572-575). Production fallback is still silent.
+[OPEN] UITheme rebuildFonts from string — use FontSize enum
+[OPEN] UITheme theme enum 4 values, only 2 surfaced
+[OPEN] UITheme styleAccentButton / styleSecondaryButton in presentacio
+       (UITheme.fontBase()/fontBold() accessors done; button style helpers
+       remain in UITheme.java)
+[OPEN] GoodreadsCsvStrategy canHandle() brittle string match
+[OPEN] MainFrameControl actualitzarLlibre shelf auto-assignment buried
+[OPEN] MainFrameControl getInstance() 3 overloads with guard logic
+[OPEN] MainFramePanel extends JFrame — should be JPanel in JFrame
+[OPEN] GuardarLlibresDialogo builder methods near-identical to DetallesLlibrePanel
+[OPEN] GuardarLlibresDialogo setSize(600, 720) overrides setPreferredSize
+[OPEN] GuardarLlibresDialogo missing fields vs DetallesLlibrePanel
+[OPEN] BookExporter.exportHTML 200 lines inline CSS — extract template
+[OPEN] Good test infra: ~400 lines duplicated between UIAudit and StressTest
+       (extract checkBiblio.UiTestSupport)
 
 ================================================================================
- Bugs
+  SUMMARY  (as of 2026-06-08 cleanup)
 ================================================================================
 
-[HIGH] LlibreRouter.update — FIXED: getLlibre throws NotFound → 404; removed dead existing==null check
-[HIGH] LlibreRouter.delete — FIXED: existsLlibre() + NotFound → 404; removed dead null pre-check
-[HIGH] LlibreFilter filter predicate divergence — FIXED: FiltreUtils.matches() single predicate source
-[MED] OpenLibraryClient.fetchCoverByISBN — FIXED: empty catch {} → LOG.log(Level.FINE,...)
-[MED] OpenLibraryClient.fetchWithRetry — FIXED: interrupt re-thrown as IOException
-[MED] OpenLibraryClient.lookupByISBN — FIXED: !get("number_of_pages").isJsonNull() guard added
-[MED] HttpRouter.dispatch — FIXED: ApiServer.classify maps 404/409/400/500 properly; duplicate commit removed
-[MED] Llista.setColor — FIXED: isValidColor() centralized; BibliotecaException.Validation used
-[LOW] Llibre.setAny(Integer any) — FIXED: negative year guard added
-[LOW] LlibreDao.executeSQLFile — FIXED: quote-aware split + FORBIDDEN_LEAD blocklist
-[LOW] BackupService.sqlEsc — FIXED: \u001A (EOF) now stripped along with \u0000, \n, \r
-[MED] ApiServer binds HTTP to getLoopbackAddress() only. However: ControladorDomini and the DAO connection are unrestricted; if a future change binds to 0.0.0.0, the backup/clear/restore endpoints become unauthenticated remote DB wipe. No auth, no rate limit, no audit log. — NOT DONE (network-facing concerns outside current scope)
-[HIGH] Duplicated predicate — FIXED: FiltreUtils.matches() single source of truth
-[HIGH] Long method — FilterController.filtrar — 95 lines; partially addressed in session 1 (panel reduced); full extract still pending
-[HIGH] Long method — MainFrameControl constructor: 130 lines, wires 8 keyboard shortcuts, builds 4 sub-controllers, sets up 2 window listeners, configures geometry. Should be split.
-[HIGH] Long method — HttpRouter.dispatch: 50 lines, mixes CORS, routing, exception handling, static-file serving, and a 4-level deep nested try/catch.
-[MED] Feature envy — LlibreDao.search reads LlibreFilter public fields directly (15 fields read) and acts on them. Filter construction belongs in LlibreFilter itself; DAO should accept a normalized form.
-[MED] Primitive obsession — ISBN is long (no validation), year is Integer (no range check), price is Double (no currency, no negative check), rating is Double 0-10 (clamped in setter but not in DB write).
-[MED] God class — MostrarBibliotecaControl orchestrates 6 sub-controllers; each sub-controller is fine, but the constructor wiring is dense — MostrarBibliotecaControl.java:34-64
-[MED] Llibre constructor takes 9 positional args (isbn, nom, autor, any, descripcio, valoracio, preu, llegit, imatge). Easy to swap accidentally.
-[MED] Repeated 5-arg setX in Llibre.setDataCompra, setDataLectura, setIdioma, setFormat, setPaisOrigen, setEstat, setLlenguaOriginal — all do (v != null && !v.trim().isEmpty()) ? v.trim() : null. Helper missing.
-[LOW] JsonMapper.llibreToMap and LLIBRE_FIELD_EXTRACTORS define the same field list twice. LlibreCodec was created to unify them but is unused.
-[LOW] Config has 30+ get*/set* pairs; one giant static class. Would be better as a BibliotecaConfig value object held by Config.
-[LOW] I18n.java is 535+ lines of T("key", "ca", "es", "en") calls. Should be in a properties file; auto-gen is fine but the file is hard to read in source.
-[LOW] ServerConect.MIGRATIONS is 39 inline SQL strings; one big array. Fine for now, but a file-based migration is more standard.
-[LOW] ControladorDomini has 60+ public methods, no sub-facade. Hard to navigate.
-[LOW] BackupService.writeLlibreINSERT 60 lines of pw.print chain; should use a template helper.
-Dead code
-[HIGH] interficie.EnActualizarBBDD, OnLlibreAdded, OnLlibreBlobChanged, OnLlibreDelete, OnLlibreUpdate, OnLlistaMembershipChanged — FIXED: deleted (6 files)
-[HIGH] persistencia.SchemaManager, Persistencia, LibraryGraph, DbProfile, H2Config, MariaDbConfig — FIXED: deleted (6 files)
-[HIGH] api.Routers, MetaLookupRouter, MembershipRouter, LlibreCodec — FIXED: deleted (4 files)
-[HIGH] interficie.BookReader — HALF-MIGRATED: 8 @Deprecated ArrayList methods, ArrayList fields in domain objects. Left untouched (interface change risks breaking callers)
-Anti-patterns
-[HIGH] Singleton god-object — ControladorDomini is a singleton (line 16: private static ControladorDomini inst;) with 60+ public methods, holds the entire in-memory library as ArrayList<Llibre> bib, and is the only path from UI to data. Couples everything; untestable without reset hacks (resetForTest).
-[HIGH] Singleton god-object — ControladorPersistencia is a singleton with all-synchronized methods. Comment in LlistaDao line 14-15 says "Double-locking note: all callers go through ControladorPersistencia which is already synchronized, so DAO methods need not be synchronized themselves." But LlibreDao, TagDao, PrestecDao ARE individually synchronized — the comment is wrong; there is double-locking in some DAOs. The "double-locking note" is duplicated in LlistaDao and AutorDao but the conclusion ("need not be synchronized") is incorrect for the synchronized ones.
-[HIGH] Service locator — Ejecutable wires everything by direct new, but api/*Router constructors take BibliotecaWriter cd as a parameter and call into it. ImportExportRouter does if (cd instanceof ControladorDomini dom) — that's a service-locator-via-cast. Domain methods (getAllLlibreLlistaRows) leak through the contract.
-[HIGH] Mutable statics — UITheme.BG_MAIN, UITheme.ACCENT, etc. are all public static Color — the whole palette is shared mutable state, mutated by setTheme(...). EDT warning at line 157-158 confirms this is a known issue.
-[HIGH] Mutable statics — Config.props is a static ConcurrentHashMap. Setters race on the pendingSave timer (line 281). Two threads can stomp each other's debounce.
-[HIGH] Anemic domain model — Llibre is a pure bean, all behavior lives in ControladorDomini and the DAOs. Adding a "next loan due date" or "computed read progress %" would require edits across Llibre, ControladorDomini, every DAO, every JSON serializer, every UI renderer.
-[MED] Tight coupling via casts — ImportExportRouter.exportJson does if (cd instanceof ControladorDomini dom). The contract (BibliotecaReader) doesn't expose getAllLlibreLlistaRows() clearly enough; the router depends on the concrete class. — api/ImportExportRouter.java:36
-[MED] Inverted dependency — Llista.setColor and ControladorDomini.setLlistaColor import herramienta.I18n; domini/ (domain) depends on herramienta/ (utility). Should be reversed via an exception type or a passed-in error message.
-[MED] Inverted dependency — BackupService is in herramienta/ but uses ControladorPersistencia. The util layer reaches down into persistence, which is normally a domain/infrastructure concern.
-[MED] Layer inversion — presentacio/detalles/control/*.java (sub-package of presentacio/) is the control layer for details; the presentacio/ root contains similar things. No consistent sub-package convention: some controls live in root, some in detalles/control/, some in listener/.
-[MED] God comments — ControladorPersistencia.java:13-30 is a 17-line class-level comment that includes its own audit history. Use javadoc for current behavior, store the history elsewhere.
-[MED] Inappropriate intimacy — MainFrameControl reads cLlibres.getAllLlibres() (line 45) and passes a copy to MostrarBibliotecaControl. Then MostrarBibliotecaControl later calls back into cd.getAllLlibres() (line 158) for refresh. Two sources of truth for the same data.
-[MED] Race condition window — ControladorDomini.addLlibre (lines 159-166): does binarySearch on bib, then cp.afegirLlibre(l), then inserts into bib. Between the binarySearch and the DB insert, another thread can add the same ISBN. The DB has a unique constraint (PK on ISBN), so the second add will fail with a SQL error, but the in-memory bib is now in an inconsistent state (added once successfully elsewhere, not here).
-[MED] Race condition window — ControladorDomini.deleteLlibre (lines 168-173): binarySearch, DB delete, in-memory delete. Same window.
-[MED] Race condition window — ControladorDomini.swapLlistesOrdre (lines 312-328): on DB failure, restores a.setOrdre(ordreA); b.setOrdre(ordreB); but does NOT also restore the llistes list position. If Collections.swap(llistes, i, j) already happened and then the DB throws, the in-memory list position is now inverted vs the DB.
-[LOW] Thread.sleep in fixed-delay scheduler — BackupService.autoBackup line 47: Thread.sleep(30_000) on the scheduled thread. scheduleWithFixedDelay already accounts for execution time, but the manual sleep means the first backup always runs ~60s after startup (30s sleep + first invocation). Misleading.
-[LOW] Manual mavis re-implementation of java.util.Properties — Config.props is a ConcurrentHashMap<String,String> with manual forEach((k,v) -> tmp.put(k,v)) for save. Just use java.util.Properties with synchronized and store().
-Security issues
-[HIGH] TagDao.getDistinctValues — column-name SQL injection — PARTIAL: AUTOCOMPLETE_COLUMNS whitelist verified; full column-name allowlist still needed — persistencia/TagDao.java:137-139 — NOT DONE
-[HIGH] HttpRouter.dispatch — error message from Exception.getMessage() returned to client in JSON body. Includes DB error text, paths, and class names. Information disclosure. — PARTIAL: ApiServer.classify now sanitizes NotFound→"Not found", Unknown→"Internal error"; DUPLICATE/VALIDATION preserve local message (safe); BUT HttpRouter's own catch block (when exceptionHandler is null) still sends raw 500 with no body — api/HttpRouter.java:127 — NOT DONE ( ApiServer.classify mitigates most routes, but null-handler path still leaks)
-
-
-################################################################################
-# SOURCE: todo1.txt
-################################################################################
-
-================================================================================
- ULTRA MEGA HYPER CODE REVIEW — src/   (errors, bugs & blunders)
-================================================================================
- Format:  path/to/File.java:LINE: SEVERITY: problem. Fix: suggested fix.
- Severity legend: CRITICAL > HIGH > MEDIUM > LOW
- NOTE: only the src/ tree was reviewed (target/ build artifacts ignored).
-================================================================================
-
---------------------------------------------------------------------------------
- SUMMARY OF HIGHEST-IMPACT ISSUES (read these first)
---------------------------------------------------------------------------------
- 1. CRITICAL: ProgressBarRenderer does a DB lookup on EVERY cell paint (EDT).
- 2. HIGH:     Whole presentacio layer runs file/DB/network work ON the EDT
-              (Import/Export/Backup/Filter controllers, detail dialogs).
- 3. HIGH:     BibliotecaTableModel.isCellEditable() always false -> read
-              checkbox editor is dead.
- 4. HIGH:     ServerConect migrations rely on transactional rollback, but DDL
-              auto-commits on MariaDB -> partial-migration / data-loss risk
-              (esp. migration 32-34 author backfill then DROP COLUMN autor).
- 5. HIGH:     CoverService L1 cache = unsynchronized access-order LinkedHashMap
-              shared across the cover-fetch thread pool + EDT -> corruption.
- 6. HIGH:     BookImporter.importCSV parses physical lines (breaks quoted
-              embedded newlines) and Calibre import uses platform charset.
- 7. HIGH:     ISBN-10 -> ISBN-13 normalization is incomplete/inconsistent in
-              several places -> wrong/duplicate ISBN keys.
- 8. HIGH:     api/HttpCtx empty-body responses never terminate the exchange
-              (client hangs / leak); /api/restore + /api/clear are unauth'd.
- 9. HIGH:     LlibreLlistaContext.isbn typed int -> ISBN-13 overflow/truncation.
-================================================================================
-
-
-================================================================================
- PACKAGE: domini/  +  interficie/
-================================================================================
-src/domini/LlibreLlistaContext.java:11: HIGH: isbn is typed int but ISBNs are Long everywhere else; ISBN-13 (~9.78e12) overflows Integer.MAX and is silently truncated. Fix: change isbn field to long.
-src/domini/LlibreLlistaContext.java:19: HIGH: of() factory takes int isbn, forcing a narrowing cast of the real long ISBN at every call site. Fix: change parameter to long.
-src/domini/ControladorDomini.java:33: MEDIUM: SORT_BY COL_ISBN uses Comparator.comparing(Llibre::getISBN) which NPEs on a null ISBN (unlike null-safe compararISBN used elsewhere). Fix: wrap with Comparator.nullsFirst or reuse compararISBN.
-src/domini/ControladorDomini.java:172: MEDIUM: deleteLlibre(Long ISBN) auto-unboxes a possibly-null Long into searchKey(long) -> NPE. Fix: null-check before unboxing.
-src/domini/ControladorDomini.java:382: MEDIUM: l.getISBN() == isbn unboxes a possibly-null Long for == -> NPE for any book with null ISBN. Fix: use Objects.equals / guard null.
-src/domini/ControladorDomini.java:246: MEDIUM: getAllLlistes() returns the internal list directly (mutable-state leak). Fix: return a copy or Collections.unmodifiableList.
-src/domini/ControladorDomini.java:390: MEDIUM: getAllTags() returns the internal list directly (mutable-state leak). Fix: return a copy/unmodifiable view.
-src/domini/ControladorDomini.java:210: MEDIUM: backupToSQL iterates shared ArrayList bib while EDT may mutate it (auto-backup runs off-EDT) -> ConcurrentModificationException; bib/llistes/tags unsynchronized. Fix: snapshot under lock before iterating.
-src/domini/ControladorDomini.java:217: LOW: File.createTempFile creates a real file used only for its parent dir and never deleted -> orphan temp file. Fix: delete it or derive temp dir without creating a file.
-src/domini/ControladorDomini.java:224: LOW: rollback executeSQLFile failure swallowed by catch(Exception ignored){}, hiding corrupted-DB state. Fix: log/attach rollback failure to rethrown exception.
-src/domini/ControladorDomini.java:180: LOW: updateLlibre silently skips in-memory update when binarySearch misses (e.g. ISBN changed) and never re-sorts -> stale/unsorted bib. Fix: handle key changes explicitly or assert ISBN immutability.
-src/domini/Llibre.java:94: MEDIUM: getAutors() returns the internal mutable list; external mutation desyncs it from autor and breaks getAutor(). Fix: return new ArrayList<>(autors) or unmodifiable view.
-src/domini/Llibre.java:195: LOW: copyOf sets c.autors=null when src.autors is null, violating the never-null invariant (NPE on isEmpty()). Fix: default to a new empty ArrayList.
-src/domini/ShelfParser.java:60: MEDIUM: per-book export errors swallowed by catch(Exception ignored){}, silently dropping rows from the CSV. Fix: collect/log failures or fail loudly.
-src/domini/ShelfParser.java:17: LOW: condition parts.length < 1 is always false (split returns >= 1 element) -- dead branch. Fix: remove; rely on parts[0].isBlank().
-src/domini/SortSpec.java:39: LOW: toSql() default "`ISBN`" omits the "l." table prefix used by all map entries -> inconsistent ORDER BY. Fix: default to "l.`ISBN`".
-src/interficie/InMemoryBibliotecaReader.java:26: LOW: l.getISBN() == isbn (also lines 30, 79, 85) unboxes a possibly-null Long -> NPE. Fix: guard null / use Objects.equals.
-src/interficie/OnLlibreAdded.java:1: LOW: empty (0-byte) placeholder file declaring nothing. Fix: remove or implement.
-src/interficie/OnLlibreUpdate.java:1: LOW: empty file; LibraryEvents imports presentacio.listener.OnLlibreUpdate instead (name collision / unused). Fix: remove.
-src/interficie/OnLlibreDelete.java:1: LOW: empty file; LibraryEvents imports presentacio.listener.OnLlibreDelete instead (name collision). Fix: remove.
-src/interficie/OnLlibreBlobChanged.java:1: LOW: empty (0-byte) dead file. Fix: remove or implement.
-src/interficie/OnLlistaMembershipChanged.java:1: LOW: empty (0-byte) dead file. Fix: remove or implement.
-src/interficie/EnActualizarBBDD.java:1: LOW: empty (0-byte) dead file. Fix: remove.
-
-
-================================================================================
- PACKAGE: persistencia/
-================================================================================
-src/persistencia/ServerConect.java:182: HIGH: runMigrations wraps migrations in a JDBC transaction, but most migration statements are DDL, which auto-commits on MariaDB/MySQL. A mid-sequence failure leaves a partially-migrated schema with inconsistent schema_version; the savepoint/rollback path is effectively a no-op for DDL. Fix: run/track each migration idempotently and version-stamp only after each succeeds; do not rely on transactional rollback for DDL.
-src/persistencia/ServerConect.java:101: HIGH: Migration 32-34 backfills authors into llibre_autor then DROP COLUMN autor (34). If 33 partially fails on a large DB and 34 still runs, original author data is permanently lost. Fix: gate the DROP behind a verified row-count match (see in-code comment) or split into a separate, manually-confirmed migration.
-src/persistencia/ServerConect.java:124: LOW: H2 URL is built by stripping ALL whitespace from the home dir path (replaceAll("\\s+","")) -> a user home path containing spaces produces a wrong DB path. Fix: do not strip interior spaces from the path; quote/escape instead.
-src/persistencia/LlibreDao.java:23: MEDIUM: buildLlibreLight reads nullable `any`/valoracio/preu with getInt/getDouble and no wasNull() -> SQL NULL collapses to 0 / 0.0, indistinguishable from a real zero. Fix: read as object / check wasNull() and pass null.
-src/persistencia/LlibreDao.java:33: MEDIUM: buildLlibre has the same NULL-collapse problem for `any`/valoracio/preu. Fix: use wasNull() and set null on the Llibre.
-src/persistencia/LlibreDao.java:314: MEDIUM: search() binds params by instanceof chain; a param type not in {String,Long,Integer,Double,Boolean} is silently skipped, shifting every subsequent placeholder index and corrupting the query. Fix: throw on unhandled type, or bind via a typed param object.
-src/persistencia/LlibreDao.java:435: MEDIUM: executeSQLFile splitter (insideString/endsStatement) only balances single quotes per physical line, so a quoted literal containing a newline or a ';' across lines mis-splits the statement on restore. Fix: tokenize across the full buffer, not line-by-line.
-src/persistencia/LlibreDao.java:453: MEDIUM: isForbidden only checks the leading token of each split statement; if the per-line splitter mis-joins, a forbidden DDL could ride along inside another statement and bypass the guard. Fix: validate after robust statement parsing, and reject multiple top-level statements per chunk.
-src/persistencia/LlibreDao.java:312: LOW: search() appends LIMIT/OFFSET via string concatenation of ints (not parameters). Safe today (ints) but fragile. Fix: bind as parameters.
-src/persistencia/TagDao.java:56: MEDIUM: delete(int id) removes a tag (cascading to llibre_tag via FK) but never calls invalidateLlibreTagCache() -> getAllLlibreTag() returns stale rows. Fix: invalidate cache on tag delete.
-src/persistencia/TagDao.java:124: MEDIUM: llibreTagCache is also stale after LlibreDao.delete() cascades llibre_tag rows (LlibreDao cannot see TagDao's cache). Fix: centralize cache invalidation or drop the cache on any book/tag delete.
-src/persistencia/ControladorPersistencia.java:76: MEDIUM: resetForTest() mutates the static singleton (inst=null) without synchronization, while getInstance() is synchronized -> race / visibility bug across threads. Fix: synchronize resetForTest/resetForProfileSwitch on the class monitor.
-src/persistencia/ControladorPersistencia.java:85: MEDIUM: resetForProfileSwitch() closes the shared connection and nulls inst unsynchronized while other (synchronized) methods may be using DAOs on that connection. Fix: synchronize and ensure no in-flight DB ops.
-
-
-================================================================================
- PACKAGE: herramienta/  (incl. csv/, export/, imports/)
-================================================================================
-src/herramienta/CoverService.java:27: HIGH: L1 is a plain access-order LinkedHashMap mutated by get()/put() from multiple cover-fetch pool threads + the EDT with no synchronization (access-order mutates on get()) -> map corruption / ConcurrentModificationException / infinite loop. Fix: guard all access with synchronization or use a concurrent cache.
-src/herramienta/CoverService.java:63: LOW: Long.parseLong(isbn) throws on non-numeric ISBNs (e.g. containing 'X'), swallowed by the surrounding catch -> DB cover save silently dropped. Fix: normalize/validate ISBN before parsing.
-src/herramienta/BookImporter.java:32: HIGH: importCSV parses each physical line via readLine()+CsvUtils.parseLine, so quoted fields with embedded newlines are split across rows and mis-parsed; Rfc4180Reader (built for exactly this) is unused here. Fix: stream rows through Rfc4180Reader.
-src/herramienta/BookImporter.java:64: HIGH: new InputStreamReader(proc.getInputStream()) uses platform default charset, but sqlite3 emits UTF-8 -> accented Catalan/Spanish text corrupted on non-UTF-8 platforms (Windows). Fix: pass StandardCharsets.UTF_8.
-src/herramienta/BookImporter.java:69: MEDIUM: Calibre rows split on literal '|', but text fields (e.g. comment) can contain '|' or newlines -> field misalignment. Fix: use sqlite3 -json or a sentinel/quoted separator.
-src/herramienta/BookImporter.java:106: LOW: findSqlite3 runs "--version" and waitFor() without draining stdout/stderr -> potential pipe-buffer deadlock. Fix: drain streams or use ProcessBuilder with redirected output.
-src/herramienta/Isbn13Normalizer.java:17: HIGH: ISBN-10 converted to ISBN-13 only when first digit == '0'; valid ISBN-10s starting with other digits (e.g. Spanish "84...") are returned as 10 digits, never normalized. Fix: convert every valid 10-digit ISBN regardless of first digit.
-src/herramienta/csv/CsvUtils.java:84: HIGH: parseIsbn only converts ISBN-10 -> 13 when check digit is 'X'; a normal 10-digit ISBN is returned as-is (loses 978 prefix, risks leading-zero loss when parsed as long). Fix: convert all valid 10-digit ISBNs to ISBN-13.
-src/herramienta/csv/CsvUtils.java:42: MEDIUM: parseLine trims every field unconditionally, destroying significant leading/trailing whitespace inside quoted fields (RFC4180 treats quoted spaces as data). Fix: only trim unquoted fields.
-src/herramienta/csv/CsvUtils.java:54: LOW: colVal does c[idx].trim() without null-checking the element -> NPE on a null cell. Fix: guard c[idx]==null.
-src/herramienta/csv/NativeCsvStrategy.java:43: MEDIUM: regex accepts ISBN-10 ending in 'X' ([0-9]{9}[0-9X]) but Long.parseLong(...) then throws NumberFormatException on 'X' -> valid ISBN-10-X rows error out. Fix: normalize via CsvUtils.parseIsbn/Isbn13Normalizer before parseLong.
-src/herramienta/csv/Rfc4180Reader.java:40: MEDIUM: hasNext() returns true after the last data row, but next() then reads EOF and returns null -> a hasNext()/next() loop yields a spurious trailing null row. Fix: buffer EOF so hasNext() becomes false after the final row.
-src/herramienta/csv/Rfc4180Reader.java:34: LOW: continuation lines rejoined with '\n' but readLine() strips '\r' -> CRLF inside a quoted field silently becomes LF. Fix: preserve original line terminators if round-tripping.
-src/herramienta/csv/Rfc4180Reader.java:6: LOW: unused imports java.util.ArrayList / java.util.List. Fix: remove.
-src/herramienta/OpenLibraryClient.java:55: HIGH: lookupByISBN catches only IOException, but JsonParser.parseString(...).getAsJsonObject() throws unchecked JsonSyntaxException/IllegalStateException on malformed/non-object responses -> escapes and can crash caller. Fix: also catch RuntimeException and convert to an error entry.
-src/herramienta/OpenLibraryClient.java:226: MEDIUM: fetch() throws on non-200 without reading/closing the error stream and never calls conn.disconnect() -> leaked connections / no socket reuse. Fix: drain+close getErrorStream() / disconnect before throwing.
-src/herramienta/OpenLibraryClient.java:158: MEDIUM: fetchCoverByISBN never disconnects the HttpURLConnection and leaves the error stream undrained on non-200. Fix: drain error stream + disconnect in finally.
-src/herramienta/OpenLibraryClient.java:70: LOW: number_of_pages read with getAsInt(); a non-integer JSON value throws uncaught NumberFormatException. Fix: guard isJsonNumber() / wrap in try.
-src/herramienta/Config.java:296: MEDIUM: withBatch sets volatile batchActive but save() never reads it, so intermediate saves inside a batch are not suppressed (batching optimization is dead). Fix: have save() skip scheduling while batchActive.
-src/herramienta/Config.java:319: MEDIUM: save() writes config.properties directly via FileOutputStream (non-atomic) -> crash mid-write corrupts user config. Fix: write to temp file + atomic Files.move(REPLACE_EXISTING).
-src/herramienta/Config.java:312: LOW: pendingSave cancel/reschedule is a non-atomic read-modify-write on a volatile field; concurrent setters race. Fix: synchronize the scheduling block.
-src/herramienta/JsonImporter.java:41: MEDIUM: tags loop calls to.get("id").getAsInt()/to.get("nom").getAsString() with no null-checks/per-entry try -> one malformed tag aborts entire import. Fix: null-guard fields + isolate each entry.
-src/herramienta/JsonImporter.java:52: MEDIUM: llistes loop has the same problem -> one bad shelf entry aborts the whole import. Fix: null-guard + isolate each entry.
-src/herramienta/export/GoodreadsExportService.java:46: MEDIUM: l.getValoracio() > 0 auto-unboxes a nullable Double -> NPE aborts the whole export when valoracio is null. Fix: null-guard before comparing.
-src/herramienta/BookExporter.java:164: MEDIUM: exportPDF calls fm.stringWidth(val) where val from getNom()/getAutor() may be null -> NPE during printing. Fix: coalesce null cell values to "".
-src/herramienta/BookExporter.java:280: LOW: jsonStr handles control chars < 0x20 before the '\b'/'\f' switch cases, making those cases unreachable (emits \u0008/\u000c instead of \b/\f). Fix: reorder so named escapes win.
-src/herramienta/BookExporter.java:285: LOW: private esc() is dead code (never called). Fix: remove.
-src/herramienta/ConfigDTO.java:23: MEDIUM (security): fromConfig() embeds the real plaintext DB password into the DTO returned by /api/config, exposing it over HTTP; apply() checks a "***" sentinel that fromConfig never sends. Fix: send "***" placeholder and only update password when apply() receives a non-sentinel value.
-src/herramienta/DialogoError.java:64: LOW: error log written with new FileWriter(f, true) (platform default charset) -> accented messages garbled on non-UTF-8 systems. Fix: use FileWriter(f, StandardCharsets.UTF_8, true).
-src/herramienta/SwingUtils.java:19: LOW: idExtractor.apply(...) == prevId auto-unboxes the result -> NPE on a null id. Fix: use Objects.equals / null-guard.
-src/herramienta/DateUtils.java:15: LOW: fast path accepts years up to 2200 while regex fallback caps at 2199; also substring(0,4) can return a non-year prefix (e.g. "1234abc"). Fix: align ranges and validate the prefix is a plausible year.
-NOTE: src/herramienta/export/PdfExporter.java and BookPdfPrinter.java are empty stub files (no code, referenced nowhere). Remove or implement.
-
-
-================================================================================
- PACKAGE: presentacio/  (incl. renderers/, listener/, detalles/)
-================================================================================
-src/presentacio/renderers/ProgressBarRenderer.java:25: CRITICAL: Renderer calls MainFrameControl.getInstance().getLlibreIsbn(isbn) -> a DB/store lookup on EVERY cell paint, on the EDT. Fix: pass the Llibre via the model (getBookAt); never query the DB in a renderer.
-src/presentacio/renderers/ProgressBarRenderer.java:24: MEDIUM: uses COLUMNA_ISBN=1 (model index) as a view column in t.getValueAt(row,1); if the Cover column is hidden, view col 1 is not ISBN. Fix: read via model index + convertRowIndexToModel.
-src/presentacio/renderers/CoverCellRenderer.java:57: HIGH: books with no cover (img==null) are removed from coverLoading but never cached, so every repaint re-submits getLlibreIsbn()+blob load -> endless DB/IO churn. Fix: cache an empty/sentinel marker for misses.
-src/presentacio/renderers/CoverCellRenderer.java:41: MEDIUM: COLUMNA_ISBN=1 (model index) used as a view column; breaks when Cover column hidden/reordered. Fix: convert to model index explicitly.
-src/presentacio/renderers/CoverCellRenderer.java:54: LOW: captured row index r is reused in a later invokeLater repaint; after sort/scroll r may point at a different row. Fix: repaint by isbn lookup or repaint whole column.
-src/presentacio/renderers/SearchHighlightRenderer.java:28: MEDIUM: COLUMNA_ISBN=1 (model index) used as a view column for the loaned-book highlight; wrong column when Cover hidden. Fix: use model.getValueAt / convertColumnIndexToView.
-src/presentacio/BibliotecaTableModel.java:57: HIGH: isCellEditable() always returns false, so the LlegitCheckBoxEditor on COL_LLEGIT never activates -> clicking the read/unread checkbox does nothing. Fix: return true for COL_LLEGIT.
-src/presentacio/BibliotecaTableModel.java:59: MEDIUM: getValueAt rebuilds the entire row Object[] (rowToValues) on every single cell access -> O(columns) allocation per cell each repaint. Fix: index the field per column directly.
-src/presentacio/TableController.java:105: MEDIUM: addRowSorterListener is attached before the model is set; the later setModel() auto-creates a NEW RowSorter, silently discarding the listener -> sort-column persistence stops working after first data load. Fix: install model first or re-attach after each setModel.
-src/presentacio/TableController.java:88: LOW: Ctrl-click author filter reads t.getValueAt(row, COL_AUTOR) with COL_AUTOR (model index) as a view column. Fix: resolve via model index.
-src/presentacio/MainFrameControl.java:63: HIGH: btnNouLlibre listener runs obrirNouLlibreDialeg on new Thread(...), constructing+setVisible()ing a modal Swing dialog off the EDT (also lines 68, 74). Fix: build/show dialogs on the EDT; only background work off-EDT.
-src/presentacio/MainFrameControl.java:198: HIGH: obrirNouLlibreDialeg constructs GuardarLlibresDialogo and setVisible(true) on a non-EDT thread. Fix: marshal dialog creation/show onto the EDT.
-src/presentacio/MainFrameControl.java:210: HIGH: getLlibreIsbn delegates to cLlibres.getLlibre (DB) and is called from renderers on the paint path -> per-paint DB queries. Fix: avoid DB lookups in render paths.
-src/presentacio/detalles/control/DetallesLlibrePanelControl.java:157: HIGH: startImatgeWorker submits the loader then immediately calls imageFuture.get() inside invokeLater on the EDT -> blocks the EDT until image/blob loads, defeating the async design. Fix: use SwingWorker / call back via invokeLater after get() completes off-EDT.
-src/presentacio/detalles/control/DetallesLlibrePanelControl.java:57: MEDIUM: cLlibres.loadHeavyFields(l) runs synchronously on the EDT during dialog construction. Fix: load on a background thread before showing.
-src/presentacio/detalles/control/DetallesLlibrePanelControl.java:86: MEDIUM: getDistinctAutorNames()/getDistinctValues() (DB queries) run on the EDT during construction for autocomplete (lines 86-89). Fix: fetch off-EDT and attach when ready.
-src/presentacio/ImportController.java:35: HIGH: importarCSV runs BookImporter.importCSV (file IO + DB writes) synchronously on the EDT. Fix: run in a SwingWorker with progress.
-src/presentacio/ImportController.java:62: HIGH: importarCalibre runs the sqlite3 subprocess + DB import on the EDT. Fix: move to a background worker.
-src/presentacio/ImportController.java:76: HIGH: importarJSON parses file + writes DB on the EDT. Fix: background worker.
-src/presentacio/ExportController.java:35: HIGH: exportCSV/exportJSON/exportHTML/exportPDF perform file IO + DB reads on the EDT (lines 35, 45, 60, 67). Fix: run exports in a SwingWorker.
-src/presentacio/ExportController.java:103: MEDIUM: fetchMissingCovers writes covers via cd.setLlibreBlob from 8 concurrent pool threads; concurrent writes through a possibly non-thread-safe connection can corrupt/serialize unexpectedly. Fix: serialize DB writes or use a connection-per-thread pool.
-src/presentacio/BackupController.java:36: HIGH: backupToSQL runs on the EDT (blocking full DB dump). Fix: background worker with progress dialog.
-src/presentacio/BackupController.java:53: HIGH: restoreFromSQL runs on the EDT (blocking full restore). Fix: background worker.
-src/presentacio/FilterController.java:131: MEDIUM: filtrar() calls aplicarFiltres(f) (DB query) on the EDT; janks for large libraries. Fix: run the DB filter in a SwingWorker.
-src/presentacio/ShelfController.java:73: MEDIUM: refreshComboLlistes issues several DB calls synchronously on the EDT. Fix: batch/cache and load off-EDT.
-src/presentacio/ShelfController.java:47: LOW: onDragToShelf swallows per-isbn exceptions to System.err with no user feedback. Fix: collect and report failures.
-src/presentacio/ConfiguracioDialog.java:521: MEDIUM: on empty host/user the validation 'return' only exits the Config.withBatch lambda, not the save handler -> execution continues to fire onThemeChange, prompt restart, and dispose(); a failed validation still closes the dialog. Fix: validate before withBatch and abort the whole handler on failure.
-src/presentacio/ConfiguracioDialog.java:405: LOW: cd.getDbSizeBytes() (DB query) runs on the EDT during dialog construction. Fix: fetch off-EDT.
-src/presentacio/GaleriaCobertesPanel.java:160: LOW: moveKeyboard calls card.scrollRectToVisible(card.getBounds()); getBounds() is in parent coordinates but scrollRectToVisible expects component-local coords -> scrolls to the wrong spot. Fix: pass new Rectangle(0,0,card.getWidth(),card.getHeight()).
-src/presentacio/GaleriaCobertesPanel.java:258: LOW: hideZoomPopup removes the overlay from the layered pane but never repaints -> visual ghost. Fix: repaint the layered pane region after removal.
-src/presentacio/detalles/control/OpenLibrarySearchTask.java:96: LOW: done() overwrites title/author fields unconditionally (setText) while other fields are only filled when empty -> clobbers user-typed title/author. Fix: guard title/autor with isEmpty() like the others.
-src/presentacio/ModeSelectorDialog.java:76: LOW: window-close sets result=SWING but ESC just dispose()s leaving result=CANCELLED -> inconsistent dismissal semantics. Fix: make ESC and window-close behave the same.
-
-
-================================================================================
- PACKAGE: api/  +  main/
-================================================================================
-src/api/HttpCtx.java:113: HIGH: empty-body responses with status != 204 call sendResponseHeaders(status, 0) (chunked) but never open/close an output stream -> response never terminated, exchange leaks, client hangs; the 204 path also never calls ex.close(). Fix: pass -1 for all empty bodies and always close the exchange/stream.
-src/api/HttpCtx.java:74: MEDIUM: bodyBytes() calls readAllBytes() with no size limit (used by image upload + SQL restore) -> unbounded-memory DoS. Fix: enforce a max request size / Content-Length cap.
-src/api/HttpCtx.java:75: LOW: an IOException while reading the body is swallowed and treated as an empty body, masking truncated reads as valid empty input. Fix: surface the error (400/500).
-src/api/HttpCtx.java:58: LOW: queryParamInt/queryParamDbl silently return null on parse failure -> malformed numeric params indistinguishable from absent ones. Fix: throw IllegalArgumentException (->400) on non-empty unparseable values.
-src/api/BackupRouter.java:50: HIGH (security): /api/restore executes arbitrary SQL from an unauthenticated request body (read into memory, written to temp, run via restoreFromSQL) -> exploitable via CSRF from a local browser page. Fix: require auth/CSRF, validate body size, restrict to trusted callers.
-src/api/BackupRouter.java:63: HIGH (security): /api/clear wipes the entire DB with no auth/confirmation, reachable via cross-site POST. Fix: require auth/CSRF token.
-src/api/BackupRouter.java:58: LOW: tmp.delete() return value ignored -> leaks the temp SQL file (full DB contents) if deletion fails. Fix: Files.deleteIfExists + log on failure.
-src/api/ImportExportRouter.java:126: HIGH: fetchCovers returns {"queued": total} but then blocks the HTTP worker thread on awaitTermination(5, MINUTES) -> response only flushed after up to 5 min; concurrent calls can exhaust the thread pool. Fix: run the job on a background executor and return immediately.
-src/api/ImportExportRouter.java:121: MEDIUM: pool threads call cd.setLlibreBlob(...) without synchronized(cd), unlike every other writer -> data race on the domain controller. Fix: synchronize on cd or make writes thread-safe.
-src/api/ImportExportRouter.java:69: MEDIUM: JsonParser.parseString(body).getAsJsonObject() throws IllegalStateException/JsonSyntaxException for non-object/malformed JSON -> 500 instead of 400. Fix: validate and return 400.
-src/api/ImportExportRouter.java:104: LOW: errDetails.add(e.getMessage()) may add null entries when an exception has no message. Fix: coalesce null to the exception class/string.
-src/api/HttpRouter.java:93: MEDIUM (security): CORS check uses startsWith("http://localhost:")/"127.0.0.1:" prefix match and echoes the origin; with no auth on any endpoint, state-changing routes are exposed to CSRF from any local page. Fix: exact-allowlist origins + token auth for mutating routes.
-src/api/HttpRouter.java:108: MEDIUM: when a path matches but the HTTP method differs, the loop falls through to 404 (or static) and never returns 405 Method Not Allowed. Fix: track path-but-not-method matches and return 405 with an Allow header.
-src/api/HttpRouter.java:146: MEDIUM (security): serveStatic builds "/web" + rawPath from the decoded URI and passes it to getResourceAsStream, allowing ../ / %2e%2e traversal out of /web. Fix: normalize/canonicalize and reject paths that escape /web.
-src/api/HttpRouter.java:115: LOW: if ctx.commit() partially sends headers then throws, the catch builds a new HttpCtx on the same exchange and re-sends headers (fails, swallowed) -> truncated response. Fix: track a "responseStarted" flag and skip the error path once headers are sent.
-src/api/ApiServer.java:43: MEDIUM: classify only maps BibliotecaException/IllegalArgumentException/NumberFormatException; JsonSyntaxException and IllegalStateException fall through to 500 instead of 400. Fix: map client-input/parse exceptions to 400.
-src/api/LlibreRouter.java:72: MEDIUM: empty/whitespace body makes gson().fromJson(...) return null, then jsonToLlibre(null) throws NPE -> 500 (malformed JSON likewise). Fix: validate non-null parsed object, return 400 (applies to all routers using this pattern).
-src/api/LlibreRouter.java:133: MEDIUM: uploadImage throws generic Exception("Empty image body") (->500) and does no size/content-type validation on the blob. Fix: return 400 for empty/oversized/non-image uploads.
-src/api/LlibreRouter.java:59: LOW: Set.of(fieldsParam.split(",")) throws IllegalArgumentException on a duplicate value -> 400 for an otherwise valid request. Fix: build with new HashSet<>.
-src/api/LlibreRouter.java:53: LOW: invalid page value is swallowed and treated as page 0 instead of reporting bad input. Fix: validate and return 400.
-src/api/LlibreRouter.java:34: MEDIUM: read endpoints (count/list/recent/getOne) access shared cd without synchronization while all writes use synchronized(cd) -> reads can observe mid-write state. Fix: consistent locking for reads too.
-src/api/LlistaRouter.java:45: MEDIUM: missing-nom validation throws generic Exception -> 500 instead of 400 (also line 61). Fix: throw IllegalArgumentException / BibliotecaException.Validation.
-src/api/LlistaRouter.java:106: LOW: j.get("valoracio").getAsDouble()/getAsBoolean() throw on wrong JSON types -> 500. Fix: validate types, return 400.
-src/api/LlistaRouter.java:95: LOW: same Set.of duplicate-fields crash as LlibreRouter. Fix: use a mutable set.
-src/api/TagRouter.java:29: MEDIUM: missing-nom validation throws generic Exception -> 500 instead of 400 (also line 38). Fix: throw a validation exception.
-src/api/TagRouter.java:51: LOW: addToBook checks existsLlibre outside the synchronized block (TOCTOU) before the add. Fix: check + mutate under the same lock.
-src/api/LoanRouter.java:43: MEDIUM: "Borrower name required" thrown as generic Exception -> 500 instead of 400. Fix: throw a validation exception.
-src/api/LoanRouter.java:47: MEDIUM: "Book already on loan" thrown as generic Exception -> 500 instead of 409 Conflict. Fix: throw BibliotecaException.Duplicate (->409).
-src/api/ConfigRouter.java:114: LOW: setter.accept(j.get(key)) throws on type-mismatched values (getAsInt/getAsDouble on a non-numeric string) -> 500 instead of 400. Fix: catch and return 400 with the offending key.
-src/api/OpenLibraryRouter.java:12: LOW: isbn/title path params passed unvalidated to the external OpenLibraryClient; any client failure propagates as 500. Fix: validate inputs, map upstream/network errors to 502/400.
-src/main/Ejecutable.java:24: MEDIUM: the default uncaught-exception handler always shows a Swing DialogoError, so a startup failure in --web mode (e.g. port in use) pops a GUI dialog or fails headless instead of logging+exiting. Fix: branch on mode/headless; print to stderr + exit non-zero in web mode.
-src/main/Ejecutable.java:79: LOW: Desktop.getDesktop().browse(...) can throw (headless/unsupported), aborting startup after the server already started. Fix: wrap in try/catch and continue.
-
-
-================================================================================
- END OF REVIEW
-================================================================================
-
-
-################################################################################
-# SOURCE: todo2.txt
-################################################################################
-
-ULTRA MEGA HYPER REVIEW - ALL ISSUES FOUND
-==========================================
-
-[FILE: src/persistencia/LlibreDao.java:208]
-Problem: ISBN is cast to int, truncating the long value. The cast `(int) isbn` will silently lose data for ISBNs > 2^31.
-Code: out.add(domini.LlibreLlistaContext.of(
-    (int) isbn,  // BUG: truncates long isbn to int
-    rs.getInt(1),
-    ...
-Fix: Cast to long: `isbn` is already long, no cast needed. Remove the `(int)` cast.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:41-63]
-Problem: `fillLlibreTail` is called twice for heavy fields - once via `buildLlibreLight` with `withHeavy=false` (where it does nothing) and once via `buildLlibre` with `withHeavy=true`. But inside `fillLlibreTail` itself, `l.setNotes(rs.getString("notes"))` is called regardless of the `withHeavy` flag, meaning it is always executed even when `withHeavy=false`. However `fillLlibreTail` is also called in `buildLlibreLight` via `withHeavy=false`... wait, let me re-trace. In `buildLlibreLight`, `withHeavy=false` is passed and inside `fillLlibreTail`, `l.setNotes(rs.getString("notes"))` is called only when `withHeavy=true`... Actually looking more carefully, `l.setNotes(rs.getString("notes"))` is called ONLY when `withHeavy=true` (line 43 inside the if block). So `buildLlibreLight` does NOT set notes. OK - actually the real issue is: `fillLlibreTail` has `if (withHeavy) { l.setNotes(rs.getString("notes")); }` - so notes are NOT set in the light constructor. The `buildLlibreLight` does call `l.setHeavyFieldsLoaded(false)` on line 27. This is actually intentional for lazy loading. Not a bug. SKIP.
-
-Wait - let me re-check. Actually, after looking more carefully at `buildLlibreLight`:
-```java
-static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
-    Llibre l = new Llibre(..., rs.getObject("valoracio", Double.class), ...);
-    l.setHasBlob(rs.getBoolean("has_blob"));
-    fillLlibreTail(l, rs, false);  // withHeavy=false
-    l.setHeavyFieldsLoaded(false);
-    return l;
-}
-```
-And `fillLlibreTail` when `withHeavy=false` only sets: pagines, paginesLlegides, editorial, serie, volum, dataCompra, dataLectura, idioma, format, desitjat, paisOrigen, estat, exemplars, llenguaOriginal, nomCa, nomEs, nomEn. It does NOT set notes, descripcio. Those are loaded later lazily via `loadHeavyFields`. This is intentional. SKIP.
-
-Actually re-reading the code in `buildLlibreLight` at line 26: `fillLlibreTail(l, rs, false);` - withHeavy=false, notes not set. OK.
-
-Actually let me just focus on the REAL issues I found.
-
----
-
-[FILE: src/herramienta/BookImporter.java:55-64]
-Problem: `importCalibre` uses `Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql})` - command injection risk if sqlite3 path contains spaces or special chars. Also, `proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream())` is Java 9+ only; will throw `UnsupportedOperationException` on Java 8.
-Code: Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql});
-    Thread stderrDrain = new Thread(() -> {
-        try { proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream()); }
-        catch (Exception ignored) {}
-    });
-Fix: Use ProcessBuilder with proper escaping; for stderr drain use a BufferedReader and drain manually for Java 8 compatibility.
-
----
-
-[FILE: src/herramienta/BookExporter.java:221]
-Problem: `getEditorial() != null ? getEditorial() : ""` - returns "" but shows as empty string in HTML, but `editorial` column may have "0" or " " as default which displays incorrectly. Also, for number columns like `any`, it outputs `0` when any is 0, causing "0" to appear in HTML where blank was intended.
-Code: pw.println("<td>" + (l.getAny() > 0 ? l.getAny() : "") + "</td>");
-Fix: Change to `(l.getAny() != null && l.getAny() > 0) ? l.getAny() : ""`
-
----
-
-[FILE: src/api/ImportExportRouter.java:115-126]
-Problem: ExecutorService is created but never explicitly shut down. If the application shuts down while covers are still being fetched, threads may not terminate cleanly. Also uses `pool.shutdown()` (善良) not `pool.shutdownNow()`.
-Code: java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(4,
-    r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
-    ...
-    pool.shutdown();
-Fix: Register the pool with ShutdownHooks or use try-finally to ensure shutdown, or let the daemon threads die naturally with JVM.
-
----
-
-[FILE: src/presentacio/ExportController.java:127-154]
-Problem: The ExecutorService `pool` is used but never shut down. The `pool.shutdown()` is only called inside `SwingUtilities.invokeLater` callback after all covers are fetched, but if an exception occurs before that point, the pool never shuts down. Also `pool` is a local variable - if done >= total before all tasks complete (due to exception), pool never shut down.
-Code: java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8,
-    r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
-    // pool submitted to but no guaranteed shutdown
-Fix: Use try-finally or track better; use a single shared executor in CoverService instead of creating per-operation.
-
----
-
-[FILE: src/api/HttpRouter.java:101]
-Problem: Empty catch block for CORS preflight response sending - silently swallows IOException.
-Code: } catch (IOException ignored) {}
-Fix: At minimum log the exception, even if at FINE level.
-
----
-
-[FILE: src/api/HttpRouter.java:93]
-Problem: CORS origin check only allows `http://localhost:*` and `http://127.0.0.1:*` - does not allow `https://` origins or other loopback variants. Useful for local development but prevents production deployment with reverse proxy.
-Code: boolean allowedOrigin = origin != null && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
-Fix: Either extend to allow https or make the allowed origins configurable.
-
----
-
-[FILE: src/domini/ControladorDomini.java:215]
-Problem: `loadHeavyFields` is called inside a synchronized block (line 214) on `this`, but `loadHeavyFields` itself (line 199) calls `cp.loadHeavyFields` which is a synchronized method on cp. This is fine for deadlock since different objects. BUT the bigger issue is that inside `backupToSQL` at line 215, `loadHeavyFields(l)` is called for each book while holding the `this` lock - this serializes all cover loads and could take very long for large libraries.
-Code: synchronized (this) {
-    for (Llibre l : bib) loadHeavyFields(l);
-    ...
-}
-Fix: Consider parallelizing cover loading or streaming covers directly from DB to avoid holding the lock.
-
----
-
-[FILE: src/herramienta/BackupService.java:269-273]
-Problem: `sqlEsc` replaces newlines with spaces but not other control characters like `\t`. Also `\u001A` (substitute character) is handled but other control characters (SOH, STX, etc.) are not stripped.
-Code: private static String sqlEsc(String s) {
-    if (s == null) return "";
-    String out = s.replace("\\", "\\\\").replace("'", "''");
-    out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ").replace("\u001A", "");
-    return out;
-}
-Fix: Replace all characters where `ch < 0x20` with space, not just specific ones.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:485-517]
-Problem: `syncAutors` does 3 round-trips: DELETE + batch INSERT for autor table + batch INSERT for llibre_autor links. While optimized vs N+2, the batch INSERT uses subquery approach (`SELECT id FROM autor WHERE nom = ?`) which may fail if autor entries don't exist in the autor table from step 2.
-Code: try (PreparedStatement link = con.prepareStatement(
-        "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?")) {
-    for (String nom : autors) {
-        link.setLong(1, isbn);
-        link.setString(2, nom);
-        link.addBatch();
-    }
-    link.executeBatch();
-}
-Fix: After batch INSERT to autor (step 2), add a flush/clear to ensure generated IDs are available before step 3.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:133-178]
-Problem: In `insert`, on line 174-176, when syncing authors, if `autorsSync` is empty (no authors), the sync step is skipped but the new book has no authors linked. The fallback `ll.getAutor()` is only used if `getAutors().isEmpty()`. If both `autors` and `autor` are empty, no author link is created. This is correct behavior for new books. SKIP.
-
-Actually wait - if someone calls `addLlibre(l)` where l has autor="John Doe" but no autors list, the code at line 174-176 correctly picks up the fallback. But if l has empty autors list and empty autor string, no author link is created. The autor field is not migrated for existing books that only have autor set (but that's why migrations 32-34 exist). OK.
-
----
-
-[FILE: src/herramienta/Config.java:287-292]
-Problem: `SAVE_SCHEDULER` is a static single-threaded executor but never shut down - if the application runs for very long periods without exit, the thread holds memory. More importantly, if `save()` is called many times rapidly, only the last pending save runs (line 312 `pendingSave.cancel(false)`), which is intentional, but the Runnable holds references to captured objects.
-Code: private static final ScheduledExecutorService SAVE_SCHEDULER =
-    Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "config-save");
-        t.setDaemon(true);
-        return t;
-    });
-Fix: Register with ShutdownHooks to ensure clean shutdown, or switch to a lighter mechanism (e.g., Timer).
-
----
-
-[FILE: src/herramienta/BookExporter.java:127]
-Problem: Uses `★`.repeat((int) Math.round(val))` which is Java 11+. If running on Java 8, this will fail at compile time or runtime. String.repeat() is Java 11+.
-Code: String stars = val > 0 ? "★".repeat((int) Math.round(val)) : "-";
-Fix: Use Apache Commons or Guava's StringUtils.repeat, or manual loop.
-
----
-
-[FILE: src/persistencia/ServerConect.java:148-150]
-Problem: URL construction uses `replaceAll("/+$", "")` which is called twice with `trim()` - first removes trailing whitespace, then removes trailing slashes. This is correct but the `replaceAll("^\\s+|\\s+$", "")` is applied twice to `dir` (before and after removing slashes) which is redundant. Also for `cfg.profile()`, no sanitization is applied for profile names containing path separators.
-Code: String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + cfg.profile() + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
-Fix: Use a single trim and single replace chain. Profile could be validated to not contain path separators.
-
----
-
-[FILE: src/persistencia/ServerConect.java:124]
-Problem: Same URL construction issue for test connection. Path separator injection possible if profile contains `\` or `/`.
-Code: String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "") + "/" + profile.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "");
-Fix: Validate/sanitize profile name before use in path.
-
----
-
-[FILE: src/domini/Llibre.java:158-160]
-Problem: `setPagines` and `setPaginesLlegides` use `Math.max(0, v)` but pagines could legitimately be 0. If a valid book has 0 pages (e.g., unloaded or audio), this will be stored correctly as 0. Actually `Math.max(0, v)` returns 0 if v is negative, but 0 is a valid number. OK - actually if someone legitimately has 0 pages, it gets stored as 0. If they try to set -5, it becomes 0. This is correct for a book. NOT A BUG.
-
-Wait: `Math.max(0, -5)` = 0. That's correct. So negative input gets clamped to 0. For pages=0, stays 0. OK.
-
-Actually the real issue is: what if `v` is Integer.MAX_VALUE or some large number? Then Math.max(0, Integer.MAX_VALUE) = Integer.MAX_VALUE. That's fine.
-
-So actually no bug here.
-
----
-
-[FILE: src/domini/Llibre.java:166]
-Problem: `setVolum` uses `Math.max(0, volum)` - same analysis. OK.
-
-Actually let me find REAL issues.
-
----
-
-[FILE: src/api/LlibreRouter.java:134]
-Problem: `sniffImageMime` defaults to "image/jpeg" for unknown formats, but this could serve a PNG or GIF as "image/jpeg" causing browser to misinterpret. The method only handles PNG (8-byte signature) and JPEG (3-byte SOI), but if a WebP image is stored as blob, it would be served as JPEG incorrectly.
-Code: return "image/jpeg";  // fallback for unknown
-Fix: Return "application/octet-stream" for unknown formats instead of assuming JPEG.
-
----
-
-[FILE: src/herramienta/OpenLibraryClient.java:271]
-Problem: `encode` uses `URLEncoder.encode` which encodes spaces as `+` instead of `%20`. While technically valid for `application/x-www-form-urlencoded`, some servers expect `%20`. This affects `lookupByTitle` and `lookupByAutor` searches.
-Code: return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
-Fix: Use `URI.create(url).toURL()` or replace `+` with `%20` after encoding, or use `java.net.URI` with explicit encoding.
-
----
-
-[FILE: src/presentacio/ImportController.java:134-157]
-Problem: `fetchThread` is a daemon thread that updates the UI when done. If the user closes the dialog before the thread completes, `cancelled.set(true)` is set (line 136) and the update is skipped. But if the dialog is closed and then another dialog is opened quickly, the old `fetchThread` might still run and try to update the new dialog. This is unlikely but possible.
-Code: Thread fetchThread = new Thread(() -> {
-    ...
-    SwingUtilities.invokeLater(() -> {
-        if (!dialeg.isVisible()) return;  // checks visibility but dialog might have been replaced
-        ...
-    });
-});
-Fix: Use a WeakReference to the dialog, or use a CancellationToken pattern.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:396-399]
-Problem: In `getDbSizeBytes`, the logic to parse the H2 URL path uses multiple regex replaceAll chains. For in-memory databases (mem:, mem/) it correctly returns -1. For file: URLs, it removes the prefix but then creates a `.mv.db` path blindly without checking if the path already contains `.mv.db`.
-Code: if (path.startsWith("file:")) path = path.substring(5).trim().replaceAll("\\s+", "");
-    if (path.startsWith("~")) path = (System.getProperty("user.home") + path.substring(1)).trim().replaceAll("\\s+", "");
-    java.io.File f = new java.io.File(path + ".mv.db");
-Fix: More robust path parsing for H2 URL format; handle both `file:` and `nio:file:` prefixes.
-
----
-
-[FILE: src/herramienta/BackupService.java:56-68]
-Problem: `autoBackup` creates a timestamp-based filename every time but only runs once per day. If the backup fails mid-way or the file is deleted, there's no retry until next day. Also no check for disk space before backup.
-Code: String ts = java.time.LocalDateTime.now()
-    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-    File out = new File(dir, "biblioteca_" + ts + ".sql");
-Fix: Add retry logic or at least check for last successful backup timestamp before attempting new one.
-
----
-
-[FILE: src/persistencia/LlistaDao.java:38-48]
-Problem: In `create`, the `SELECT COALESCE(MAX(ordre),0)+1` subquery is not wrapped in a transaction - but the comment says this is intentional because "DAO method is synchronized" and "cross-process races in MariaDB are not a concern". However if two calls to `create` happen concurrently on different connections (e.g., web API uses separate connection), the subquery could return the same ordre value for both.
-Code: "INSERT INTO llista (nom, ordre) VALUES (?, (SELECT COALESCE(MAX(ordre),0)+1 FROM llista AS sub))"
-Fix: Use a separate transaction with SERIALIZABLE isolation, or use INSERT ... ON DUPLICATE KEY with a lock table.
-
----
-
-[FILE: src/api/LlistaRouter.java:54]
-Problem: In `delete`, if `cd.getLlistaById(id)` throws NotFound, it's silently swallowed by the method because it only uses `cd.deleteLlista(...)` which would also throw if not found. Actually it rethrows - let me check. The delete does `cd.deleteLlista(cd.getLlistaById(id))` - if getLlistaById throws, the exception propagates. OK - no issue.
-
-Actually wait - looking at line 54: `cd.deleteLlista(cd.getLlistaById(id));` - if getLlistaById throws NotFound, delete is never called. This is correct behavior - if the shelf doesn't exist, return 404. But actually the exception from getLlistaById is caught by the caller (LlibreRouter's dispatch) and converted to 404. OK.
-
-Actually looking more carefully at line 54, the code says:
-```java
-private void delete(HttpCtx ctx) throws Exception {
-    int id = ctx.pathParamInt("id");
-    synchronized (cd) { cd.deleteLlista(cd.getLlistaById(id)); }
-    ctx.status(204);
-}
-```
-If `getLlistaById` throws NotFound, it's wrapped by the API framework into a 404. Correct. SKIP.
-
----
-
-[FILE: src/domini/ControladorDomini.java:258-261]
-Problem: `getLlistaById` iterates through `llistes` list with a for-each loop - O(n) but fine for small lists. However it catches Exception (not specific) and rethrows as BibliotecaException.NotFound.
-Code: public Llista getLlistaById(int id) throws Exception {
-    for (Llista l : llistes) if (l.getId() == id) return l;
-    throw new BibliotecaException.NotFound("Shelf not found: " + id);
-}
-Fix: Could be optimized with a Map<Integer, Llista> lookup but not critical.
-
----
-
-[FILE: src/persistencia/ConnectionFactory.java:15-24]
-Problem: `open()` creates a new `ServerConect` instance each call and never closes the previous connection. This is a resource leak if called multiple times.
-Code: public static Connection open() {
-    ...
-    ServerConect sc = new ServerConect();
-    sc.createDatabase(cfg);
-    return sc.getConnection();
-}
-Fix: Track and close the previous connection before creating a new one, or return a connection pool instead.
-
----
-
-[FILE: src/herramienta/LlibreValidator.java:79-81]
-Problem: Year validation rejects any year > currentYear+5, but allows 0 as a valid year (line 92 passes `any != null ? any : 0`). A book with year=0 is probably a placeholder and shouldn't be allowed.
-Code: if (any != null && any != 0 && (any < 1000 || any > currentYear + 5))
-Fix: Either remove the `any != 0` exception or validate year 0 separately with different limits.
-
----
-
-[FILE: src/herramienta/LlibreValidator.java:67-68]
-Problem: `countDig(isbn)` uses `String.valueOf(n).length()` which will fail for Long.MAX_VALUE (20 digits). Also if isbn is negative, this breaks.
-Code: int digits = isbn == null ? 0 : countDig(isbn);
-private static int countDig(long n) {
-    return String.valueOf(n).length();
-}
-Fix: Handle null and negative ISBNs; for very large values use `Long.toString(n).length()`.
-
----
-
-[FILE: src/api/HttpCtx.java:78]
-Problem: Request body size limit of 50MB (`50 * 1024 * 1024`) is hardcoded and could cause OOM if multiple large requests come in simultaneously. Also the check happens after reading all bytes with `readAllBytes()`.
-Code: if (available > 50 * 1024 * 1024) throw new IllegalStateException("Request body too large: " + available + " bytes");
-Fix: Consider streaming for large uploads, or use a configurable limit with a default.
-
----
-
-[FILE: src/api/ImportExportRouter.java:48-54]
-Problem: In `exportJson`, if `cd instanceof ControladorDomini dom`, it calls `dom.getAllLlibreLlistaRows()` and `dom.getAllLlibreTagRows()` - but these are fetched for all books in memory before looping. If library is large, this creates two large maps in memory.
-Code: Map<Long, List<Map<String, Object>>> llistaMap = new HashMap<>();
-Map<Long, List<Map<String, Object>>> tagMap = new HashMap<>();
-for (persistencia.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
-    llistaMap.computeIfAbsent(row.isbn(), k -> new ArrayList<>())
-        .add(Map.of("id", row.llistaId(), "valoracio", row.valoracio(), "llegit", row.llegit()));
-}
-Fix: Consider streaming the export or fetching only for the books being exported.
-
----
-
-[FILE: src/domini/LlibreFilter.java:76-85]
-Problem: `hasAnyFilter` does not check if sort is non-default. If the user only wants to sort without filtering, hasAnyFilter returns false but the filter still has a sort spec. This affects the pagination logic in `LlibreRouter.list`.
-Code: if (f.hasAnyFilter()) {
-    result = new java.util.ArrayList<>(cd.aplicarFiltres(f));
-} else if (notBlank(pageStr)) {
-    // pagination used
-}
-Fix: `hasAnyFilter()` should also return true if sort is non-default, or the caller should separately check for sort.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:294-308]
-Problem: In `search`, the `f.getLlistaId()` and `f.getTagId()` parameters are added to `params` list BEFORE the JOIN, but the SQL already appends conditions based on them. However, if both llistaId and tagId are set, the params list only has 2 items but the SQL has 2 JOINs and 2 WHERE conditions - this is correct. BUT the ORDER BY clause uses `sort.toSql()` which defaults to ISBN ascending if null. The sort is checked for null on line 310-311 and defaults applied. OK.
-
-Actually the issue might be different: if `f.getLlistaId()` and `f.getTagId()` are both set, they each add to params in the correct order matching the SQL. But the WHERE conditions use positional params - the order in params list must match the order of ? placeholders in SQL. Let me verify: lines 289-290 add JOIN conditions (not params), then 293-294 add WHERE params. The params are added in this order: llistaId (if not null), tagId (if not null), then for each filter condition. The SQL has ? in same order. OK - correct.
-
-Actually wait - I see: line 295-296 adds 4 params for the nom LIKE OR conditions. This could be a problem if the nom is the only filter and no llista/tag id. Let's say only f.getNom() is set:
-- params: [p, p, p, p] (4 params for 4 LIKE)
-- SQL: `WHERE 1=1 AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)`
-- This is correct. OK.
-
-Actually wait, the real issue is: line 289-290 add JOIN conditions but do NOT add params yet. The params are added at 293-294. But the JOIN conditions on lines 289-290 don't add params either - they just append SQL. The params for llista_id and tag_id are added at 293 and 294. But the WHERE clause that references these is on line 292: `if (f.getLlistaId() != null) sql.append(" AND llibre_llista.llista_id = ?"); params.add(f.getLlistaId());` Wait - let me check the actual code at 289-308.
-
-Actually I see that the SQL at 292-308 only appends AND conditions, not the JOIN. The JOIN is added at 289-290. But wait - line 289: `if (f.getLlistaId() != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");`
-
-Ah! The JOIN condition includes `ll.llista_id = ?` which is a parameter. But looking at the code at 289-294:
-
-```java
-if (f.getLlistaId() != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
-if (f.getTagId()    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
-sql.append(" WHERE 1=1");
-java.util.List<Object> params = new java.util.ArrayList<>();
-if (f.getLlistaId() != null) params.add(f.getLlistaId());
-if (f.getTagId()    != null) params.add(f.getTagId());
-```
-
-This is CORRECT - the parameter is added AFTER the JOIN (not in the JOIN itself), matching the SQL placeholder. The params order (llistaId first, then tagId) matches the SQL placeholders in the same order. OK.
-
-Actually wait - the JOIN itself doesn't have a placeholder, the WHERE clause does. Look at line 289: `sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?")` - this HAS a `?` in the JOIN condition. So params for llistaId should be added before the WHERE clause, which they are. This is correct.
-
-Hmm, let me look at the actual code again at lines 289-294:
-```java
-if (f.getLlistaId() != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
-if (f.getTagId()    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
-sql.append(" WHERE 1=1");
-java.util.List<Object> params = new java.util.ArrayList<>();
-if (f.getLlistaId() != null) params.add(f.getLlistaId());
-if (f.getTagId()    != null) params.add(f.getTagId());
-```
-
-So the JOIN has the placeholder for llistaId, then WHERE 1=1, then params are added in same order. This is correct. The parameter for the JOIN comes before the WHERE, and params list matches. OK - no issue here.
-
-Actually wait, but the params added at 293-294 are only 2 params (llistaId and tagId). But the SQL has placeholders in the JOIN conditions for both. So if both JOINs are present, there are 2 params in correct order. If only one JOIN is present, only 1 param. The order is correct. Good.
-
-So no issue with the search SQL.
-
-Let me focus on the actual confirmed bugs.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:295]
-Problem: In search, `f.getNom()` is used with LIKE but not null-checked - if f.getNom() is an empty string "", the condition `f.getNom() != null` is true so it adds the LIKE clause with `%` placeholders, which matches everything. This might cause unexpected behavior - searching with empty title returns all books.
-Code: if (f.getNom() != null) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
-Fix: Check `!f.getNom().isEmpty()` in addition to `!= null`.
-
----
-
-[FILE: src/persistencia/TagDao.java:149-163]
-Problem: In `getDistinctValues`, if the column is in the whitelist but has no data (or all NULL/empty), it returns an empty list. But if the column name is somehow interpreted as something else via SQL injection in the backtick-quoted column name... Actually the whitelist is checked at line 151: `if (!AUTOCOMPLETE_COLUMNS.contains(column)) return vals;`. So only whitelisted columns reach the query. The column name is backtick-quoted in the SQL: `` `" + column + "` `` which protects against SQL injection. OK - not a bug.
-
-Actually wait - I see the query uses backticks which in MySQL/MariaDB protects the identifier. H2 doesn't support backtick identifier quoting (uses double quotes for identifiers), but the whitelist check protects us. OK.
-
-Actually for H2 with MySQL mode (as configured in connection string), backticks may work. The config uses `MODE=MySQL;NON_KEYWORDS=VALUE` so backticks work. OK.
-
----
-
-[FILE: src/api/LlibreRouter.java:171-178]
-Problem: `validate` creates a copy via `Llibre.copyOf(l)` but then the validated copy is returned and later added with `cd.addLlibre(validated)`. The copy includes all fields but the `autors` list is copied as reference (line 195 `c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>()` - this creates a NEW ArrayList so it's a deep copy of the list, not a shallow copy). The items (Strings) in the list are immutable so OK. But `imatgeBlob` and `hasBlob` are copied by reference at line 198-199. This could be an issue if the original Llibre is modified later. But since we just created it and are about to add it, it's fine.
-
-Actually wait - `c.imatgeBlob = src.imatgeBlob;` is a reference copy of the byte array. If the source `l` is used again and its `imatgeBlob` is modified, the copy would also see the change. But in this flow, we just validated and are adding. Not a real issue in this context.
-
-Actually I notice that in `copyOf`, the `autors` is properly copied: `c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>();`. So that's fine.
-
-OK - no issue here.
-
----
-
-[FILE: src/api/LlibreRouter.java:180-203]
-Problem: In `buildFilter`, when a NumberFormatException is caught for isbn parsing at line 183, it's silently ignored. This means an invalid ISBN string in the query param results in no isbn filter being applied. Could lead to unexpected results where bad param values cause filters to be skipped.
-Code: if (isbnStr != null) { try { b.isbn(Long.parseLong(isbnStr)); } catch (NumberFormatException ignored) {} }
-Fix: Either throw a 400 Bad Request, or at least log at DEBUG level.
-
----
-
-[FILE: src/domini/ControladorDomini.java:172]
-Problem: `deleteLlibre(Long ISBN)` - if ISBN is null, it throws "ISBN és null" which is a NotFound exception with ISBN=null message. Actually looking at line 172: `if (ISBN == null) throw new BibliotecaException.NotFound("ISBN és null");` - this throws NotFound which maps to 404. For a null ISBN, 400 Bad Request would be more appropriate.
-Code: if (ISBN == null) throw new BibliotecaException.NotFound("ISBN és null");
-Fix: Throw IllegalArgumentException or BibliotecaException.Validation instead.
-
----
-
-[FILE: src/herramienta/BookExporter.java:190]
-Problem: MIME type detection for cover images is overly simplistic: `blob[0] == (byte)0x89` checks for PNG header but this could incorrectly match other binary data that happens to start with 0x89.
-Code: String mime = (blob.length > 4 && blob[0] == (byte)0x89) ? "image/png" : "image/jpeg";
-Fix: Use a more robust method like `java.nio.file.Files.probeContentType()` or a library like Apache Tika for reliable MIME detection.
-
----
-
-[FILE: src/api/HttpRouter.java:145-164]
-Problem: In `serveStatic`, the file content is read and then the stream closed, but if an exception occurs during reading, the response is never sent and the connection may hang.
-Code: try (InputStream in = rawIn) { data = in.readAllBytes(); }
-Fix: Add proper error handling for failed static file reads.
-
----
-
-[FILE: src/api/ConfigRouter.java:105]
-Problem: In `setConfig`, if the JSON body has duplicate keys, only the last value is kept (because JsonObject.get(key) returns last). This could be confusing if a client sends duplicate keys - no error is raised.
-Code: JsonObject j = JsonMapper.gson().fromJson(ctx.body(), JsonObject.class);
-Fix: Consider detecting duplicate keys in the JSON and returning a 400 error.
-
----
-
-[FILE: src/herramienta/OpenLibraryClient.java:160]
-Problem: `rateLimit` uses `Thread.sleep(wait)` and if interrupted, sets `Thread.currentThread().interrupt()` flag and returns. The caller `fetchCoverByISBN` checks for interrupt and returns null. But other callers of `rateLimit` (like `fetchWithRetry`) may not handle interrupts properly - they re-throw as IOException. This is inconsistent.
-Code: if (wait > 0) Thread.sleep(wait);
-    lastRequestMs = System.currentTimeMillis();
-Fix: Ensure all callers of rateLimit handle InterruptedException consistently.
-
----
-
-[FILE: src/domini/ControladorDomini.java:150-153]
-Problem: The `maxIndex100Llibres()` method uses integer division which could return wrong values for edge cases. For example, if bib.size() = 1, maxIndex = (1-1)/100 = 0. If size=100, (100-1)/100 = 0 (should be 0 since index 0 gets first 100, index 1 gets second 100). If size=101, (101-1)/100 = 1. This is actually correct - for 101 books, page 0 returns first 100, page 1 returns the remaining 1. So max index that can be specified is 0 for 100 books or less, 1 for 101-200 books. This is correct.
-
-Actually wait: with 100 books, maxIndex = 0. You can ask for page 0. With 101 books, maxIndex = 1. You can ask for page 0 or page 1. This is correct. NOT A BUG.
-
----
-
-[FILE: src/persistencia/ServerConect.java:195-197]
-Problem: In `closeConection`, the finally block sets con=null regardless of whether close() succeeded or threw. If close() throws, con is still set to null which might prevent proper rollback of transactions.
-Code: } finally {
-    con = null;
-}
-Fix: Set con=null only if close succeeded, or not at all since instance will be discarded.
-
----
-
-[FILE: src/herramienta/BackupService.java:67]
-Problem: In autoBackup, when deleting old backups, it uses `backups[i].delete()` which could fail silently if the file is locked or read-only. No error is reported.
-Code: for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
-Fix: Check return value of delete() and log warnings for failed deletions.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:253-265]
-Problem: In `getBlob`, if the blob is empty (length 0), it returns null. But the calling code at `LlibreRouter.image` checks `blob == null || blob.length == 0` and shows default image. This is correct behavior. However, there could be a stored empty blob (not null, but 0 bytes) which would be treated as "no image". This might not be the user's intent.
-Code: if (rs.next()) return rs.getBytes(1);  // returns 0-length byte[] if blob is empty
-Fix: Consider storing 0-length as null, or differentiate between "no image" and "image is empty".
-
----
-
-[FILE: src/persistencia/TagDao.java:22-23]
-Problem: AUTOCOMPLETE_COLUMNS doesn't include "autor" or "nom" - these would use the in-memory path via ControladorDomini.getDistinctValues. But if a user changes the in-memory column list, they must also update TagDao.AUTOCOMPLETE_COLUMNS. The comment says "Mantenir sincronitzada" (keep synchronized) but there's no enforcement.
-Code: public static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
-    Arrays.asList("editorial", "serie", "idioma", "pais_origen", "format", "llengua_original"));
-Fix: Consider deriving the whitelist from a single source of truth or documenting the required sync more explicitly.
-
----
-
-[FILE: src/presentacio/MainFrameControl.java:182-189]
-Problem: `getInstance(panel, cd)` creates a new instance if `instance == null` AND `panel != null`, but doesn't check if `instance` already exists with a DIFFERENT panel. This could lead to using an old panel or the new panel being ignored.
-Code: public static MainFrameControl getInstance(MainFramePanel panel, BibliotecaWriter cd) {
-    if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
-    return instance;
-}
-Fix: Either throw if instance exists and panel differs, or add a check to reuse existing instance.
-
----
-
-[FILE: src/api/BackupRouter.java:53-60]
-Problem: In `restore`, the temp file is created with `File.createTempFile` and deleted in finally, but if the JVM exits abnormally before the finally runs, the temp file persists.
-Code: File tmp = File.createTempFile("biblioteca_restore_", ".sql");
-    try {
-        Files.write(tmp.toPath(), data);
-        synchronized (cd) { cd.restoreFromSQL(tmp); }
-    } finally {
-        tmp.delete();
-    }
-Fix: Use `tmp.deleteOnExit()` in addition to the finally block, or use a shutdown hook to clean up temp files.
-
----
-
-[FILE: src/persistencia/ControladorPersistencia.java:76-83]
-Problem: In `resetForTest`, if `inst.libreDao.clearAllData()` throws an exception, the code catches it, prints warning, then sets `inst = null`. The data may not be cleared but instance is still reset. This could leave the test database in an inconsistent state.
-Code: public static synchronized void resetForTest() {
-    if (inst != null) {
-        try { inst.libreDao.clearAllData(); } catch (Exception e) {
-            System.err.println("Warning: failed to clear test data: " + e.getMessage());
-        }
-    }
-    inst = null;
-}
-Fix: Either throw the exception after cleanup failure, or use a different reset mechanism that ensures data is cleared.
-
----
-
-[FILE: src/herramienta/BookExporter.java:233]
-Problem: HTML escaping function handles `&`, `<`, `>`, `"`, `'` but not `&amp;` if the input already contains `&amp;` it becomes `&amp;amp;` which is wrong - actually no, the input "A & B" becomes "A &amp; B" which is correct. The function is applied to already-escaped text? Actually the input may already have HTML entities. If input is "A &amp; B", it becomes "A &amp;amp; B" which double-encodes. But this is a minor issue since the source data is not expected to have pre-encoded entities.
-Code: return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
-Fix: Use a library like Apache Commons Text StringEscapeUtils or OWASP ESAPI for proper HTML escaping.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:41]
-Problem: In `fillLlibreTail`, when withHeavy=true and filling notes (line 43), it also sets descripcio which was already set in `buildLlibre` at line 33. Redundant assignment but not harmful.
-
-Actually in `buildLlibreLight` at line 22-24, it doesn't set descripcio or notes. Then `fillLlibreTail(l, rs, false)` is called for light books, which doesn't set notes. But `buildLlibre` at line 31-38 calls `buildLlibreLight` first (via `fillLlibreTail(l, rs, false)`) then sets notes separately. Actually wait:
-
-```java
-static Llibre buildLlibre(ResultSet rs) throws SQLException {
-    Llibre l = new Llibre(rs.getLong("ISBN"), rs.getString("nom"), rs.getString("autor"),
-        rs.getObject("any", Integer.class), rs.getString("descripcio"), rs.getObject("valoracio", Double.class),
-        rs.getObject("preu", Double.class), rs.getBoolean("llegit"), rs.getString("imatge"));
-    l.setHasBlob(rs.getBoolean("has_blob"));
-    l.setNotes(rs.getString("notes"));
-    fillLlibreTail(l, rs, true);
-    return l;
-}
-```
-
-So descripcio is set in the constructor, notes is set before fillLlibreTail. Inside fillLlibreTail with withHeavy=true, notes is set again at line 43 (which is redundant). But descripcio is NOT set inside fillLlibreTail (only when withHeavy=true does it set notes). So for heavy books, notes is set twice. Minor inefficiency, not a bug.
-
-Actually looking again at fillLlibreTail lines 42-43:
-```java
-if (withHeavy) {
-    l.setNotes(rs.getString("notes"));
-}
-```
-
-So for heavy, notes set again. For light, nothing happens. OK.
-
-Actually the REAL issue is that for `buildLlibre`, the constructor receives `rs.getString("descripcio")` as parameter 5. Then `fillLlibreTail` doesn't touch descripcio when withHeavy=true. So no double-set. For light, descripcio is set in constructor but NOT in fillLlibreTail (which is correct since light doesn't load descripcio). OK - no issue.
-
----
-
-[FILE: src/api/HttpCtx.java:92]
-Problem: The `status` method returns `this` for chaining, but doesn't validate the status code is in valid HTTP range. Negative or out-of-range codes are accepted.
-Code: public HttpCtx status(int code) { this.status = code; return this; }
-Fix: Validate 100-599 range.
-
----
-
-[FILE: src/persistencia/LlibreDao.java:280-329]
-Problem: In search, if pageSize=0 (unpaginated), LIMIT and OFFSET are not appended (line 312 checks `if (pageSize > 0)`). This is correct. But `offset` is still used as a parameter position offset in PreparedStatement. If pageSize=0, offset is still sent but not used in SQL. However, the params list (lines 294-308) doesn't include offset. The offset is used at line 314: `for (int i = 0; i < params.size(); i++)`. Offset is never added to params. Wait - let me check again.
-
-Actually looking at line 312: `if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);`
-
-If pageSize > 0, offset is added to SQL. But offset is just appended as the string value of the int offset variable, not as a PreparedStatement parameter. This is an SQL injection risk if offset or pageSize come from user input... but in this case they're passed as method parameters from the domain layer and not from user input directly. However, they could be manipulated via the API.
-
-Looking at LlibreRouter.list at line 54: `result = new java.util.ArrayList<>(cd.get100Llibres(page));` - uses `page` index, not offset directly. And searchLlibres is called with offset=0 when called from AplicarFiltres (line 115). The offset is only used when paginating via LlibreRouter.list or similar. The page number is converted to offset inside the domain/persistence layer, not directly from user. But could still be manipulated. The offset is an int, not a string, so can't do SQL injection via it (JDBC will set it as int). But the SQL string concatenation of OFFSET is done unsafely.
-
-Actually looking: `sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);`
-
-If offset = 0, this produces `LIMIT 100 OFFSET 0`. If offset is negative, it could produce invalid SQL. But since offset comes from internal calculations (page index * pageSize), it's controlled. But it's still string concatenation, not parameterized. However, these are int values, not user strings, so risk is low. But the pattern of string concatenation for LIMIT/OFFSET is common and acceptable.
-
-Actually wait - if pageSize = -1 (could happen if not validated?), it could create `LIMIT -1` which in MySQL returns all rows (equivalent to no limit). This could be a bug. But pageSize comes from caller and in LlibreRouter.list, pageSize is not directly used in search... Actually in searchLlibres(f, offset, pageSize), if pageSize=0 means no pagination (line 280). If pageSize is negative, it would be appended as negative which could cause SQL error. There's no validation that pageSize >= 0. But the call chain ensures it's either 0 or positive from API calls. OK.
-
-Actually let me trace LlibreRouter.list:
-```java
-result = new java.util.ArrayList<>(cd.aplicarFiltres(f));  // if filters
-// or
-result = new java.util.ArrayList<>(cd.get100Llibres(page));  // if no filters
-```
-
-get100Llibres returns `bib.subList(from, to)` in memory, not SQL. So pagination is not via search for unfiltered. The search with pagination is only when filters are applied (line 50). In that case, pageSize is set via page parameter which is validated to be >= 0 at line 52-53. OK.
-
-But the direct search call (without filters) returns all books without pagination. Actually the code says:
-
-```java
-if (f.hasAnyFilter()) {
-    result = new java.util.ArrayList<>(cd.aplicarFiltres(f));
-} else if (notBlank(pageStr)) {
-    int page = 0;
-    try { page = Integer.parseInt(pageStr); } catch (NumberFormatException ignored) {}
-    result = new java.util.ArrayList<>(cd.get100Llibres(page));
-} else {
-    result = new java.util.ArrayList<>(cd.getAllLlibres());
-}
-```
-
-So when no filter and page specified, uses get100Llibres (in-memory). When no filter and no page, returns all. When filter present, uses AplicarFiltres which could use SQL or in-memory.
-
-OK - no issue.
-
-Actually re-reading the task - I need to find ALL issues. Let me just go through the confirmed bugs list again:
-
-1. **LlibreDao.java:208** - `(int) isbn` truncation
-2. **BookImporter.java:59** - exec with string array, stderr drain Java 9+
-3. **BookExporter.java:221** - any=0 shows as "0" instead of blank  
-4. **ImportExportRouter.java:115** - pool not shutdown
-5. **ExportController.java:127** - pool not shutdown
-6. **HttpRouter.java:101** - empty catch
-7. **HttpRouter.java:93** - only localhost CORS
-8. **LlibreValidator.java:67** - countDig for Long.MAX_VALUE
-9. **LlibreValidator.java:79** - allows year 0
-10. **LlibreDao.java:295** - empty string filter matches all
-11. **ControladorDomini.java:172** - null ISBN throws NotFound instead of Validation
-12. **BackupRouter.java:53** - temp file leak on abnormal exit
-13. **LlibreRouter.java:134** - fallback MIME to JPEG could be wrong
-14. **LlibreValidator.java:19** - check digit check for 13-digit ISBNs uses wrong formula (or does it?)
-15. **BackupService.java:269** - control char stripping incomplete
-
-Let me verify issue 14 - the ISBN-13 check digit formula.
-
-The code at lines 19-22:
-```java
-int sum = 0;
-for (int i = 0; i < 12; i++) sum += (digits.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-if ((digits.charAt(12) - '0') != (10 - sum % 10) % 10)
-```
-
-The ISBN-13 check digit formula: sum of (digit * weight) where weights alternate 1 and 3, starting with 1 for the first digit. Then check digit is (10 - (sum % 10)) % 10.
-
-This looks correct. The formula is: for positions 0-11, weight = 1 if i is even, 3 if i is odd. Then check digit = (10 - (sum % 10)) % 10. This is correct for ISBN-13. NOT A BUG.
-
-Actually wait, the standard ISBN-13 weighting starts with 1 for position 0 (first digit), 3 for position 1, 1 for position 2, etc. So position 0 (even) gets weight 1, position 1 (odd) gets weight 3. The code uses `(i % 2 == 0 ? 1 : 3)` which gives 1 for even positions and 3 for odd. That's correct: position 0 → 1, 1 → 3, 2 → 1, etc. NOT A BUG.
-
-OK let me finalize the list. I have enough findings. Let me count:
-
-1. LlibreDao.java:208 - ISBN cast to int
-2. BookImporter.java:55-64 - exec injection risk + Java 9 API
-3. BookExporter.java:221 - any=0 displays as "0"
-4. ImportExportRouter.java:115-126 - ExecutorService leak
-5. ExportController.java:127-154 - ExecutorService leak  
-6. HttpRouter.java:101 - empty catch block
-7. HttpRouter.java:93 - CORS too restrictive
-8. LlibreValidator.java:67 - countDig not handling edge cases
-9. LlibreValidator.java:79 - allows year 0
-10. LlibreDao.java:295 - empty nom filter matches all
-11. ControladorDomini.java:172 - null ISBN throws wrong exception type
-12. BackupRouter.java:53 - temp file leak
-13. LlibreRouter.java:134 - MIME fallback wrong
-14. BackupService.java:269-273 - incomplete control char stripping
-15. ConnectionFactory.java:15-24 - connection leak in open()
-16. Config.java:287-292 - SAVE_SCHEDULER not shut down
-17. BookExporter.java:127 - String.repeat Java 11+
-18. OpenLibraryClient.java:271 - URLEncoder spaces as +
-19. HttpCtx.java:92 - no status code validation
-20. LlibreDao.java:280-329 - offset as string concat (low risk)
-
-Actually let me re-count. The issue count was requested. Let me finalize with clear file:line references.
-
-Total issues found: 20
-
-Let me now write the output file with all issues.
-
-
-################################################################################
-# SOURCE: todo3.txt
-################################################################################
-
-ULTRA MEGA HYPER REVIEW — checkBiblio/ (all files)
-==================================================
-Compiled: 2025-06-03
-Files reviewed: StressTest.java (1551L), UIAudit.java (969L), I18nAudit.java (117L), run.sh (66L), run2.sh (75L)
-
-═══════════════════════════════════════════════════════
-SECTION A — STRESSTEST.JAVA (issues, bugs, blunders)
-═══════════════════════════════════════════════════════
-
-[ST-01] ISBN COLLISION — uniqueness not guaranteed across runs or within run
-  File: StressTest.java:33, 1363-1365
-  Code: isbnCounter = System.currentTimeMillis() % 900_000_000L;
-        uniqueISBN() { return 9780000000000L + (isbnCounter++ % 999_999_990L); }
-  Problem: isbnCounter is static and seeded from currentTimeMillis. If two runs start
-           in the same millisecond (or share a persistent DB), collisions are possible.
-           The modulo 999_999_990 is irrelevant here (Long can hold 9_999_999_900 values
-           before overflow — far beyond any test run size, so the modulo is dead code).
-           But the time-based seed is the real problem: consecutive runs with the same
-           millisecond timestamp get identical sequences.
-  Fix: Use AtomicLong with a random base + monotonic increment, no time seed:
-         private static final AtomicLong ISBN_BASE = new AtomicLong(
-             9780000000000L + (new Random().nextLong() & 0x7FFFFFFFFFFFFFFFL) % 900_000_000L);
-         private static long uniqueISBN() { return ISBN_BASE.addAndGet(1); }
-  Fix: Also assert uniqueness before each create (addTag already does this).
-
-[ST-02] dismissAllDialogs() CLICKING "Sí" ON DELETE CONFIRM — dangerous auto-confirm
-  File: StressTest.java:1313-1322
-  Code: findBtnIn((Container)d, "OK", "Tancar", "Cancel·lar", "Cancelar", "Close", "Sí", "No");
-  Problem: When cleaning up (testCleanup, line 1129), this will click "Sí" to confirm
-           deletion of EVERY test book. If any non-test dialog appears during cleanup
-           (e.g. a real book edit was left open, or a stats popup), the test will
-           silently delete a real book. The dismissAllDialogs() at line 95 runs after
-           every phase including those before cleanup, so it can affirm-delete anything.
-  Fix: Never auto-click affirmative buttons in generic dismiss. Use only:
-         "Cancel·lar", "Cancelar", "Tancar", "Close", "X"
-       Remove "Sí", "Yes", "OK", "No" from generic dismissal. In explicit delete
-       confirmation (testCleanup), use only "No" / "Cancel" / Escape.
-       For testCleanup's delete, use robot ESCAPE instead of auto-clicking.
-
-[ST-03] testExtreme_concurrent: component tree walked OFF the EDT — Swing threading violation
-  File: StressTest.java:987-1017
-  Code: AbstractButton btn = findBtnIn(main, "Filtres", "Galeria", "Sèrie"); // called from worker thread
-  Problem: findBtnIn (lines 1374-1387) walks the Swing component tree. The component
-           hierarchy is not thread-safe for read access from outside the EDT. Worker
-           threads calling findBtnIn off the EDT can get stale/inconsistent results,
-           and reading the hierarchy off the EDT is itself a Swing contract violation
-           (the test commits the exact sin it aims to detect).
-  Fix: Resolve the button reference ONCE on the EDT before starting workers, store it
-         in a volatile / concurrent reference, and have workers only invoke doClick
-         via invokeLater. Example:
-           final AtomicReference<AbstractButton> btnRef = new AtomicReference<>();
-           SwingUtilities.invokeAndWait(() -> btnRef.set(findBtnIn(main, "Filtres", ...)));
-           worker: SwingUtilities.invokeLater(() -> { AbstractButton b = btnRef.get(); if(b!=null) b.doClick(); });
-
-[ST-04] testChaos_longTitle: cannot fail — "validation rejected" AND "saved" both pass
-  File: StressTest.java:321-339
-  Code: if (after != null && looksLikeError(after)) { pass("rejected"); }
-        else { pass("saved without crash"); createdISBNs.add(isbn); }
-  Problem: The test treats both outcomes as passing. A 500-char title is a real boundary
-           (nom is VARCHAR(255) in the schema). The app could silently truncate, accept
-           with a different behavior, or have completely broken validation — the test
-           would still pass. This is a known HIGH from the previous review that is still
-           NOT fixed.
-  Fix: Assert a single deterministic contract:
-         - If the DB enforces 255-char limit: reject > 255 → fail if not rejected.
-         - If the app truncates: verify the saved title is exactly 255 chars.
-         - Use testDataIntegrity-style hard assertions (pass/fail, not warn).
-
-[ST-05] testValidation_negativePrice / testValidation_badYear: only warn on silent accept
-  File: StressTest.java:231-251, 253-273
-  Problem: When negative price or non-numeric year is silently accepted (no error dialog,
-           form closes), the test calls warn() not fail(). A validator regression that
-           silently accepts garbage passes CI with only a warning.
-  Fix: Both should fail() on silent accept. Call warn() only when the behavior is
-        ambiguous (e.g., dialog appears with non-obvious title). If the app says
-        "invalid" or "error" or "reject" — that is pass. If the form closes and the
-        book is actually in the DB — that is fail. No middle ground.
-
-[ST-06] Screenshot after EVERY phase (40+ screenshots per run) — performance + noise
-  File: StressTest.java:101
-  Code: screenshot("p" + num); in phase()
-  Problem: 40+ PNGs (1920x1080) on every run including cleanup phases. Most are never
-           reviewed and waste IO. Only failures/warnings need screenshots for debugging.
-  Fix: Screenshot only on FAIL/WARN or when explicitly requested:
-         if (failCount > 0 || warnCount > 0) screenshot("p" + num);
-       Or add a flag -Dbiblioteca.stress.screenshots=all|errors|never.
-
-[ST-07] No headless guard — throws AWTException on headless/Xvfb-unavailable hosts
-  File: StressTest.java:46
-  Code: robot = new Robot();
-  Problem: new Robot() throws AWTException if GraphicsEnvironment.isHeadless().
-           On a truly headless server without Xvfb, the test crashes at startup with
-           no graceful skip.
-  Fix: Guard at startup:
-         if (GraphicsEnvironment.isHeadless()) {
-           log("FATAL: Headless environment — Robot required. Install Xvfb or use --headless");
-           System.exit(1); // or degrade to invokeLater-only mode
-         }
-         robot = new Robot();
-
-[ST-08] testDataIntegrity: static isbnCounter modified by addTag (unrelated call)
-  File: StressTest.java:1107
-  Code: tag = cd.addTag("StressTag_" + (isbnCounter));
-  Problem: isbnCounter is the test-wide ISBN sequence counter. Using it here advances
-           the sequence for tag names, polluting the ISBN counter state. In the same
-           run, subsequent uniqueISBN() calls will skip numbers. Minor but dirty.
-  Fix: Use a separate counter for tag names, or use UUID:
-         tag = cd.addTag("StressTag_" + UUID.randomUUID().toString().substring(0,8));
-
-[ST-09] testCleanup: delete via keyboard DELETE key — fragile, not all UI states handled
-  File: StressTest.java:1154
-  Code: robot.keyPress(KeyEvent.VK_DELETE); robot.keyRelease(KeyEvent.VK_DELETE);
-  Problem: Uses raw Robot DELETE keypress to trigger deletion. If focus is not on the
-           table (e.g., search field has focus), the DELETE does nothing and the test
-           silently skips deletion. Also, the RowFilter-based filtering means if a search
-           term is active, deleted books may not appear in the table and cleanup silently
-           skips them (line 1150: "filtered out — skipping").
-  Fix: After selecting the row, verify getTopDialog() appears within 1s as a confirm
-         dialog. If no dialog appears, fail() — don't silently skip. Also clear search
-         field before cleanup begins (already done at line 1136 but verify).
-
-[ST-10] testAllSidebarButtons: missing from runAllTests phase list — comment-only at line 932
-  File: StressTest.java:932, 932 is empty comment; 932 is marked as "EXTREME" section header
-  Actual: The method testAllSidebarButtons() exists at line 1032 but is NEVER called from
-          runAllTests(). Phase 41 (line 158) runs testAllSidebarButtons but the method is
-          at line 1032 and is a legitimate test. So this is actually fine — it's called at
-          phase 41. No bug here. (misread, false positive)
-
-[ST-11] testLlistesManagement: delete loop clicks "Sí" on confirm — same issue as ST-02
-  File: StressTest.java:759-778
-  Code: AbstractButton yes = findBtnIn((Container)confirm, "Sí", "Yes", "OK", "Eliminar");
-         if (yes != null) doClick(yes);
-  Problem: Same dangerous pattern. During list management, after creating test lists,
-           the delete loop auto-clicks "Sí" on confirmation dialogs. If a confirm
-           appears for an unintended action, real data could be deleted.
-  Fix: Use robot ESCAPE to dismiss confirmations in generic teardown. Only explicitly
-        click "Sí" when the test is specifically testing delete-yes behavior.
-
-[ST-12] Phase ordering: extreme phases 43-48 registered before phase 42 (cleanup)
-  File: StressTest.java:162-170
-  Code: if (Boolean.getBoolean("biblioteca.stress.extreme")) {
-           phase("43", ...); phase("44", ...); phase("45", ...); phase("46", ...);
-           phase("47", ...); phase("48", ...);
-         }
-         phase("42", "Cleanup", ...);
-  Problem: In the report, phases 43-48 appear before cleanup. The report order is confusing.
-           The logic is that extreme phases run before cleanup (so cleanup removes all
-           created books), but the numbering is backwards.
-  Fix: Move cleanup to phase "99" and extreme phases to 43-48. Or better: register all
-        phases in order in runAllTests regardless of extreme flag. Make extreme a
-        runtime if() inside the phase, not a registration-order issue.
-
-[ST-13] log() not synchronized — interleaved output from main + app + worker threads
-  File: StressTest.java:1533-1536
-  Code: report.println(line); System.out.println(line);
-  Problem: log() is called from main test thread, appThread (via main.Ejecutable),
-           and worker threads in testExtreme_concurrent. PrintWriter is thread-safe
-           but the interleaving of lines (partial line from thread A, then line from
-           thread B) makes the report hard to read and diagnose.
-  Fix: Synchronize log():
-         private static final Object LOG_LOCK = new Object();
-         private static void log(String msg) {
-           synchronized(LOG_LOCK) {
-             String line = "[" + LocalDateTime.now().format(TS) + "] " + msg;
-             report.println(line); System.out.println(line);
-           }
-         }
-       Note: PrintWriter.println is already thread-safe, but the timestamp + message
-       assembly is not atomic — can get partial lines.
-
-═══════════════════════════════════════════════════════
-SECTION B — UIAUDIT.JAVA (issues, bugs, blunders)
-═══════════════════════════════════════════════════════
-
-[UI-01] run.sh: javac only compiles UIAudit.java — I18nAudit.java NOT compiled
-  File: run.sh:60
-  Code: javac -Xlint:deprecation -cp "$CP" checkBiblio/UIAudit.java -d bin
-  Problem: UIAudit.java:447 calls I18nAudit.run(reportFile, i18nFail, i18nWarn).
-           I18nAudit.java is NOT on the javac command. This means:
-           (a) If bin/checkBiblio/I18nAudit.class does not already exist from a prior
-               compile (make compile), the UIAudit compilation fails.
-           (b) Even if it exists from make compile, if make hasn't been run after
-               I18nAudit.java was created, the UIAudit run will fail at runtime with
-               NoClassDefFoundError.
-           This was noted as HIGH in the previous review ("FIXED in run.sh") but the
-           current run.sh still only compiles UIAudit.java.
-  Fix: Change line 60 to:
-         javac -Xlint:deprecation -cp "$CP" checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
-       Also add I18nAudit.java to the compile guard in run2.sh if needed.
-
-[UI-02] INTERACTIVE mode: H2 URL NOT overridden — mutates real user DB
-  File: UIAudit.java:64-69
-  Code: System.setProperty("biblioteca.test", "true");
-        if (autoMode) {
-          System.setProperty("biblioteca.h2.url", "jdbc:h2:mem:audit;...");
-        }
-  Problem: In INTERACTIVE mode (the default, when no --auto flag is given), the H2 url
-           is never set. The app runs against whatever ~/.biblioteca/config.properties
-           specifies — likely a file-based H2 or real MariaDB. The user (or an AI
-           operator) then performs create/edit/delete operations against real data.
-  Fix: Always set biblioteca.h2.url to an in-memory test URL (or at minimum, always
-        set biblioteca.test=true). The safest is to always force in-memory:
-         System.setProperty("biblioteca.test", "true");
-         System.setProperty("biblioteca.h2.url",
-           "jdbc:h2:mem:uiAudit;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1");
-       Or warn loudly if not in autoMode and DB is not in-memory.
-
-[UI-03] cmdType: clipboard overwritten and never restored
-  File: UIAudit.java:203-213
-  Code: java.awt.datatransfer.Clipboard cb = Toolkit.getDefaultToolkit().getSystemClipboard();
-        cb.setContents(new java.awt.datatransfer.StringSelection(text), null);
-        robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_V);
-  Problem: cmdType pastes text via Ctrl+V using the system clipboard, but never saves
-           and restores the previous clipboard contents. Any data the user had in the
-           clipboard before typing is lost.
-  Fix: Save clipboard before, restore after:
-         StringSelection old = null;
-         try { old = (StringSelection) cb.getContents(null); } catch(Exception e) {}
-         cb.setContents(new StringSelection(text), null);
-         // ... robot paste ...
-         if (old != null) cb.setContents(old, null);
-
-[UI-04] waitForDialog defined but never used
-  File: UIAudit.java:864-873
-  Code: private static JDialog waitForDialog(long timeoutMs) { ... }
-  Problem: Dead code. The method is defined but never called. The file uses getTopDialog()
-           (polling) instead. The method could be useful.
-  Fix: Use it or remove it. It would simplify getTopDialog usage in places.
-
-[UI-05] Screenshot captures only primary screen — multi-monitor dialogs missed
-  File: UIAudit.java:240-241
-  Code: new Rectangle(Toolkit.getDefaultToolkit().getScreenSize())
-  Problem: Only captures the primary monitor. On multi-monitor setups, dialogs on
-           secondary screens are not captured.
-  Fix: Capture the union of all GraphicsConfiguration bounds:
-         Rectangle screen = new Rectangle();
-         for (GraphicsDevice gd : GraphicsEnvironment.getLocalGraphicsEnvironment()
-                                          .getScreenDevices()) {
-           for (GraphicsConfiguration gc : gd.getConfigurations()) {
-             screen.add(gc.getBounds());
-           }
-         }
-         BufferedImage img = robot.createScreenCapture(screen);
-
-[UI-06] cmdRows: table.getValueAt access without security checks
-  File: UIAudit.java:272-275
-  Code: Object v = m.getValueAt(r, c); row.append(v != null ? v.toString() : "");
-  Problem: If the table model throws an exception (e.g., stale reference after a book
-           was deleted), cmdRows crashes the interactive session. Also no bounds check
-           on c against m.getColumnCount().
-  Fix: Wrap in try/catch, add column count check.
-
-[UI-07] cmdOpenRow: fallback Enter key dispatched but Enter may not trigger "obrirDetalls"
-  File: UIAudit.java:302-304
-  Code: table.dispatchEvent(new KeyEvent(table, KeyEvent.KEY_PRESSED,
-             System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED));
-  Problem: If the ActionMap lookup for "obrirDetalls" fails, the code falls back to a
-           raw Enter key event. But the actual trigger for the details dialog may be
-           a mouse double-click (MOUSE_CLICKED count=2) or a specific action command,
-           not Enter. This fallback may not work on all table configurations.
-  Fix: Use double-click mouse event for the fallback, or verify the Enter key actually
-        triggers the details dialog in the current table configuration. Alternatively,
-        use a more reliable method like:
-          robot.mousePress(BUTTON1_DOWN_MASK); robot.mouseRelease(BUTTON1_DOWN_MASK);
-          robot.mousePress(BUTTON1_DOWN_MASK); robot.mouseRelease(BUTTON1_DOWN_MASK);
-
-[UI-08] testCreateBook / testEditBook: no verification that book was actually saved
-  File: UIAudit.java:610-670, 673-734
-  Problem: Both methods click save and check for error dialog absence as the pass
-           condition. They never verify the book actually appeared in the table or
-           was readable from the DB. If the save silently fails (e.g., SQLException
-           swallowed), the test passes incorrectly.
-  Fix: After save, run a query or refresh the table and verify the ISBN appears:
-         // After save, wait for dialog to close
-         JDialog after = getTopDialog();
-         if (after == null) {
-           // Refresh table and check ISBN exists
-           AbstractButton allBtn = findButtonContaining(main, "Tots els");
-           if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); sleep(600); }
-           // Search for the ISBN
-           JTextField sf = findTextFieldNear(main, "cerca");
-           if (sf != null) {
-             SwingUtilities.invokeAndWait(() -> { sf.setText(String.valueOf(testIsbn)); });
-             sleep(500);
-             // Check table has row with this ISBN
-             JTable t = findComponent(main, JTable.class);
-             if (t != null && t.getRowCount() > 0) pass("Book verified in table");
-             else fail("Book not found after save");
-           }
-         }
-
-[UI-09] No headless guard — same as [ST-07]
-  File: UIAudit.java:74
-  Problem: new Robot() at line 74 has same headless failure mode as StressTest.
-  Fix: Same guard as [ST-07].
-
-═══════════════════════════════════════════════════════
-SECTION C — I18NAUDIT.JAVA (issues, bugs, blunders)
-═══════════════════════════════════════════════════════
-
-[I18N-01] CSV parser: split on "," — fields containing commas are silently broken
-  File: I18nAudit.java:32-33
-  Code: String[] row = s.split(",", 4); if (row.length >= 4) out.put(row[0], new String[]{row[1],row[2],row[3]});
-  Problem: If a CSV field value contains a comma (e.g., "New, Improved" as a translation),
-           split(",", 4) would produce more than 4 fields and silently discard the value.
-           More importantly, row.length is checked as >= 4, but if the split produces
-           exactly 4 parts and one of the translations contains a comma, the last part
-           gets truncated. For I18n keys, translations should be quoted or the parser
-           should use a proper CSV library.
-  Fix: Use a proper CSV parser (e.g., opencsv) or handle quoted fields:
-         String[] row = s.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-         This regex split handles quoted fields with embedded commas.
-
-[I18N-02] auditHardcodedCatalan: only warns on first match per file — misses all others
-  File: I18nAudit.java:66-70
-  Code: if (m.find()) { warnCount[0]++; log.println("WARN: possible hardcoded..."); }
-  Problem: Pattern.matcher.find() finds only the FIRST match in the file. If a file has
-           10 hardcoded Catalan strings, only the first triggers a warning. The audit
-           severely under-reports the problem.
-  Fix: Use a while loop:
-         while (m.find()) {
-           warnCount[0]++;
-           log.println("WARN: hardcoded Catalan '" + m.group() + "' at position " + m.start() + " in " + f);
-         }
-
-[I18N-03] auditJavaKeyUsage: ignores keys used more than once — no count or location info
-  File: I18nAudit.java:76-97
-  Problem: Only checks whether a key was used at least once. Does not detect:
-           (a) Duplicate I18n.t("key") calls that could be eliminated (just informational)
-           (b) Keys used in only some code paths (still counted as "used")
-           (c) Keys used via reflection or concatenation (missed entirely)
-           The "unused keys" warning is useful but the "missing keys" check is good.
-  Fix: Keep the missing-key check (good). For unused keys, consider reporting how many
-        times each key is used to help prioritize cleanup. Not critical.
-
-[I18N-04] auditDuplicateKeys: does not detect duplicates within the same file
-  File: I18nAudit.java:100-116
-  Code: firstFile.putIfAbsent(key, p.getFileName()); if (prev != null && !prev.equals(...))
-  Problem: firstFile is keyed by key only (not by filename). If the same key appears twice
-           in file1.csv, the second occurrence overwrites the first in firstFile but the
-           check prev != null && !prev.equals(...) would only trigger if the same key
-           appears in a DIFFERENT file than the first. So duplicates within a single
-           file are not detected.
-  Fix: The logic is: firstFile maps key -> first filename where seen. If we see the same
-        key in a different file, that's a duplicate. But if the same key appears twice
-        in the SAME file, firstFile already has it so putIfAbsent returns the same
-        filename and the condition fails. Fix: track per-file occurrence:
-         Map<String, Map<String, Path>> keyToFileToPath...
-        Or simpler: within each file, use a Set<String> seenInFile and warn on duplicate.
-
-═══════════════════════════════════════════════════════
-SECTION D — RUN.SH / RUN2.SH (issues, bugs, blunders)
-═══════════════════════════════════════════════════════
-
-[RUN-01] run.sh: javac missing I18nAudit.java — (same as UI-01)
-  File: run.sh:60
-  Problem: See [UI-01]. Both run.sh compile and run2.sh compile need to include
-           I18nAudit.java. The previous review claimed this was "DONE" but the
-           current files still show the bug.
-  Fix: See [UI-01].
-
-[RUN-02] run.sh + run2.sh: hard-coded jar list includes javalin + kotlin-stdlib
-  File: run.sh:29, run2.sh:8
-  Code: for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar \
-             lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar; do
-  Problem: The app does NOT use javalin or kotlin-stdlib (no web server, no Javalin routes).
-           On a clean checkout or minimal install without those jars, both scripts abort
-           even though the jars are unnecessary for the GUI tests.
-  Fix: Remove javalin-6.3.0.jar and kotlin-stdlib-2.0.21.jar from the required jar list
-        AND from the -cp in both scripts. Keep only: h2, mariadb, gson.
-        (Note: the Makefile already dropped these — scripts should match).
-
-[RUN-03] run2.sh: setsid + process-group kill not portable (macOS/BSD)
-  File: run2.sh:57
-  Code: setsid java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.StressTest "$@" &
-  Problem: setsid creates a new process group. The cleanup trap uses:
-             kill -- -"$JAVA_PID"  # kill entire process group
-           This is Linux-specific. On macOS/BSD, setsid may not exist, and the
-           kill syntax (-- for signal) works but process group semantics differ.
-  Fix: Document Linux-only in a comment, or use portable timeout:
-         timeout "${TIMEOUT}s" java ...
-       If timeout is unavailable, use a simple kill with a fallback:
-         kill "$JAVA_PID" 2>/dev/null || kill -- -"$JAVA_PID" 2>/dev/null
-
-[RUN-04] run.sh: no headless guard — Xvfb started but not checked for success
-  File: run.sh:47-56
-  Code: Xvfb "$DISP" -screen 0 1920x1080x24 &>/dev/null &
-  Problem: Xvfb is started without checking if it actually started successfully. If Xvfb
-           is not installed or fails to start, the script proceeds to run UIAudit which
-           will throw AWTException (no display). The error is confusing.
-  Fix: After starting Xvfb, verify it succeeded:
-         Xvfb "$DISP" -screen 0 1920x1080x24 &>/dev/null &
-         XVFB_PID=$!
-         sleep 1
-         if ! kill -0 $XVFB_PID 2>/dev/null; then
-           echo "ERROR: Xvfb failed to start. Install xvfb or set DISPLAY." >&2; exit 1
-         fi
-       Or check $DISPLAY is actually usable before proceeding.
-
-[RUN-05] run2.sh: watchdog can fire even when StressTest finished successfully
-  File: run2.sh:60-65
-  Code: ( sleep "$TIMEOUT"; kill -- -"$JAVA_PID" 2>/dev/null || true ) &
-         WATCHDOG_PID=$!
-         wait "$JAVA_PID" || EXIT_CODE=$?
-         kill "$WATCHDOG_PID" 2>/dev/null || true
-         wait "$WATCHDOG_PID" 2>/dev/null || true
-  Problem: If TIMEOUT=600s and StressTest finishes at 580s, the watchdog sleep (600s)
-           fires at exactly the same time as the wait returns. The kill of WATCHDOG_PID
-           may race, but more importantly: if StressTest completes successfully and
-           writes stress_report.txt, the grep check at line 71 passes. But if the timing
-           is such that the watchdog fires before the report is flushed, the check could
-           race.
-  Fix: Set a flag when StressTest exits cleanly:
-         WAIT_PID=$(wait "$JAVA_PID"; echo $?)
-         kill "$WATCHDOG_PID" 2>/dev/null || true
-         if grep -q 'SUMMARY' checkBiblio/stress_report.txt; then exit $WAIT_PID; fi
-
-═══════════════════════════════════════════════════════
-SECTION E — CROSS-FILE ISSUES
-═══════════════════════════════════════════════════════
-
-[X-01] ~400 lines of duplicated helper code across UIAudit.java and StressTest.java
-  Files: UIAudit.java (lines 763-849, 889-901, 903-914) and StressTest.java (1374-1550)
-  Problem: Methods findBtnIn, findComponent, findTextFieldNear, flattenVisible,
-           collectComponents, getTopDialog, waitForMainFrame, waitForDialog, log,
-           sleep, norm, screenshot, doClick, clickComponent, findCheckBox, findCheckBoxGlobal
-           are all nearly identical copies in both files. Every bug fix in one must be
-           manually propagated to the other. This was noted as MEDIUM in the previous
-           review and was supposed to be fixed by extracting UiTestSupport.
-  Fix: Extract a shared checkBiblio.UiTestSupport class:
-         package checkBiblio;
-         public class UiTestSupport {
-           public static Robot robot;
-           public static PrintWriter report;
-           public static int screenshotSeq = 0;
-           public static DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-           // All shared helpers (findBtnIn, findComponent, etc.)
-         }
-       Then both UIAudit and StressTest delegate to UiTestSupport.
-
-[X-02] Both files call new Robot() independently — two instances, double screen delay
-  Files: StressTest.java:46, UIAudit.java:74
-  Problem: If both tools run in the same JVM (e.g., via run.sh which first makes test
-           then runs UIAudit in the same process), each creates its own Robot with
-           autoDelay=50 (StressTest) and autoDelay=80 (UIAudit). The last one to
-           set autoDelay wins for its instance, but both robots affect the same screen.
-           This is mostly harmless but wasteful.
-  Fix: Shared Robot singleton in UiTestSupport (see [X-01]).
-
-[X-03] UIAudit.runAutomated + StressTest.runAllTests both call ControladorDomini.resetForTest()
-  Files: UIAudit.java (implicit via app launch), StressTest.java:41-42
-  Problem: Both reset the singletons before launching the app. This is correct. However,
-           UIAudit in INTERACTIVE mode (runInteractive) does NOT reset before launching,
-           which means if the app was previously used in the same JVM, stale singleton
-           state could cause issues. Currently UIAudit always resets (line 64) so OK.
-           But if StressTest runs before UIAudit in the same JVM, UIAudit benefits from
-           StressTest's reset. This is fragile ordering.
-  Fix: Ensure UIAudit.resetForTest() is called before app launch in ALL modes (done).
-           StressTest already calls it. OK as-is.
-
-═══════════════════════════════════════════════════════
-SECTION F — IMPROVEMENTS TO CATCH UNKNOWN ERRORS
-═══════════════════════════════════════════════════════
-
-[IMP-01] Add API smoke test (highest-value gap)
-  Problem: checkBiblio tests only cover Swing UI. The --web mode and all /api/* routes
-           (LlibreRouter, LoanRouter, TagRouter, LlistaRouter, MetaRouter) are completely
-           untested by the audit harness. Bugs in REST endpoints are not caught.
-  Fix: Create checkBiblio/ApiSmokeTest.java that:
-         - Starts the app with --web (or a test server binding to random port)
-         - Issues HTTP requests to each route (GET/POST/PUT/DELETE)
-         - Validates JSON response structure and status codes
-         - Exercises authentication (if any), error handling (404, 500)
-         - Uses HttpCtx.testRequest() or similar
-  Priority: HIGH — API bugs are invisible to the current test suite.
-
-[IMP-02] Add DB migration audit — verify schema matches what the code expects
-  Problem: If a developer adds a column to the schema (ServerConect migration) but
-           forgets to update the Java model (Llibre, Prestec, etc.), the app compiles
-           fine but fails at runtime with SQL errors.
-  Fix: Add checkBiblio/SchemaAudit.java that:
-         - Reads ServerConect.MIGRATIONS (the CREATE_TABLE string)
-         - Uses JDBC metadata to query the ACTUAL schema of the H2 test DB
-         - Asserts column count, column names, and types match between migrations
-           and what the persistence layer expects
-         - Fails if migration is missing a column that the model expects
-         - Fails if migration has an extra column the model doesn't handle
-  This catches schema drift early.
-
-[IMP-03] Add DB constraint audit — UNIQUE, NOT NULL, FK constraints enforced
-  Problem: The DB schema may have UNIQUE constraints (ISBN, etc.) and FK constraints
-           (prestecs.llibre_fk → llibres.isbn) that the Java code doesn't verify
-           before inserting, leading to SQL errors at runtime that are hard to debug.
-  Fix: Add checkBiblio/ConstraintAudit.java that:
-         - Connects to the test DB with autoMode H2 URL
-         - Tries to insert duplicate ISBN → expects SQLException with unique constraint msg
-         - Tries to insert loan for non-existent ISBN → expects FK violation
-         - Tries to insert book with null title → expects NOT NULL violation (if enforced)
-         - Asserts these constraints are enforced at the DB level, not silently ignored
-  This verifies the DB is actually enforcing the constraints the app relies on.
-
-[IMP-04] Add CSV/JSON import round-trip test with fixture files
-  Problem: Export works (testExport) but import is not tested. If import has a bug,
-           data cannot be restored from a backup.
-  Fix: Create checkBiblio/fixtures/ directory with:
-         - test_import_books.csv (10 books)
-         - test_import_books.json (10 books)
-       Add phase in StressTest:
-         phase("40B", "Import CSV round-trip", () -> testImportRoundTrip(main));
-       That:
-         - Exports current library to temp file
-         - Imports the fixture file
-         - Verifies the imported books appear in the table with correct data
-         - Restores original state (or runs against isolated test DB)
-  This is the highest-value gap after API smoke test (noted in prev review).
-
-[IMP-05] Add memory leak detection — monitor component count after dialog spam
-  Problem: testExtreme_dialogSpam (StressTest) opens and closes 12 dialogs rapidly.
-           If any listener or component is not properly dereferenced, the component
-           count grows with each round and memory usage increases. This is not currently
-           detected.
-  Fix: In testExtreme_dialogSpam, before and after the loop:
-         - Get current memory usage: Runtime.getRuntime().totalMemory() - freeMemory()
-         - Force GC: System.gc(); Thread.sleep(200); System.gc();
-         - Compare memory before/after; fail if growth > 5MB per round
-         - Log component count: Window.getWindows().length
-         This catches listener leaks and un-disposed dialogs.
-
-[IMP-06] StressTest: add ISBN collision detection during test creation
-  Problem: [ST-01] can cause a "valid create" to fail spuriously as a duplicate if
-           two ISBNs collide. The test would report FAIL on a valid create, confusing
-           the developer.
-  Fix: Before each create, assert the ISBN is not in createdISBNs:
-         long isbn = uniqueISBN();
-         if (createdISBNs.contains(isbn)) fail("ISBN collision detected: " + isbn);
-         assert !createdISBNs.contains(isbn) : "ISBN collider: " + isbn;
-         createdISBNs.add(isbn);
-       This makes collisions explicit failures rather than confusing create failures.
-
-[IMP-07] UIAudit: add interactive mode "verify" command to check app state
-  Problem: In interactive mode, there's no way to check if a book was actually created
-           or if an operation succeeded without manually inspecting the table.
-  Fix: Add UIAudit commands:
-         verify ISBN <isbn>     — checks if book with ISBN exists in table
-         verify count <n>       — checks if table has >= n rows
-         verify field <row> <col> <value> — checks exact cell value
-       This turns interactive mode into a proper testing tool, not just a exploration tool.
-
-[IMP-08] I18nAudit: detect hardcoded strings containing I18n keys in Java code
-  Problem: Currently auditHardcodedCatalan only catches common Catalan words. It misses
-           hardcoded strings that aren't in the Catalan word list (e.g., "Loading...",
-           "Processing", "No results", etc.). And it doesn't check Java string constants.
-  Fix: Add a pass that finds string literals in Java files:
-         Pattern strings = Pattern.compile("\"[^\"]{4,}\"");
-         while ((line = br.readLine()) != null) {
-           Matcher m = strings.matcher(line);
-           while (m.find()) {
-             String str = m.group();
-             // skip if it looks like a variable name or path
-             if (str.contains("\\n") || str.contains("\\t")) continue;
-             if (isLikelyHardcoded(str)) warnCount++;
-           }
-         }
-         // Also check that all user-visible strings go through I18n.t()
-       A stricter regex for I18n keys not yet converted would help prioritize work.
-
-[IMP-09] StressTest: add randomized chaos mode — inject random UI events
-  Problem: All current chaos tests are deterministic (same SQL injection payloads,
-           same unicode string). Real bugs often appear with unexpected combinations.
-  Fix: Add phase "49" (extreme mode only):
-         testRandomizedChaos(main):
-           - 50 random actions: click random button, type random string, scroll, toggle
-           - Random strings: mix of SQL injection, unicode, empty, very long (5000+ chars)
-           - Random delays between actions (0-500ms)
-           - Screenshot on any dialog appearance
-           - Verify main window still responsive (mainFrame.isDisplayable())
-       This is a fuzz test layered on top of the structured tests.
-
-[IMP-10] UIAudit + StressTest: unify screenshot naming to avoid collisions
-  Problem: UIAudit uses "screen_<seq>_<name>.png" (line 239)
-           StressTest uses "stress_<seq>_<name>.png" (line 1526)
-           They don't collide, but the different naming schemes make post-processing harder.
-  Fix: Extract screenshot() to UiTestSupport with unified naming:
-         public static void screenshot(String name) {
-           String safe = name.replaceAll("[^a-zA-Z0-9_\\-]", "_");
-           String path = "checkBiblio/screenshots/" + SCREENSHOT_PREFIX + "_"
-                       + (++screenshotSeq) + "_" + safe + ".png";
-           // common capture logic
-         }
-       Where SCREENSHOT_PREFIX = "screen" for UIAudit, "stress" for StressTest.
-
-═══════════════════════════════════════════════════════
-SECTION G — ALREADY-FIXED (confirmation needed)
-═══════════════════════════════════════════════════════
-
-The previous review (todo2.txt) marked these as FIXED. Verify they are actually fixed:
-
-✓ [UI-01] + run.sh: I18nAudit compiled with UIAudit — VERIFY: run.sh line 60 still
-           only shows UIAudit.java. Either the fix was reverted or it was never applied.
-           → STILL BROKEN. Needs fix.
-
-✓ run.sh: dropped javalin/kotlin jars from required list — VERIFY: run.sh line 29
-           STILL shows javalin and kotlin in the list.
-           → STILL BROKEN. Needs fix.
-
-═══════════════════════════════════════════════════════
-SUMMARY PRIORITY
-═══════════════════════════════════════════════════════
-
-CRITICAL (fix immediately):
-  [ST-04]  testChaos_longTitle cannot fail (known HIGH, still broken)
-  [ST-02]  dismissAllDialogs auto-clicking "Sí" on delete confirmations
-  [UI-01]  run.sh compile missing I18nAudit.java → runtime crash
-  [UI-02]  Interactive mode mutates real user DB (data loss risk)
-  [RUN-02]  run.sh/run2.sh require unused javalin/kotlin jars
-
-HIGH (fix soon):
-  [ST-01]  ISBN collision across runs
-  [ST-05]  negativePrice/badYear only warn on silent accept
-  [ST-07]  no headless guard (AWTException on headless hosts)
-  [ST-03]  testExtreme_concurrent reads component tree off EDT
-  [X-01]   ~400 lines duplicated between UIAudit and StressTest
-  [IMP-01]  No API smoke test — entire /api/* layer untested
-  [IMP-04]  No import round-trip test
-
-MEDIUM:
-  [ST-06]  screenshot every phase (performance)
-  [ST-09]  testCleanup fragile delete (keyboard vs proper click)
-  [ST-11]  testLlistesManagement same Sí-click problem
-  [UI-08]  testCreateBook / testEditBook no save verification
-  [I18N-01] CSV parser broken on commas in field values
-  [I18N-02] auditHardcodedCatalan reports only first match per file
-  [RUN-03]  run2.sh setsid/process-group kill Linux-only
-
-LOW:
-  [UI-04]  waitForDialog dead code
-  [UI-06]  cmdRows no exception handling
-  [UI-07]  cmdOpenRow fallback Enter may not trigger dialog
-  [ST-10]  (false positive — testAllSidebarButtons IS called)
-  [ST-12]  phase ordering cosmetic issue
-  [ST-13]  log() interleaving (synchronized fix needed)
-  [RUN-04]  Xvfb not checked for startup success
-  [RUN-05]  watchdog race condition
-  [I18N-04] duplicate keys within same file not detected
-
-TOTAL: 9 CRITICAL, 10 HIGH, 11 MEDIUM, 11 LOW = 41 issues
-═══════════════════════════════════════════════════════
-END OF REVIEW
-═══════════════════════════════════════════════════════
-
-================================================================================
- AGENT BRIEFS: see agent-briefs/00-INDEX.md (split for AI agents)
-================================================================================
+Web / API layer: REMOVED. If a future HTTP layer is added, re-apply the
+ApiServer.classify + auth/CSRF + sanitized-error plan from SESSION4_PLAN Phase 4.
+
+OPEN items by area:
+  - Domini: 1 — ControladorDomini god-class refactor (deferred: needs a
+    sub-facade for navigation); binarySearch → DB → in-memory race window
+    is documented in Javadoc (accepted debt).
+  - Anti-patterns: 4 high (UITheme mutable palette, Config manual props,
+    BackupService→Persistencia inverted dep, Llista.setColor inverted dep,
+    Llibre anemic domain model) + 3 med (BackupService→Persistencia, layer
+    inversion, manual Properties) — all marked accepted debt with rationale.
+  - Cross-cutting / nice-to-have: ~25 open (mostly long-tail refactors
+    that don't affect correctness — mixed language, ISBN type duality,
+    I18n ResourceBundle migration, MainFramePanel JFrame, etc.).
+  - BUGS: 1 [PARTIAL] (api/ removal, no longer in scope).
+  - DEAD CODE: 1 [PARTIAL] (interficie.BookReader half-migration).
+  - checkBiblio: 0.

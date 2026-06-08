@@ -53,7 +53,7 @@ public final class ShelfParser {
                         llistesStr.append(esc(ll.getNom())).append('|')
                             .append(row.valoracio()).append('|').append(row.llegit());
                     }
-                    pw.printf("\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
+                    pw.printf(java.util.Locale.ROOT, "\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
                         l.getISBN(), esc(l.getNom()), esc(l.getAutor()), l.getAny(),
                         esc(l.getDescripcio()), l.getValoracio(), l.getPreu(), l.getLlegit(),
                         esc(l.getImatge()), llistesStr);

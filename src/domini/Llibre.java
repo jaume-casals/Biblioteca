@@ -34,6 +34,8 @@ public class Llibre {
 	private String nomEn = null;
 	private boolean heavyFieldsLoaded = true;
 
+	private Llibre() {}
+
 	public Llibre(Long isbn, String nom, String autor, Integer any, String descripcio, Double valoracio, Double preu,
 			Boolean llegit, String imatge) {
 		this.isbn = isbn;
@@ -45,6 +47,53 @@ public class Llibre {
 		this.preu = preu;
 		this.llegit = llegit;
 		this.imatge = imatge;
+	}
+
+	public static Llibre bindUpdateableFields(Llibre target, Long isbn, String nom, String autor,
+			Integer any, String descripcio, Double valoracio, Double preu, Boolean llegit, String imatge) {
+		target.isbn = isbn;
+		target.nom = nom;
+		target.autor = autor;
+		target.any = any;
+		target.descripcio = descripcio;
+		target.valoracio = valoracio;
+		target.preu = preu;
+		target.llegit = llegit;
+		target.imatge = imatge;
+		return target;
+	}
+
+	public static Builder builder() {
+		return new Builder();
+	}
+
+	public static final class Builder {
+		private Long isbn;
+		private String nom;
+		private String autor;
+		private Integer any;
+		private String descripcio;
+		private Double valoracio;
+		private Double preu;
+		private Boolean llegit;
+		private String imatge;
+
+		private Builder() {}
+
+		public Builder isbn(Long v) { this.isbn = v; return this; }
+		public Builder nom(String v) { this.nom = v; return this; }
+		public Builder autor(String v) { this.autor = v; return this; }
+		public Builder any(Integer v) { this.any = v; return this; }
+		public Builder descripcio(String v) { this.descripcio = v; return this; }
+		public Builder valoracio(Double v) { this.valoracio = v; return this; }
+		public Builder preu(Double v) { this.preu = v; return this; }
+		public Builder llegit(Boolean v) { this.llegit = v; return this; }
+		public Builder imatge(String v) { this.imatge = v; return this; }
+
+		public Llibre build() {
+			return Llibre.bindUpdateableFields(new Llibre(), isbn, nom, autor, any, descripcio,
+				valoracio, preu, llegit, imatge);
+		}
 	}
 
 	public Long getISBN() {
@@ -192,7 +241,7 @@ public class Llibre {
 	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = (llengua != null && !llengua.trim().isEmpty()) ? llengua.trim() : null; }
 
 	public static Llibre copyOf(Llibre src) {
-		Llibre c = new Llibre(src.isbn, src.nom, src.autor, src.any, src.descripcio,
+		Llibre c = Llibre.bindUpdateableFields(new Llibre(), src.isbn, src.nom, src.autor, src.any, src.descripcio,
 			src.valoracio, src.preu, src.llegit, src.imatge);
 		c.notes = src.notes; c.pagines = src.pagines; c.paginesLlegides = src.paginesLlegides;
 		c.editorial = src.editorial; c.serie = src.serie; c.volum = src.volum;

@@ -109,7 +109,7 @@ public class DetallesLlibrePanel extends JDialog {
 		btnEliminar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
 		btnEliminar.setBackground(new Color(0xC0392B));
 		btnEliminar.setForeground(Color.WHITE);
-		btnEliminar.setFont(UITheme.FONT_BOLD);
+		btnEliminar.setFont(UITheme.fontBold());
 		btnEliminar.setFocusPainted(false);
 		btnEliminar.setBorderPainted(false);
 		btnEliminar.setOpaque(true);
@@ -225,7 +225,7 @@ public class DetallesLlibrePanel extends JDialog {
 		textNotes.setLineWrap(true);
 		textNotes.setWrapStyleWord(true);
 		textNotes.setEnabled(false);
-		textNotes.setFont(UITheme.FONT_BASE);
+		textNotes.setFont(UITheme.fontBase());
 		textNotes.setBackground(UITheme.BG_MAIN);
 		textNotes.setForeground(UITheme.TEXT_DARK);
 
@@ -304,7 +304,7 @@ public class DetallesLlibrePanel extends JDialog {
 		combo.setEnabled(false);
 		combo.setBackground(UITheme.BG_MAIN);
 		combo.setForeground(UITheme.TEXT_DARK);
-		combo.setFont(UITheme.FONT_BASE);
+		combo.setFont(UITheme.fontBase());
 		entry.add(combo, BorderLayout.CENTER);
 		grid.add(entry);
 		return combo;
