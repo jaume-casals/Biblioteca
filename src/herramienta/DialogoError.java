@@ -172,7 +172,7 @@ public class DialogoError {
         scroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
 
         JButton btnTancar = new JButton(I18n.t("btn_close"));
-        UITheme.styleSecondaryButton(btnTancar);
+        presentacio.UIComponents.styleSecondaryButton(btnTancar);
 
         JPanel btnPanel = new JPanel();
         btnPanel.setBackground(UITheme.BG_MAIN);

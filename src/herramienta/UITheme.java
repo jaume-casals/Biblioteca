@@ -11,15 +11,9 @@ import java.io.File;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
-import javax.swing.border.Border;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.plaf.basic.BasicButtonUI;
 
 public class UITheme {
 
@@ -63,9 +57,9 @@ public class UITheme {
     public static Color TABLE_GRID;
     public static Color TABLE_ALT;
 
-    // Derived — used internally by style methods
-    static Color SECONDARY_BTN_BG;
-    static Color FIELD_BG;
+    // Derived — used by UIComponents style helpers (panel-layer styling).
+    public static Color SECONDARY_BTN_BG;
+    public static Color FIELD_BG;
     static Color NIMBUS_BLUE_GREY;
 
     // ── Fixed colors (theme-independent) ─────────────────────────────────────
@@ -276,82 +270,12 @@ public class UITheme {
         I18n.applySwingOptionPane();
     }
 
-    // ── Style helpers ─────────────────────────────────────────────────────────
-    public static void styleAccentButton(JButton btn) {
-        btn.setUI(new BasicButtonUI());
-        btn.setBackground(ACCENT);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(FONT_BOLD);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    }
-
-    public static void styleSecondaryButton(JButton btn) {
-        btn.setUI(new BasicButtonUI());
-        btn.setBackground(SECONDARY_BTN_BG);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(FONT_BOLD);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    }
-
-    public static void styleSidebarButton(JButton btn) {
-        btn.setUI(new BasicButtonUI());
-        btn.setBackground(SIDEBAR_BG);
-        btn.setForeground(SIDEBAR_TEXT);
-        btn.setFont(FONT_BASE);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
-        btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    }
-
-    public static void styleLabel(JLabel lbl) {
-        lbl.setFont(FONT_LABEL);
-        lbl.setForeground(TEXT_MID);
-    }
-
-    public static void stylePanel(JPanel panel) {
-        panel.setBackground(BG_PANEL);
-    }
-
-    public static void styleField(JTextField field) {
-        field.setFont(FONT_BASE);
-        field.setForeground(TEXT_DARK);
-        field.setBackground(FIELD_BG);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_CLR),
-            BorderFactory.createEmptyBorder(3, 7, 3, 7)
-        ));
-        if (field.getClientProperty("hoverInstalled") == null) {
-            field.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override public void mouseEntered(java.awt.event.MouseEvent e) {
-                    if (field.isEnabled())
-                        field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ACCENT, 1),
-                            BorderFactory.createEmptyBorder(3, 7, 3, 7)));
-                }
-                @Override public void mouseExited(java.awt.event.MouseEvent e) {
-                    field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(BORDER_CLR),
-                        BorderFactory.createEmptyBorder(3, 7, 3, 7)));
-                }
-            });
-            field.putClientProperty("hoverInstalled", Boolean.TRUE);
-        }
-    }
-
-    public static Border cardBorder() {
-        return BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_CLR),
-            BorderFactory.createEmptyBorder(6, 6, 6, 6)
-        );
-    }
+    // Style helpers live in presentacio.UIComponents (session 11 move):
+    // the presentacio layer is the only caller, and the indirection
+    // through this class was removed so UIComponents holds the actual
+    // implementation.  The two package-private fields
+    // (SECONDARY_BTN_BG, FIELD_BG) remain here as the theme-palette
+    // source for those helpers.
 
     public static ImageIcon scaledIcon(byte[] data, int size) {
         if (data == null) return null;
