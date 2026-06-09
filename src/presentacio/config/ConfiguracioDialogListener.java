@@ -1,4 +1,4 @@
-package presentacio;
+package presentacio.config;
 
 /** Callbacks fired by the settings dialog. Replaces raw Runnable parameters. */
 public interface ConfiguracioDialogListener {

@@ -3,6 +3,7 @@ package presentacio;
 
 
 import presentacio.UIComponents;
+import presentacio.config.ConfiguracioDialogListener;
 import domini.Llibre;
 import domini.Llista;
 import herramienta.Config;
