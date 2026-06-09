@@ -5,11 +5,11 @@ package checkBiblio;
  *
  * Launches the real Biblioteca app in-process and exposes an interactive
  * command console so an external operator (human or AI) can drive the UI,
- * inspect every component, click buttons, fill fields, take screenshots,
- * and run a built-in automated walkthrough.
+ * inspect every component, click buttons, fill fields, and run a built-in
+ * automated walkthrough.
  *
  * Compile:  javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
- *                 checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
+ *                 checkBiblio/UiTestSupport.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
  * Run:      java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
  *                 checkBiblio.UIAudit [--auto]
  *
@@ -21,7 +21,6 @@ package checkBiblio;
  *   type <text>               type text into the currently-focused component
  *   clear                     clear the focused text field (Ctrl+A, Delete)
  *   focus <text>              click a text field whose label contains <text>
- *   screenshot [name]         save screenshot to checkBiblio/screen_<name>.png
  *   close                     dispose the topmost visible dialog
  *   enter                     press Enter
  *   esc                       press Escape
@@ -34,16 +33,11 @@ package checkBiblio;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.file.*;
-import java.text.Normalizer;
 import java.time.*;
 import java.time.format.*;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.*;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.table.TableModel;
 
@@ -52,7 +46,6 @@ public class UIAudit {
     // ── State ──────────────────────────────────────────────────────────────────
     private static Robot robot;
     private static PrintWriter reportFile;
-    private static int screenshotSeq = 0;
     private static int warnCount = 0;
     private static int failCount = 0;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
@@ -71,7 +64,6 @@ public class UIAudit {
             System.exit(1);
         }
 
-        Files.createDirectories(Path.of("checkBiblio/screenshots"));
         reportFile = new PrintWriter(new FileWriter("checkBiblio/audit_report.txt", false), true);
 
         robot = new Robot();
@@ -80,7 +72,6 @@ public class UIAudit {
         log("=== Biblioteca UIAudit ===");
         log("Mode: " + (autoMode ? "AUTOMATED" : "INTERACTIVE"));
         log("Started: " + LocalDateTime.now());
-        log("Screenshots -> checkBiblio/screenshots/");
 
         // ── Launch app (force Swing mode via --swing arg, skips ModeSelectorDialog) ──
         log("Launching Biblioteca in Swing mode...");
@@ -93,14 +84,14 @@ public class UIAudit {
 
         // ── Wait for main frame ───────────────────────────────────────────────
         log("Waiting for main JFrame (up to 12s)...");
-        JFrame mainFrame = waitForMainFrame(12000);
+        JFrame mainFrame = UiTestSupport.waitForMainFrame(12000);
         if (mainFrame == null) {
             log("FATAL: Main window never appeared. Aborting.");
             closeReport();
             System.exit(1);
         }
         log("OK: Main window visible — \"" + mainFrame.getTitle() + "\"");
-        sleep(600);
+        UiTestSupport.sleep(600);
 
         if (autoMode) {
             runAutomated(mainFrame);
@@ -142,11 +133,10 @@ public class UIAudit {
                     case "type"       -> cmdType(arg);
                     case "clear"      -> cmdClear();
                     case "focus"      -> cmdFocus(arg);
-                    case "screenshot" -> cmdScreenshot(arg.isEmpty() ? "manual" : arg);
                     case "close"      -> cmdClose();
-                    case "enter"      -> { robot.keyPress(KeyEvent.VK_ENTER); robot.keyRelease(KeyEvent.VK_ENTER); }
-                    case "esc"        -> { robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE); }
-                    case "wait"       -> sleep(arg.isEmpty() ? 500 : Long.parseLong(arg));
+                    case "enter"      -> UiTestSupport.pressEnter(robot);
+                    case "esc"        -> UiTestSupport.pressEscape(robot);
+                    case "wait"       -> UiTestSupport.sleep(arg.isEmpty() ? 500 : Long.parseLong(arg));
                     case "auto"       -> runAutomated(mainFrame);
                     case "rows"       -> cmdRows(mainFrame);
                     case "open-row"   -> cmdOpenRow(mainFrame, Integer.parseInt(arg));
@@ -167,34 +157,36 @@ public class UIAudit {
         for (Window w : all) {
             if (!w.isVisible()) continue;
             visible++;
-            String title = windowTitle(w);
+            String title = UiTestSupport.windowTitle(w);
             print("  [" + w.getClass().getSimpleName() + "] \"" + title + "\" size=" + w.getSize());
         }
         if (visible == 0) print("  (no visible windows)");
     }
 
     private static void cmdScan(String titleFragment) {
-        Window w = titleFragment == null ? getTopWindow() : findWindowByTitle(titleFragment);
+        Window w = titleFragment == null
+            ? UiTestSupport.getTopWindow()
+            : UiTestSupport.findWindowByTitle(titleFragment);
         if (w == null) { print("No window found" + (titleFragment != null ? ": " + titleFragment : "")); return; }
-        print("Scanning: \"" + windowTitle(w) + "\"");
+        print("Scanning: \"" + UiTestSupport.windowTitle(w) + "\"");
         List<String> found = new ArrayList<>();
-        collectComponents((Container)w, "", found);
+        UiTestSupport.collectComponents((Container)w, "", found);
         found.forEach(UIAudit::print);
-        log("SCAN: " + found.size() + " components in \"" + windowTitle(w) + "\"");
+        log("SCAN: " + found.size() + " components in \"" + UiTestSupport.windowTitle(w) + "\"");
     }
 
     private static void cmdClick(String text) throws Exception {
         if (text.isEmpty()) { print("Usage: click <button_text>"); return; }
         for (Window w : Window.getWindows()) {
             if (!w.isVisible()) continue;
-            AbstractButton btn = findButtonContaining((Container)w, text);
+            AbstractButton btn = UiTestSupport.findBtnIn((Container)w, text);
             if (btn != null) {
-                print("Clicking \"" + btn.getText() + "\" in \"" + windowTitle(w) + "\"");
+                print("Clicking \"" + btn.getText() + "\" in \"" + UiTestSupport.windowTitle(w) + "\"");
                 log("CLICK: \"" + btn.getText() + "\"");
-                clickComponent(btn);
-                sleep(400);
+                UiTestSupport.clickComponent(robot, btn);
+                UiTestSupport.sleep(400);
                 // Report any new dialog
-                JDialog d = getTopDialog();
+                JDialog d = UiTestSupport.getTopDialog();
                 if (d != null) print("  → Dialog appeared: \"" + d.getTitle() + "\"");
                 return;
             }
@@ -203,7 +195,7 @@ public class UIAudit {
         log("WARN: button not found: \"" + text + "\"");
     }
 
-    private static void cmdType(String text) throws AWTException {
+    private static void cmdType(String text) {
         print("Typing: " + text);
         log("TYPE: " + text);
         // Use clipboard for reliability with non-ASCII chars
@@ -216,9 +208,8 @@ public class UIAudit {
     }
 
     private static void cmdClear() {
-        robot.keyPress(KeyEvent.VK_CONTROL); robot.keyPress(KeyEvent.VK_A);
-        robot.keyRelease(KeyEvent.VK_A);     robot.keyRelease(KeyEvent.VK_CONTROL);
-        robot.keyPress(KeyEvent.VK_DELETE);  robot.keyRelease(KeyEvent.VK_DELETE);
+        UiTestSupport.pressCtrlA(robot);
+        UiTestSupport.pressDelete(robot);
         print("Cleared focused field.");
     }
 
@@ -226,25 +217,15 @@ public class UIAudit {
         if (labelHint.isEmpty()) { print("Usage: focus <label_text>"); return; }
         for (Window w : Window.getWindows()) {
             if (!w.isVisible()) continue;
-            JTextField tf = findTextFieldNear((Container)w, labelHint);
+            JTextField tf = UiTestSupport.findTextFieldNear((Container)w, labelHint);
             if (tf != null) {
-                clickComponent(tf);
+                UiTestSupport.clickComponent(robot, tf);
                 print("Focused text field near label \"" + labelHint + "\"");
                 log("FOCUS: field near \"" + labelHint + "\"");
                 return;
             }
         }
         print("No text field found near label: \"" + labelHint + "\"");
-    }
-
-    private static void cmdScreenshot(String name) throws Exception {
-        String safe = name.replaceAll("[^a-zA-Z0-9_\\-]", "_");
-        String filename = "checkBiblio/screenshots/screen_" + (++screenshotSeq) + "_" + safe + ".png";
-        BufferedImage img = robot.createScreenCapture(
-            new Rectangle(Toolkit.getDefaultToolkit().getScreenSize()));
-        ImageIO.write(img, "PNG", new File(filename));
-        print("Screenshot: " + filename);
-        log("SCREENSHOT: " + filename);
     }
 
     private static void cmdClose() {
@@ -261,7 +242,7 @@ public class UIAudit {
     }
 
     private static void cmdRows(JFrame mainFrame) {
-        JTable t = findComponent((Container)mainFrame, JTable.class);
+        JTable t = UiTestSupport.findComponent((Container)mainFrame, JTable.class);
         if (t == null) { print("No JTable found."); return; }
         TableModel m = t.getModel();
         int rows = Math.min(10, m.getRowCount());
@@ -282,7 +263,7 @@ public class UIAudit {
     }
 
     private static void cmdOpenRow(JFrame mainFrame, int rowIndex) throws Exception {
-        JTable table = findComponent((Container)mainFrame, JTable.class);
+        JTable table = UiTestSupport.findComponent((Container)mainFrame, JTable.class);
         if (table == null) { print("No JTable found."); return; }
         if (rowIndex >= table.getRowCount()) { print("Row " + rowIndex + " out of range (max " + (table.getRowCount()-1) + ")."); return; }
 
@@ -291,7 +272,7 @@ public class UIAudit {
             table.scrollRectToVisible(table.getCellRect(rowIndex, 0, true));
             table.requestFocusInWindow();
         });
-        sleep(200);
+        UiTestSupport.sleep(200);
 
         // Fire the registered "obrirDetalls" action directly — avoids Robot entirely (works on Xvfb).
         // Must use invokeLater (not invokeAndWait): modal dialogs block the EDT inside setVisible(true),
@@ -306,9 +287,9 @@ public class UIAudit {
                     System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED));
             }
         });
-        sleep(800);
+        UiTestSupport.sleep(800);
 
-        JDialog dlg = getTopDialog();
+        JDialog dlg = UiTestSupport.getTopDialog();
         if (dlg != null) {
             print("Opened dialog: \"" + dlg.getTitle() + "\"");
             log("OPEN-ROW " + rowIndex + " -> dialog \"" + dlg.getTitle() + "\"");
@@ -320,7 +301,6 @@ public class UIAudit {
     // ── Automated full walkthrough ─────────────────────────────────────────────
     private static void runAutomated(JFrame mainFrame) throws Exception {
         log("\n=== AUTOMATED AUDIT START ===");
-        cmdScreenshot("00_start");
 
         // --- Main window scan ---
         log("\n--- MAIN WINDOW ---");
@@ -342,21 +322,19 @@ public class UIAudit {
             {"Sobre",      "Sobre"},
         };
         for (String[] entry : sidebar) {
-            AbstractButton btn = findButtonContaining((Container)mainFrame, entry[0]);
+            AbstractButton btn = UiTestSupport.findBtnIn((Container)mainFrame, entry[0]);
             if (btn != null) {
                 log("CLICK: sidebar \"" + btn.getText() + "\"");
                 SwingUtilities.invokeLater(btn::doClick);
-                sleep(900);
-                JDialog d = getTopDialog();
+                UiTestSupport.sleep(900);
+                JDialog d = UiTestSupport.getTopDialog();
                 if (d != null) {
                     log("  -> Dialog: \"" + d.getTitle() + "\" — scanning...");
                     collectAndLog((Container)d);
-                    cmdScreenshot("sidebar_" + entry[0]);
                     SwingUtilities.invokeLater(d::dispose);
-                    sleep(400);
+                    UiTestSupport.sleep(400);
                 } else {
                     log("  -> No dialog (panel update)");
-                    cmdScreenshot("sidebar_" + entry[0]);
                 }
             } else {
                 warn("sidebar button not found for hint \"" + entry[0] + "\"");
@@ -369,13 +347,12 @@ public class UIAudit {
 
         // --- Filter drawer ---
         log("\n--- FILTER DRAWER ---");
-        AbstractButton tog = findButtonContaining((Container)mainFrame, "Filtre", "Filter");
+        AbstractButton tog = UiTestSupport.findBtnIn((Container)mainFrame, "Filtre", "Filter");
         if (tog != null) {
-            SwingUtilities.invokeLater(tog::doClick); sleep(400);
+            SwingUtilities.invokeLater(tog::doClick); UiTestSupport.sleep(400);
             log("Filter drawer toggled open");
-            cmdScreenshot("filter_open");
             collectAndLog((Container)mainFrame);
-            SwingUtilities.invokeLater(tog::doClick); sleep(300);
+            SwingUtilities.invokeLater(tog::doClick); UiTestSupport.sleep(300);
         } else {
             warn("filter toggle button not found");
         }
@@ -390,12 +367,12 @@ public class UIAudit {
         boolean bookCreated = testCreateBook(mainFrame);
 
         // Reset to all books before table inspection
-        AbstractButton allBtn = findButtonContaining((Container)mainFrame, "Tots els");
-        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); sleep(600); }
+        AbstractButton allBtn = UiTestSupport.findBtnIn((Container)mainFrame, "Tots els");
+        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); UiTestSupport.sleep(600); }
 
         // --- Table inspection ---
         log("\n--- TABLE ---");
-        JTable table = findComponent((Container)mainFrame, JTable.class);
+        JTable table = UiTestSupport.findComponent((Container)mainFrame, JTable.class);
         if (table != null) {
             TableModel m = table.getModel();
             log("Rows: " + m.getRowCount() + "  Cols: " + m.getColumnCount());
@@ -410,30 +387,28 @@ public class UIAudit {
         if (bookCreated && table != null && table.getRowCount() > 0) {
             log("\n--- BOOK DETAILS (row 0) ---");
             cmdOpenRow(mainFrame, 0);
-            JDialog detailsDlg = getTopDialog();
+            JDialog detailsDlg = UiTestSupport.getTopDialog();
             if (detailsDlg != null) {
-                cmdScreenshot("book_details");
                 collectAndLog((Container)detailsDlg);
 
                 // Try Edit
-                AbstractButton editBtn = findButtonContaining((Container)detailsDlg, "Editar", "Edit");
+                AbstractButton editBtn = UiTestSupport.findBtnIn((Container)detailsDlg, "Editar", "Edit");
                 if (editBtn != null) {
                     log("Clicking Edit...");
-                    SwingUtilities.invokeLater(editBtn::doClick); sleep(500);
-                    cmdScreenshot("book_edit_mode");
+                    SwingUtilities.invokeLater(editBtn::doClick); UiTestSupport.sleep(500);
                     log("Edit mode active. Pressing Escape to cancel.");
-                    robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
-                    sleep(300);
+                    UiTestSupport.pressEscape(robot);
+                    UiTestSupport.sleep(300);
                 } else {
                     warn("Edit button not found in details dialog");
                 }
 
-                clickSubDialogButton(detailsDlg, "Llistes", "book_llistes");
-                clickSubDialogButton(detailsDlg, "Etiquetes", "book_tags");
-                clickSubDialogButton(detailsDlg, "Historial", "book_historial");
-                clickSubDialogButton(detailsDlg, "Imprimir", "book_imprimir");
+                clickSubDialogButton(detailsDlg, "Llistes");
+                clickSubDialogButton(detailsDlg, "Etiquetes");
+                clickSubDialogButton(detailsDlg, "Historial");
+                clickSubDialogButton(detailsDlg, "Imprimir");
 
-                SwingUtilities.invokeLater(detailsDlg::dispose); sleep(400);
+                SwingUtilities.invokeLater(detailsDlg::dispose); UiTestSupport.sleep(400);
             } else {
                 warn("No dialog appeared after opening row 0");
             }
@@ -446,7 +421,6 @@ public class UIAudit {
         // --- Edit first book, change all fields ---
         if (bookCreated) testEditBook(mainFrame);
 
-        cmdScreenshot("99_final");
         log("\n--- I18n static audit ---");
         int[] i18nFail = {0}, i18nWarn = {0};
         I18nAudit.run(reportFile, i18nFail, i18nWarn);
@@ -456,7 +430,6 @@ public class UIAudit {
         log("FAIL: " + failCount + "  WARN: " + warnCount);
         log("Report: checkBiblio/audit_report.txt");
         writeJsonReport();
-        log("Screenshots: checkBiblio/screenshots/");
         print("\n[AUTO] Audit complete. FAIL=" + failCount + " WARN=" + warnCount
             + " — see checkBiblio/audit_report.txt");
     }
@@ -471,16 +444,15 @@ public class UIAudit {
         log("FAIL: " + msg);
     }
 
-    private static void clickSubDialogButton(JDialog detailsDlg, String btnHint, String shotName) throws Exception {
-        AbstractButton btn = findButtonContaining((Container)detailsDlg, btnHint);
+    private static void clickSubDialogButton(JDialog detailsDlg, String btnHint) throws Exception {
+        AbstractButton btn = UiTestSupport.findBtnIn((Container)detailsDlg, btnHint);
         if (btn == null) { warn("Details button not found: \"" + btnHint + "\""); return; }
         log("Clicking \"" + btn.getText() + "\"...");
         SwingUtilities.invokeLater(btn::doClick);
-        sleep(700);
-        JDialog sub = getTopDialog();
+        UiTestSupport.sleep(700);
+        JDialog sub = UiTestSupport.getTopDialog();
         if (sub != null && sub != detailsDlg) {
             log("  -> Sub-dialog: \"" + sub.getTitle() + "\"");
-            cmdScreenshot(shotName);
             dismissDialog(sub);
         } else {
             log("  -> No sub-dialog for \"" + btnHint + "\"");
@@ -488,28 +460,28 @@ public class UIAudit {
     }
 
     private static void dismissDialog(JDialog d) {
-        AbstractButton close = findButtonContaining((Container)d, "Tancar", "OK", "Cancel");
+        AbstractButton close = UiTestSupport.findBtnIn((Container)d, "Tancar", "OK", "Cancel");
         if (close != null) SwingUtilities.invokeLater(close::doClick);
         else SwingUtilities.invokeLater(d::dispose);
-        sleep(350);
+        UiTestSupport.sleep(350);
     }
 
     private static void dismissAllDialogs() {
         for (int i = 0; i < 8; i++) {
-            JDialog d = getTopDialog();
+            JDialog d = UiTestSupport.getTopDialog();
             if (d == null) break;
             dismissDialog(d);
         }
     }
 
     private static void testTopBar(JFrame main) throws Exception {
-        JTextField search = findTextFieldNear(main, "ISBN");
+        JTextField search = UiTestSupport.findTextFieldNear(main, "ISBN");
         if (search == null) {
             List<Component> flat = new ArrayList<>();
-            flattenVisible(main, flat);
+            UiTestSupport.flattenVisible(main, flat);
             for (Component c : flat) {
                 if (c instanceof JTextField tf && tf.getToolTipText() != null
-                        && norm(tf.getToolTipText()).contains("cerca")) {
+                        && UiTestSupport.norm(tf.getToolTipText()).contains("cerca")) {
                     search = tf;
                     break;
                 }
@@ -518,29 +490,28 @@ public class UIAudit {
         if (search != null) {
             final JTextField searchField = search;
             SwingUtilities.invokeAndWait(() -> searchField.setText("test"));
-            sleep(200);
+            UiTestSupport.sleep(200);
             log("Search bar set to \"test\"");
             SwingUtilities.invokeAndWait(() -> searchField.setText(""));
-            sleep(200);
+            UiTestSupport.sleep(200);
         } else {
             warn("Search bar not found");
         }
 
-        AbstractButton galeria = findButtonContaining(main, "Galeria");
+        AbstractButton galeria = UiTestSupport.findBtnIn(main, "Galeria");
         if (galeria != null) {
-            SwingUtilities.invokeLater(galeria::doClick); sleep(700);
-            cmdScreenshot("top_galeria");
+            SwingUtilities.invokeLater(galeria::doClick); UiTestSupport.sleep(700);
             log("Gallery mode toggled on");
-            SwingUtilities.invokeLater(galeria::doClick); sleep(700);
+            SwingUtilities.invokeLater(galeria::doClick); UiTestSupport.sleep(700);
             log("Gallery mode toggled off");
         } else {
             warn("Galeria button not found");
         }
 
-        AbstractButton series = findButtonContaining(main, "Sèrie", "Series");
+        AbstractButton series = UiTestSupport.findBtnIn(main, "Sèrie", "Series");
         if (series != null) {
-            SwingUtilities.invokeLater(series::doClick); sleep(500);
-            SwingUtilities.invokeLater(series::doClick); sleep(500);
+            SwingUtilities.invokeLater(series::doClick); UiTestSupport.sleep(500);
+            SwingUtilities.invokeLater(series::doClick); UiTestSupport.sleep(500);
             log("Series grouping toggled x2");
         } else {
             warn("Series button not found");
@@ -548,60 +519,58 @@ public class UIAudit {
     }
 
     private static void testPagination(JFrame main) throws Exception {
-        AbstractButton next = findButtonContaining(main, "Seguent", "Next");
-        AbstractButton prev = findButtonContaining(main, "Anterior", "Previous");
+        AbstractButton next = UiTestSupport.findBtnIn(main, "Seguent", "Next");
+        AbstractButton prev = UiTestSupport.findBtnIn(main, "Anterior", "Previous");
         if (next != null) {
-            SwingUtilities.invokeLater(next::doClick); sleep(600);
-            cmdScreenshot("pagination_next");
+            SwingUtilities.invokeLater(next::doClick); UiTestSupport.sleep(600);
             log("Pagination: next page");
         } else {
             warn("Next page button not found");
         }
         if (prev != null) {
-            SwingUtilities.invokeLater(prev::doClick); sleep(600);
+            SwingUtilities.invokeLater(prev::doClick); UiTestSupport.sleep(600);
             log("Pagination: previous page");
         }
     }
 
     private static void testFilterActions(JFrame main) throws Exception {
-        AbstractButton tog = findButtonContaining(main, "Filtre", "Filter");
+        AbstractButton tog = UiTestSupport.findBtnIn(main, "Filtre", "Filter");
         if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
-            SwingUtilities.invokeLater(tog::doClick); sleep(400);
+            SwingUtilities.invokeLater(tog::doClick); UiTestSupport.sleep(400);
         }
-        fillField(main, "Nom", "audit");
-        AbstractButton filtrar = findButtonContaining(main, "Filtrar");
+        UiTestSupport.setFieldNear(main, "Nom", "audit");
+        AbstractButton filtrar = UiTestSupport.findBtnIn(main, "Filtrar");
         if (filtrar != null) {
-            SwingUtilities.invokeLater(filtrar::doClick); sleep(700);
+            SwingUtilities.invokeLater(filtrar::doClick); UiTestSupport.sleep(700);
             log("Filter applied (nom=audit)");
-            cmdScreenshot("filter_applied");
         }
-        AbstractButton clear = findButtonContaining(main, "Treure", "Quitar");
+        AbstractButton clear = UiTestSupport.findBtnIn(main, "Treure", "Quitar");
         if (clear != null) {
-            SwingUtilities.invokeLater(clear::doClick); sleep(600);
+            SwingUtilities.invokeLater(clear::doClick); UiTestSupport.sleep(600);
             log("Filters cleared");
         }
     }
 
     private static void testIoButtons(JFrame main) throws Exception {
-        AbstractButton tog = findButtonContaining(main, "Filtre", "Filter");
+        AbstractButton tog = UiTestSupport.findBtnIn(main, "Filtre", "Filter");
         if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
-            SwingUtilities.invokeLater(tog::doClick); sleep(400);
+            SwingUtilities.invokeLater(tog::doClick); UiTestSupport.sleep(400);
         }
         String[] safe = {"Exportar", "Importar", "Fetch", "Escanejar", "Backup", "Restaurar"};
         for (String hint : safe) {
-            AbstractButton btn = findButtonContaining(main, hint);
+            AbstractButton btn = UiTestSupport.findBtnIn(main, hint);
             if (btn == null) { warn("I/O button not found: " + hint); continue; }
             log("CLICK I/O: \"" + btn.getText() + "\"");
-            if (norm(btn.getText()).contains("export") || norm(btn.getText()).contains("import")) {
-                SwingUtilities.invokeLater(btn::doClick); sleep(400);
-                AbstractButton item = findButtonContaining(main, "CSV", "JSON", "HTML");
-                if (item != null) { SwingUtilities.invokeLater(item::doClick); sleep(500); }
+            if (UiTestSupport.norm(btn.getText()).contains("export") || UiTestSupport.norm(btn.getText()).contains("import")) {
+                SwingUtilities.invokeLater(btn::doClick); UiTestSupport.sleep(400);
+                AbstractButton item = UiTestSupport.findBtnIn(main, "CSV", "JSON", "HTML");
+                if (item != null) { SwingUtilities.invokeLater(item::doClick); UiTestSupport.sleep(500); }
             } else {
-                SwingUtilities.invokeLater(btn::doClick); sleep(600);
+                SwingUtilities.invokeLater(btn::doClick); UiTestSupport.sleep(600);
             }
             dismissAllDialogs();
-            robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE);
-            sleep(250);
+            UiTestSupport.pressEscape(robot);
+            UiTestSupport.sleep(250);
         }
     }
 
@@ -613,15 +582,15 @@ public class UIAudit {
 
     /** Dot-decimal strings — GuardarLlibresDialogoControl uses Double.parseDouble (locale-independent). */
     private static String randDecimal(int scale, double max) {
-        return String.format(Locale.US, "%." + scale + "f", RNG.nextDouble() * max);
+        return String.format(java.util.Locale.US, "%." + scale + "f", RNG.nextDouble() * max);
     }
 
     /** True once no visible dialog has the given title (save succeeded and dialog closed). */
     private static boolean waitForDialogTitleGone(String title, int maxMs) throws Exception {
         for (int waited = 0; waited < maxMs; waited += 100) {
-            JDialog d = getTopDialog();
+            JDialog d = UiTestSupport.getTopDialog();
             if (d == null || !title.equals(d.getTitle())) return true;
-            sleep(100);
+            UiTestSupport.sleep(100);
         }
         return false;
     }
@@ -629,15 +598,14 @@ public class UIAudit {
     /** Open new-book dialog, fill every field with random data, save. Returns true if a row appears in the table. */
     private static boolean testCreateBook(JFrame mainFrame) throws Exception {
         log("\n--- CREATE BOOK (random data) ---");
-        AbstractButton nouBtn = findButtonContaining((Container)mainFrame, "Afegir", "Nou", "New");
+        AbstractButton nouBtn = UiTestSupport.findBtnIn((Container)mainFrame, "Afegir", "Nou", "New");
         if (nouBtn == null) { warn("Add-book button not found"); return false; }
 
-        SwingUtilities.invokeLater(nouBtn::doClick); sleep(900);
-        JDialog dlg = getTopDialog();
+        SwingUtilities.invokeLater(nouBtn::doClick); UiTestSupport.sleep(900);
+        JDialog dlg = UiTestSupport.getTopDialog();
         if (dlg == null) { warn("New-book dialog did not appear"); return false; }
         String dlgTitle = dlg.getTitle();
         log("Dialog: \"" + dlgTitle + "\"");
-        cmdScreenshot("create_book_empty");
 
         // ISBN must be numeric and unique — use timestamp suffix
         long testIsbn = 9780000000000L + (System.currentTimeMillis() % 1_000_000L);
@@ -658,20 +626,19 @@ public class UIAudit {
         };
 
         for (String[] pair : fields) {
-            fillField(dlg, pair[0], pair[1]);
+            UiTestSupport.setFieldNear(dlg, pair[0], pair[1]);
         }
 
         // Check Llegit checkbox randomly
-        JCheckBox chkLlegit = findCheckBox(dlg, "Llegit");
+        JCheckBox chkLlegit = UiTestSupport.findCheckBox(dlg, "Llegit");
         if (chkLlegit != null && RNG.nextBoolean()) {
             SwingUtilities.invokeAndWait(() -> chkLlegit.setSelected(true));
             log("  Set Llegit = true");
         }
 
-        cmdScreenshot("create_book_filled");
         log("Fields filled. Clicking Save...");
 
-        AbstractButton saveBtn = findButtonContaining((Container)dlg, "Desa", "Guardar", "Save");
+        AbstractButton saveBtn = UiTestSupport.findBtnIn((Container)dlg, "Desa", "Guardar", "Save");
         if (saveBtn == null) {
             warn("Save button not found — cancelling");
             SwingUtilities.invokeLater(dlg::dispose);
@@ -680,14 +647,13 @@ public class UIAudit {
         SwingUtilities.invokeLater(saveBtn::doClick);
         if (!waitForDialogTitleGone(dlgTitle, 2500)) {
             warn("Create-book dialog still open after save (validation may have failed silently in test mode)");
-            cmdScreenshot("create_book_result");
             collectAndLog((Container)dlg);
             SwingUtilities.invokeLater(dlg::dispose);
-            sleep(400);
+            UiTestSupport.sleep(400);
             log("CREATE BOOK test failed. ISBN=" + testIsbn);
             return false;
         }
-        sleep(400);
+        UiTestSupport.sleep(400);
         log("OK: Book saved (ISBN=" + testIsbn + ")");
         log("CREATE BOOK test done. ISBN=" + testIsbn);
         return true;
@@ -698,18 +664,17 @@ public class UIAudit {
         log("\n--- EDIT BOOK (random data, row 0) ---");
 
         // Reset to all books view
-        AbstractButton allBtn = findButtonContaining((Container)mainFrame, "Tots els");
-        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); sleep(700); }
+        AbstractButton allBtn = UiTestSupport.findBtnIn((Container)mainFrame, "Tots els");
+        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); UiTestSupport.sleep(700); }
 
         cmdOpenRow(mainFrame, 0);
-        JDialog detailsDlg = getTopDialog();
+        JDialog detailsDlg = UiTestSupport.getTopDialog();
         if (detailsDlg == null) { log("WARN: No details dialog for row 0"); return; }
         log("Details dialog: \"" + detailsDlg.getTitle() + "\"");
 
-        AbstractButton editBtn = findButtonContaining((Container)detailsDlg, "Editar", "Edit");
+        AbstractButton editBtn = UiTestSupport.findBtnIn((Container)detailsDlg, "Editar", "Edit");
         if (editBtn == null) { log("WARN: Edit button not found"); SwingUtilities.invokeLater(detailsDlg::dispose); return; }
-        SwingUtilities.invokeLater(editBtn::doClick); sleep(600);
-        cmdScreenshot("edit_book_before");
+        SwingUtilities.invokeLater(editBtn::doClick); UiTestSupport.sleep(600);
         log("Edit mode active — filling fields with random data...");
 
         String[][] fields = {
@@ -726,215 +691,40 @@ public class UIAudit {
         };
 
         for (String[] pair : fields) {
-            fillField(detailsDlg, pair[0], pair[1]);
+            UiTestSupport.setFieldNear(detailsDlg, pair[0], pair[1]);
         }
 
-        JCheckBox chkLlegit = findCheckBox(detailsDlg, "Llegit");
+        JCheckBox chkLlegit = UiTestSupport.findCheckBox(detailsDlg, "Llegit");
         if (chkLlegit != null) {
             boolean newVal = !chkLlegit.isSelected();
             SwingUtilities.invokeAndWait(() -> chkLlegit.setSelected(newVal));
             log("  Toggled Llegit -> " + newVal);
         }
 
-        cmdScreenshot("edit_book_filled");
-
-        AbstractButton saveBtn = findButtonContaining((Container)detailsDlg, "Desa", "Guardar", "Save");
-        if (saveBtn == null) { log("WARN: Save button not found — pressing Escape"); robot.keyPress(KeyEvent.VK_ESCAPE); robot.keyRelease(KeyEvent.VK_ESCAPE); sleep(300); return; }
+        AbstractButton saveBtn = UiTestSupport.findBtnIn((Container)detailsDlg, "Desa", "Guardar", "Save");
+        if (saveBtn == null) { log("WARN: Save button not found — pressing Escape"); UiTestSupport.pressEscape(robot); UiTestSupport.sleep(300); return; }
         log("Clicking Save...");
-        SwingUtilities.invokeLater(saveBtn::doClick); sleep(1000);
+        SwingUtilities.invokeLater(saveBtn::doClick); UiTestSupport.sleep(1000);
 
-        JDialog afterDlg = getTopDialog();
+        JDialog afterDlg = UiTestSupport.getTopDialog();
         if (afterDlg != null) {
             log("RESULT dialog after edit save: \"" + afterDlg.getTitle() + "\"");
             collectAndLog((Container)afterDlg);
-            cmdScreenshot("edit_book_result");
-            SwingUtilities.invokeLater(afterDlg::dispose); sleep(400);
+            SwingUtilities.invokeLater(afterDlg::dispose); UiTestSupport.sleep(400);
         } else {
             log("OK: No error dialog — edit likely saved successfully");
         }
-        JDialog still = getTopDialog();
-        if (still != null) { SwingUtilities.invokeLater(still::dispose); sleep(300); }
+        JDialog still = UiTestSupport.getTopDialog();
+        if (still != null) { SwingUtilities.invokeLater(still::dispose); UiTestSupport.sleep(300); }
         log("EDIT BOOK test done.");
     }
 
-    /** Clear a text field near a label and type new value. */
-    private static void fillField(Container dlg, String labelHint, String value) throws Exception {
-        if (value.isEmpty()) return;
-        JTextField tf = findTextFieldNear(dlg, labelHint);
-        if (tf == null) { log("  WARN: field not found for label \"" + labelHint + "\""); return; }
-        SwingUtilities.invokeAndWait(() -> {
-            tf.requestFocusInWindow();
-            tf.selectAll();
-            tf.setText(value);
-        });
-        log("  Set \"" + labelHint + "\" = \"" + value + "\"");
-        sleep(60);
-    }
-
-    private static JCheckBox findCheckBox(Container c, String text) {
-        for (Component comp : c.getComponents()) {
-            if (comp instanceof JCheckBox chk && norm(chk.getText()).contains(norm(text))) return chk;
-            if (comp instanceof Container sub) {
-                JCheckBox found = findCheckBox(sub, text);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
-    // ── Component traversal helpers ───────────────────────────────────────────
+    // ── Component traversal helpers (only the ones still specific to UIAudit) ─
 
     private static void collectAndLog(Container c) {
         List<String> items = new ArrayList<>();
-        collectComponents(c, "  ", items);
+        UiTestSupport.collectComponents(c, "  ", items);
         items.forEach(UIAudit::log);
-    }
-
-    private static void collectComponents(Container c, String indent, List<String> out) {
-        for (Component comp : c.getComponents()) {
-            if (!comp.isVisible()) continue;
-            if (comp instanceof AbstractButton btn && !(btn instanceof JCheckBox)) {
-                out.add(indent + "[BTN] \"" + btn.getText() + "\"" +
-                    (btn.getToolTipText() != null ? "  tip:\"" + btn.getToolTipText() + "\"" : ""));
-            } else if (comp instanceof JCheckBox chk) {
-                out.add(indent + "[CHK] \"" + chk.getText() + "\" selected=" + chk.isSelected());
-            } else if (comp instanceof JTextField tf) {
-                out.add(indent + "[TF ] value=\"" + tf.getText() + "\"" +
-                    (tf.getToolTipText() != null ? "  tip:\"" + tf.getToolTipText() + "\"" : ""));
-            } else if (comp instanceof JLabel lbl && lbl.getText() != null && !lbl.getText().isBlank()) {
-                out.add(indent + "[LBL] \"" + lbl.getText() + "\"");
-            } else if (comp instanceof JComboBox<?> cb) {
-                out.add(indent + "[CMB] selected=\"" + cb.getSelectedItem() + "\" items=" + cb.getItemCount());
-            } else if (comp instanceof JTable tbl) {
-                out.add(indent + "[TBL] rows=" + tbl.getRowCount() + " cols=" + tbl.getColumnCount());
-            }
-            if (comp instanceof Container sub) collectComponents(sub, indent + "  ", out);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends Component> T findComponent(Container c, Class<T> type) {
-        for (Component comp : c.getComponents()) {
-            if (type.isInstance(comp)) return (T) comp;
-            if (comp instanceof Container sub) {
-                T found = findComponent(sub, type);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
-    private static AbstractButton findButtonContaining(Container c, String... texts) {
-        for (Component comp : c.getComponents()) {
-            if (comp instanceof AbstractButton btn && btn.isVisible()) {
-                String t = btn.getText();
-                if (t != null) for (String text : texts)
-                    if (norm(t).contains(norm(text))) return btn;
-            }
-            if (comp instanceof Container sub) {
-                AbstractButton found = findButtonContaining(sub, texts);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
-    /** Lowercase + strip diacritics so "estadist" matches "Estadístiques". */
-    private static String norm(String s) {
-        if (s == null) return "";
-        return Normalizer.normalize(s, Normalizer.Form.NFD)
-                         .replaceAll("\\p{M}", "")
-                         .toLowerCase();
-    }
-
-    private static JTextField findTextFieldNear(Container c, String labelHint) {
-        // Walk all components; when we see a label matching the hint, return the next JTextField
-        List<Component> flat = new ArrayList<>();
-        flattenVisible(c, flat);
-        for (int i = 0; i < flat.size(); i++) {
-            Component comp = flat.get(i);
-            if (comp instanceof JLabel lbl && lbl.getText() != null
-                    && norm(lbl.getText()).contains(norm(labelHint))) {
-                // Find next JTextField
-                for (int j = i + 1; j < Math.min(i + 6, flat.size()); j++) {
-                    if (flat.get(j) instanceof JTextField tf) return tf;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static void flattenVisible(Container c, List<Component> out) {
-        for (Component comp : c.getComponents()) {
-            if (!comp.isVisible()) continue;
-            out.add(comp);
-            if (comp instanceof Container sub) flattenVisible(sub, out);
-        }
-    }
-
-    // ── Window helpers ─────────────────────────────────────────────────────────
-
-    private static JFrame waitForMainFrame(long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            for (Window w : Window.getWindows()) {
-                if (w instanceof JFrame f && f.isVisible() && !f.getTitle().isBlank()) return f;
-            }
-            Thread.sleep(150);
-        }
-        return null;
-    }
-
-    private static JDialog waitForDialog(long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            for (Window w : Window.getWindows()) {
-                if (w instanceof JDialog d && d.isVisible()) return d;
-            }
-            Thread.sleep(100);
-        }
-        return null;
-    }
-
-    private static Window getTopWindow() {
-        Window[] ws = Window.getWindows();
-        for (int i = ws.length - 1; i >= 0; i--)
-            if (ws[i].isVisible()) return ws[i];
-        return null;
-    }
-
-    private static JDialog getTopDialog() {
-        Window[] ws = Window.getWindows();
-        for (int i = ws.length - 1; i >= 0; i--)
-            if (ws[i] instanceof JDialog d && d.isVisible()) return d;
-        return null;
-    }
-
-    private static Window findWindowByTitle(String fragment) {
-        for (Window w : Window.getWindows()) {
-            if (!w.isVisible()) continue;
-            if (windowTitle(w).toLowerCase().contains(fragment.toLowerCase())) return w;
-        }
-        return null;
-    }
-
-    private static String windowTitle(Window w) {
-        if (w instanceof JFrame f) return f.getTitle();
-        if (w instanceof JDialog d) return d.getTitle();
-        return w.getClass().getSimpleName();
-    }
-
-    // ── Robot helpers ──────────────────────────────────────────────────────────
-
-    private static void clickComponent(Component c) throws AWTException {
-        if (!c.isShowing()) return;
-        Point loc = c.getLocationOnScreen();
-        int cx = loc.x + c.getWidth() / 2;
-        int cy = loc.y + c.getHeight() / 2;
-        robot.mouseMove(cx, cy);
-        sleep(60);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
     }
 
     // ── Logging ────────────────────────────────────────────────────────────────
@@ -960,7 +750,6 @@ public class UIAudit {
               type <text>         paste <text> into focused component
               clear               clear focused text field
               focus <label>       click text field near matching label
-              screenshot [name]   save screenshot
               close               dispose topmost dialog
               enter               press Enter
               esc                 press Escape
@@ -985,9 +774,5 @@ public class UIAudit {
         log("=== UIAudit finished ===");
         writeJsonReport();
         reportFile.close();
-    }
-
-    private static void sleep(long ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
     }
 }

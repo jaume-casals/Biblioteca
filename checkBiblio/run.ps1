@@ -56,13 +56,12 @@ try {
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "  Compiling UIAudit"
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-        javac -Xlint:deprecation -cp $cp checkBiblio\UIAudit.java checkBiblio\I18nAudit.java -d bin
+        javac -Xlint:deprecation -cp $cp checkBiblio\UiTestSupport.java checkBiblio\UIAudit.java checkBiblio\I18nAudit.java -d bin
         if ($LASTEXITCODE -ne 0) {
             $stepErrors += "UIAudit compile failed (javac)"
             $finalExit = 1
         } else {
             Remove-Item checkBiblio\audit_report.txt -ErrorAction SilentlyContinue
-            Get-ChildItem checkBiblio\screenshots\screen_*.png -ErrorAction SilentlyContinue | Remove-Item
 
             Write-Host ""
             Write-Host "══════════════════════════════════════" -ForegroundColor Cyan

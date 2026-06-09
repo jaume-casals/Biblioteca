@@ -130,11 +130,10 @@ if [ "$RUN_AUDIT" -eq 1 ]; then
     fi
 
     echo "Compiling UIAudit..."
-    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin 2>&1; then
+    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin 2>&1; then
         record_error "UIAudit compile failed (javac)"
     else
         rm -f checkBiblio/audit_report.txt
-        rm -f checkBiblio/screenshots/screen_*.png
 
         echo "Starting UIAudit..."
         java -Xmx512m -cp "$CP" checkBiblio.UIAudit "${AUDIT_ARGS[@]}" 2>&1

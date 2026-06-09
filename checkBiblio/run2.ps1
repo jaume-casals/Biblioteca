@@ -65,7 +65,7 @@ try {
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "  Compiling StressTest"
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-        javac -Xlint:deprecation -cp $cp checkBiblio\StressTest.java -d bin
+        javac -Xlint:deprecation -cp $cp checkBiblio\UiTestSupport.java checkBiblio\StressTest.java -d bin
         if ($LASTEXITCODE -ne 0) {
             $stepErrors += "StressTest compile failed (javac)"
             $finalExit = 1
@@ -75,7 +75,6 @@ try {
     # ── Run StressTest with timeout ────────────────────────────────────────
     if ($stepErrors.Count -eq 0) {
         Remove-Item checkBiblio\stress_report.txt -ErrorAction SilentlyContinue
-        Get-ChildItem checkBiblio\screenshots\stress_*.png -ErrorAction SilentlyContinue | Remove-Item
 
         Write-Host ""
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
@@ -133,7 +132,7 @@ try {
                 $finalExit = 1
             }
         }
-        $stressIssues = Select-String -Path checkBiblio\stress_report.txt -Pattern '✗ FAIL:|! WARN:|SCREENSHOT FAILED|FATAL:|APP LAUNCH ERROR'
+        $stressIssues = Select-String -Path checkBiblio\stress_report.txt -Pattern '✗ FAIL:|! WARN:|FATAL:|APP LAUNCH ERROR'
         if ($stressIssues) {
             Write-Host ""
             Write-Host "  StressTest issues (FAIL / WARN / FATAL):"

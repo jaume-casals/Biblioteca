@@ -59,7 +59,7 @@ print_final_summary() {
         if [ -n "$fail_n" ] && [ "$fail_n" -gt 0 ] 2>/dev/null; then
             FINAL_EXIT=1
         fi
-        stress_issues=$(grep -E '✗ FAIL:|! WARN:|SCREENSHOT FAILED|FATAL:|APP LAUNCH ERROR' checkBiblio/stress_report.txt 2>/dev/null || true)
+        stress_issues=$(grep -E '✗ FAIL:|! WARN:|FATAL:|APP LAUNCH ERROR' checkBiblio/stress_report.txt 2>/dev/null || true)
         if [ -n "$stress_issues" ]; then
             echo ""
             echo "  StressTest issues (FAIL / WARN / FATAL):"
@@ -126,7 +126,7 @@ fi
 STRESS_COMPILED=0
 if [ "$FINAL_EXIT" -eq 0 ]; then
     echo "Compiling StressTest..."
-    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/StressTest.java -d bin 2>&1; then
+    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/StressTest.java -d bin 2>&1; then
         record_error "StressTest compile failed (javac)"
     else
         STRESS_COMPILED=1
@@ -135,7 +135,6 @@ fi
 
 if [ "$STRESS_COMPILED" -eq 1 ]; then
     rm -f checkBiblio/stress_report.txt
-    rm -f checkBiblio/screenshots/stress_*.png
 
     echo "Starting StressTest... (timeout: ${TIMEOUT}s)"
     if command -v setsid &>/dev/null; then
