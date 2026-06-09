@@ -433,26 +433,26 @@ public class ControladorDomini implements BibliotecaWriter {
 		return -1;
 	}
 
-private void swapLlistesOrdre(int i, int j) {
-        synchronized (BIB_LOCK) {
-            Llista a = llistes.get(i);
-            Llista b = llistes.get(j);
-            int ordreA = a.getOrdre();
-            int ordreB = b.getOrdre();
-            try {
-                a.setOrdre(ordreB);
-                b.setOrdre(ordreA);
-                Collections.swap(llistes, i, j);
-                cp.updateLlistaOrdre(a.getId(), ordreB);
-                cp.updateLlistaOrdre(b.getId(), ordreA);
-            } catch (java.sql.SQLException e) {
-                a.setOrdre(ordreA);
-                b.setOrdre(ordreB);
-                Collections.swap(llistes, i, j);
-                throw new BibliotecaException(e.getMessage(), e);
-            }
-        }
-    }
+	private void swapLlistesOrdre(int i, int j) {
+		synchronized (BIB_LOCK) {
+			Llista a = llistes.get(i);
+			Llista b = llistes.get(j);
+			int ordreA = a.getOrdre();
+			int ordreB = b.getOrdre();
+			try {
+				a.setOrdre(ordreB);
+				b.setOrdre(ordreA);
+				Collections.swap(llistes, i, j);
+				cp.updateLlistaOrdre(a.getId(), ordreB);
+				cp.updateLlistaOrdre(b.getId(), ordreA);
+			} catch (java.sql.SQLException e) {
+				a.setOrdre(ordreA);
+				b.setOrdre(ordreB);
+				Collections.swap(llistes, i, j);
+				throw new BibliotecaException(e.getMessage(), e);
+			}
+		}
+	}
 
 	public java.util.List<Llibre> getRecentlyAdded() {
 		return cp.getRecentlyAdded(20);
@@ -499,17 +499,17 @@ private void swapLlistesOrdre(int i, int j) {
 		return cp.getLlibreBlob(isbn);
 	}
 
-public void setLlibreBlob(long isbn, byte[] blob) {
-        try {
-            cp.setLlibreBlob(isbn, blob);
-            synchronized (BIB_LOCK) {
-                for (Llibre l : bib) {
-                    if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
-                }
-            }
-        }
-        catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
-    }
+	public void setLlibreBlob(long isbn, byte[] blob) {
+		try {
+			cp.setLlibreBlob(isbn, blob);
+			synchronized (BIB_LOCK) {
+				for (Llibre l : bib) {
+					if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+				}
+			}
+		}
+		catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
+	}
 
 	// ── Tag management ─────────────────────────────────────────────────────────
 
