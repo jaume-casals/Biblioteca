@@ -1,25 +1,35 @@
 ================================================================================
  BACKLOG (tot.txt) — Biblioteca
- Generated: 2026-06-08  (replaces separate todo.txt, SESSION4_PLAN.md,
-                        PLAN-REMOVE-WEB.md, plans/remove-web-mode.md, agent-briefs/)
- Status legend: [OPEN] = not yet fixed, [PARTIAL] = partially fixed,
-                [WONT] = out of scope / not pursued.
- Cleanup 2026-06-08: all [DONE] items removed (verified against src/).
+ Generated: 2026-06-09  (replaces single history blob with structured status)
+ Status legend: [DONE] committed, [OPEN] not fixed, [PARTIAL] partially fixed,
+                [WONT] out of scope / not pursued.
+ Priority scale: [1] critical / [2] important / [3] nice-to-have.
+ Audit gates:  `scripts\test.bat`  (Windows)   |   `make test`  (Linux/macOS).
 ================================================================================
 
-Web mode removal: DONE in commits 877f163 / fa32d64. `src/api/` and `src/web/`
-removed; `ModeSelectorDialog`, `ModeButton`, `WebLauncher` deleted. `Ejecutable`
-rejects `--web` and starts Swing. `ConfigDTO.java` kept, Javadoc trimmed.
+================================================================================
+ 1.  REMOVED / NOT IN SCOPE
+================================================================================
 
-Priority scale: [1] critical / [2] important / [3] nice-to-have
+[DONE]   Web / API layer removed (commits 877f163, fa32d64).
+         - src/api/, src/web/ deleted
+         - ModeSelectorDialog, ModeButton, WebLauncher deleted
+         - Ejecutable rejects --web, always starts Swing
+         - ConfigDTO.java kept, Javadoc trimmed
+         - If a new HTTP layer is ever added, the api/* router hardening
+           (404/409/400/500, PNG MIME sniff, sanitized errors, CSRF) must
+           be re-applied — see Session 2 / Session 4 notes for the specifics.
+
+[DONE]   Mode picker removed with the web layer. Ejecutable no longer
+         offers mode choice; --web flag is rejected.
 
 ================================================================================
- SESSIONS — ALREADY DONE  (historical record; see git log for current state)
+ 2.  SESSIONS  (historical record; details in git log)
 ================================================================================
 
 Session 2 (bugs + dead code + test harness):
   - LlibreRouter update/delete/image: 404 not 500, PNG MIME sniff
-  - ApiServer.classify: 404/409/400/500 mapping (now obsolete — api/ removed)
+  - ApiServer.classify: 404/409/400/500 mapping          (obsolete — api/ removed)
   - OpenLibraryClient: empty catch → LOG, interrupt re-thrown, pages null guard
   - TagDao AUTOCOMPLETE_COLUMNS whitelist verified
   - Dead code deleted: 6 interficie, 6 persistencia, 4 api files
@@ -28,26 +38,26 @@ Session 2 (bugs + dead code + test harness):
   - Llibre.setAny: negative-year guard
   - LlibreDao.executeSQLFile: quote-aware split + FORBIDDEN_LEAD blocklist
   - FiltreUtils.matches(): single predicate source
-  - Tests: 7 plain + 10 JUnit 5 (all pass)
+  - Tests: 7 plain + 10 JUnit 5
 
 Session 3 (refactors + I18n + backups):
   - OpenLibraryClient: COVER_BASE/COVER_SIZE + javadoc
   - DialogoError: IS_HEADLESS cached, UIManager warning icon
   - install.sh: Java check + -Xmx512m
-  - ModeSelectorDialog: window-X button SWING default (then file deleted)
+  - ModeSelectorDialog: window-X SWING default             (then file deleted)
   - BookExporter.exportHTML: "La meva biblioteca" → I18n key
   - ShelfParser extracted to domini; BookExporter.exportCSV delegates
   - BookExporter.exportPDF dead wrappers deleted
   - UITheme.rebuildFonts: EDT assertion
-  - HttpRouter: duplicate errCtx.commit() removed (now obsolete — api/ removed)
+  - HttpRouter: duplicate errCtx.commit() removed          (obsolete — api/ removed)
   - BackupService.sqlEsc: \u001A stripped
   - GoodreadsCsvStrategy: Private Notes mapped
-  - AutoCompletion: noted dead, lambdas not needed
-  - I18n: export_html_heading + dlg_export_html_title keys added
+  - AutoCompletion: noted dead (no presentacio callers)
+  - I18n: export_html_heading + dlg_export_html_title keys
   - Tests: 197 plain + 184 JUnit 5
 
-Session 4 (mostly post-SESSION4_PLAN — see Phased order below):
-  - LlibreLlistaContext.isbn → long, of(...) signature long
+Session 4 (post-SESSION4_PLAN — phased items):
+  - LlibreLlistaContext.isbn → long; LlibreLlistaContext.of(...) long
   - LlibreDao.java empty-nom !isBlank() guard
   - CoverService L1 synchronized via L1_LOCK
   - CoverCellRenderer NO_COVER sentinel + convertColumnIndexToView
@@ -74,7 +84,7 @@ Session 4 (mostly post-SESSION4_PLAN — see Phased order below):
   - ServerConect.MIGRATIONS uses record Migration(int version, String sql)
   - BookExporter: any>0 ? any : "" (HTML)
 
-Session 5 (post-tot.txt sweep — see Phased order below):
+Session 5 (post-tot.txt sweep — phased items):
   - ShelfParser.exportToCsv: pw.printf now uses Locale.ROOT (es-ES locale
     was emitting "7,5" / "19,99" which broke re-import to 0.0)
   - Config.save: atomic write via Files.move (REPLACE_EXISTING + ATOMIC_MOVE);
@@ -90,10 +100,9 @@ Session 5 (post-tot.txt sweep — see Phased order below):
   - LlibreValidator.countDig: replaced String.valueOf(n).length() with a
     branchless threshold chain (correct for Long.MAX_VALUE, negative, etc.)
   - LlibreDao.search: instanceof chain replaced with bindParam() pattern-
-    matching switch (null is bound as SQL NULL; unknown types throw with
-    class name)
-  - LlibreDao.executeSQLFile: splitStatements() now scans the whole file
-    in one pass with inQuote state, so ';' inside string literals across
+    matching switch (null → SQL NULL; unknown types throw with class name)
+  - LlibreDao.executeSQLFile: splitStatements() scans the whole file in
+    one pass with inQuote state, so ';' inside string literals across
     lines no longer mis-splits
   - ServerConect.runMigrations: per-engine dispatch (H2 keeps the
     setAutoCommit(false)/commit/rollback wrapper; MariaDB/MySQL takes a
@@ -103,153 +112,246 @@ Session 5 (post-tot.txt sweep — see Phased order below):
   - BackupService.autoBackup: removed redundant Thread.sleep(30_000) —
     scheduleWithFixedDelay already has the 30s initial delay
   - Llibre: new Builder and bindUpdateableFields() helper; all internal
-    callers (LlibreValidator, LlibreDao) now use the builder or the
-    helper. 9-positional-arg ctor kept for backward compat
+    callers (LlibreValidator, LlibreDao) use the builder or the helper.
+    9-positional-arg ctor kept for backward compat.
   - UITheme.FONT_BASE / FONT_BOLD: now private static volatile with
     fontBase() / fontBold() accessors; 16 callers updated
   - strings/ui.csv: added app_title, tab_advanced, val_any_negatiu,
     err_db_connect, err_db_close, dlg_shortcuts_content,
     validation_invalid_number, dlg_restore_title, dlg_backup_title,
-    csv_bad_isbn, export_html_heading keys. Without tab_advanced the
-    DetallesLlibrePanel() constructor threw IllegalStateException in
-    test mode (biblioteca.test=true), which silently broke every
-    "open details" assertion in UIAudit/StressTest.
-  - I18nAudit.loadCsvKeys + auditDuplicateKeys: replaced naive
-    s.split(",", 4) with a quote-aware splitCsvLine() + stripQuotes()
-    helper. The naive split kept the surrounding quotes on the key
-    column, so 26 real keys (e.g. dlg_pdf_title, stats_pace_year)
-    were reported as "missing from CSV" even though they were present.
-  - I18nAudit.auditJavaKeyUsage: now ignores captured keys ending in
-    "_" (e.g. I18n.t("err_db_init_" + cfg.dbType())) — those are
-    concatenation sites, not real keys.
+    csv_bad_isbn, export_html_heading keys
+  - I18nAudit.loadCsvKeys + auditDuplicateKeys: quote-aware splitCsvLine() +
+    stripQuotes() helper. Naive s.split(",", 4) kept the surrounding
+    quotes on the key column, so 26 real keys were reported as "missing
+    from CSV" even though they were present.
+  - I18nAudit.auditJavaKeyUsage: now ignores captured keys ending in "_"
+    (concatenation sites, e.g. I18n.t("err_db_init_" + cfg.dbType())).
   - MainFrameControl JFrame title and AboutDialog header now use
     I18n.t("app_title")
   - LlistesDelLlibreDialog: shelfCheckList now MULTIPLE_INTERVAL_SELECTION
     and pre-selects indices for current shelf memberships
   - ControladorPersistencia: 17-line audit-history comment trimmed to a
     14-line class JavaDoc
-  - I18nAudit: now reports FAIL=0, WARN=1012 (down from FAIL=35, WARN=1036)
-  - Tests: 184 plain + 168 JUnit 5 (all pass)
+  - I18nAudit: FAIL=0, WARN=1012 (down from FAIL=35, WARN=1036)
+
+Session 6 (tot.txt consolidation — 2026-06-09):
+  - MainFramePanel now extends JPanel (was JFrame); chrome lives in
+    MainFrameControl. statusBar gets accessibleName from I18n.t.
+  - GuardarLlibresDialogo: addFieldEntry / addComboEntry / addCheckEntry
+    inlined; now uses presentacio.FormGridBuilder. Still keeps
+    setSize(600, 720) override — tracked below.
+  - Tidy: dead RunI18nAudit.java and i18n_audit_test.txt deleted from
+    repo root (I18nAudit is now driven from checkBiblio/run*.ps1).
 
 ================================================================================
- BUGS (residual)
+ 3.  BUGS  (residual)
 ================================================================================
 
-[PARTIAL] BackupRouter / api/* — REMOVED, no longer in scope (was HIGH security: restore/clear
-       unauth'd; PII in JSON error; CSRF from local page). If a new HTTP layer is ever
-       reintroduced, these must be re-applied.
+[PARTIAL] BackupRouter / api/* security defects  (REMOVED — no longer in scope).
+        Originally: restore/clear unauthenticated; PII in JSON error; CSRF
+        from local page.  If a new HTTP layer is reintroduced, re-apply the
+        Session 2 hardening plan.  See `1. REMOVED / NOT IN SCOPE` above.
 
 ================================================================================
-  DEAD CODE
+ 4.  DEAD CODE
 ================================================================================
 
-[PARTIAL] interficie.BookReader — HALF-MIGRATED: 8 @Deprecated ArrayList methods, ArrayList
-      fields in domain objects. Left untouched (interface change risks breaking callers).
-      Marked as accepted debt.
+[PARTIAL] interficie.BookReader  — current state is a clean interface (no
+        @Deprecated ArrayList methods, no ArrayList fields in domain objects).
+        The "[OPEN] half-migrated" note in older tot.txt is stale; BookReader
+        has no deprecated surface today.  Kept on the list as historical
+        debt marker; no active action required.
 
 ================================================================================
-  ANTI-PATTERNS  (status update)
+ 5.  ANTI-PATTERNS  (status: all OPEN unless noted)
 ================================================================================
 
-[HIGH] Singleton god-object — ControladorDomini — STILL OPEN (60+ public methods,
-       in-memory ArrayList, only path from UI to data).  [OPEN — needs major refactor;
-       documented in Javadoc; sub-facade for navigation would help but not started]
-[HIGH] Singleton god-object — ControladorPersistencia — STILL OPEN but the previous
-       "double-locking" critique was wrong: methods are now uniformly synchronized
-       on the controller, and DAOs do not double-lock.  [OPEN — facade is fine,
-       but no sub-facade for navigation]
-[HIGH] Mutable statics — UITheme.BG_MAIN, ACCENT etc. — STILL OPEN; theme switching
-       reassigns these fields at runtime so they can't be `final`. Marked accepted
-       debt; a Map<Theme, Palette> refactor would touch 273+ call sites.  [OPEN]
-[HIGH] Anemic domain model — Llibre is a pure bean — STILL OPEN.  [OPEN]
-[MED]  Inverted dependency — Llista.setColor / ControladorDomini.setLlistaColor
-       uses FQN `herramienta.I18n.t` rather than an import; coupling is real but
-       minimized. Full fix would move the i18n to the UI caller.  [OPEN — accepted]
-[MED]  Inverted dependency — BackupService (herramienta) uses ControladorPersistencia.
-       Util reaching into persistence.  [OPEN — accepted]
-[MED]  Layer inversion — presentacio/detalles/control/ vs presentacio root vs
-       presentacio/listener/ — inconsistent sub-packages.  [OPEN — accepted]
-[LOW]  Manual re-implementation of Properties in Config.props — STILL OPEN.
-       The ConcurrentHashMap-based props are read often (every Config getter
-       call) and the boot path stays simple; java.util.Properties would
-       need explicit synchronization for the same use.  [OPEN — accepted]
+[HIGH]  Singleton god-object — ControladorDomini — STILL OPEN.
+        60+ public methods, in-memory ArrayList<Llibre|Llista|Tag>, only
+        path from UI to data.  Documented in Javadoc; sub-facade for
+        navigation would help but not started.
+
+[HIGH]  Singleton god-object — ControladorPersistencia — STILL OPEN.
+        Previous "double-locking" critique was wrong: methods are now
+        uniformly synchronized on the controller, and DAOs do not
+        double-lock.  Facade is fine, but no sub-facade for navigation.
+
+[HIGH]  Mutable statics — UITheme.BG_MAIN, ACCENT, etc. — STILL OPEN.
+        Theme switching reassigns these fields at runtime so they can't
+        be `final`.  Accepted debt; a Map<Theme, Palette> refactor would
+        touch 273+ call sites.  Note: UITheme.Palette.java already
+        documents the migration plan; switch in setTheme remains.
+
+[HIGH]  Anemic domain model — Llibre — PARTIALLY OPEN.
+        Llibre now has a Builder, bindUpdateableFields(), addAutorNom,
+        setAutors(), and `isHeavyFieldsLoaded` lifecycle.  Still mostly
+        getter/setter symmetry on ~25 fields; the heavy behaviour
+        (validation, persistence orchestration) lives in LlibreValidator
+        and ControladorDomini.
+
+[MED]   Inverted dependency — Llista.setColor / ControladorDomini.setLlistaColor
+        uses FQN `herramienta.I18n.t` rather than an import.  Coupling is
+        real but minimized.  Full fix would move the i18n to the UI caller.
+
+[MED]   Inverted dependency — BackupService (herramienta) uses
+        ControladorPersistencia.  Util reaching into persistence.
+        Accepted debt.
+
+[MED]   Layer inversion — presentacio/detalles/control/ vs presentacio root
+        vs presentacio/listener/ — inconsistent sub-packages.
+        Accepted debt.
+
+[LOW]   Manual re-implementation of Properties in Config.props — STILL OPEN.
+        ConcurrentHashMap-based props are read often (every Config getter
+        call) and the boot path stays simple; java.util.Properties would
+        need explicit synchronization for the same use.  Accepted debt.
 
 ================================================================================
-  CROSS-CUTTING / NICE-TO-HAVE  (most still OPEN)
+ 6.  CROSS-CUTTING / NICE-TO-HAVE  (most still OPEN)
 ================================================================================
 
-[OPEN] Mixed language: method names Catalan, variable names Spanish
-[OPEN] ISBN used as both Long (domain) and String (table/JSON)
-[OPEN] BibliotecaWriter — single interface for everything
-[OPEN] Perf: getAllLlibres() loads notes/descripcio/imatgeBlob eagerly
-       (loadHeavyFields is the on-demand path; getAll still materialises a list)
-[OPEN] Duplicate utility methods: parseDoubleOrZero, csvQ, parseIsbnParam
-[PARTIAL] Hardcoded Catalan strings check across .java files — I18nAudit
-       flags them with regex; full pass leaves ~30 warning sites
-       (UITheme labels, hex colors, etc.). New occurrences replaced with
-       I18n.t as they're touched.
-[OPEN] ConfigRouter / LlistaRouter / TagRouter long methods
-[PARTIAL] MostrarBibliotecaControl 6 sub-controllers wiring dense — Javadoc
-       on MainFrameControl documents the split; the wiring itself is still
-       dense but each sub-controller is single-purpose
-[OPEN] JsonMapper.llibreToMap duplicates LLIBRE_FIELD_EXTRACTORS
-[OPEN] ServerConect.MIGRATIONS now uses record — but inline SQL strings remain
-       (acceptable; migrations are read rarely and append-only)
-[OPEN] I18n.java 535+ lines of T() calls — should be ResourceBundle
-       (auto-generated from strings/strings.csv; ResourceBundle migration is
-       a generator-script change, not the Java file itself)
-[OPEN] LoanRouter / LlistaRouter / TagRouter getById linear scans
-[OPEN] DateUtils — small class, mostly one-liners; consider inline or expand
-[OPEN] I18n Lang enum / Lang ordinal lookup (magic numbers 0/1/2) — internal
-       switch on `lang` string in langIndex() returns 0/1/2 directly
-[PARTIAL] I18n missing key returns key silently — logs to stderr AND throws
-       IllegalStateException when `biblioteca.test=true` is set
-       (I18n.java:572-575). Production fallback is still silent.
-[OPEN] UITheme rebuildFonts from string — use FontSize enum
-[OPEN] UITheme theme enum 4 values, only 2 surfaced
-[OPEN] UITheme styleAccentButton / styleSecondaryButton in presentacio
-       (UITheme.fontBase()/fontBold() accessors done; button style helpers
-       remain in UITheme.java)
-[OPEN] GoodreadsCsvStrategy canHandle() brittle string match
-[OPEN] MainFrameControl actualitzarLlibre shelf auto-assignment buried
-[OPEN] MainFrameControl getInstance() 3 overloads with guard logic
-[OPEN] MainFramePanel extends JFrame — should be JPanel in JFrame
-[OPEN] GuardarLlibresDialogo builder methods near-identical to DetallesLlibrePanel
-[OPEN] GuardarLlibresDialogo setSize(600, 720) overrides setPreferredSize
-[OPEN] GuardarLlibresDialogo missing fields vs DetallesLlibrePanel
-[OPEN] BookExporter.exportHTML 200 lines inline CSS — extract template
-[OPEN] Good test infra: ~400 lines duplicated between UIAudit and StressTest
-       (extract checkBiblio.UiTestSupport)
+[OPEN]  Mixed language: method names Catalan, variable names Spanish.
+[OPEN]  ISBN used as both Long (domain) and String (table/JSON).
+[OPEN]  BibliotecaWriter — single interface for everything
+        (BookReader / ShelfWriter / TagWriter / BibliotecaAdmin split
+         would clarify the surface; no current need).
+[OPEN]  Perf: getAllLlibres() loads notes/descripcio/imatgeBlob eagerly.
+        loadHeavyFields() is the on-demand path; getAll still materialises
+        the full list.  Fix: introduce a lean getAllLlibresSummary() that
+        skips heavy columns, and have presenters opt in.
+[PARTIAL] Duplicate utility methods:
+        - parseDoubleOrZero: present in herramienta/csv/CsvUtils.java and
+          duplicated as `private static double parseDoubleOrZero` in
+          domini/ShelfParser.java:26  →  consolidate into CsvUtils.
+        - csvQ: only in CsvUtils.java  (no duplicate).
+        - parseIsbnParam: not present anywhere  (stale entry, remove).
+[PARTIAL] Hardcoded Catalan strings across .java files — I18nAudit
+        flags them with regex; full pass leaves ~30 warning sites
+        (UITheme labels, hex colors, etc.).  New occurrences replaced
+        with I18n.t as they're touched.
+[PARTIAL] MostrarBibliotecaControl 6 sub-controllers wiring dense —
+        Javadoc on MainFrameControl documents the split; wiring itself
+        is still dense but each sub-controller is single-purpose.
+[OPEN]  UITheme.rebuildFonts from string — use FontSize enum.
+        FontSize enum exists (herramienta/FontSize.java) but
+        UITheme.rebuildFonts(String) still parses "small"/"medium"/"large"
+        with a ternary.  Replace the String parameter with FontSize.
+[OPEN]  UITheme theme enum has 4 values, only 2 surfaced.
+        Theme.{LIGHT, DARK, SEPIA, OCEAN} exist; LeftSidebarPanel /
+        ConfiguracioDialog only cycle through LIGHT ↔ DARK.  Add a
+        "Display" choice to the theme selector (4-way radio or combobox).
+[OPEN]  UITheme styleAccentButton / styleSecondaryButton live in
+        herramienta.  Used exclusively from presentacio (86 call sites
+        in presentacio/ vs the thin UIComponents wrapper at
+        presentacio/UIComponents.java:15-16).  Move into a
+        presentacio.UIComponents factory, delete from UITheme.
+[OPEN]  GoodreadsCsvStrategy.canHandle() brittle string match
+        (header detection by substring — see canHandle bodies in
+         herramienta/csv/{Goodreads,LibraryThing,Native}CsvStrategy.java).
+        Add a minimum column count + required-column check.
+[OPEN]  MainFrameControl actualitzarLlibre shelf auto-assignment buried
+        (presentacio/MainFrameControl.java:283-297).  Extract a
+        assignToCurrentShelfIfNeeded(Llibre, isNew) helper.
+[OPEN]  MainFrameControl getInstance() 3 overloads with guard logic
+        (lines 188 / 193 / 199).  Use an initialization-on-demand
+        holder and a single getInstance(panel, cd) entry point.
+[OPEN]  GuardarLlibresDialogo setSize(600, 720) overrides setPreferredSize
+        (line 199 — last statement of the constructor).  setPreferredSize
+        on line 63 is ignored once setSize runs.  Use pack() + enforce
+        minimumSize, or remove the setSize line and let the layout work.
+[PARTIAL] GuardarLlibresDialogo missing fields vs DetallesLlibrePanel.
+        textNotes is now present (line 17).  Still missing: paisOrigen,
+        estat, nomCa/nomEs/nomEn, exemplars.  Only the create-book flow
+        is affected; edit-book flow (DetallesLlibrePanel) is full.
+[OPEN]  BookExporter.exportHTML ~15 lines of inline CSS in
+        HTML_CSS constant (herramienta/BookExporter.java:64-79) plus
+        ~190 lines of HTML emission in exportHTML body.  Extract the
+        template (use a Mustache/Handlebars-style helper, or split into
+        header / card / footer builders with the CSS in a constants file).
+[OPEN]  Good test infra: ~400 lines duplicated between UIAudit and
+        StressTest.  Extract checkBiblio.UiTestSupport.
+[OPEN]  ControladorDomini.getLlistaById / getTagById linear scans
+        (domini/ControladorDomini.java:298-303 and 443-447).  Both walk
+        the in-memory ArrayList; for libraries with thousands of shelves/
+        tags this is still O(n).  Use a Map<Integer, Llista|Tag> mirror.
+        Note: stale entries "LoanRouter / LlistaRouter / TagRouter getById"
+        in older tot.txt referenced api/ classes that no longer exist;
+        ignore.
+[OPEN]  DateUtils — small class, mostly one-liners.  Three methods:
+        parseYear, normalizeDate, formatDateForDisplay.  Used in 7 call
+        sites.  Decision: keep as-is (clearly bounded utility, 7
+        dependents, no business logic to inline).
+[OPEN]  I18n Lang enum / Lang ordinal lookup  — magic numbers 0/1/2.
+        langIndex() at I18n.java:615-619 returns 0/1/2 directly.  Introduce
+        a Lang enum (CA, ES, EN) and use Lang.values()[idx].  Trivial
+        change; mostly a readability win.
 
 ================================================================================
-  SUMMARY  (as of 2026-06-08 cleanup)
+ 7.  CHECKBIBLIO  (audit & stress harness)
 ================================================================================
 
-Web / API layer: REMOVED. If a future HTTP layer is added, re-apply the
-ApiServer.classify + auth/CSRF + sanitized-error plan from SESSION4_PLAN Phase 4.
+[DONE]   UIAudit / I18nAudit / StressTest integrated with biblioteca.h2.url
+        system property.  Headless guards in place.
 
-OPEN items by area:
-  - Domini: 1 — ControladorDomini god-class refactor (deferred: needs a
-    sub-facade for navigation); binarySearch → DB → in-memory race window
-    is documented in Javadoc (accepted debt).
-  - Anti-patterns: 4 high (UITheme mutable palette, Config manual props,
-    BackupService→Persistencia inverted dep, Llista.setColor inverted dep,
-    Llibre anemic domain model) + 3 med (BackupService→Persistencia, layer
-    inversion, manual Properties) — all marked accepted debt with rationale.
-  - Cross-cutting / nice-to-have: ~25 open (mostly long-tail refactors
-    that don't affect correctness — mixed language, ISBN type duality,
-    I18n ResourceBundle migration, MainFramePanel JFrame, etc.).
-  - BUGS: 1 [PARTIAL] (api/ removal, no longer in scope).
-  - DEAD CODE: 1 [PARTIAL] (interficie.BookReader half-migration).
-  - checkBiblio: 0.
+[OPEN]   UIAudit: extract checkBiblio.UiTestSupport (duplication with
+         StressTest — see "Good test infra" above).
 
-StressTest / UIAudit (2026-06-08 follow-up):
-  - I18nAudit: was reporting 35 false-positive FAILs (quote-stripping
-    bug in loadCsvKeys) + 9 real missing keys. Fixed the parser and
-    added the 9 real keys (tab_advanced, val_any_negatiu,
-    err_db_connect, err_db_close, dlg_shortcuts_content,
-    validation_invalid_number, dlg_restore_title, dlg_backup_title,
-    csv_bad_isbn, export_html_heading). The tab_advanced key was the
-    silent culprit: its absence made DetallesLlibrePanel() throw
-    IllegalStateException under biblioteca.test=true, breaking every
-    "open details" assertion in UIAudit and StressTest.
+[OPEN]   I18nAudit.auditDuplicateKeys: not yet implemented (only
+         loadCsvKeys + auditJavaKeyUsage + auditHardcodedCatalan exist).
+
+================================================================================
+ 8.  CONFIG / RUNTIME
+================================================================================
+
+[DONE]   Config.save: atomic write via Files.move (REPLACE_EXISTING +
+        ATOMIC_MOVE); new flushNow(); shutdown hook for SAVE_SCHEDULER.
+
+[DONE]   scripts/compile.bat, scripts/test.bat, scripts/trace_run.bat added
+        so Windows users do not need a Makefile.  checkBiblio/run.ps1 and
+        checkBiblio/run2.ps1 mirror the Linux shell wrappers.
+
+================================================================================
+ 9.  TESTS
+================================================================================
+
+Current state (last `scripts\test.bat` run, 2026-06-09):
+  - 184 plain tests passing  (test/BibliotecaTest.java)
+  - 168 JUnit 5 tests passing (test/BibliotecaJUnit5Test.java +
+                                test/DominiPersistenciaJUnit5Test.java)
+  - 0 failures, 0 skipped.
+
+Required gate:  `scripts\test.bat`  (Windows)  |  `make test`  (Linux/macOS)
+must be green before merging any code change.
+
+================================================================================
+ 10.  SUMMARY  (as of 2026-06-09)
+================================================================================
+
+Web / API layer:  REMOVED.  (Re-apply Session 2 hardening if reintroduced.)
+
+Bug surface:      1 [PARTIAL] (api/ security — out of scope until/unless
+                   HTTP layer is reintroduced).
+
+Dead code:        1 [PARTIAL] (BookReader historical debt marker; no
+                   active action).
+
+Anti-patterns:    3 [HIGH] (ControladorDomini god-class, ControladorPersistencia
+                   god-class, UITheme mutable statics — all accepted debt
+                   with documented rationale), 1 [HIGH PARTIAL] (Llibre
+                   anemic — improved with Builder / bindUpdateableFields
+                   but mostly getter/setter), 3 [MED] (Llista.setColor
+                   FQN i18n, BackupService→Persistencia dep, layer
+                   inversion), 1 [LOW] (Config manual props).
+
+Cross-cutting:    ~20 open items.  Most are long-tail refactors that don't
+                   affect correctness (mixed language, ISBN type duality,
+                   I18n ResourceBundle migration, MainFramePanel JFrame
+                   already done, etc.).  The cleanest wins to take next:
+                     - parseDoubleOrZero dedup (ShelfParser → CsvUtils)
+                     - UITheme.rebuildFonts(String) → rebuildFonts(FontSize)
+                     - MainFrameControl.getInstance() overloads
+                     - ControladorDomini.get{Llista,Tag}ById linear scans
+                     - GuardarLlibresDialogo setSize(600,720) override
+
+checkBiblio:      0 open.  1 [OPEN] for shared UiTestSupport extraction
+                   (see "Good test infra").
