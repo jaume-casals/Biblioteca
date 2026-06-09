@@ -54,7 +54,7 @@ public class Llibre {
 		target.isbn = isbn;
 		target.nom = nom;
 		target.autor = autor;
-		target.any = any;
+		target.setAny(any);
 		target.descripcio = descripcio;
 		target.valoracio = valoracio;
 		target.preu = preu;

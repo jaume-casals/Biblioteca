@@ -29,6 +29,20 @@ public class DetallesLlibrePanelControl {
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
 
+	private static Integer parseIntOrNull(String s) {
+		if (s == null) return null;
+		String t = s.trim();
+		if (t.isEmpty()) return null;
+		try { return Integer.parseInt(t); } catch (NumberFormatException e) { return null; }
+	}
+
+	private static Double parseDoubleOrNull(String s) {
+		if (s == null) return null;
+		String t = s.trim();
+		if (t.isEmpty()) return null;
+		try { return Double.parseDouble(t); } catch (NumberFormatException e) { return null; }
+	}
+
 	private static final int IMG_W = 200;
 	private static final int MAX_DESCRIPTION_CHARS = 120;
 	private static final int MAX_NOTES_CHARS = 200;
@@ -123,7 +137,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextPortada().setText(l.getImatge() != null ? l.getImatge() : "");
 		this.vista.getTextPreu().setText(java.util.Objects.toString(l.getPreu(), ""));
 		this.vista.getTextValoracio().setText(java.util.Objects.toString(l.getValoracio(), ""));
-		this.vista.getChckLlegit().setSelected(l.getLlegit());
+		this.vista.getChckLlegit().setSelected(Boolean.TRUE.equals(l.getLlegit()));
 		this.vista.getTextNotes().setText(l.getNotes());
 		this.vista.getTextEditorial().setText(l.getEditorial() != null ? l.getEditorial() : "");
 		this.vista.getTextSerie().setText(l.getSerie() != null ? l.getSerie() : "");
@@ -221,7 +235,8 @@ public class DetallesLlibrePanelControl {
 
 	private void imprimirFitxa(Llibre l) {
 		java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
-		job.setJobName(l.getNom().toString());
+		String nom = l.getNom() == null ? "" : l.getNom().toString();
+		job.setJobName(nom);
 		job.setPrintable((graphics, pageFormat, pageIndex) -> {
 			if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
 			java.awt.Graphics2D g2 = (java.awt.Graphics2D) graphics;
@@ -229,7 +244,7 @@ public class DetallesLlibrePanelControl {
 			double w = pageFormat.getImageableWidth();
 			int x = 0, y = 0, lineH = 18;
 			g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 16));
-			g2.drawString(l.getNom().toString(), x, y += 20);
+			g2.drawString(nom, x, y += 20);
 			g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
 			g2.drawString(I18n.t("field_author") + ": " + l.getAutor(), x, y += lineH + 4);
 			g2.drawString("ISBN: " + l.getISBN(), x, y += lineH);
@@ -325,9 +340,11 @@ public class DetallesLlibrePanelControl {
 				try {
 					Llibre a = LlibreValidator.checkLlibre(Long.parseLong(vista.getTextISBN().getText()),
 							vista.getTextNom().getText(), vista.getTextAutor().getText(),
-							Integer.parseInt(vista.getTextAny().getText()), vista.getTextDescripcio().getText(),
-							Double.parseDouble(vista.getTextValoracio().getText()),
-							Double.parseDouble(vista.getTextPreu().getText()), vista.getChckLlegit().isSelected(),
+							parseIntOrNull(vista.getTextAny().getText()),
+							vista.getTextDescripcio().getText(),
+							parseDoubleOrNull(vista.getTextValoracio().getText()),
+							parseDoubleOrNull(vista.getTextPreu().getText()),
+							vista.getChckLlegit().isSelected(),
 							vista.getTextPortada().getText());
 					a.setEditorial(vista.getTextEditorial().getText().trim());
 					a.setSerie(vista.getTextSerie().getText().trim());

@@ -20,6 +20,14 @@ set RC1=%ERRORLEVEL%
 echo === Running BibliotecaJUnit5Test (JUnit 5) ===
 java -Dbiblioteca.test=true -Dbiblioteca.h2.url="jdbc:h2:mem:junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" -jar lib\junit-platform-console-standalone-1.11.4.jar execute --select-class=BibliotecaJUnit5Test --details=summary --classpath "%CP%"
 set RC2=%ERRORLEVEL%
+echo === Running DominiPersistenciaJUnit5Test (JUnit 5) ===
+java -Dbiblioteca.test=true -Dbiblioteca.h2.url="jdbc:h2:mem:domini_persistencia_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" -jar lib\junit-platform-console-standalone-1.11.4.jar execute --select-class=DominiPersistenciaJUnit5Test --details=summary --classpath "%CP%"
+set RC3=%ERRORLEVEL%
+echo === Running RestoreSqlJUnit5Test (JUnit 5) ===
+java -Dbiblioteca.test=true -Dbiblioteca.h2.url="jdbc:h2:mem:restore_sql_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" -jar lib\junit-platform-console-standalone-1.11.4.jar execute --select-class=RestoreSqlJUnit5Test --details=summary --classpath "%CP%"
+set RC4=%ERRORLEVEL%
 if not "%RC1%"=="0" exit /b %RC1%
 if not "%RC2%"=="0" exit /b %RC2%
+if not "%RC3%"=="0" exit /b %RC3%
+if not "%RC4%"=="0" exit /b %RC4%
 exit /b 0

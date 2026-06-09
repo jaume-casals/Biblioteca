@@ -62,6 +62,16 @@ test: compile test-deps
 	    -jar $(JUNIT5_STANDALONE) execute \
 	    --select-class=BibliotecaJUnit5Test --details=summary \
 	    --classpath bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/assertj-core-3.26.3.jar
+	@java -Dbiblioteca.test=true \
+	    -Dbiblioteca.h2.url="jdbc:h2:mem:domini_persistencia_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    --select-class=DominiPersistenciaJUnit5Test --details=summary \
+	    --classpath bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/assertj-core-3.26.3.jar
+	@java -Dbiblioteca.test=true \
+	    -Dbiblioteca.h2.url="jdbc:h2:mem:restore_sql_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    --select-class=RestoreSqlJUnit5Test --details=summary \
+	    --classpath bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/assertj-core-3.26.3.jar
 
 # Optional UI audit (requires display; skipped in headless CI unless DISPLAY set)
 audit: compile

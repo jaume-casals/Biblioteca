@@ -20,6 +20,17 @@ public class ControladorDomini implements BibliotecaWriter {
 	private ArrayList<Llista> llistes;
 	private ArrayList<Tag> tags;
 
+	/**
+	 * Lock que protegeix totes les lectures i mutacions de les llistes en memòria
+	 * ({@link #bib}, {@link #llistes}, {@link #tags}). Les crides a
+	 * {@link ControladorPersistencia} ja estan sincronitzades pel seu propi
+	 * controlador; aquest lock només cobreix l'estat in-memory. S'adquireix des
+	 * de qualsevol fil (EDT inclòs) i de fons (per exemple
+	 * {@code ExportController.fetchMissingCovers} que dispara 8 fils
+	 * concurrents contra {@link #setLlibreBlob}).
+	 */
+	private final Object BIB_LOCK = new Object();
+
 	private static final Comparator<Llibre> compararISBN =
 		(a, b) -> {
 			Long ia = a.getISBN(), ib = b.getISBN();
@@ -78,8 +89,10 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f) {
-		if (bib.size() >= SQL_FILTER_THRESHOLD) return searchLlibresSQL(f);
-		return filterInMemory(bib, f);
+		synchronized (BIB_LOCK) {
+			if (bib.size() >= SQL_FILTER_THRESHOLD) return searchLlibresSQL(f);
+			return filterInMemory(bib, f);
+		}
 	}
 
 	// SQL fallback only applies to the full library (1-arg overload). This overload always filters in-memory.
@@ -125,32 +138,40 @@ public class ControladorDomini implements BibliotecaWriter {
 	public int countLlibresDB() { return cp.countLlibres(); }
 
 	/** True when the library is large enough to benefit from SQL-side operations. */
-	public boolean isLargeLibrary() { return bib.size() >= SQL_FILTER_THRESHOLD; }
+	public boolean isLargeLibrary() { synchronized (BIB_LOCK) { return bib.size() >= SQL_FILTER_THRESHOLD; } }
 
 	public java.util.List<Llibre> getAllLlibres() {
-		return new ArrayList<>(bib);
+		synchronized (BIB_LOCK) {
+			return new ArrayList<>(bib);
+		}
 	}
 
 	public java.util.List<Llibre> getUnmodifiableLlibres() {
-		return Collections.unmodifiableList(bib);
+		synchronized (BIB_LOCK) {
+			return Collections.unmodifiableList(new ArrayList<>(bib));
+		}
 	}
 
 	public java.util.List<Llibre> get10Llibres() {
-		return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
+		synchronized (BIB_LOCK) {
+			return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
+		}
 	}
 
 public java.util.List<Llibre> get100Llibres(int index) { // Starts from index*100
-        int from = Math.min(100 * index, bib.size());
-        int to = Math.min(from + 100, bib.size());
-        return new ArrayList<>(bib.subList(from, to));
+        synchronized (BIB_LOCK) {
+            int from = Math.min(100 * index, bib.size());
+            int to = Math.min(from + 100, bib.size());
+            return new ArrayList<>(bib.subList(from, to));
+        }
     }
 
 public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
-        return Math.max(0, (bib.size() - 1) / 100);
+        synchronized (BIB_LOCK) { return Math.max(0, (bib.size() - 1) / 100); }
     }
 
 	public int getSize() {
-		return bib.size();
+		synchronized (BIB_LOCK) { return bib.size(); }
 	}
 
 	/**
@@ -166,12 +187,14 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	 * de duplicats a nivell d'INSERT.
 	 */
 	public void addLlibre(Llibre l) {
-		int pos = Collections.binarySearch(bib, l, compararISBN);
-		if (pos >= 0)
-			throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
-		try { cp.afegirLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		pos = -(pos + 1);
-		bib.add(pos, l);
+		synchronized (BIB_LOCK) {
+			int pos = Collections.binarySearch(bib, l, compararISBN);
+			if (pos >= 0)
+				throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
+			try { cp.afegirLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+			pos = -(pos + 1);
+			bib.add(pos, l);
+		}
 	}
 
 	/**
@@ -182,10 +205,12 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	 * no és atòmica — veure {@link #addLlibre(Llibre)}.
 	 */
 	public void deleteLlibre(Llibre l) {
-		int pos = Collections.binarySearch(bib, l, compararISBN);
-		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
-		try { cp.eliminarLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		bib.remove(pos);
+		synchronized (BIB_LOCK) {
+			int pos = Collections.binarySearch(bib, l, compararISBN);
+			if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
+			try { cp.eliminarLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+			bib.remove(pos);
+		}
 	}
 
 	/**
@@ -197,27 +222,36 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	 */
 	public void deleteLlibre(Long ISBN) {
 		if (ISBN == null) throw new BibliotecaException.Validation("ISBN no pot ser null");
-		int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
-		if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
-		try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		bib.remove(pos);
+		synchronized (BIB_LOCK) {
+			int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
+			if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
+			try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+			bib.remove(pos);
+		}
 	}
 
 	public void updateLlibre(Llibre l) {
 		try { cp.updateLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		int pos = Collections.binarySearch(bib, l, compararISBN);
-		if (pos >= 0) bib.set(pos, l);
+		synchronized (BIB_LOCK) {
+			int pos = Collections.binarySearch(bib, l, compararISBN);
+			if (pos >= 0) bib.set(pos, l);
+		}
 	}
 
 	public boolean existsLlibre(long ISBN) {
-		return Collections.binarySearch(bib, searchKey(ISBN), compararISBN) >= 0;
+		synchronized (BIB_LOCK) {
+			return Collections.binarySearch(bib, searchKey(ISBN), compararISBN) >= 0;
+		}
 	}
 
 	public Llibre getLlibre(long ISBN) {
-		int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
-		if (index < 0)
-			throw new BibliotecaException.NotFound("No existeix el llibre amb ISBN " + ISBN);
-		Llibre l = bib.get(index);
+		Llibre l;
+		synchronized (BIB_LOCK) {
+			int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
+			if (index < 0)
+				throw new BibliotecaException.NotFound("No existeix el llibre amb ISBN " + ISBN);
+			l = bib.get(index);
+		}
 		if (!l.isHeavyFieldsLoaded()) loadHeavyFields(l);
 		return l;
 	}
@@ -227,8 +261,10 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		if (book == null || book.isHeavyFieldsLoaded()) return;
 		try {
 			cp.loadHeavyFields(book.getISBN(), book);
-			int index = Collections.binarySearch(bib, book, compararISBN);
-			if (index >= 0) bib.set(index, book);
+			synchronized (BIB_LOCK) {
+				int index = Collections.binarySearch(bib, book, compararISBN);
+				if (index >= 0) bib.set(index, book);
+			}
 		} catch (RuntimeException e) {
 			throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.getISBN(), e);
 		}
@@ -275,18 +311,22 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 				throw new BibliotecaException("Restore failed: " + e.getMessage(), e);
 			}
 		} catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
-		bib = new ArrayList<>(cp.getAllLlibres());
-		if (bib.isEmpty()) throw new BibliotecaException("Restore completat però no s'han carregat llibres — el fitxer pot estar buit o corrupte");
-		Collections.sort(bib, compararISBN);
-		llistes = new ArrayList<>(cp.getAllLlistes());
-		tags = new ArrayList<>(cp.getAllTags());
+		synchronized (BIB_LOCK) {
+			bib = new ArrayList<>(cp.getAllLlibres());
+			if (bib.isEmpty()) throw new BibliotecaException("Restore completat però no s'han carregat llibres — el fitxer pot estar buit o corrupte");
+			Collections.sort(bib, compararISBN);
+			llistes = new ArrayList<>(cp.getAllLlistes());
+			tags = new ArrayList<>(cp.getAllTags());
+		}
 	}
 
 	public void clearAll() {
 		try { cp.clearAllData(); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		bib.clear();
-		llistes.clear();
-		tags.clear();
+		synchronized (BIB_LOCK) {
+			bib.clear();
+			llistes.clear();
+			tags.clear();
+		}
 	}
 
 	public long getDbSizeBytes() { return cp.getDbSizeBytes(); }
@@ -296,7 +336,9 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	public java.util.List<Llista> getAllLlistes() { return new java.util.ArrayList<>(llistes); }
 
 	public Llista getLlistaById(int id) throws Exception {
-		for (Llista l : llistes) if (l.getId() == id) return l;
+		synchronized (BIB_LOCK) {
+			for (Llista l : llistes) if (l.getId() == id) return l;
+		}
 		throw new BibliotecaException.NotFound("Shelf not found: " + id);
 	}
 
@@ -305,20 +347,22 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		try {
 			int id = cp.createLlista(nom);
 			Llista l = new Llista(id, nom);
-			llistes.add(l);
+			synchronized (BIB_LOCK) { llistes.add(l); }
 			return l;
 		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
 	public void deleteLlista(Llista llista) {
 		try { cp.deleteLlista(llista.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		llistes.remove(llista);
+		synchronized (BIB_LOCK) { llistes.remove(llista); }
 	}
 
 	public void renameLlista(int id, String newNom) {
 		if (newNom == null || newNom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
 		try { cp.renameLlista(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		llistes.stream().filter(l -> l.getId() == id).findFirst().ifPresent(l -> l.setNom(newNom));
+		synchronized (BIB_LOCK) {
+			llistes.stream().filter(l -> l.getId() == id).findFirst().ifPresent(l -> l.setNom(newNom));
+		}
 	}
 
 	public int getCountInLlista(int llistaId) { return cp.getCountInLlista(llistaId); }
@@ -359,27 +403,31 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 	}
 
 	private int indexOfLlista(int id) {
-		for (int i = 0; i < llistes.size(); i++)
-			if (llistes.get(i).getId() == id) return i;
+		synchronized (BIB_LOCK) {
+			for (int i = 0; i < llistes.size(); i++)
+				if (llistes.get(i).getId() == id) return i;
+		}
 		return -1;
 	}
 
 private void swapLlistesOrdre(int i, int j) {
-        Llista a = llistes.get(i);
-        Llista b = llistes.get(j);
-        int ordreA = a.getOrdre();
-        int ordreB = b.getOrdre();
-        try {
-            a.setOrdre(ordreB);
-            b.setOrdre(ordreA);
-            Collections.swap(llistes, i, j);
-            cp.updateLlistaOrdre(a.getId(), ordreB);
-            cp.updateLlistaOrdre(b.getId(), ordreA);
-        } catch (java.sql.SQLException e) {
-            a.setOrdre(ordreA);
-            b.setOrdre(ordreB);
-            Collections.swap(llistes, i, j);
-            throw new BibliotecaException(e.getMessage(), e);
+        synchronized (BIB_LOCK) {
+            Llista a = llistes.get(i);
+            Llista b = llistes.get(j);
+            int ordreA = a.getOrdre();
+            int ordreB = b.getOrdre();
+            try {
+                a.setOrdre(ordreB);
+                b.setOrdre(ordreA);
+                Collections.swap(llistes, i, j);
+                cp.updateLlistaOrdre(a.getId(), ordreB);
+                cp.updateLlistaOrdre(b.getId(), ordreA);
+            } catch (java.sql.SQLException e) {
+                a.setOrdre(ordreA);
+                b.setOrdre(ordreB);
+                Collections.swap(llistes, i, j);
+                throw new BibliotecaException(e.getMessage(), e);
+            }
         }
     }
 
@@ -391,8 +439,10 @@ private void swapLlistesOrdre(int i, int j) {
 		if (!Llista.isValidColor(color))
 			throw new BibliotecaException.Validation(herramienta.I18n.t("val_color_invalid", color));
 		try { cp.updateLlistaColor(id, color); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		for (Llista l : llistes) {
-			if (l.getId() == id) { l.setColor(color); break; }
+		synchronized (BIB_LOCK) {
+			for (Llista l : llistes) {
+				if (l.getId() == id) { l.setColor(color); break; }
+			}
 		}
 	}
 
@@ -429,8 +479,10 @@ private void swapLlistesOrdre(int i, int j) {
 public void setLlibreBlob(long isbn, byte[] blob) {
         try {
             cp.setLlibreBlob(isbn, blob);
-            for (Llibre l : bib) {
-                if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+            synchronized (BIB_LOCK) {
+                for (Llibre l : bib) {
+                    if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+                }
             }
         }
         catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
@@ -441,7 +493,9 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 	public java.util.List<Tag> getAllTags() { return new java.util.ArrayList<>(tags); }
 
 	public Tag getTagById(int id) throws Exception {
-		for (Tag t : tags) if (t.getId() == id) return t;
+		synchronized (BIB_LOCK) {
+			for (Tag t : tags) if (t.getId() == id) return t;
+		}
 		throw new BibliotecaException.NotFound("Tag not found: " + id);
 	}
 
@@ -450,19 +504,21 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 		try {
 			int id = cp.createTag(nom);
 			Tag t = new Tag(id, nom);
-			tags.add(t);
+			synchronized (BIB_LOCK) { tags.add(t); }
 			return t;
 		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
 	public void deleteTag(Tag tag) {
 		try { cp.deleteTag(tag.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		tags.remove(tag);
+		synchronized (BIB_LOCK) { tags.remove(tag); }
 	}
 
 	public void renameTag(int id, String newNom) {
 		try { cp.renameTag(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		for (Tag t : tags) { if (t.getId() == id) { t.setNom(newNom); break; } }
+		synchronized (BIB_LOCK) {
+			for (Tag t : tags) { if (t.getId() == id) { t.setNom(newNom); break; } }
+		}
 	}
 
 	public java.util.Set<Long> getLlibresWithTag(int tagId) { return cp.getLlibresWithTag(tagId); }
@@ -512,7 +568,9 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 			default                -> null;
 		};
 		if (extractor != null) {
-			return bib.stream()
+			java.util.List<Llibre> snapshot;
+			synchronized (BIB_LOCK) { snapshot = new ArrayList<>(bib); }
+			return snapshot.stream()
 				.map(extractor)
 				.filter(s -> s != null && !s.isEmpty())
 				.distinct()
@@ -524,7 +582,9 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	public java.util.List<String> getDistinctAutorNames() {
 		java.util.TreeSet<String> names = new java.util.TreeSet<>();
-		for (Llibre l : bib) {
+		java.util.List<Llibre> snapshot;
+		synchronized (BIB_LOCK) { snapshot = new ArrayList<>(bib); }
+		for (Llibre l : snapshot) {
 			java.util.List<String> a = l.getAutors();
 			if (a != null && !a.isEmpty()) {
 				a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);

@@ -64,8 +64,12 @@ public class Ejecutable {
                     try {
                         cdRef.set(ControladorDomini.getInstance());
                     } catch (RuntimeException e) {
-                        javax.swing.JOptionPane.showMessageDialog(null, e.getMessage());
-                        System.exit(1);
+                        final String msg = e.getMessage();
+                        EventQueue.invokeLater(() -> {
+                            javax.swing.JOptionPane.showMessageDialog(null, msg);
+                            System.exit(1);
+                        });
+                        return;
                     }
                     EventQueue.invokeLater(() -> {
                         splash.hide();

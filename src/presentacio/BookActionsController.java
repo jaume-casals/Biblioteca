@@ -102,7 +102,12 @@ class BookActionsController {
         if (JOptionPane.showConfirmDialog(state.vista, msg, I18n.t("dlg_confirm_delete_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         List<Long> isbns = new ArrayList<>();
-        for (int row : rows) isbns.add(Long.parseLong((String) t.getValueAt(row, TableController.COL_ISBN)));
+        for (int row : rows) {
+            Object cell = t.getValueAt(row, TableController.COL_ISBN);
+            if (!(cell instanceof String) && !(cell instanceof Number)) continue;
+            try { isbns.add(Long.parseLong(cell.toString())); }
+            catch (NumberFormatException nfe) { /* skip non-numeric cell */ }
+        }
         for (long isbn : isbns) {
             try {
                 Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);

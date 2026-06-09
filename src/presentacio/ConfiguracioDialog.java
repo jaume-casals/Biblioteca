@@ -168,21 +168,36 @@ public class ConfiguracioDialog extends JDialog {
 		btnTestConn.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			String dbType = external ? "mariadb" : "h2";
-			try {
-				java.util.Properties testProps = new java.util.Properties();
-				testProps.setProperty("dbType", dbType);
-				if (external) {
-					testProps.setProperty("dbHost", txtHost.getText().trim());
-					testProps.setProperty("dbUser", txtUser.getText().trim());
-					testProps.setProperty("dbPassword", new String(txtPass.getPassword()));
-				}
-				java.sql.Connection conn = persistencia.ServerConect.testConnection(testProps);
-				conn.close();
-				JOptionPane.showMessageDialog(this, t("dlg_connection_ok"), t("dlg_connection_title"), JOptionPane.INFORMATION_MESSAGE);
-			} catch (Exception ex) {
-				JOptionPane.showMessageDialog(this, t("dlg_connection_fail") + "\n" + ex.getMessage(),
-					t("dlg_connection_title"), JOptionPane.ERROR_MESSAGE);
+			java.util.Properties testProps = new java.util.Properties();
+			testProps.setProperty("dbType", dbType);
+			if (external) {
+				testProps.setProperty("dbHost", txtHost.getText().trim());
+				testProps.setProperty("dbUser", txtUser.getText().trim());
+				testProps.setProperty("dbPassword", new String(txtPass.getPassword()));
 			}
+			btnTestConn.setEnabled(false);
+			btnTestConn.setText(t("btn_test_connection") + "…");
+			new SwingWorker<Void, Void>() {
+				@Override protected Void doInBackground() throws Exception {
+					java.sql.Connection conn = persistencia.ServerConect.testConnection(testProps);
+					conn.close();
+					return null;
+				}
+				@Override protected void done() {
+					btnTestConn.setEnabled(true);
+					btnTestConn.setText(t("btn_test_connection"));
+					try {
+						get();
+						JOptionPane.showMessageDialog(ConfiguracioDialog.this, t("dlg_connection_ok"),
+							t("dlg_connection_title"), JOptionPane.INFORMATION_MESSAGE);
+					} catch (Exception ex) {
+						Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+						JOptionPane.showMessageDialog(ConfiguracioDialog.this,
+							t("dlg_connection_fail") + "\n" + cause.getMessage(),
+							t("dlg_connection_title"), JOptionPane.ERROR_MESSAGE);
+					}
+				}
+			}.execute();
 		});
 
 		Runnable updateFields = () -> {

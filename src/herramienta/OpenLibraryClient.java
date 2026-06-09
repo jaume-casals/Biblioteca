@@ -180,7 +180,7 @@ public class OpenLibraryClient {
 			LOG.log(Level.FINE, "fetchCoverByISBN primary URL failed for " + isbn, e);
 		} finally {
 			if (conn != null) {
-				try { conn.getErrorStream().close(); } catch (Exception ignored) {}
+				try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
 				conn.disconnect();
 			}
 		}
@@ -238,7 +238,7 @@ public class OpenLibraryClient {
 		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 		int code = conn.getResponseCode();
 		if (code != 200) {
-			try { conn.getErrorStream().close(); } catch (Exception ignored) {}
+			try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
 			conn.disconnect();
 			throw new java.io.IOException("HTTP " + code);
 		}

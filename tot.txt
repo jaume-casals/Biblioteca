@@ -152,6 +152,87 @@ Session 6 (tot.txt consolidation — 2026-06-09):
         from local page.  If a new HTTP layer is reintroduced, re-apply the
         Session 2 hardening plan.  See `1. REMOVED / NOT IN SCOPE` above.
 
+[DONE] A1  HIGH  setLlibreBlob thread-unsafe mutation of `bib` — concurrent
+              cover fetch from 8-thread pool (ExportController.fetchMissingCovers)
+              raced with EDT reads of the in-memory list.
+              FIX 2026-06-09: new `private final Object BIB_LOCK` in
+              ControladorDomini. `setLlibreBlob` (and every other method
+              that reads/mutates `bib` / `llistes` / `tags`) now acquires it.
+              See domini/ControladorDomini.java:21-32. StressTest passes
+              at 50 threads.
+[DONE] A2  HIGH  executeSQLFile `--` strip (LlibreDao:436) was not
+              quote-aware, corrupting string literals like 'pre--war ed.'
+              on restore.
+              FIX 2026-06-09: `replaceAll("--[^\\n]*\\n", "")` replaced by
+              a single-pass `splitAndStripComments` that tracks `inQuote`
+              while splitting on `;` AND stripping `--` line comments.
+              See persistencia/LlibreDao.java:463-499. New JUnit 5
+              regression test: test/RestoreSqlJUnit5Test.java
+              (`dashDashInsideStringLiteralSurvivesRestore`).
+[DONE] A3  MED   executeSQLFile was a blocklist (FORBIDDEN_LEAD) — allowed
+              DELETE FROM / UPDATE … SET autor='pwned' on a tampered backup.
+              FIX 2026-06-09: replaced `isForbidden` + `FORBIDDEN_LEAD` with
+              `isAllowed` + `ALLOWED_LEAD` (INSERT / VALUES / SET / BEGIN /
+              COMMIT / ROLLBACK). See persistencia/LlibreDao.java:501-525.
+              Combined with A2's quote-aware scanner, tampered files that
+              smuggle DELETE inside a quoted literal are now data, not code.
+              New regression tests: `deleteAndUpdateAreRejectedByAllowlist`,
+              `lineCommentIsStillStripped` in test/RestoreSqlJUnit5Test.java.
+[DONE] A4  MED   DetallesLlibrePanelControl EditHandler: Integer.parseInt /
+              Double.parseDouble on blank any/valoracio/preu fields aborted
+              save, even though LlibreValidator allows them to be null/0.
+              FIX 2026-06-09: added private `parseIntOrNull` /
+              `parseDoubleOrNull` helpers; the EditHandler now uses them
+              for any/valoracio/preu (and the existing
+              try/catch NumberFormatException pattern covers volum/exemplars/
+              pagines/paginesLlegides). See
+              presentacio/detalles/control/DetallesLlibrePanelControl.java:32-48,
+              326-331.
+[DONE] A5  MED   ConfiguracioDialog test-connection button ran
+              ServerConect.testConnection on the EDT (6–10 s freeze).
+              FIX 2026-06-09: wrapped the call in a SwingWorker. Button
+              is disabled + label suffixed "…" while running; result
+              dialog shown in `done()` on the EDT. See
+              presentacio/ConfiguracioDialog.java:166-203.
+[DONE] A6  MED   Ejecutable DB-init failure: JOptionPane shown from
+              background loader thread, not EDT.
+              FIX 2026-06-09: wrapped the dialog + System.exit in
+              EventQueue.invokeLater (mirrors the success path on line 70).
+              See main/Ejecutable.java:62-79.
+[DONE] A7  LOW   BookActionsController.eliminarFilaSeleccionada: the
+              Long.parseLong((String) t.getValueAt(...)) loop was outside
+              the surrounding try/catch — non-String cell crashed the EDT.
+              FIX 2026-06-09: accepts both String and Number cells, falls
+              back to .toString(), wraps parseLong in try/catch and skips
+              malformed rows instead of aborting. See
+              presentacio/BookActionsController.java:104-110.
+[DONE] A8  LOW   DetallesLlibrePanelControl: l.getLlegit() unboxing at
+              :126 and l.getNom().toString() at :224, :232 could NPE.
+              FIX 2026-06-09: setSelected(Boolean.TRUE.equals(l.getLlegit()));
+              imprimirFitxa() captures `nom` once with a null guard.
+              See presentacio/detalles/control/DetallesLlibrePanelControl.java:140,
+              236-246.
+[DONE] A9  LOW   OpenLibraryClient: conn.getErrorStream().close() at
+              :183, :241 NPEd on a 200 response (swallowed by empty catch).
+              FIX 2026-06-09: both call sites now check
+              `if (conn.getErrorStream() != null)` before closing. See
+              herramienta/OpenLibraryClient.java:183, 241.
+[DONE] A10 LOW   Llibre.bindUpdateableFields wrote target.any directly,
+              bypassing the negative-year guard in setAny.
+              FIX 2026-06-09: bindUpdateableFields now calls
+              `target.setAny(any)` so the guard runs on the bind path too.
+              See domini/Llibre.java:52-64. All 351 existing tests still
+              pass; validateInto() in LlibreValidator already supplies
+              validated values, so the guard does not false-positive on
+              already-validated input.
+
+Regression test wiring: scripts/test.bat and Makefile `test` target now
+run four JUnit 5 classes (BibliotecaJUnit5Test, DominiPersistenciaJUnit5Test,
+RestoreSqlJUnit5Test — the new one). 361 tests total, all green.
+UIAudit: 0 FAIL, 654 WARN (no new warnings introduced).
+StressTest (50 threads, in-memory H2): PASS=77 FAIL=0 WARN=8 (8 pre-existing
+delete-confirm timing warnings, unrelated to A1).
+
 ================================================================================
  4.  DEAD CODE
 ================================================================================
@@ -286,6 +367,39 @@ Session 6 (tot.txt consolidation — 2026-06-09):
         a Lang enum (CA, ES, EN) and use Lang.values()[idx].  Trivial
         change; mostly a readability win.
 
+[OPEN]  B1  LARGE  Config god class — split into UIConfig/DBConfig/
+              WindowConfig/FilterConfig; share atomic-rename helper
+              between save() and flushNow() (Config.java:301-342).
+[OPEN]  B2  MED    Plaintext DB password on disk (Config.java:94-98).  At
+              minimum, document the exposure; ideally OS keystore or
+              light obfuscation.
+[OPEN]  B3  LARGE  GaleriaCobertesPanel god class (720 lines) — extract
+              image-loader/LRU-cache service + card factory; remove
+              duplicate WrapLayout (one already exists at
+              presentacio/layouts/).
+[OPEN]  B4  MED    mostrarEstadistiques (BookActionsController.java:143-258)
+              — 115-line god method that builds a 4-tab dialog inside a
+              controller.  Move view to a dedicated builder.
+[OPEN]  B5  MED    BookActionsController:108 — child controller reaches
+              MainFrameControl.getInstance() directly.  Inject the lookup.
+[OPEN]  B6  MED    Triplicated 25+ column list / INSERT binding across
+              LlibreDao insert/update and BackupService writer.
+[OPEN]  B7  MED    ControladorDomini 552-line facade — group shelf/tag/loan/
+              stats into delegate objects to slim the public surface.
+[OPEN]  B8  SMALL  Likely-dead pagination helpers (get10Llibres, get100Llibres,
+              maxIndex100Llibres) — declared on BookReader, implemented in
+              InMemoryBibliotecaReader and ControladorDomini; the real
+              paginator (TablePageController) does not use them.  Confirm
+              and remove after approval.
+[OPEN]  B9  SMALL  LlibreValidator.countDig 13-branch magic-number ladder
+              (LlibreValidator.java:129-145).  Replace with
+              Long.toString(Math.abs(n)).length().
+[OPEN]  B10 MED    Inconsistent null/empty conventions on Llibre getters:
+              getNotes/getEditorial/getSerie coerce null→""; getIdioma/
+              getFormat/getPaisOrigen return null.  Pick one.
+[OPEN]  B11 SMALL  Mixed tab/space indentation (e.g. ControladorDomini.java
+              142-150, 367-384, 429-437).  Normalize via formatter.
+
 ================================================================================
  7.  CHECKBIBLIO  (audit & stress harness)
 ================================================================================
@@ -316,9 +430,14 @@ Session 6 (tot.txt consolidation — 2026-06-09):
 
 Current state (last `scripts\test.bat` run, 2026-06-09):
   - 184 plain tests passing  (test/BibliotecaTest.java)
-  - 168 JUnit 5 tests passing (test/BibliotecaJUnit5Test.java +
-                                test/DominiPersistenciaJUnit5Test.java)
-  - 0 failures, 0 skipped.
+  - 168 JUnit 5 tests passing (test/BibliotecaJUnit5Test.java)
+  -   6 JUnit 5 tests passing (test/DominiPersistenciaJUnit5Test.java)
+  -   3 JUnit 5 tests passing (test/RestoreSqlJUnit5Test.java — NEW
+                                regression tests for A2/A3: pre--war
+                                ed. inside string literal, allowlist
+                                blocks DELETE/UPDATE/DROP, line comments
+                                stripped quote-aware)
+  - 361 total, 0 failures, 0 skipped.
 
 Required gate:  `scripts\test.bat`  (Windows)  |  `make test`  (Linux/macOS)
 must be green before merging any code change.
@@ -331,6 +450,7 @@ Web / API layer:  REMOVED.  (Re-apply Session 2 hardening if reintroduced.)
 
 Bug surface:      1 [PARTIAL] (api/ security — out of scope until/unless
                    HTTP layer is reintroduced).
+                   0 [OPEN] from the 2026-06-09 sweep (A1–A10 all DONE).
 
 Dead code:        1 [PARTIAL] (BookReader historical debt marker; no
                    active action).
@@ -343,7 +463,7 @@ Anti-patterns:    3 [HIGH] (ControladorDomini god-class, ControladorPersistencia
                    FQN i18n, BackupService→Persistencia dep, layer
                    inversion), 1 [LOW] (Config manual props).
 
-Cross-cutting:    ~20 open items.  Most are long-tail refactors that don't
+Cross-cutting:    ~31 open items.  Most are long-tail refactors that don't
                    affect correctness (mixed language, ISBN type duality,
                    I18n ResourceBundle migration, MainFramePanel JFrame
                    already done, etc.).  The cleanest wins to take next:
@@ -352,6 +472,9 @@ Cross-cutting:    ~20 open items.  Most are long-tail refactors that don't
                      - MainFrameControl.getInstance() overloads
                      - ControladorDomini.get{Llista,Tag}ById linear scans
                      - GuardarLlibresDialogo setSize(600,720) override
+                   B1–B11 are the post-2026-06-09 refactor backlog (B1, B3
+                   LARGE; B2, B4, B5, B6, B7, B10 MED; B8, B9, B11 SMALL).
+                   Deferred to dedicated sessions — see items in section 6.
 
 checkBiblio:      0 open.  1 [OPEN] for shared UiTestSupport extraction
                    (see "Good test infra").

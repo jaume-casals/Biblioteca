@@ -433,13 +433,12 @@ public class LlibreDao {
                 throw new RuntimeException(e);
             }
             String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-            content = content.replaceAll("--[^\\n]*\\n", "");
-            java.util.List<String> statements = splitStatements(content);
+            java.util.List<String> statements = splitAndStripComments(content);
             try (Statement st = con.createStatement()) {
                 for (String s : statements) {
                     String trimmed = s.trim();
                     if (trimmed.isEmpty()) continue;
-                    if (isForbidden(trimmed)) continue;
+                    if (!isAllowed(trimmed)) continue;
                     st.execute(trimmed);
                 }
             }
@@ -447,32 +446,51 @@ public class LlibreDao {
     }
 
     /**
-     * Splits a SQL script into individual statements. The whole file is scanned
-     * in a single pass; a state flag tracks whether the cursor is inside a
-     * single-quoted string literal so that a {@code ;} or newline inside the
-     * literal does not terminate the statement. Two consecutive single quotes
-     * inside a literal (the standard SQL escape for one quote) are kept
-     * verbatim and do not close the literal.
+     * Single-pass SQL scanner: splits the file into statements on top-level
+     * {@code ;} <em>and</em> strips {@code --} line comments, both honouring
+     * SQL single-quoted string literals.
+     *
+     * <p>Quote-aware behaviour matters because backup rows commonly contain
+     * values like {@code 'pre--war ed.'}; a naive
+     * {@code replaceAll("--[^\\n]*\\n", "")} on the whole file would corrupt
+     * the value at the first {@code --} it finds. The same {@code inQuote}
+     * flag that protects {@code ;} from terminating a statement inside a
+     * literal also protects {@code --} from being interpreted as a comment
+     * marker when it is just data. Two consecutive single quotes inside a
+     * literal (the standard SQL escape for one quote) are kept verbatim and
+     * do not close the literal.
      */
-    private static java.util.List<String> splitStatements(String sql) {
+    private static java.util.List<String> splitAndStripComments(String sql) {
         java.util.List<String> stmts = new java.util.ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inQuote = false;
         for (int i = 0; i < sql.length(); i++) {
             char c = sql.charAt(i);
-            if (c == '\'') {
-                if (inQuote && i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
-                    current.append("''");
-                    i++;
+            if (inQuote) {
+                if (c == '\'') {
+                    if (i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+                        current.append("''");
+                        i++;
+                    } else {
+                        inQuote = false;
+                        current.append(c);
+                    }
                 } else {
-                    inQuote = !inQuote;
                     current.append(c);
                 }
-            } else if (c == ';' && !inQuote) {
-                stmts.add(current.toString());
-                current = new StringBuilder();
             } else {
-                current.append(c);
+                if (c == '\'') {
+                    inQuote = true;
+                    current.append(c);
+                } else if (c == ';' ) {
+                    stmts.add(current.toString());
+                    current = new StringBuilder();
+                } else if (c == '-' && i + 1 < sql.length() && sql.charAt(i + 1) == '-') {
+                    while (i < sql.length() && sql.charAt(i) != '\n') i++;
+                    if (i < sql.length()) current.append('\n');
+                } else {
+                    current.append(c);
+                }
             }
         }
         String remaining = current.toString().trim();
@@ -481,22 +499,34 @@ public class LlibreDao {
     }
 
     /**
-     * Block statements that would mutate the schema or change the active DB.
-     * Backup files are user-controlled text — a tampered file could otherwise
-     * drop tables or switch databases. The check is the first non-space token
-     * followed by a space; case-insensitive.
+     * Allow-list of SQL statement types acceptable in a backup file.
+     *
+     * <p>Backup files are user-controlled text and {@link #executeSQLFile}
+     * runs each statement verbatim through {@link Statement#execute}, so a
+     * block-list (e.g. "block DROP, ALTER, …") is not safe — any statement
+     * type the author forgets to block goes through, including
+     * {@code DELETE FROM llibre} or {@code UPDATE llibre SET autor='pwned'}.
+     * An allow-list inverts the default: anything not explicitly listed is
+     * rejected. The first non-space token must match one of
+     * {@link #ALLOWED_LEAD}. Comparison is case-insensitive.
+     *
+     * <p>Combined with the quote-aware {@link #splitAndStripComments}, a
+     * tampered file that smuggles {@code DELETE} inside a quoted literal is
+     * still just data inside an allowed {@code INSERT}.
+     *
+     * <p>SECURITY: do not relax this list without re-reading the threat
+     * model above.
      */
-    private static boolean isForbidden(String sql) {
+    private static boolean isAllowed(String sql) {
         String upper = sql.toUpperCase(java.util.Locale.ROOT);
-        for (String kw : FORBIDDEN_LEAD) {
+        for (String kw : ALLOWED_LEAD) {
             if (upper.startsWith(kw)) return true;
         }
         return false;
     }
 
-    private static final String[] FORBIDDEN_LEAD = {
-        "USE ", "CREATE DATABASE", "DROP DATABASE", "DROP TABLE", "DROP SCHEMA",
-        "ALTER ", "TRUNCATE ", "RENAME ", "GRANT ", "REVOKE ", "SHUTDOWN"
+    private static final String[] ALLOWED_LEAD = {
+        "INSERT ", "VALUES ", "SET ", "BEGIN", "COMMIT", "ROLLBACK"
     };
 
     @FunctionalInterface private interface SqlWork { void run() throws SQLException; }
