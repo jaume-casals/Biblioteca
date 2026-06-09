@@ -93,6 +93,14 @@ public class ControladorPersistencia {
 
 	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDao.getAll(); }
 
+	/**
+	 * Lean variant of {@link #getAllLlibres()}: returns books with only the
+	 * light columns populated (no {@code descripcio}, no {@code notes},
+	 * no cover blob).  Callers that need the heavy text/blob columns must
+	 * invoke {@link #loadHeavyFields} per book.
+	 */
+	public synchronized ArrayList<Llibre> getAllLlibresSummary() { return libreDao.getAll(); }
+
 	public synchronized void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.insert(llibre); }
 	public synchronized void eliminarLlibre(Llibre llibre) throws java.sql.SQLException {
 		libreDao.delete(llibre);

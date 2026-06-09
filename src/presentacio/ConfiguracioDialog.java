@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.Frame;
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
@@ -133,7 +136,7 @@ public class ConfiguracioDialog extends JDialog {
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblTipus = new JLabel(t("lbl_type"));
-		UITheme.styleLabel(lblTipus);
+		UIComponents.styleLabel(lblTipus);
 		JComboBox<String> cmbType = new JComboBox<>(new String[]{
 			t("opt_h2_full"), t("opt_mariadb_full")
 		});
@@ -142,21 +145,21 @@ public class ConfiguracioDialog extends JDialog {
 		cmbType.putClientProperty("id", "cmbType");
 
 		JLabel lblHost = new JLabel(t("lbl_server"));
-		UITheme.styleLabel(lblHost);
+		UIComponents.styleLabel(lblHost);
 		JTextField txtHost = new JTextField(Config.getDbHost());
-		UITheme.styleField(txtHost);
+		UIComponents.styleField(txtHost);
 		txtHost.putClientProperty("id", "txtHost");
 
 		JLabel lblUser = new JLabel(t("lbl_user"));
-		UITheme.styleLabel(lblUser);
+		UIComponents.styleLabel(lblUser);
 		JTextField txtUser = new JTextField(Config.getDbUser());
-		UITheme.styleField(txtUser);
+		UIComponents.styleField(txtUser);
 		txtUser.putClientProperty("id", "txtUser");
 
 		JLabel lblPass = new JLabel(t("lbl_password"));
-		UITheme.styleLabel(lblPass);
+		UIComponents.styleLabel(lblPass);
 		JPasswordField txtPass = new JPasswordField(Config.getDbPassword());
-		UITheme.styleField(txtPass);
+		UIComponents.styleField(txtPass);
 		txtPass.putClientProperty("id", "txtPass");
 
 		JLabel lblDbNote = new JLabel(t("lbl_db_restart"));
@@ -164,7 +167,7 @@ public class ConfiguracioDialog extends JDialog {
 		lblDbNote.setForeground(UITheme.TEXT_MID);
 
 		JButton btnTestConn = new JButton(t("btn_test_connection"));
-		UITheme.styleSecondaryButton(btnTestConn);
+		UIComponents.styleSecondaryButton(btnTestConn);
 		btnTestConn.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			String dbType = external ? "mariadb" : "h2";
@@ -256,13 +259,13 @@ public class ConfiguracioDialog extends JDialog {
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblImgDir = new JLabel(t("lbl_default_folder"));
-		UITheme.styleLabel(lblImgDir);
+		UIComponents.styleLabel(lblImgDir);
 		JTextField txtImgDir = new JTextField(Config.getDefaultImgDir());
-		UITheme.styleField(txtImgDir);
+		UIComponents.styleField(txtImgDir);
 		txtImgDir.putClientProperty("id", "txtImgDir");
 
 		JButton btnExplorar = new JButton("...");
-		UITheme.styleSecondaryButton(btnExplorar);
+		UIComponents.styleSecondaryButton(btnExplorar);
 		btnExplorar.addActionListener(e -> {
 			JFileChooser fc = new JFileChooser(txtImgDir.getText());
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -300,7 +303,7 @@ public class ConfiguracioDialog extends JDialog {
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblTheme = new JLabel(t("lbl_theme"));
-		UITheme.styleLabel(lblTheme);
+		UIComponents.styleLabel(lblTheme);
 		herramienta.UITheme.Theme[] themeValues = herramienta.UITheme.Theme.values();
 		String[] themeLabels = new String[themeValues.length];
 		for (int i = 0; i < themeValues.length; i++) themeLabels[i] = themeValues[i].displayName();
@@ -312,7 +315,7 @@ public class ConfiguracioDialog extends JDialog {
 		cmbTheme.putClientProperty("id", "cmbTheme");
 
 		JLabel lblFont = new JLabel(t("lbl_font_size"));
-		UITheme.styleLabel(lblFont);
+		UIComponents.styleLabel(lblFont);
 		String[] fontSizeLabels = {t("opt_small"), t("opt_medium"), t("opt_large")};
 		String[] fontSizeKeys = {"small", "medium", "large"};
 		JComboBox<String> cmbFont = new JComboBox<>(fontSizeLabels);
@@ -323,7 +326,7 @@ public class ConfiguracioDialog extends JDialog {
 		cmbFont.putClientProperty("id", "cmbFont");
 
 		JLabel lblCurrency = new JLabel(t("lbl_currency_symbol"));
-		UITheme.styleLabel(lblCurrency);
+		UIComponents.styleLabel(lblCurrency);
 		String[] currencySymbols = {"€", "$", "£", "¥", "CHF"};
 		JComboBox<String> cmbCurrency = new JComboBox<>(currencySymbols);
 		cmbCurrency.setFont(UITheme.fontBase());
@@ -333,13 +336,13 @@ public class ConfiguracioDialog extends JDialog {
 		cmbCurrency.putClientProperty("id", "cmbCurrency");
 
 		JLabel lblDefVal = new JLabel(t("lbl_default_rating"));
-		UITheme.styleLabel(lblDefVal);
+		UIComponents.styleLabel(lblDefVal);
 		JTextField txtDefVal = new JTextField(String.valueOf(Config.getDefaultValoracio()));
-		UITheme.styleField(txtDefVal);
+		UIComponents.styleField(txtDefVal);
 		txtDefVal.putClientProperty("id", "txtDefVal");
 
 		JLabel lblDefValHint = new JLabel("(0.0 – 10.0)");
-		UITheme.styleLabel(lblDefValHint);
+		UIComponents.styleLabel(lblDefValHint);
 
 		gl.setHorizontalGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING)
 			.addComponent(lblSeccio)
@@ -382,7 +385,7 @@ public class ConfiguracioDialog extends JDialog {
 		gl.setAutoCreateContainerGaps(true);
 
 		JLabel lblLang = new JLabel(t("lbl_language_setting"));
-		UITheme.styleLabel(lblLang);
+		UIComponents.styleLabel(lblLang);
 		String[] langLabels = {t("opt_lang_ca"), t("opt_lang_es"), t("opt_lang_en")};
 		String[] langKeys = {"ca", "es", "en"};
 		JComboBox<String> cmbLang = new JComboBox<>(langLabels);
@@ -417,7 +420,7 @@ public class ConfiguracioDialog extends JDialog {
 		lblSeccio.setForeground(UITheme.ACCENT);
 
 		JLabel lblDbSize = new JLabel(t("lbl_db_size"));
-		UITheme.styleLabel(lblDbSize);
+		UIComponents.styleLabel(lblDbSize);
 		JLabel lblDbSizeVal = new JLabel("...");
 		lblDbSizeVal.setFont(UITheme.fontBase());
 		lblDbSizeVal.setForeground(UITheme.TEXT_DARK);
@@ -466,7 +469,7 @@ public class ConfiguracioDialog extends JDialog {
 		});
 
 		JButton btnPerfils = new JButton(t("btn_gestio_perfils"));
-		UITheme.styleSecondaryButton(btnPerfils);
+		UIComponents.styleSecondaryButton(btnPerfils);
 		btnPerfils.setToolTipText(t("tip_gestio_perfils"));
 		btnPerfils.addActionListener(e -> {
 			if (!"h2".equals(Config.getDbType())) {
@@ -534,7 +537,7 @@ public class ConfiguracioDialog extends JDialog {
 		String[] langKeys = {"ca", "es", "en"};
 
 		JButton btnGuardar = new JButton(t("btn_save"));
-		UITheme.styleAccentButton(btnGuardar);
+		UIComponents.styleAccentButton(btnGuardar);
 		btnGuardar.addActionListener(e -> {
 			boolean external = cmbType.getSelectedIndex() == 1;
 			String prevDbType = Config.getDbType();
@@ -586,7 +589,7 @@ public class ConfiguracioDialog extends JDialog {
 		});
 
 		JButton btnCancel = new JButton(t("btn_cancel"));
-		UITheme.styleSecondaryButton(btnCancel);
+		UIComponents.styleSecondaryButton(btnCancel);
 		btnCancel.addActionListener(e -> dispose());
 
 		gl.setHorizontalGroup(gl.createSequentialGroup()

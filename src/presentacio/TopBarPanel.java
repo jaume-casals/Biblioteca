@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 
@@ -35,7 +38,7 @@ public class TopBarPanel extends JPanel {
 		searchWrap.setBackground(UITheme.BG_PANEL);
 		searchBar = new JTextField();
 		searchBar.setToolTipText(I18n.t("tip_search_bar"));
-		UITheme.styleField(searchBar);
+		UIComponents.styleField(searchBar);
 		searchWrap.add(searchBar, BorderLayout.CENTER);
 		add(searchWrap, BorderLayout.CENTER);
 
@@ -43,22 +46,22 @@ public class TopBarPanel extends JPanel {
 		rightBtns.setBackground(UITheme.BG_PANEL);
 
 		btnToggleFiltres = new JButton(I18n.t("btn_toggle_filtres_lbl"));
-		UITheme.styleSecondaryButton(btnToggleFiltres);
+		UIComponents.styleSecondaryButton(btnToggleFiltres);
 		btnToggleFiltres.setToolTipText(I18n.t("tip_toggle_filtres"));
 		rightBtns.add(btnToggleFiltres);
 
 		btnToggleVista = new JButton(I18n.t("btn_toggle_vista_lbl"));
-		UITheme.styleSecondaryButton(btnToggleVista);
+		UIComponents.styleSecondaryButton(btnToggleVista);
 		btnToggleVista.setToolTipText(I18n.t("tip_toggle_vista"));
 		rightBtns.add(btnToggleVista);
 
 		btnGroupSeries = new JButton(I18n.t("btn_group_series_lbl"));
-		UITheme.styleSecondaryButton(btnGroupSeries);
+		UIComponents.styleSecondaryButton(btnGroupSeries);
 		btnGroupSeries.setToolTipText(I18n.t("tip_group_series"));
 		rightBtns.add(btnGroupSeries);
 
 		btnNouLlibre = new JButton(I18n.t("btn_nou_llibre_short"));
-		UITheme.styleAccentButton(btnNouLlibre);
+		UIComponents.styleAccentButton(btnNouLlibre);
 		btnNouLlibre.setToolTipText(I18n.t("tip_nou_llibre_short"));
 		rightBtns.add(btnNouLlibre);
 
@@ -66,11 +69,11 @@ public class TopBarPanel extends JPanel {
 	}
 
 	public void applyTheme() {
-		UITheme.styleField(searchBar);
-		UITheme.styleAccentButton(btnNouLlibre);
-		UITheme.styleSecondaryButton(btnToggleFiltres);
-		UITheme.styleSecondaryButton(btnToggleVista);
-		UITheme.styleSecondaryButton(btnGroupSeries);
+		UIComponents.styleField(searchBar);
+		UIComponents.styleAccentButton(btnNouLlibre);
+		UIComponents.styleSecondaryButton(btnToggleFiltres);
+		UIComponents.styleSecondaryButton(btnToggleVista);
+		UIComponents.styleSecondaryButton(btnGroupSeries);
 	}
 
 	public JTextField getSearchBar()          { return searchBar; }

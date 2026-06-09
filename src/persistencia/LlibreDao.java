@@ -155,36 +155,8 @@ public class LlibreDao {
                     "`idioma`,`format`,`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`," +
                     "`nom_ca`,`nom_es`,`nom_en`) " +
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")) {
-                ps.setLong(1, ll.getISBN());
-                ps.setString(2, ll.getNom());
-                ps.setInt(3, ll.getAny() != null ? ll.getAny() : 0);
-                ps.setString(4, ll.getDescripcio() != null ? ll.getDescripcio() : "");
-                ps.setDouble(5, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
-                ps.setDouble(6, ll.getPreu() != null ? ll.getPreu() : 0.0);
-                ps.setBoolean(7, Boolean.TRUE.equals(ll.getLlegit()));
-                ps.setString(8, ll.getImatge() != null ? ll.getImatge() : "");
-                ps.setBytes(9, ll.getImatgeBlob());
-                ps.setString(10, ll.getNotes());
-                ps.setInt(11, ll.getPagines());
-                ps.setInt(12, ll.getPaginesLlegides());
-                ps.setString(13, ll.getEditorial());
-                ps.setString(14, ll.getSerie());
-                ps.setInt(15, ll.getVolum());
-                String dc = ll.getDataCompra(), dl = ll.getDataLectura();
-                if (dc != null) { try { ps.setDate(16, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(16, java.sql.Types.DATE); } }
-                else ps.setNull(16, java.sql.Types.DATE);
-                if (dl != null) { try { ps.setDate(17, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(17, java.sql.Types.DATE); } }
-                else ps.setNull(17, java.sql.Types.DATE);
-                if (ll.getIdioma() != null) ps.setString(18, ll.getIdioma()); else ps.setNull(18, java.sql.Types.VARCHAR);
-                if (ll.getFormat() != null) ps.setString(19, ll.getFormat()); else ps.setNull(19, java.sql.Types.VARCHAR);
-                ps.setBoolean(20, ll.getDesitjat());
-                if (ll.getPaisOrigen() != null) ps.setString(21, ll.getPaisOrigen()); else ps.setNull(21, java.sql.Types.VARCHAR);
-                if (ll.getEstat() != null) ps.setString(22, ll.getEstat()); else ps.setNull(22, java.sql.Types.VARCHAR);
-                ps.setInt(23, Math.max(1, ll.getExemplars()));
-                if (ll.getLlenguaOriginal() != null) ps.setString(24, ll.getLlenguaOriginal()); else ps.setNull(24, java.sql.Types.VARCHAR);
-                if (ll.getNomCa() != null && !ll.getNomCa().isBlank()) ps.setString(25, ll.getNomCa()); else ps.setNull(25, java.sql.Types.VARCHAR);
-                if (ll.getNomEs() != null && !ll.getNomEs().isBlank()) ps.setString(26, ll.getNomEs()); else ps.setNull(26, java.sql.Types.VARCHAR);
-                if (ll.getNomEn() != null && !ll.getNomEn().isBlank()) ps.setString(27, ll.getNomEn()); else ps.setNull(27, java.sql.Types.VARCHAR);
+                Object[] vals = LlibreFieldBindings.forInsert(ll);
+                for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
                 ps.execute();
             }
             java.util.List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()
@@ -202,35 +174,9 @@ public class LlibreDao {
                     "`data_compra`=?,`data_lectura`=?,`idioma`=?,`format`=?,`desitjat`=?,`pais_origen`=?," +
                     "`estat`=?,`exemplars`=?,`llengua_original`=?," +
                     "`nom_ca`=?,`nom_es`=?,`nom_en`=? WHERE `ISBN`=?")) {
-                ps.setString(1, ll.getNom());
-                ps.setInt(2, ll.getAny() != null ? ll.getAny() : 0);
-                ps.setString(3, ll.getDescripcio() != null ? ll.getDescripcio() : "");
-                ps.setDouble(4, ll.getValoracio() != null ? ll.getValoracio() : 0.0);
-                ps.setDouble(5, ll.getPreu() != null ? ll.getPreu() : 0.0);
-                ps.setBoolean(6, Boolean.TRUE.equals(ll.getLlegit()));
-                ps.setString(7, ll.getImatge() != null ? ll.getImatge() : "");
-                ps.setString(8, ll.getNotes());
-                ps.setInt(9, ll.getPagines());
-                ps.setInt(10, ll.getPaginesLlegides());
-                ps.setString(11, ll.getEditorial());
-                ps.setString(12, ll.getSerie());
-                ps.setInt(13, ll.getVolum());
-                String dc = ll.getDataCompra(), dl = ll.getDataLectura();
-                if (dc != null) { try { ps.setDate(14, java.sql.Date.valueOf(dc)); } catch (IllegalArgumentException e) { ps.setNull(14, java.sql.Types.DATE); } }
-                else ps.setNull(14, java.sql.Types.DATE);
-                if (dl != null) { try { ps.setDate(15, java.sql.Date.valueOf(dl)); } catch (IllegalArgumentException e) { ps.setNull(15, java.sql.Types.DATE); } }
-                else ps.setNull(15, java.sql.Types.DATE);
-                if (ll.getIdioma() != null) ps.setString(16, ll.getIdioma()); else ps.setNull(16, java.sql.Types.VARCHAR);
-                if (ll.getFormat() != null) ps.setString(17, ll.getFormat()); else ps.setNull(17, java.sql.Types.VARCHAR);
-                ps.setBoolean(18, ll.getDesitjat());
-                if (ll.getPaisOrigen() != null) ps.setString(19, ll.getPaisOrigen()); else ps.setNull(19, java.sql.Types.VARCHAR);
-                if (ll.getEstat() != null) ps.setString(20, ll.getEstat()); else ps.setNull(20, java.sql.Types.VARCHAR);
-                ps.setInt(21, Math.max(1, ll.getExemplars()));
-                if (ll.getLlenguaOriginal() != null) ps.setString(22, ll.getLlenguaOriginal()); else ps.setNull(22, java.sql.Types.VARCHAR);
-                if (ll.getNomCa() != null && !ll.getNomCa().isBlank()) ps.setString(23, ll.getNomCa()); else ps.setNull(23, java.sql.Types.VARCHAR);
-                if (ll.getNomEs() != null && !ll.getNomEs().isBlank()) ps.setString(24, ll.getNomEs()); else ps.setNull(24, java.sql.Types.VARCHAR);
-                if (ll.getNomEn() != null && !ll.getNomEn().isBlank()) ps.setString(25, ll.getNomEn()); else ps.setNull(25, java.sql.Types.VARCHAR);
-                ps.setLong(26, ll.getISBN());
+                Object[] vals = LlibreFieldBindings.forUpdate(ll);
+                for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
+                ps.setLong(vals.length + 1, ll.getISBN());
                 ps.execute();
             }
             java.util.List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()

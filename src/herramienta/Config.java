@@ -16,24 +16,101 @@ import java.util.concurrent.TimeUnit;
  * Façana estàtica sobre les propietats de configuració (tema, idioma, BBDD,
  * geometria de finestra, etc.).
  *
- * <p><b>TODO (refactor):</b> 303 línies, getters/setters plans per a 4
- * dominis diferents (UI, DB, Window, Filter). La refactorització natural
- * seria:
+ * <p>El magatzem intern està organitzat en 4 sub-maps (un per domini:
+ * UI, DB, Window, Filter) que es carreguen i es serialitzen junts.  El
+ * getter/setter API continua sent estàtic sobre {@code Config} per
+ * compatibilitat — les classes {@link UiConfig}, {@link DbConfig},
+ * {@link WindowConfig} en són vistes tipades.
+ *
+ * <p>Layout intern (sub-maps):
  * <ul>
- *   <li>{@code UIConfig}: tema, fontSize, idioma, currency, defaultValoracio, presets</li>
- *   <li>{@code DBConfig}: dbHost, dbUser, dbPassword, dbType, dbPath, profiles</li>
- *   <li>{@code WindowConfig}: windowX/Y/Width/Height, maximitzada, darrera pestanya</li>
- *   <li>{@code FilterConfig}: defaultImgDir, defaultSearchMode, presetCount</li>
+ *   <li>{@code UI_STORE}: tema, fontSize, lang, currency, defaultValoracio, presets,
+ *       readingGoal, viewMode, galleryZoom, sortColumn, sortOrder</li>
+ *   <li>{@code DB_STORE}: dbHost, dbUser, dbPassword, dbType, dbProfile</li>
+ *   <li>{@code WINDOW_STORE}: windowX/Y/Width/Height, windowMaximized, colWidth_*, colVisible_*</li>
+ *   <li>{@code FILTER_STORE}: defaultImgDir</li>
  * </ul>
- * {@code Config} es queda com a façana que delega. Fins llavors, els
- * comentaris de secció més avall permeten navegar mentalment quin getter
- * pertany a quin sub-domini.
  */
 public class Config {
 
     private Config() {}
 
-    private static final ConcurrentHashMap<String, String> props = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> UI_STORE     = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> DB_STORE     = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> WINDOW_STORE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> FILTER_STORE = new ConcurrentHashMap<>();
+
+    /** Domain tag used to route a key to the right sub-store on read/write. */
+    public enum Domain { UI, DB, WINDOW, FILTER }
+
+    /** Internal: write a key into a specific domain store. */
+    static void putIn(Domain d, String key, String val) {
+        switch (d) {
+            case UI:     UI_STORE.put(key, val); break;
+            case DB:     DB_STORE.put(key, val); break;
+            case WINDOW: WINDOW_STORE.put(key, val); break;
+            case FILTER: FILTER_STORE.put(key, val); break;
+        }
+    }
+
+    /** Internal: read a key from a specific domain store. */
+    static String getFrom(Domain d, String key) {
+        switch (d) {
+            case UI:     return UI_STORE.get(key);
+            case DB:     return DB_STORE.get(key);
+            case WINDOW: return WINDOW_STORE.get(key);
+            case FILTER: return FILTER_STORE.get(key);
+        }
+        return null;
+    }
+
+    /** Domain of a key.  Unknown keys land in the FILTER store. */
+    private static Domain domainOf(String key) {
+        if (UI_KEYS.contains(key))         return Domain.UI;
+        if (DB_KEYS.contains(key))         return Domain.DB;
+        if (WINDOW_KEYS.contains(key))     return Domain.WINDOW;
+        if (FILTER_KEYS.contains(key))     return Domain.FILTER;
+        if (key.startsWith("colWidth_") || key.startsWith("colVisible_")) return Domain.WINDOW;
+        if (key.startsWith("preset."))     return Domain.UI;
+        return Domain.FILTER;
+    }
+
+    private static final java.util.Set<String> UI_KEYS = java.util.Set.of(
+        "theme", "darkMode", "fontSize", "lang", "currencySymbol",
+        "defaultValoracio", "presetCount", "readingGoal", "viewMode",
+        "galleryZoom", "sortColumn", "sortOrder");
+    private static final java.util.Set<String> DB_KEYS = java.util.Set.of(
+        "dbHost", "dbUser", "dbPassword", "dbType", "dbProfile");
+    private static final java.util.Set<String> WINDOW_KEYS = java.util.Set.of(
+        "windowX", "windowY", "windowWidth", "windowHeight", "windowMaximized");
+    private static final java.util.Set<String> FILTER_KEYS = java.util.Set.of(
+        "defaultImgDir");
+
+    /** Composite view used by the existing file-load/save paths.  Iterating
+     *  it walks all 4 sub-stores; puts route to the domain-aware store. */
+    static final Map<String, String> props = new java.util.AbstractMap<String, String>() {
+        @Override public String get(Object key) {
+            if (key == null) return null;
+            Domain d = domainOf((String) key);
+            return getFrom(d, (String) key);
+        }
+        @Override public String put(String key, String val) {
+            String prev = get(key);
+            putIn(domainOf(key), key, val);
+            return prev;
+        }
+        @Override public java.util.Set<java.util.Map.Entry<String, String>> entrySet() {
+            java.util.Set<java.util.Map.Entry<String, String>> all = new java.util.HashSet<>();
+            all.addAll(UI_STORE.entrySet());
+            all.addAll(DB_STORE.entrySet());
+            all.addAll(WINDOW_STORE.entrySet());
+            all.addAll(FILTER_STORE.entrySet());
+            return all;
+        }
+        @Override public int size() {
+            return UI_STORE.size() + DB_STORE.size() + WINDOW_STORE.size() + FILTER_STORE.size();
+        }
+    };
 
     public static void reload() {
         props.clear();
@@ -91,6 +168,29 @@ public class Config {
     public static String getDbUser() { return props.getOrDefault("dbUser", "user"); }
     public static void setDbUser(String user) { props.put("dbUser", user); save(); }
 
+    /**
+     * Returns the DB password.  <b>Note:</b> the password is stored in
+     * {@code ~/.biblioteca/config.properties} in plaintext.  This is
+     * acceptable for a local single-user desktop app (config file
+     * permissions are the user's responsibility) but should NOT be relied
+     * on for any multi-user or networked deployment.
+     * <p>
+     * <b>Exposure surface:</b>
+     * <ul>
+     *   <li>Anyone with read access to {@code config.properties} sees the password.</li>
+     *   <li>Backup tools that include the home directory will include the password.</li>
+     *   <li>On shared hosts, any user on the same machine can read the file.</li>
+     * </ul>
+     * <b>Migration paths (not implemented — see tot.txt B2):</b>
+     * <ul>
+     *   <li>OS keystore (Keychain / Credential Manager / Secret Service) keyed by
+     *       the local user account.</li>
+     *   <li>{@code jasypt} or similar with a master password derived from the
+     *       OS user — still recoverable, but obscures casual disk inspection.</li>
+     *   <li>Switch to integrated auth where the DB driver picks up the OS user
+     *       (MySQL {@code --skip-grant-tables}, MariaDB {@code unix_socket}).</li>
+     * </ul>
+     */
     public static String getDbPassword() { return props.getOrDefault("dbPassword", ""); }
 
     /** Distingeix "no configurat" (retorna false) de "password buit" (true). */

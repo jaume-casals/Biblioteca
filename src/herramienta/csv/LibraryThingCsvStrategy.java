@@ -12,7 +12,16 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
     @Override
     public boolean canHandle(String headerRow) {
-        return headerRow.contains("BCID");
+        if (headerRow == null || headerRow.isBlank()) return false;
+        // BCID is the LibraryThing-specific book identifier; it appears in
+        // every export and is unique to that strategy. Require a few other
+        // canonical columns to avoid matching a stray substring.
+        if (!headerRow.contains("BCID")) return false;
+        String[] cols = CsvUtils.parseLine(headerRow);
+        if (cols.length < 8) return false;
+        if (!headerRow.contains("Title")) return false;
+        if (!headerRow.contains("Authors")) return false;
+        return true;
     }
 
     @Override

@@ -78,7 +78,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public void showTaula() { centerTable.showTaula(); }
 
 	public void applyTheme() {
-		UITheme.rebuildFonts(herramienta.Config.getFontSize());
+		UITheme.rebuildFonts(herramienta.FontSize.fromKey(herramienta.Config.getFontSize()));
 		herramienta.Config.setTheme(UITheme.getTheme());
 
 		setBackground(UITheme.BG_MAIN);

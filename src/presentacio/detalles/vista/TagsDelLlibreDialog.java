@@ -1,5 +1,8 @@
 package presentacio.detalles.vista;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -62,12 +65,12 @@ public class TagsDelLlibreDialog extends JDialog {
         add(panel);
 
         filterField = new JTextField();
-        UITheme.styleField(filterField);
+        UIComponents.styleField(filterField);
         filterField.setToolTipText(I18n.t("tip_filter_tags"));
         JPanel filterPanel = new JPanel(new BorderLayout(4, 0));
         filterPanel.setBackground(UITheme.BG_PANEL);
         JLabel lblFilter = new JLabel(I18n.t("lbl_filter_colon"));
-        UITheme.styleLabel(lblFilter);
+        UIComponents.styleLabel(lblFilter);
         filterPanel.add(lblFilter, BorderLayout.WEST);
         filterPanel.add(filterField, BorderLayout.CENTER);
         panel.add(filterPanel, BorderLayout.NORTH);
@@ -91,19 +94,19 @@ public class TagsDelLlibreDialog extends JDialog {
         comboAdd.setPreferredSize(new Dimension(180, 30));
 
         btnAfegir = new JButton(I18n.t("btn_afegir_etiqueta"));
-        UITheme.styleAccentButton(btnAfegir);
+        UIComponents.styleAccentButton(btnAfegir);
 
         txtNovaEtiqueta = new JTextField(12);
-        UITheme.styleField(txtNovaEtiqueta);
+        UIComponents.styleField(txtNovaEtiqueta);
         txtNovaEtiqueta.setToolTipText(I18n.t("tip_nom_nova_etiqueta"));
 
         btnCrear = new JButton(I18n.t("btn_crear"));
-        UITheme.styleSecondaryButton(btnCrear);
+        UIComponents.styleSecondaryButton(btnCrear);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         addRow.setBackground(UITheme.BG_PANEL);
         JLabel lblEtiq = new JLabel(I18n.t("lbl_etiqueta_colon"));
-        UITheme.styleLabel(lblEtiq);
+        UIComponents.styleLabel(lblEtiq);
         addRow.add(lblEtiq);
         addRow.add(comboAdd);
         addRow.add(btnAfegir);
@@ -111,13 +114,13 @@ public class TagsDelLlibreDialog extends JDialog {
         JPanel createRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         createRow.setBackground(UITheme.BG_PANEL);
         JLabel lblNova = new JLabel(I18n.t("lbl_nova_colon"));
-        UITheme.styleLabel(lblNova);
+        UIComponents.styleLabel(lblNova);
         createRow.add(lblNova);
         createRow.add(txtNovaEtiqueta);
         createRow.add(btnCrear);
 
         btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
-        UITheme.styleSecondaryButton(btnTreure);
+        UIComponents.styleSecondaryButton(btnTreure);
         btnTreure.setBackground(UITheme.DANGER);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));

@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -140,11 +143,11 @@ public class CenterTablePanel extends JPanel {
 		paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
 		paginationPanel.setBackground(UITheme.BG_MAIN);
 		btnPaginaAnterior = new JButton(I18n.t("btn_page_prev"));
-		UITheme.styleSecondaryButton(btnPaginaAnterior);
+		UIComponents.styleSecondaryButton(btnPaginaAnterior);
 		lblPagina = new JLabel(I18n.t("page_info_java", 1, 1));
-		UITheme.styleLabel(lblPagina);
+		UIComponents.styleLabel(lblPagina);
 		btnPaginaSeguent = new JButton(I18n.t("btn_page_next"));
-		UITheme.styleSecondaryButton(btnPaginaSeguent);
+		UIComponents.styleSecondaryButton(btnPaginaSeguent);
 		paginationPanel.add(btnPaginaAnterior);
 		paginationPanel.add(lblPagina);
 		paginationPanel.add(btnPaginaSeguent);
@@ -174,16 +177,16 @@ public class CenterTablePanel extends JPanel {
 		javax.swing.UIManager.put("Table.alternateRowColor", UITheme.TABLE_ALT);
 
 		paginationPanel.setBackground(UITheme.BG_MAIN);
-		UITheme.styleSecondaryButton(btnPaginaAnterior);
-		UITheme.styleSecondaryButton(btnPaginaSeguent);
-		UITheme.styleLabel(lblPagina);
+		UIComponents.styleSecondaryButton(btnPaginaAnterior);
+		UIComponents.styleSecondaryButton(btnPaginaSeguent);
+		UIComponents.styleLabel(lblPagina);
 
 		galeria.applyTheme();
 	}
 
 	public void applyThemePostLaf() {
-		UITheme.styleSecondaryButton(btnPaginaAnterior);
-		UITheme.styleSecondaryButton(btnPaginaSeguent);
+		UIComponents.styleSecondaryButton(btnPaginaAnterior);
+		UIComponents.styleSecondaryButton(btnPaginaSeguent);
 	}
 
 	public void nameScrollBarButtons() {

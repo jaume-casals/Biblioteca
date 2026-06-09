@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Window;
 
@@ -53,35 +56,35 @@ public class GestioLlistesDialog extends JDialog {
         bottom.setBackground(UITheme.BG_PANEL);
 
         JTextField txtNom = new JTextField();
-        UITheme.styleField(txtNom);
+        UIComponents.styleField(txtNom);
         txtNom.setToolTipText(I18n.t("tip_nom_nova_llista"));
 
         JButton btnAfegir = new JButton(I18n.t("btn_nova_llista"));
-        UITheme.styleAccentButton(btnAfegir);
+        UIComponents.styleAccentButton(btnAfegir);
         btnAfegir.addActionListener(e -> onAddLlista(txtNom));
 
         JButton btnEliminar = new JButton(I18n.t("btn_eliminar_seleccionada"));
-        UITheme.styleSecondaryButton(btnEliminar);
+        UIComponents.styleSecondaryButton(btnEliminar);
         btnEliminar.setBackground(UITheme.DANGER);
         btnEliminar.addActionListener(e -> onDeleteLlista());
 
         JButton btnRename = new JButton(I18n.t("btn_rename_llista"));
-        UITheme.styleSecondaryButton(btnRename);
+        UIComponents.styleSecondaryButton(btnRename);
         btnRename.setToolTipText(I18n.t("tip_rename_llista"));
         btnRename.addActionListener(e -> onRenameLlista());
 
         JButton btnColor = new JButton(I18n.t("btn_color_llista"));
-        UITheme.styleSecondaryButton(btnColor);
+        UIComponents.styleSecondaryButton(btnColor);
         btnColor.setToolTipText(I18n.t("tip_color_llista"));
         btnColor.addActionListener(e -> onColorLlista());
 
         JButton btnUp = new JButton("▲");
-        UITheme.styleSecondaryButton(btnUp);
+        UIComponents.styleSecondaryButton(btnUp);
         btnUp.setToolTipText(I18n.t("tip_pujar_llista"));
         btnUp.addActionListener(e -> onMoveLlista(true));
 
         JButton btnDown = new JButton("▼");
-        UITheme.styleSecondaryButton(btnDown);
+        UIComponents.styleSecondaryButton(btnDown);
         btnDown.setToolTipText(I18n.t("tip_baixar_llista"));
         btnDown.addActionListener(e -> onMoveLlista(false));
 

@@ -3,6 +3,7 @@ package main;
 import domini.ControladorDomini;
 import interficie.BibliotecaWriter;
 import herramienta.Config;
+import herramienta.FontSize;
 import herramienta.UITheme;
 import presentacio.MainFrameControl;
 import presentacio.MainFramePanel;
@@ -43,7 +44,7 @@ public class Ejecutable {
         EventQueue.invokeLater(() -> {
             try {
                 UITheme.setTheme(Config.getTheme());
-                UITheme.rebuildFonts(Config.getFontSize());
+                UITheme.rebuildFonts(FontSize.fromKey(Config.getFontSize()));
                 UIManager.put("nimbusBase",                UITheme.ACCENT);
                 UIManager.put("nimbusBlueGrey",            UITheme.isDark() ? new Color(0x3D4451) : new Color(0x5D8AA8));
                 UIManager.put("control",                   UITheme.BG_MAIN);

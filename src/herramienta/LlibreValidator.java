@@ -127,20 +127,6 @@ public class LlibreValidator {
 	}
 
 	private static int countDig(long n) {
-		if (n < 0) n = -n;
-		if (n < 10L) return 1;
-		if (n < 100L) return 2;
-		if (n < 1_000L) return 3;
-		if (n < 10_000L) return 4;
-		if (n < 100_000L) return 5;
-		if (n < 1_000_000L) return 6;
-		if (n < 10_000_000L) return 7;
-		if (n < 100_000_000L) return 8;
-		if (n < 1_000_000_000L) return 9;
-		if (n < 10_000_000_000L) return 10;
-		if (n < 100_000_000_000L) return 11;
-		if (n < 1_000_000_000_000L) return 12;
-		if (n < 10_000_000_000_000L) return 13;
-		return 19;
+		return Long.toString(Math.abs(n)).length();
 	}
 }

@@ -1,5 +1,8 @@
 package presentacio.renderers;
 
+
+
+import presentacio.UIComponents;
 import java.awt.Component;
 import javax.swing.*;
 import javax.swing.table.*;
@@ -13,7 +16,7 @@ public class BotonDetallesEditor extends DefaultCellEditor {
     public BotonDetallesEditor(JCheckBox checkbox, JButton botonDetalles) {
         super(checkbox);
         this.botonDetalles = botonDetalles;
-        UITheme.styleAccentButton(botonDetalles);
+        UIComponents.styleAccentButton(botonDetalles);
     }
 
     @Override

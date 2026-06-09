@@ -1,5 +1,7 @@
 package domini;
 
+import herramienta.csv.CsvUtils;
+
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -16,16 +18,11 @@ public final class ShelfParser {
             String[] parts = entry.split("\\|", 3);
             if (parts.length < 1 || parts[0].isBlank()) continue;
             String nom = parts[0].trim();
-            double val = parts.length > 1 ? parseDoubleOrZero(parts[1]) : 0.0;
+            double val = parts.length > 1 ? CsvUtils.parseDoubleOrZero(parts[1]) : 0.0;
             boolean llegit = parts.length > 2 && parseBool(parts[2].trim());
             entries.add(new ShelfEntry(nom, val, llegit));
         }
         return entries;
-    }
-
-    private static double parseDoubleOrZero(String s) {
-        if (s == null || s.isBlank()) return 0.0;
-        try { return Double.parseDouble(s.trim()); } catch (Exception ignored) { return 0.0; }
     }
 
     private static boolean parseBool(String s) {

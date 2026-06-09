@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import domini.Llibre;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
@@ -36,7 +39,7 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
         BibliotecaWriter writer = cd != null ? cd : domini.ControladorDomini.getInstance();
         this.state = new LibraryViewState(vista, biblio, enActualizarBBDD, writer);
         this.botonDetalles = new JButton();
-        UITheme.styleAccentButton(this.botonDetalles);
+        UIComponents.styleAccentButton(this.botonDetalles);
         this.tableCtrl = new TableController(vista);
         this.pageCtrl = new TablePageController(vista, writer, this::setTable);
 
@@ -155,7 +158,10 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
             state.biblio = new ArrayList<>(state.cd.getLlibresInLlista(state.currentLlistaId));
             pageCtrl.setUseDBPagination(false);
         } else {
-            state.biblio = new ArrayList<>(state.cd.getAllLlibres());
+            // Lean — heavy text/notes/cover are loaded lazily by
+            // DetallesLlibrePanelControl via loadHeavyFields() when the
+            // user opens the book detail dialog.
+            state.biblio = new ArrayList<>(state.cd.getAllLlibresSummary());
             pageCtrl.setUseDBPagination(state.cd.isLargeLibrary());
         }
         filterCtrl.quitarFiltros();

@@ -8,4 +8,6 @@ public final class DbConfig {
     public static String host()     { return Config.getDbHost(); }
     public static String user()     { return Config.getDbUser(); }
     public static String password() { return Config.getDbPassword(); }
+    public static String profile()  { return Config.getDbProfile(); }
+    public static boolean hasPassword() { return Config.hasDbPassword(); }
 }

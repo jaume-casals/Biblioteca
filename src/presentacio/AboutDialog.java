@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
@@ -58,7 +61,7 @@ public class AboutDialog extends JDialog {
 		main.add(Box.createVerticalStrut(4));
 
 		JLabel lblSub = new JLabel(I18n.t("lbl_app_desc"));
-		UITheme.styleLabel(lblSub);
+		UIComponents.styleLabel(lblSub);
 		lblSub.setHorizontalAlignment(SwingConstants.CENTER);
 		lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
 		main.add(lblSub);
@@ -75,7 +78,7 @@ public class AboutDialog extends JDialog {
 
 		// License excerpt
 		JLabel lblLicTitle = new JLabel(I18n.t("lbl_license_section"));
-		UITheme.styleLabel(lblLicTitle);
+		UIComponents.styleLabel(lblLicTitle);
 		lblLicTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 		main.add(lblLicTitle);
 		main.add(Box.createVerticalStrut(6));
@@ -100,7 +103,7 @@ public class AboutDialog extends JDialog {
 
 		// Source link button
 		JButton btnSource = new JButton(I18n.t("btn_source_github"));
-		UITheme.styleSecondaryButton(btnSource);
+		UIComponents.styleSecondaryButton(btnSource);
 		btnSource.setAlignmentX(Component.CENTER_ALIGNMENT);
 		btnSource.setMaximumSize(new Dimension(200, 32));
 		btnSource.addActionListener(e -> {
@@ -114,7 +117,7 @@ public class AboutDialog extends JDialog {
 		add(main, BorderLayout.CENTER);
 
 		JButton btnTancar = new JButton(I18n.t("btn_close"));
-		UITheme.styleAccentButton(btnTancar);
+		UIComponents.styleAccentButton(btnTancar);
 		btnTancar.addActionListener(e -> dispose());
 		JPanel bottom = new JPanel();
 		bottom.setBackground(UITheme.BG_PANEL);
@@ -134,7 +137,7 @@ public class AboutDialog extends JDialog {
 		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
 		row.setAlignmentX(Component.CENTER_ALIGNMENT);
 		JLabel k = new JLabel(key + ":");
-		UITheme.styleLabel(k);
+		UIComponents.styleLabel(k);
 		k.setPreferredSize(new Dimension(80, 0));
 		k.setHorizontalAlignment(SwingConstants.RIGHT);
 		JLabel v = new JLabel(value);

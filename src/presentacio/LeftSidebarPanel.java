@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -258,13 +261,13 @@ public class LeftSidebarPanel extends JPanel {
 	public void applyTheme() {
 		applyBgToNonButtons(this, UITheme.SIDEBAR_BG);
 		for (JButton btn : sidebarBtns) {
-			UITheme.styleSidebarButton(btn);
+			UIComponents.styleSidebarButton(btn);
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
 			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 		}
 		btnSortir.setForeground(new Color(0xFF8080));
 		for (JButton btn : sidebarShelfBtnMap.values()) {
-			UITheme.styleSidebarButton(btn);
+			UIComponents.styleSidebarButton(btn);
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
 			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 		}
@@ -276,7 +279,7 @@ public class LeftSidebarPanel extends JPanel {
 
 	private JButton makeSidebarBtn(String text) {
 		JButton btn = new JButton(text);
-		UITheme.styleSidebarButton(btn);
+		UIComponents.styleSidebarButton(btn);
 		btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
 		btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 		btn.setAlignmentX(Component.LEFT_ALIGNMENT);

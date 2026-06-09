@@ -1,5 +1,8 @@
 package presentacio.detalles.vista;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -78,7 +81,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         west.setBackground(UITheme.BG_PANEL);
         west.setPreferredSize(new Dimension(180, 0));
         JLabel lblChecks = new JLabel(I18n.t("lbl_llistes"));
-        UITheme.styleLabel(lblChecks);
+        UIComponents.styleLabel(lblChecks);
         west.add(lblChecks, BorderLayout.NORTH);
         west.add(new JScrollPane(shelfCheckList), BorderLayout.CENTER);
         panel.add(west, BorderLayout.WEST);
@@ -91,7 +94,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         comboAdd.setPreferredSize(new Dimension(160, 30));
 
         txtVal = new JTextField("0.0");
-        UITheme.styleField(txtVal);
+        UIComponents.styleField(txtVal);
         txtVal.setPreferredSize(new Dimension(60, 30));
         txtVal.setToolTipText(I18n.t("lbl_valoracio_tip"));
 
@@ -101,12 +104,12 @@ public class LlistesDelLlibreDialog extends JDialog {
         chkLlegit.setFont(UITheme.fontBase());
 
         btnAfegir = new JButton(I18n.t("btn_afegir_llista"));
-        UITheme.styleAccentButton(btnAfegir);
+        UIComponents.styleAccentButton(btnAfegir);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
         addRow.setBackground(UITheme.BG_PANEL);
         JLabel lblLlista = new JLabel(I18n.t("lbl_llista_colon"));
-        UITheme.styleLabel(lblLlista);
+        UIComponents.styleLabel(lblLlista);
         addRow.add(lblLlista);
         addRow.add(comboAdd);
         addRow.add(txtVal);
@@ -114,11 +117,11 @@ public class LlistesDelLlibreDialog extends JDialog {
         addRow.add(btnAfegir);
 
         btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
-        UITheme.styleSecondaryButton(btnTreure);
+        UIComponents.styleSecondaryButton(btnTreure);
         btnTreure.setBackground(UITheme.DANGER);
 
         btnGuardar = new JButton(I18n.t("btn_guardar_canvis"));
-        UITheme.styleAccentButton(btnGuardar);
+        UIComponents.styleAccentButton(btnGuardar);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
         btnRow.setBackground(UITheme.BG_PANEL);

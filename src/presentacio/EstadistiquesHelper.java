@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import domini.Llibre;
 import herramienta.I18n;
 import interficie.BibliotecaWriter;
@@ -137,7 +140,7 @@ public class EstadistiquesHelper {
         }
         if (tagCount.isEmpty()) {
             javax.swing.JLabel lbl = new javax.swing.JLabel(I18n.t("stats_no_tags"));
-            herramienta.UITheme.styleLabel(lbl);
+            presentacio.UIComponents.styleLabel(lbl);
             panel.add(lbl);
             return panel;
         }
@@ -179,7 +182,7 @@ public class EstadistiquesHelper {
 
         java.util.function.Consumer<String> addLine = text -> {
             javax.swing.JLabel lbl = new javax.swing.JLabel(text);
-            herramienta.UITheme.styleLabel(lbl);
+            presentacio.UIComponents.styleLabel(lbl);
             lbl.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
             panel.add(lbl);
             panel.add(javax.swing.Box.createVerticalStrut(6));
@@ -221,6 +224,113 @@ public class EstadistiquesHelper {
         return buildStatsSummary(computeStats(llibres), scope);
     }
 
+    /**
+     * Builds the "General" stats tab: goal progress + text summary + per-shelf table.
+     * All view construction lives here so the controller stays slim.
+     */
+    public static javax.swing.JPanel buildGeneralTab(List<Llibre> global, BookStats globalStats, BibliotecaWriter cd) {
+        String summary = buildStatsSummary(globalStats, I18n.t("lbl_all_library"));
+
+        javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
+        txtSummary.setEditable(false);
+        txtSummary.setFont(herramienta.UITheme.fontBase());
+        txtSummary.setBackground(herramienta.UITheme.BG_PANEL);
+        txtSummary.setForeground(herramienta.UITheme.TEXT_DARK);
+        txtSummary.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8));
+
+        javax.swing.JScrollPane shelfScroll = buildShelfTable(global, cd);
+
+        javax.swing.JPanel goalPanel = buildReadingGoalPanel(global, globalStats);
+        javax.swing.JPanel statsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        statsPanel.setBackground(herramienta.UITheme.BG_PANEL);
+        statsPanel.add(txtSummary, java.awt.BorderLayout.NORTH);
+        if (shelfScroll != null) statsPanel.add(shelfScroll, java.awt.BorderLayout.CENTER);
+
+        javax.swing.JPanel tab = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        tab.setBackground(herramienta.UITheme.BG_PANEL);
+        tab.add(goalPanel, java.awt.BorderLayout.NORTH);
+        tab.add(statsPanel, java.awt.BorderLayout.CENTER);
+        return tab;
+    }
+
+    private static javax.swing.JScrollPane buildShelfTable(List<Llibre> global, BibliotecaWriter cd) {
+        java.util.Map<Long, Llibre> byIsbn = new java.util.HashMap<>();
+        for (Llibre l : global) byIsbn.put(l.getISBN(), l);
+        java.util.Map<Integer, java.util.List<Llibre>> shelfBooks = new java.util.HashMap<>();
+        if (cd instanceof domini.ControladorDomini dom) {
+            for (persistencia.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
+                Llibre l = byIsbn.get(row.isbn());
+                if (l != null) shelfBooks.computeIfAbsent(row.llistaId(), k -> new java.util.ArrayList<>()).add(l);
+            }
+        }
+        javax.swing.table.DefaultTableModel shelfModel = new javax.swing.table.DefaultTableModel(
+            new String[]{I18n.t("col_stats_llista"), I18n.t("col_stats_llibres"), I18n.t("col_stats_llegits"),
+                I18n.t("col_stats_pct"), I18n.t("col_stats_val")}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        for (domini.Llista ll : cd.getAllLlistes()) {
+            java.util.List<Llibre> shelf = shelfBooks.getOrDefault(ll.getId(), java.util.List.of());
+            if (shelf.isEmpty()) { shelfModel.addRow(new Object[]{ll.getNom(), 0, 0, "0.0%", "—"}); continue; }
+            long llegits = shelf.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+            double avgVal = shelf.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
+            shelfModel.addRow(new Object[]{
+                ll.getNom(), shelf.size(), llegits,
+                String.format("%.1f%%", 100.0 * llegits / shelf.size()),
+                String.format("%.2f", avgVal)
+            });
+        }
+        if (shelfModel.getRowCount() == 0) return null;
+        javax.swing.JTable shelfTable = new javax.swing.JTable(shelfModel);
+        shelfTable.setFont(herramienta.UITheme.fontBase());
+        shelfTable.setBackground(herramienta.UITheme.BG_PANEL);
+        shelfTable.setForeground(herramienta.UITheme.TEXT_DARK);
+        shelfTable.setRowHeight(26);
+        shelfTable.setEnabled(false);
+        shelfTable.getTableHeader().setFont(herramienta.UITheme.fontBold());
+        javax.swing.JScrollPane shelfScroll = new javax.swing.JScrollPane(shelfTable);
+        shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
+        shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("lbl_per_list")));
+        return shelfScroll;
+    }
+
+    private static javax.swing.JPanel buildReadingGoalPanel(List<Llibre> global, BookStats globalStats) {
+        int totalLlegits = (int) global.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
+        int savedGoal = herramienta.Config.getReadingGoal();
+        javax.swing.JPanel goalPanel = new javax.swing.JPanel(new java.awt.BorderLayout(6, 4));
+        goalPanel.setBackground(herramienta.UITheme.BG_PANEL);
+        goalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
+            javax.swing.BorderFactory.createLineBorder(herramienta.UITheme.BORDER_CLR),
+            I18n.t("lbl_reading_goal_section"), javax.swing.border.TitledBorder.LEFT,
+            javax.swing.border.TitledBorder.TOP, herramienta.UITheme.fontBold(), herramienta.UITheme.TEXT_MID));
+        javax.swing.JProgressBar goalBar = new javax.swing.JProgressBar(0, Math.max(savedGoal, 1));
+        goalBar.setValue(Math.min(totalLlegits, Math.max(savedGoal, 1)));
+        goalBar.setStringPainted(true);
+        goalBar.setFont(herramienta.UITheme.fontBase());
+        javax.swing.JSpinner goalSpinner = new javax.swing.JSpinner(
+            new javax.swing.SpinnerNumberModel(Math.max(savedGoal, 1), 1, 9999, 1));
+        goalSpinner.setFont(herramienta.UITheme.fontBase());
+        goalSpinner.setPreferredSize(new java.awt.Dimension(70, 28));
+        goalSpinner.addChangeListener(ev -> {
+            int goal = (int) goalSpinner.getValue();
+            herramienta.Config.setReadingGoal(goal);
+            goalBar.setMaximum(goal);
+            goalBar.setValue(Math.min(totalLlegits, goal));
+            goalBar.setString(totalLlegits + " / " + goal);
+        });
+        goalBar.setMaximum(Math.max(savedGoal, 1));
+        goalBar.setString(totalLlegits + " / " + Math.max(savedGoal, 1));
+        javax.swing.JLabel lblGoal = new javax.swing.JLabel(I18n.t("lbl_goal"));
+        UIComponents.styleLabel(lblGoal);
+        javax.swing.JPanel goalControls = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
+        goalControls.setBackground(herramienta.UITheme.BG_PANEL);
+        goalControls.add(lblGoal);
+        goalControls.add(goalSpinner);
+        goalControls.add(new javax.swing.JLabel(I18n.t("lbl_read_count", totalLlegits)));
+        goalPanel.add(goalControls, java.awt.BorderLayout.NORTH);
+        goalPanel.add(goalBar, java.awt.BorderLayout.CENTER);
+        return goalPanel;
+    }
+
     public static void showDialog(java.awt.Window parent, javax.swing.JComponent[] tabs, String[] tabTitles) {
         javax.swing.JDialog dlg = new javax.swing.JDialog(parent,
             I18n.t("dlg_stats_title"), java.awt.Dialog.ModalityType.APPLICATION_MODAL);
@@ -236,7 +346,7 @@ public class EstadistiquesHelper {
         dlg.getContentPane().setBackground(herramienta.UITheme.BG_PANEL);
         dlg.add(tabbedPane);
         javax.swing.JButton btnClose = new javax.swing.JButton(I18n.t("btn_close"));
-        herramienta.UITheme.styleSecondaryButton(btnClose);
+        presentacio.UIComponents.styleSecondaryButton(btnClose);
         btnClose.addActionListener(e -> dlg.dispose());
         dlg.getRootPane().setDefaultButton(btnClose);
         dlg.getRootPane().registerKeyboardAction(e -> dlg.dispose(),

@@ -244,16 +244,21 @@ public class UITheme {
         setTheme(dark ? Theme.DARK : Theme.LIGHT);
     }
 
-    public static void rebuildFonts(String size) {
+    public static void rebuildFonts(FontSize size) {
         if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
             System.err.println("[UITheme] rebuildFonts() called off EDT — font changes must happen on the EDT");
-        int sz = "small".equals(size) ? 11 : "large".equals(size) ? 16 : 13;
+        int sz = size.px;
         FONT_BASE  = new Font("SansSerif", Font.PLAIN, sz);
         FONT_BOLD  = new Font("SansSerif", Font.BOLD,  sz);
         FONT_LABEL = new Font("SansSerif", Font.BOLD,  Math.max(9, sz - 1));
         FONT_TITLE = new Font("SansSerif", Font.BOLD,  sz + 5);
         FONT_SMALL = new Font("SansSerif", Font.PLAIN, Math.max(9, sz - 2));
         UIManager.put("defaultFont", FONT_BASE);
+    }
+
+    /** Backwards-compat overload — accepts the legacy "small"/"medium"/"large" key. */
+    public static void rebuildFonts(String size) {
+        rebuildFonts(FontSize.fromKey(size));
     }
 
     public static void applyUIManager() {

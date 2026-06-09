@@ -81,43 +81,57 @@ public class BookExporter {
     public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) throws Exception {
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
-            pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
-            pw.println("<title>" + htmlEsc(I18n.t("dlg_export_html_title")) + "</title><style>");
-            pw.println(HTML_CSS);
-            pw.println("</style></head><body>");
-            pw.println("<h1>" + htmlEsc(I18n.t("export_html_heading")) + "</h1>");
-
-            if (groupByShelf) {
-                List<Llista> llistes = cd.getAllLlistes();
-                // Build isbn→set<llistaId> map in bulk to avoid N+1 queries
-                java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
-                for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
-                    isbnToLlistes.computeIfAbsent(row.isbn(), k -> new java.util.HashSet<>()).add(row.llistaId());
-                java.util.Set<Long> printed = new java.util.HashSet<>();
-                for (Llista llista : llistes) {
-                    List<Llibre> shelfBooks = view.stream()
-                        .filter(l -> { java.util.Set<Integer> s = isbnToLlistes.get(l.getISBN()); return s != null && s.contains(llista.getId()); })
-                        .collect(Collectors.toList());
-                    if (shelfBooks.isEmpty()) continue;
-                    pw.println("<h2>" + htmlEsc(llista.getNom()) + " (" + shelfBooks.size() + ")</h2>");
-                    if (tableView) printHtmlTable(pw, shelfBooks);
-                    else printHtmlGrid(pw, shelfBooks, cd);
-                    shelfBooks.forEach(l -> printed.add(l.getISBN()));
-                }
-                List<Llibre> unshelfed = view.stream()
-                    .filter(l -> !printed.contains(l.getISBN())).collect(Collectors.toList());
-                if (!unshelfed.isEmpty()) {
-                    pw.println("<h2>" + I18n.t("lbl_no_shelf") + "</h2>");
-                    if (tableView) printHtmlTable(pw, unshelfed);
-                    else printHtmlGrid(pw, unshelfed, cd);
-                }
-            } else {
-                if (tableView) printHtmlTable(pw, view);
-                else printHtmlGrid(pw, view, cd);
-            }
-
+            writeHtmlHeader(pw);
+            writeHtmlBody(pw, view, cd, groupByShelf, tableView);
             pw.println("</body></html>");
         }
+    }
+
+    private static void writeHtmlHeader(PrintWriter pw) {
+        pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
+        pw.println("<title>" + htmlEsc(I18n.t("dlg_export_html_title")) + "</title><style>");
+        pw.println(HTML_CSS);
+        pw.println("</style></head><body>");
+        pw.println("<h1>" + htmlEsc(I18n.t("export_html_heading")) + "</h1>");
+    }
+
+    private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) {
+        if (groupByShelf) {
+            writeHtmlGroupedByShelf(pw, view, cd, tableView);
+        } else {
+            if (tableView) printHtmlTable(pw, view);
+            else printHtmlGrid(pw, view, cd);
+        }
+    }
+
+    private static void writeHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd, boolean tableView) {
+        List<Llista> llistes = cd.getAllLlistes();
+        java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
+        for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
+            isbnToLlistes.computeIfAbsent(row.isbn(), k -> new java.util.HashSet<>()).add(row.llistaId());
+        java.util.Set<Long> printed = new java.util.HashSet<>();
+        for (Llista llista : llistes) {
+            List<Llibre> shelfBooks = view.stream()
+                .filter(l -> { java.util.Set<Integer> s = isbnToLlistes.get(l.getISBN()); return s != null && s.contains(llista.getId()); })
+                .collect(Collectors.toList());
+            if (shelfBooks.isEmpty()) continue;
+            writeHtmlShelfHeader(pw, llista.getNom(), shelfBooks.size());
+            if (tableView) printHtmlTable(pw, shelfBooks);
+            else printHtmlGrid(pw, shelfBooks, cd);
+            shelfBooks.forEach(l -> printed.add(l.getISBN()));
+        }
+        List<Llibre> unshelfed = view.stream()
+            .filter(l -> !printed.contains(l.getISBN())).collect(Collectors.toList());
+        if (!unshelfed.isEmpty()) {
+            writeHtmlShelfHeader(pw, I18n.t("lbl_no_shelf"), 0);
+            if (tableView) printHtmlTable(pw, unshelfed);
+            else printHtmlGrid(pw, unshelfed, cd);
+        }
+    }
+
+    private static void writeHtmlShelfHeader(PrintWriter pw, String name, int count) {
+        if (count > 0) pw.println("<h2>" + htmlEsc(name) + " (" + count + ")</h2>");
+        else pw.println("<h2>" + htmlEsc(name) + "</h2>");
     }
 
     public static void exportPDF(List<Llibre> view) {

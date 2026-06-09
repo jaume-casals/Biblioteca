@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -75,7 +78,7 @@ public class FilterDrawerPanel extends JPanel {
 		presetBar.setPreferredSize(new Dimension(0, 38));
 
 		JLabel lblPresets = new JLabel(I18n.t("lbl_preset_colon"));
-		UITheme.styleLabel(lblPresets);
+		UIComponents.styleLabel(lblPresets);
 		lblPresets.setBounds(8, 9, 50, 20);
 		presetBar.add(lblPresets);
 
@@ -86,19 +89,19 @@ public class FilterDrawerPanel extends JPanel {
 		presetBar.add(comboPresets);
 
 		btnCarregaPreset = new JButton(I18n.t("btn_load_preset"));
-		UITheme.styleAccentButton(btnCarregaPreset);
+		UIComponents.styleAccentButton(btnCarregaPreset);
 		btnCarregaPreset.setToolTipText(I18n.t("tip_load_preset"));
 		btnCarregaPreset.setBounds(216, 6, 75, 26);
 		presetBar.add(btnCarregaPreset);
 
 		btnDesaPreset = new JButton(I18n.t("btn_save_preset_lbl"));
-		UITheme.styleSecondaryButton(btnDesaPreset);
+		UIComponents.styleSecondaryButton(btnDesaPreset);
 		btnDesaPreset.setToolTipText(I18n.t("tip_save_preset"));
 		btnDesaPreset.setBounds(295, 6, 65, 26);
 		presetBar.add(btnDesaPreset);
 
 		btnEsborraPreset = new JButton(I18n.t("btn_delete_preset_lbl"));
-		UITheme.styleSecondaryButton(btnEsborraPreset);
+		UIComponents.styleSecondaryButton(btnEsborraPreset);
 		btnEsborraPreset.setToolTipText(I18n.t("tip_delete_preset"));
 		btnEsborraPreset.setBounds(364, 6, 75, 26);
 		presetBar.add(btnEsborraPreset);
@@ -136,7 +139,7 @@ public class FilterDrawerPanel extends JPanel {
 		row1.add(makeSep());
 
 		JLabel lblTag = new JLabel(I18n.t("filter_etiqueta_lbl"));
-		UITheme.styleLabel(lblTag);
+		UIComponents.styleLabel(lblTag);
 		row1.add(lblTag);
 		comboTagFilter = new JComboBox<>();
 		comboTagFilter.setFont(UITheme.fontBase());
@@ -152,7 +155,7 @@ public class FilterDrawerPanel extends JPanel {
 		row1b.add(makeFieldWrap(I18n.t("filter_serie_lbl"),     filterSerie     = new JTextField(12)));
 		row1b.add(makeFieldWrap(I18n.t("filter_idioma_lbl"),    filterIdioma    = new JTextField(10)));
 		JLabel lblFormat = new JLabel(I18n.t("filter_format_lbl") + ":");
-		UITheme.styleLabel(lblFormat);
+		UIComponents.styleLabel(lblFormat);
 		row1b.add(lblFormat);
 		filterFormat = new JComboBox<>(new String[]{"", I18n.t("fmt_hardcover"), I18n.t("fmt_softcover"), I18n.t("fmt_ebook"), I18n.t("fmt_audiobook")});
 		filterFormat.setFont(UITheme.fontBase());
@@ -170,12 +173,12 @@ public class FilterDrawerPanel extends JPanel {
 		row2.add(makeSep());
 
 		bttnFiltrar = new JButton(I18n.t("btn_filtrar"));
-		UITheme.styleAccentButton(bttnFiltrar);
+		UIComponents.styleAccentButton(bttnFiltrar);
 		bttnFiltrar.setToolTipText(I18n.t("tip_filtrar"));
 		row2.add(bttnFiltrar);
 
 		bttnQuitarFiltros = new JButton(I18n.t("btn_quitar_filtres"));
-		UITheme.styleSecondaryButton(bttnQuitarFiltros);
+		UIComponents.styleSecondaryButton(bttnQuitarFiltros);
 		bttnQuitarFiltros.setToolTipText(I18n.t("tip_quitar_filtres"));
 		row2.add(bttnQuitarFiltros);
 
@@ -190,7 +193,7 @@ public class FilterDrawerPanel extends JPanel {
 		btnExportPDF = new JButton();
 
 		btnExportDropdown = new JButton(I18n.t("btn_export_lbl") + " ▾");
-		UITheme.styleSecondaryButton(btnExportDropdown);
+		UIComponents.styleSecondaryButton(btnExportDropdown);
 		JPopupMenu exportMenu = new JPopupMenu();
 		JMenuItem miExportCSV = new JMenuItem(I18n.t("btn_export_csv"));
 		miExportCSV.setToolTipText(I18n.t("tip_export_csv"));
@@ -216,7 +219,7 @@ public class FilterDrawerPanel extends JPanel {
 		btnImportarJSON = new JButton();
 
 		btnImportDropdown = new JButton(I18n.t("btn_import_lbl") + " ▾");
-		UITheme.styleSecondaryButton(btnImportDropdown);
+		UIComponents.styleSecondaryButton(btnImportDropdown);
 		JPopupMenu importMenu = new JPopupMenu();
 		JMenuItem miImportCSV = new JMenuItem(I18n.t("btn_import_csv"));
 		miImportCSV.setToolTipText(I18n.t("tip_import_csv"));
@@ -234,24 +237,24 @@ public class FilterDrawerPanel extends JPanel {
 		row3.add(btnImportDropdown);
 
 		btnFetchCovers = new JButton(I18n.t("btn_fetch_covers_lbl"));
-		UITheme.styleSecondaryButton(btnFetchCovers);
+		UIComponents.styleSecondaryButton(btnFetchCovers);
 		btnFetchCovers.setToolTipText(I18n.t("tip_fetch_covers"));
 		row3.add(btnFetchCovers);
 
 		btnEscanejarISBN = new JButton(I18n.t("btn_scan_isbn_lbl"));
-		UITheme.styleSecondaryButton(btnEscanejarISBN);
+		UIComponents.styleSecondaryButton(btnEscanejarISBN);
 		btnEscanejarISBN.setToolTipText(I18n.t("tip_scan_isbn"));
 		row3.add(btnEscanejarISBN);
 
 		row3.add(makeSep());
 
 		btnBackupBD = new JButton(I18n.t("btn_backup_bd"));
-		UITheme.styleSecondaryButton(btnBackupBD);
+		UIComponents.styleSecondaryButton(btnBackupBD);
 		btnBackupBD.setToolTipText(I18n.t("tip_backup_bd"));
 		row3.add(btnBackupBD);
 
 		btnRestaurarBD = new JButton(I18n.t("btn_restore_bd"));
-		UITheme.styleSecondaryButton(btnRestaurarBD);
+		UIComponents.styleSecondaryButton(btnRestaurarBD);
 		btnRestaurarBD.setToolTipText(I18n.t("tip_restore_bd"));
 		row3.add(btnRestaurarBD);
 
@@ -268,43 +271,43 @@ public class FilterDrawerPanel extends JPanel {
 
 	public void applyTheme() {
 		styleFilterComponents();
-		UITheme.styleAccentButton(bttnFiltrar);
-		UITheme.styleSecondaryButton(bttnQuitarFiltros);
-		UITheme.styleSecondaryButton(btnExportDropdown);
-		UITheme.styleSecondaryButton(btnImportDropdown);
-		UITheme.styleSecondaryButton(btnFetchCovers);
-		UITheme.styleSecondaryButton(btnEscanejarISBN);
-		UITheme.styleSecondaryButton(btnBackupBD);
-		UITheme.styleSecondaryButton(btnRestaurarBD);
-		UITheme.styleAccentButton(btnCarregaPreset);
-		UITheme.styleSecondaryButton(btnDesaPreset);
-		UITheme.styleSecondaryButton(btnEsborraPreset);
+		UIComponents.styleAccentButton(bttnFiltrar);
+		UIComponents.styleSecondaryButton(bttnQuitarFiltros);
+		UIComponents.styleSecondaryButton(btnExportDropdown);
+		UIComponents.styleSecondaryButton(btnImportDropdown);
+		UIComponents.styleSecondaryButton(btnFetchCovers);
+		UIComponents.styleSecondaryButton(btnEscanejarISBN);
+		UIComponents.styleSecondaryButton(btnBackupBD);
+		UIComponents.styleSecondaryButton(btnRestaurarBD);
+		UIComponents.styleAccentButton(btnCarregaPreset);
+		UIComponents.styleSecondaryButton(btnDesaPreset);
+		UIComponents.styleSecondaryButton(btnEsborraPreset);
 		comboPresets.setFont(UITheme.fontBase());
 		setBackground(UITheme.BG_MAIN);
 	}
 
 	public void applyThemePostLaf() {
 		styleFilterComponents();
-		UITheme.styleAccentButton(bttnFiltrar);
-		UITheme.styleSecondaryButton(bttnQuitarFiltros);
-		UITheme.styleSecondaryButton(btnExportDropdown);
-		UITheme.styleSecondaryButton(btnImportDropdown);
-		UITheme.styleSecondaryButton(btnFetchCovers);
-		UITheme.styleSecondaryButton(btnEscanejarISBN);
-		UITheme.styleSecondaryButton(btnBackupBD);
-		UITheme.styleSecondaryButton(btnRestaurarBD);
-		UITheme.styleAccentButton(btnCarregaPreset);
-		UITheme.styleSecondaryButton(btnDesaPreset);
-		UITheme.styleSecondaryButton(btnEsborraPreset);
+		UIComponents.styleAccentButton(bttnFiltrar);
+		UIComponents.styleSecondaryButton(bttnQuitarFiltros);
+		UIComponents.styleSecondaryButton(btnExportDropdown);
+		UIComponents.styleSecondaryButton(btnImportDropdown);
+		UIComponents.styleSecondaryButton(btnFetchCovers);
+		UIComponents.styleSecondaryButton(btnEscanejarISBN);
+		UIComponents.styleSecondaryButton(btnBackupBD);
+		UIComponents.styleSecondaryButton(btnRestaurarBD);
+		UIComponents.styleAccentButton(btnCarregaPreset);
+		UIComponents.styleSecondaryButton(btnDesaPreset);
+		UIComponents.styleSecondaryButton(btnEsborraPreset);
 	}
 
 	private JPanel makeFieldWrap(String label, JTextField field) {
 		JPanel p = new JPanel(new BorderLayout(4, 0));
 		p.setBackground(UITheme.BG_PANEL);
 		JLabel lbl = new JLabel(label + ":");
-		UITheme.styleLabel(lbl);
+		UIComponents.styleLabel(lbl);
 		lbl.setPreferredSize(new Dimension(lbl.getPreferredSize().width, 28));
-		UITheme.styleField(field);
+		UIComponents.styleField(field);
 		field.setPreferredSize(new Dimension(field.getPreferredSize().width, 28));
 		p.add(lbl, BorderLayout.WEST);
 		p.add(field, BorderLayout.CENTER);
@@ -315,9 +318,9 @@ public class FilterDrawerPanel extends JPanel {
 		JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
 		p.setBackground(UITheme.BG_PANEL);
 		JLabel lbl = new JLabel(label + ":");
-		UITheme.styleLabel(lbl);
-		UITheme.styleField(min);
-		UITheme.styleField(max);
+		UIComponents.styleLabel(lbl);
+		UIComponents.styleField(min);
+		UIComponents.styleField(max);
 		min.setPreferredSize(new Dimension(min.getPreferredSize().width, 28));
 		max.setPreferredSize(new Dimension(max.getPreferredSize().width, 28));
 		JLabel dash = new JLabel("\u2013");
@@ -348,14 +351,14 @@ public class FilterDrawerPanel extends JPanel {
 						((JCheckBox) c).setForeground(UITheme.TEXT_DARK);
 						((JCheckBox) c).setFont(UITheme.fontBase());
 					} else if (c instanceof JLabel) {
-						UITheme.styleLabel((JLabel) c);
+						UIComponents.styleLabel((JLabel) c);
 					} else if (c instanceof JTextField) {
-						UITheme.styleField((JTextField) c);
+						UIComponents.styleField((JTextField) c);
 					} else if (c instanceof JPanel) {
 						((JPanel) c).setBackground(UITheme.BG_PANEL);
 						for (Component cc : ((JPanel) c).getComponents()) {
-							if (cc instanceof JLabel) UITheme.styleLabel((JLabel) cc);
-							if (cc instanceof JTextField) UITheme.styleField((JTextField) cc);
+							if (cc instanceof JLabel) UIComponents.styleLabel((JLabel) cc);
+							if (cc instanceof JTextField) UIComponents.styleField((JTextField) cc);
 						}
 					}
 				}

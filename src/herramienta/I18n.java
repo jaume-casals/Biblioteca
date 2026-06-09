@@ -613,9 +613,6 @@ public class I18n {
     }
 
     private static int langIndex() {
-        String lang = Config.getLang();
-        if ("es".equals(lang)) return 1;
-        if ("en".equals(lang)) return 2;
-        return 0; // ca default
+        return Lang.fromCode(Config.getLang()).ordinal();
     }
 }

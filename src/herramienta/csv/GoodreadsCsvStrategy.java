@@ -12,8 +12,18 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
     @Override
     public boolean canHandle(String headerRow) {
+        if (headerRow == null || headerRow.isBlank()) return false;
         String[] cols = CsvUtils.parseLine(headerRow);
-        return cols.length >= 5 && headerRow.contains("Book Id") && headerRow.contains("Exclusive Shelf");
+        // Goodreads exports typically have 30+ columns. Require both a unique Goodreads
+        // sentinel ("Book Id" — not "Book Id" anywhere else in our other strategies)
+        // and the "Exclusive Shelf" column used to derive the "llegit" flag.
+        if (cols.length < 10) return false;
+        if (!headerRow.contains("Book Id")) return false;
+        if (!headerRow.contains("Exclusive Shelf")) return false;
+        // Guard against accidental false positives: Title is also required to extract
+        // a non-empty book name.
+        if (!headerRow.contains("Title")) return false;
+        return true;
     }
 
     @Override

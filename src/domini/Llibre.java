@@ -209,15 +209,15 @@ public class Llibre {
 	public boolean hasBlob() { return hasBlob; }
 	public void setHasBlob(boolean hasBlob) { this.hasBlob = hasBlob; }
 
-	public String getNotes() { return notes != null ? notes : ""; }
+	public String getNotes() { return notes; }
 	public void setNotes(String notes) { this.notes = notes != null ? notes : ""; }
 	public int getPagines() { return pagines; }
 	public void setPagines(int pagines) { this.pagines = Math.max(0, pagines); }
 	public int getPaginesLlegides() { return paginesLlegides; }
 	public void setPaginesLlegides(int paginesLlegides) { this.paginesLlegides = Math.max(0, paginesLlegides); }
-	public String getEditorial() { return editorial != null ? editorial : ""; }
+	public String getEditorial() { return editorial; }
 	public void setEditorial(String editorial) { this.editorial = editorial != null ? editorial : ""; }
-	public String getSerie() { return serie != null ? serie : ""; }
+	public String getSerie() { return serie; }
 	public void setSerie(String serie) { this.serie = serie != null ? serie : ""; }
 	public int getVolum() { return volum; }
 	public void setVolum(int volum) { this.volum = Math.max(0, volum); }

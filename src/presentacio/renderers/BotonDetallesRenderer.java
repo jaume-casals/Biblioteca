@@ -1,5 +1,8 @@
 package presentacio.renderers;
 
+
+
+import presentacio.UIComponents;
 import java.awt.Color;
 import java.awt.Component;
 import javax.swing.*;
@@ -9,7 +12,7 @@ import herramienta.I18n;
 import herramienta.UITheme;
 
 public class BotonDetallesRenderer extends JButton implements TableCellRenderer {
-    public BotonDetallesRenderer() { UITheme.styleAccentButton(this); }
+    public BotonDetallesRenderer() { UIComponents.styleAccentButton(this); }
 
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value,

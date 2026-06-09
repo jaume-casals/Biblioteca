@@ -190,12 +190,6 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 		return instance;
 	}
 
-	public static MainFrameControl getInstance(MainFramePanel panel) {
-		if (instance == null && panel != null)
-			throw new IllegalStateException("MainFrameControl not yet initialized — use getInstance(panel, cd)");
-		return instance;
-	}
-
 	public static MainFrameControl getInstance() {
 		return instance;
 	}
@@ -284,17 +278,25 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 
 	@Override
 	public void onBookUpdated(Llibre l, boolean isNew) {
-		if (isNew) {
-			Integer llistaId = mostrarControl.getCurrentLlistaId();
-			if (llistaId != null) {
-				try {
-					cLlibres.addLlibreToLlista(l.getISBN(), llistaId, 0.0, false);
-				} catch (Exception e) {
-					new DialogoError(e).showErrorMessage();
-				}
-			}
-		}
+		if (isNew) assignToCurrentShelfIfNeeded(l);
 		mostrarControl.refreshLlibre(l, isNew);
+	}
+
+	/**
+	 * If the user is currently viewing a specific shelf, add a newly created
+	 * book to that shelf so it shows up immediately.  No-op when:
+	 *  - the book is not new (this helper is for {@code isNew} only),
+	 *  - the user is on "All books" (no shelf filter),
+	 *  - the add fails (caller already handled the user-facing error).
+	 */
+	private void assignToCurrentShelfIfNeeded(Llibre l) {
+		Integer llistaId = mostrarControl.getCurrentLlistaId();
+		if (llistaId == null) return;
+		try {
+			cLlibres.addLlibreToLlista(l.getISBN(), llistaId, 0.0, false);
+		} catch (Exception e) {
+			new DialogoError(e).showErrorMessage();
+		}
 	}
 
 	@Override

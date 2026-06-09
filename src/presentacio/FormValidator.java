@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import java.awt.Color;
 
 import javax.swing.BorderFactory;
@@ -20,7 +23,7 @@ public final class FormValidator {
 
     public static void validateField(JTextField field, boolean valid) {
         if (valid) {
-            UITheme.styleField(field);
+            UIComponents.styleField(field);
         } else {
             field.setBorder(INVALID_BORDER);
         }

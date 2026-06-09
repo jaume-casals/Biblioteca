@@ -1,5 +1,8 @@
 package presentacio;
 
+
+
+import presentacio.UIComponents;
 import domini.Llibre;
 import domini.Llista;
 import herramienta.Config;
@@ -110,7 +113,7 @@ class BookActionsController {
         }
         for (long isbn : isbns) {
             try {
-                Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
+                Llibre l = state.cd.findLlibre(isbn).orElse(null);
                 if (l == null) continue;
                 state.undoBuffer.push(l);
                 if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
@@ -154,98 +157,7 @@ class BookActionsController {
         }
 
         EstadistiquesHelper.BookStats globalStats = EstadistiquesHelper.computeStats(global);
-        String summary = EstadistiquesHelper.buildStatsSummary(globalStats, I18n.t("lbl_all_library"));
-
-        javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
-        txtSummary.setEditable(false);
-        txtSummary.setFont(UITheme.fontBase());
-        txtSummary.setBackground(UITheme.BG_PANEL);
-        txtSummary.setForeground(UITheme.TEXT_DARK);
-        txtSummary.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8));
-
-        javax.swing.table.DefaultTableModel shelfModel = new javax.swing.table.DefaultTableModel(
-            new String[]{I18n.t("col_stats_llista"), I18n.t("col_stats_llibres"), I18n.t("col_stats_llegits"),
-                I18n.t("col_stats_pct"), I18n.t("col_stats_val")}, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        Map<Long, Llibre> byIsbn = new HashMap<>();
-        for (Llibre l : state.cd.getAllLlibres()) byIsbn.put(l.getISBN(), l);
-        Map<Integer, List<Llibre>> shelfBooks = new HashMap<>();
-        if (state.cd instanceof domini.ControladorDomini dom) {
-            for (persistencia.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
-                Llibre l = byIsbn.get(row.isbn());
-                if (l != null) shelfBooks.computeIfAbsent(row.llistaId(), k -> new ArrayList<>()).add(l);
-            }
-        }
-        for (Llista ll : state.cd.getAllLlistes()) {
-            List<Llibre> shelf = shelfBooks.getOrDefault(ll.getId(), List.of());
-            if (shelf.isEmpty()) { shelfModel.addRow(new Object[]{ll.getNom(), 0, 0, "0.0%", "—"}); continue; }
-            long llegits = shelf.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
-            double avgVal = shelf.stream().mapToDouble(l -> l.getValoracio() != null ? l.getValoracio() : 0).average().orElse(0);
-            shelfModel.addRow(new Object[]{
-                ll.getNom(), shelf.size(), llegits,
-                String.format("%.1f%%", 100.0 * llegits / shelf.size()),
-                String.format("%.2f", avgVal)
-            });
-        }
-
-        JTable shelfTable = new JTable(shelfModel);
-        shelfTable.setFont(UITheme.fontBase());
-        shelfTable.setBackground(UITheme.BG_PANEL);
-        shelfTable.setForeground(UITheme.TEXT_DARK);
-        shelfTable.setRowHeight(26);
-        shelfTable.setEnabled(false);
-        shelfTable.getTableHeader().setFont(UITheme.fontBold());
-        javax.swing.JScrollPane shelfScroll = new javax.swing.JScrollPane(shelfTable);
-        shelfScroll.setPreferredSize(new java.awt.Dimension(480, Math.min(200, shelfModel.getRowCount() * 27 + 30)));
-        shelfScroll.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("lbl_per_list")));
-
-        int totalLlegits = (int) global.stream().filter(l -> Boolean.TRUE.equals(l.getLlegit())).count();
-        int savedGoal = Config.getReadingGoal();
-        javax.swing.JPanel goalPanel = new javax.swing.JPanel(new java.awt.BorderLayout(6, 4));
-        goalPanel.setBackground(UITheme.BG_PANEL);
-        goalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(
-            javax.swing.BorderFactory.createLineBorder(UITheme.BORDER_CLR),
-            I18n.t("lbl_reading_goal_section"), javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP, UITheme.fontBold(), UITheme.TEXT_MID));
-
-        javax.swing.JProgressBar goalBar = new javax.swing.JProgressBar(0, Math.max(savedGoal, 1));
-        goalBar.setValue(Math.min(totalLlegits, Math.max(savedGoal, 1)));
-        goalBar.setStringPainted(true);
-        goalBar.setFont(UITheme.fontBase());
-
-        javax.swing.JSpinner goalSpinner = new javax.swing.JSpinner(
-            new javax.swing.SpinnerNumberModel(Math.max(savedGoal, 1), 1, 9999, 1));
-        goalSpinner.setFont(UITheme.fontBase());
-        goalSpinner.setPreferredSize(new java.awt.Dimension(70, 28));
-        goalSpinner.addChangeListener(ev -> {
-            int goal = (int) goalSpinner.getValue();
-            Config.setReadingGoal(goal);
-            goalBar.setMaximum(goal);
-            goalBar.setValue(Math.min(totalLlegits, goal));
-            goalBar.setString(totalLlegits + " / " + goal);
-        });
-        goalBar.setMaximum(Math.max(savedGoal, 1));
-        goalBar.setString(totalLlegits + " / " + Math.max(savedGoal, 1));
-
-        javax.swing.JLabel lblGoal = new javax.swing.JLabel(I18n.t("lbl_goal"));
-        UITheme.styleLabel(lblGoal);
-        javax.swing.JPanel goalControls = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
-        goalControls.setBackground(UITheme.BG_PANEL);
-        goalControls.add(lblGoal);
-        goalControls.add(goalSpinner);
-        goalControls.add(new javax.swing.JLabel(I18n.t("lbl_read_count", totalLlegits)));
-        goalPanel.add(goalControls, java.awt.BorderLayout.NORTH);
-        goalPanel.add(goalBar, java.awt.BorderLayout.CENTER);
-
-        javax.swing.JPanel tab1 = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
-        tab1.setBackground(UITheme.BG_PANEL);
-        tab1.add(goalPanel, java.awt.BorderLayout.NORTH);
-        javax.swing.JPanel statsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
-        statsPanel.setBackground(UITheme.BG_PANEL);
-        statsPanel.add(txtSummary, java.awt.BorderLayout.NORTH);
-        if (shelfModel.getRowCount() > 0) statsPanel.add(shelfScroll, java.awt.BorderLayout.CENTER);
-        tab1.add(statsPanel, java.awt.BorderLayout.CENTER);
+        javax.swing.JPanel tab1 = EstadistiquesHelper.buildGeneralTab(global, globalStats, state.cd);
 
         javax.swing.JPanel tab2 = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 8));
         tab2.setBackground(UITheme.BG_PANEL);

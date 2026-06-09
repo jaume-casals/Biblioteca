@@ -65,7 +65,9 @@ public final class CsvUtils {
         return java.util.Optional.of(v == null ? "" : v.trim());
     }
 
+    /** Returns the trimmed value parsed as a double, or 0.0 on null/blank/parse failure. */
     public static double parseDoubleOrZero(String s) {
+        if (s == null || s.isBlank()) return 0.0;
         try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
     }
 

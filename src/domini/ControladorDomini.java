@@ -3,6 +3,7 @@ package domini;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 import herramienta.BackupService;
@@ -19,6 +20,15 @@ public class ControladorDomini implements BibliotecaWriter {
 	private ArrayList<Llibre> bib;
 	private ArrayList<Llista> llistes;
 	private ArrayList<Tag> tags;
+
+	/**
+	 * Id-indexed mirror maps for O(1) {@code get{Llista,Tag}ById} lookups.
+	 * Rebuilt atomically whenever {@link #llistes} / {@link #tags} are
+	 * reassigned (load, restore, clear).  Inside the BIB_LOCK the maps are
+	 * always kept in sync with the lists.
+	 */
+	private final Map<Integer, Llista> llistesById = new HashMap<>();
+	private final Map<Integer, Tag> tagsById = new HashMap<>();
 
 	/**
 	 * Lock que protegeix totes les lectures i mutacions de les llistes en memòria
@@ -82,10 +92,18 @@ public class ControladorDomini implements BibliotecaWriter {
 		Collections.sort(bib, compararISBN);
 		llistes = new ArrayList<>(cp.getAllLlistes());
 		tags = new ArrayList<>(cp.getAllTags());
+		rebuildIdIndexes();
 		backupService = new BackupService(cp);
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
 			backupService.scheduleAutoBackup();
 		}
+	}
+
+	private void rebuildIdIndexes() {
+		llistesById.clear();
+		for (Llista l : llistes) llistesById.put(l.getId(), l);
+		tagsById.clear();
+		for (Tag t : tags) tagsById.put(t.getId(), t);
 	}
 
 	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f) {
@@ -158,17 +176,17 @@ public class ControladorDomini implements BibliotecaWriter {
 		}
 	}
 
-public java.util.List<Llibre> get100Llibres(int index) { // Starts from index*100
-        synchronized (BIB_LOCK) {
-            int from = Math.min(100 * index, bib.size());
-            int to = Math.min(from + 100, bib.size());
-            return new ArrayList<>(bib.subList(from, to));
-        }
-    }
+	public java.util.List<Llibre> get100Llibres(int index) {
+		synchronized (BIB_LOCK) {
+			int from = Math.min(100 * index, bib.size());
+			int to = Math.min(from + 100, bib.size());
+			return new ArrayList<>(bib.subList(from, to));
+		}
+	}
 
-public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 100 llibres
-        synchronized (BIB_LOCK) { return Math.max(0, (bib.size() - 1) / 100); }
-    }
+	public int maxIndex100Llibres() {
+		synchronized (BIB_LOCK) { return Math.max(0, (bib.size() - 1) / 100); }
+	}
 
 	public int getSize() {
 		synchronized (BIB_LOCK) { return bib.size(); }
@@ -317,6 +335,7 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 			Collections.sort(bib, compararISBN);
 			llistes = new ArrayList<>(cp.getAllLlistes());
 			tags = new ArrayList<>(cp.getAllTags());
+			rebuildIdIndexes();
 		}
 	}
 
@@ -326,6 +345,8 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 			bib.clear();
 			llistes.clear();
 			tags.clear();
+			llistesById.clear();
+			tagsById.clear();
 		}
 	}
 
@@ -337,7 +358,8 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 
 	public Llista getLlistaById(int id) throws Exception {
 		synchronized (BIB_LOCK) {
-			for (Llista l : llistes) if (l.getId() == id) return l;
+			Llista l = llistesById.get(id);
+			if (l != null) return l;
 		}
 		throw new BibliotecaException.NotFound("Shelf not found: " + id);
 	}
@@ -347,21 +369,22 @@ public int maxIndex100Llibres() { // maxim index que li pots indicar per agafar 
 		try {
 			int id = cp.createLlista(nom);
 			Llista l = new Llista(id, nom);
-			synchronized (BIB_LOCK) { llistes.add(l); }
+			synchronized (BIB_LOCK) { llistes.add(l); llistesById.put(id, l); }
 			return l;
 		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
 	public void deleteLlista(Llista llista) {
 		try { cp.deleteLlista(llista.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) { llistes.remove(llista); }
+		synchronized (BIB_LOCK) { llistes.remove(llista); llistesById.remove(llista.getId()); }
 	}
 
 	public void renameLlista(int id, String newNom) {
 		if (newNom == null || newNom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
 		try { cp.renameLlista(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		synchronized (BIB_LOCK) {
-			llistes.stream().filter(l -> l.getId() == id).findFirst().ifPresent(l -> l.setNom(newNom));
+			Llista l = llistesById.get(id);
+			if (l != null) l.setNom(newNom);
 		}
 	}
 
@@ -494,7 +517,8 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 
 	public Tag getTagById(int id) throws Exception {
 		synchronized (BIB_LOCK) {
-			for (Tag t : tags) if (t.getId() == id) return t;
+			Tag t = tagsById.get(id);
+			if (t != null) return t;
 		}
 		throw new BibliotecaException.NotFound("Tag not found: " + id);
 	}
@@ -504,20 +528,21 @@ public void setLlibreBlob(long isbn, byte[] blob) {
 		try {
 			int id = cp.createTag(nom);
 			Tag t = new Tag(id, nom);
-			synchronized (BIB_LOCK) { tags.add(t); }
+			synchronized (BIB_LOCK) { tags.add(t); tagsById.put(id, t); }
 			return t;
 		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 	}
 
 	public void deleteTag(Tag tag) {
 		try { cp.deleteTag(tag.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) { tags.remove(tag); }
+		synchronized (BIB_LOCK) { tags.remove(tag); tagsById.remove(tag.getId()); }
 	}
 
 	public void renameTag(int id, String newNom) {
 		try { cp.renameTag(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
 		synchronized (BIB_LOCK) {
-			for (Tag t : tags) { if (t.getId() == id) { t.setNom(newNom); break; } }
+			Tag t = tagsById.get(id);
+			if (t != null) t.setNom(newNom);
 		}
 	}
 

@@ -24,4 +24,12 @@ public interface BookReader {
     List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f);
     List<Llibre> searchLlibresSQL(LlibreFilter f);
     byte[] getLlibreBlob(long isbn);
+
+    /**
+     * Lean variant of {@link #getAllLlibres()}: same result, but explicitly
+     * documented to skip heavy text/blob columns (descripcio, notes, cover).
+     * Default delegates to {@code getAllLlibres} for backends that already
+     * return a light view (in-memory tests) or where the cost is acceptable.
+     */
+    default List<Llibre> getAllLlibresSummary() { return getAllLlibres(); }
 }

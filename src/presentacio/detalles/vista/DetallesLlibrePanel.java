@@ -1,5 +1,8 @@
 package presentacio.detalles.vista;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -99,11 +102,11 @@ public class DetallesLlibrePanel extends JDialog {
 		east.add(Box.createVerticalStrut(6));
 
 		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge_detail"));
-		UITheme.styleSecondaryButton(btnSeleccionarImatge);
+		UIComponents.styleSecondaryButton(btnSeleccionarImatge);
 		btnSeleccionarImatge.setEnabled(false);
 
 		btnEditar = new JButton(I18n.t("btn_edit_java"));
-		UITheme.styleAccentButton(btnEditar);
+		UIComponents.styleAccentButton(btnEditar);
 
 		btnEliminar = new JButton(I18n.t("btn_delete"));
 		btnEliminar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
@@ -116,23 +119,23 @@ public class DetallesLlibrePanel extends JDialog {
 		btnEliminar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
 		JButton btnTancar = new JButton(I18n.t("btn_close"));
-		UITheme.styleSecondaryButton(btnTancar);
+		UIComponents.styleSecondaryButton(btnTancar);
 		btnTancar.addActionListener(e -> dispose());
 
 		btnGestioLlistes = new JButton(I18n.t("btn_llistes"));
-		UITheme.styleSecondaryButton(btnGestioLlistes);
+		UIComponents.styleSecondaryButton(btnGestioLlistes);
 		btnGestioLlistes.setToolTipText(I18n.t("tip_llistes"));
 
 		btnGestioTags = new JButton(I18n.t("btn_etiquetes"));
-		UITheme.styleSecondaryButton(btnGestioTags);
+		UIComponents.styleSecondaryButton(btnGestioTags);
 		btnGestioTags.setToolTipText(I18n.t("tip_etiquetes"));
 
 		btnHistorialPrestecs = new JButton(I18n.t("btn_historial_prestecs"));
-		UITheme.styleSecondaryButton(btnHistorialPrestecs);
+		UIComponents.styleSecondaryButton(btnHistorialPrestecs);
 		btnHistorialPrestecs.setToolTipText(I18n.t("tip_historial_prestecs"));
 
 		btnImprimir = new JButton(I18n.t("btn_imprimir_detail"));
-		UITheme.styleSecondaryButton(btnImprimir);
+		UIComponents.styleSecondaryButton(btnImprimir);
 		btnImprimir.setToolTipText(I18n.t("tip_imprimir_detail"));
 
 		int btnH = 36;
@@ -287,7 +290,7 @@ public class DetallesLlibrePanel extends JDialog {
 		JTextField field = new JTextField();
 		field.setEnabled(false);
 		field.setColumns(10);
-		UITheme.styleField(field);
+		UIComponents.styleField(field);
 		fieldRegistry.linkLabel(lbl, field);
 		fieldRegistry.register(label, field);
 		entry.add(field, BorderLayout.CENTER);
@@ -333,7 +336,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	JLabel makeLabel(String text) {
 		JLabel lbl = new JLabel(text);
-		UITheme.styleLabel(lbl);
+		UIComponents.styleLabel(lbl);
 		lbl.setPreferredSize(new Dimension(LBL_W, 0));
 		return lbl;
 	}

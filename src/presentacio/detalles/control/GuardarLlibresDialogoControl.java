@@ -163,6 +163,20 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			l.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
 			l.setDesitjat(vista.getChckDesitjat().isSelected());
 			l.setNotes(vista.getTextNotes().getText().trim());
+			l.setPaisOrigen(vista.getTextPaisOrigen().getText().trim());
+			String estat = (String) vista.getComboEstat().getSelectedItem();
+			l.setEstat(estat != null && !estat.isEmpty() ? estat : null);
+			String exemplarsTxt = vista.getTextExemplars().getText().trim();
+			if (!exemplarsTxt.isEmpty()) {
+				try { l.setExemplars(Integer.parseInt(exemplarsTxt)); }
+				catch (NumberFormatException ignored) {}
+			}
+			String nomCa = vista.getTextNomCa().getText().trim();
+			String nomEs = vista.getTextNomEs().getText().trim();
+			String nomEn = vista.getTextNomEn().getText().trim();
+			l.setNomCa(nomCa.isEmpty() ? null : nomCa);
+			l.setNomEs(nomEs.isEmpty() ? null : nomEs);
+			l.setNomEn(nomEn.isEmpty() ? null : nomEn);
 			l.setImatgeBlob(selectedBlob);
 			herramienta.LlibreValidator.validateExtrasAll(l.getEditorial(), l.getSerie(), l.getIdioma(), l.getFormat(), l.getPaisOrigen(), l.getEstat());
 			cLlibres.addLlibre(l);

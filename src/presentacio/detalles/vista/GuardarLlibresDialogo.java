@@ -1,5 +1,8 @@
 package presentacio.detalles.vista;
 
+
+
+import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -52,6 +55,12 @@ public class GuardarLlibresDialogo extends JDialog {
 	private JTextField textPortada;
 	private JCheckBox  chckLlegit;
 	private JTextField textNotes;
+	private JTextField textPaisOrigen;
+	private JComboBox<String> comboEstat;
+	private JTextField textExemplars;
+	private JTextField textNomCa;
+	private JTextField textNomEs;
+	private JTextField textNomEn;
 	private JProgressBar progressBar;
 
 	public GuardarLlibresDialogo() {
@@ -83,14 +92,14 @@ public class GuardarLlibresDialogo extends JDialog {
 		west.add(Box.createVerticalStrut(6));
 
 		btnGuardar = new JButton(I18n.t("btn_save_java"));
-		UITheme.styleAccentButton(btnGuardar);
+		UIComponents.styleAccentButton(btnGuardar);
 
 		JButton btnCancel = new JButton(I18n.t("btn_cancel"));
-		UITheme.styleSecondaryButton(btnCancel);
+		UIComponents.styleSecondaryButton(btnCancel);
 		btnCancel.addActionListener(e -> dispose());
 
 		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge"));
-		UITheme.styleSecondaryButton(btnSeleccionarImatge);
+		UIComponents.styleSecondaryButton(btnSeleccionarImatge);
 
 		for (JButton btn : new JButton[]{btnGuardar, btnCancel, btnSeleccionarImatge}) {
 			btn.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -105,21 +114,21 @@ public class GuardarLlibresDialogo extends JDialog {
 		grid.setBackground(UITheme.BG_PANEL);
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
-		textISBN       = new JTextField(); textISBN.setColumns(10); UITheme.styleField(textISBN);
-		textNom        = new JTextField(); textNom.setColumns(10); UITheme.styleField(textNom);
-		textAutor      = new JTextField(); textAutor.setColumns(10); UITheme.styleField(textAutor);
-		textAny        = new JTextField(); textAny.setColumns(10); UITheme.styleField(textAny);
-		textDescripcio = new JTextField(); textDescripcio.setColumns(10); UITheme.styleField(textDescripcio);
-		textValoracio  = new JTextField(); textValoracio.setColumns(10); UITheme.styleField(textValoracio);
-		textPreu       = new JTextField(); textPreu.setColumns(10); UITheme.styleField(textPreu);
-		textEditorial  = new JTextField(); textEditorial.setColumns(10); UITheme.styleField(textEditorial);
-		textSerie      = new JTextField(); textSerie.setColumns(10); UITheme.styleField(textSerie);
-		textVolum      = new JTextField(); textVolum.setColumns(10); UITheme.styleField(textVolum);
-		textDataCompra  = new JTextField(); textDataCompra.setColumns(10); UITheme.styleField(textDataCompra);
-		textDataLectura = new JTextField(); textDataLectura.setColumns(10); UITheme.styleField(textDataLectura);
+		textISBN       = new JTextField(); textISBN.setColumns(10); UIComponents.styleField(textISBN);
+		textNom        = new JTextField(); textNom.setColumns(10); UIComponents.styleField(textNom);
+		textAutor      = new JTextField(); textAutor.setColumns(10); UIComponents.styleField(textAutor);
+		textAny        = new JTextField(); textAny.setColumns(10); UIComponents.styleField(textAny);
+		textDescripcio = new JTextField(); textDescripcio.setColumns(10); UIComponents.styleField(textDescripcio);
+		textValoracio  = new JTextField(); textValoracio.setColumns(10); UIComponents.styleField(textValoracio);
+		textPreu       = new JTextField(); textPreu.setColumns(10); UIComponents.styleField(textPreu);
+		textEditorial  = new JTextField(); textEditorial.setColumns(10); UIComponents.styleField(textEditorial);
+		textSerie      = new JTextField(); textSerie.setColumns(10); UIComponents.styleField(textSerie);
+		textVolum      = new JTextField(); textVolum.setColumns(10); UIComponents.styleField(textVolum);
+		textDataCompra  = new JTextField(); textDataCompra.setColumns(10); UIComponents.styleField(textDataCompra);
+		textDataLectura = new JTextField(); textDataLectura.setColumns(10); UIComponents.styleField(textDataLectura);
 		textDataCompra.setToolTipText("YYYY-MM-DD");
 		textDataLectura.setToolTipText("YYYY-MM-DD");
-		textIdioma     = new JTextField(); textIdioma.setColumns(10); UITheme.styleField(textIdioma);
+		textIdioma     = new JTextField(); textIdioma.setColumns(10); UIComponents.styleField(textIdioma);
 		comboFormat    = new JComboBox<>(herramienta.FormatOptions.withBlank());
 		comboFormat.setBackground(UITheme.BG_MAIN);
 		comboFormat.setForeground(UITheme.TEXT_DARK);
@@ -131,8 +140,17 @@ public class GuardarLlibresDialogo extends JDialog {
 		chckLlegit     = new JCheckBox("");
 		chckLlegit.setBackground(UITheme.BG_PANEL);
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
-		textNotes      = new JTextField(); textNotes.setColumns(10); UITheme.styleField(textNotes);
-		textPortada    = new JTextField(); textPortada.setColumns(10); UITheme.styleField(textPortada);
+		textNotes      = new JTextField(); textNotes.setColumns(10); UIComponents.styleField(textNotes);
+		textPortada    = new JTextField(); textPortada.setColumns(10); UIComponents.styleField(textPortada);
+		textPaisOrigen = new JTextField(); textPaisOrigen.setColumns(10); UIComponents.styleField(textPaisOrigen);
+		comboEstat     = new JComboBox<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
+		comboEstat.setBackground(UITheme.BG_MAIN);
+		comboEstat.setForeground(UITheme.TEXT_DARK);
+		comboEstat.setFont(UITheme.fontBase());
+		textExemplars  = new JTextField(); textExemplars.setColumns(10); UIComponents.styleField(textExemplars);
+		textNomCa      = new JTextField(); textNomCa.setColumns(10); UIComponents.styleField(textNomCa);
+		textNomEs      = new JTextField(); textNomEs.setColumns(10); UIComponents.styleField(textNomEs);
+		textNomEn      = new JTextField(); textNomEn.setColumns(10); UIComponents.styleField(textNomEn);
 
 		FormGridBuilder builder = FormGridBuilder.columnsOf(grid);
 		builder.addField(I18n.t("field_isbn"), textISBN);
@@ -153,6 +171,12 @@ public class GuardarLlibresDialogo extends JDialog {
 		builder.addCheck(I18n.t("field_read"), chckLlegit);
 		builder.addField(I18n.t("field_notes"), textNotes);
 		builder.addField(I18n.t("col_cover"), textPortada);
+		builder.addField(I18n.t("field_country"), textPaisOrigen);
+		builder.addCombo(I18n.t("field_estat"), comboEstat);
+		builder.addField(I18n.t("field_exemplars"), textExemplars);
+		builder.addField(I18n.t("field_title_ca"), textNomCa);
+		builder.addField(I18n.t("field_title_es"), textNomEs);
+		builder.addField(I18n.t("field_title_en"), textNomEn);
 
 		JScrollPane scroll = new JScrollPane(grid,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -182,7 +206,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		south.setBorder(new EmptyBorder(0, 8, 8, 8));
 
 		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
-		UITheme.styleAccentButton(btnCercaInternet);
+		UIComponents.styleAccentButton(btnCercaInternet);
 		btnCercaInternet.setBackground(herramienta.UITheme.GREEN);
 		btnCercaInternet.setForeground(java.awt.Color.WHITE);
 		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
@@ -195,8 +219,6 @@ public class GuardarLlibresDialogo extends JDialog {
 		south.add(progressBar, BorderLayout.SOUTH);
 
 		add(south, BorderLayout.SOUTH);
-
-		setSize(600, 720);
 	}
 
 	// ── getters ───────────────────────────────────────────────────────────────
@@ -224,4 +246,10 @@ public class GuardarLlibresDialogo extends JDialog {
 	public JTextField    getTextPortada()        { return textPortada; }
 	public JCheckBox     getChckLlegit()         { return chckLlegit; }
 	public JTextField    getTextNotes()          { return textNotes; }
+	public JTextField    getTextPaisOrigen()     { return textPaisOrigen; }
+	public JComboBox<String> getComboEstat()     { return comboEstat; }
+	public JTextField    getTextExemplars()      { return textExemplars; }
+	public JTextField    getTextNomCa()          { return textNomCa; }
+	public JTextField    getTextNomEs()          { return textNomEs; }
+	public JTextField    getTextNomEn()          { return textNomEn; }
 }

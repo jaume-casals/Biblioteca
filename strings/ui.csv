@@ -596,3 +596,7 @@ dlg_db_restart_title,Reiniciar aplicació,Reiniciar aplicación,Restart applicat
 dlg_connection_ok,Connexió exitosa,Conexión exitosa,Connection successful
 dlg_connection_fail,Connexió fallida,Conexión fallida,Connection failed
 btn_test_connection,Prova connexió,Probar conexión,Test connection
+theme_light,Clar,Claro,Light
+theme_dark,Fosc,Oscuro,Dark
+theme_sepia,Sèpia,Sépia,Sepia
+theme_ocean,Oceà,Océano,Ocean
