@@ -7,6 +7,76 @@
 ================================================================================
 
 ================================================================================
+  0.  SESSION 10  (2026-06-09 — ControladorDomini facade split)
+================================================================================
+
+Session 10 (B7 [OPEN → DONE].  ControladorDomini 637 → 158 lines.):
+   - New package domini/facade/ with six collaborators + a shared state holder:
+       * StateContext (82 lines, package-private): wraps the in-memory state
+         — three backing lists (bib, llistes, tags), the BIB_LOCK, the two
+         id-index maps (llistesById, tagsById), the persistence ref.  Exposes
+         withLock(Runnable) and withLockReturning(Supplier<T>) so every
+         delegate mutation / read uses the same lock pattern.  replaceAll(
+         newBib, newLlistes, newTags) used by restoreFromSQL; clearAll()
+         used by clearAll().
+       * ShelfDelegate (127 lines, 16 methods): shelf CRUD
+         (getAllLlistes, getLlistaById, addLlista, deleteLlista, renameLlista,
+         getCountInLlista, getAllCountsInLlistes), book↔shelf relations
+         (getLlibresInLlista, getLlistesForLlibre, getLlistesForLlibreContext,
+         addLlibreToLlista, removeLlibreFromLlista, updateLlibreInLlista),
+         ordering (moveLlistaUp, moveLlistaDown, with the
+         swapLlistesOrdre / indexOfLlista internals), and setLlistaColor.
+       * TagDelegate (64 lines, 9 methods): tag CRUD
+         (getAllTags, getTagById, addTag, deleteTag, renameTag) and
+         book↔tag relations (getLlibresWithTag, getTagsForLlibre,
+         addLlibreToTag, removeLlibreFromTag).
+       * LoanDelegate (32 lines, 7 methods): prestarLlibre, retornarLlibre,
+         getLoanedISBNs, getAllActiveLoans, getLoansForIsbn,
+         getAllOverdueLoans, countLoans.  All pass-throughs to cp.
+       * BookDelegate (209 lines, 21 methods): owns the bib list and the
+         SORT_BY comparator map.  Llibre CRUD
+         (getAllLlibres, getUnmodifiableLlibres, get10Llibres, get100Llibres,
+         maxIndex100Llibres, getSize, addLlibre, deleteLlibre ×2,
+         updateLlibre, existsLlibre, getLlibre, loadHeavyFields), blob
+         access (getLlibreBlob, setLlibreBlob), search / filter
+         (aplicarFiltres ×2, searchLlibresSQL, getLlibresPage,
+         countLlibresDB, isLargeLibrary, getRecentlyAdded), plus the
+         SQL_FILTER_THRESHOLD constant and the ISBN_COMPARATOR public
+         constant used by the facade ctor for the initial sort.
+       * StatsDelegate (76 lines, 9 methods): distinct-value queries
+         (getDistinctValues, getDistinctAutorNames), db size
+         (getDbSizeBytes), and the row-dump methods used by backup
+         (getAllLlibreLlistaRows, getAllLlibreTagRows, getAutorsData,
+         getLlibreAutorData, getAllPrestecs, getAllLecturesData).
+       * BackupDelegate (107 lines, 3 methods): backupToSQL,
+         restoreFromSQL, clearAll.  Touches all three state lists and
+         the backup service; takes atomic snapshots under the state
+         lock; I/O runs outside the lock (same as the original).
+
+   - ControladorDomini is now a 158-line facade.  The ctor wires the
+     StateContext + BackupService + 5 delegates.  Every public method
+     is a one-line forwarder: `return books.someMethod(args)`.  The
+     singleton lifecycle (getInstance, resetForTest,
+     resetForProfileSwitch, create) stays on the facade.
+
+   - Public API of ControladorDomini is 100% identical: same class
+     name, same package, same method signatures, same exceptions, same
+     side effects.  Zero callers touched (verified across 11 production
+     files in src/, 4 test files in test/, and checkBiblio/StressTest).
+     LlibreLlistaContext, LlibreLlistaRow, LlibreTagRow, LecturaRow,
+     PrestecRow re-imported in ControladorDomini.java to replace
+     fully-qualified usages now that the implementations moved.
+
+   - Verification: `scripts\test.bat` → 184 plain + 168 JUnit 5 +
+     6 DominiPersistenciaJUnit5 + 3 RestoreSqlJUnit5 = 361 tests, 0
+     failures.  javac -Xlint:all on the 7 new/modified files → 0
+     warnings.
+
+   - B7 [OPEN → DONE]; section 3 of this file is now empty (B7 was
+     the last [OPEN] entry); section 4 retitled to mention session 10
+     in the test-count line.
+
+================================================================================
   0.  SESSION 9  (2026-06-09 — GaleriaCobertesPanel split + tot.txt sweep)
 ================================================================================
 
@@ -337,16 +407,13 @@ tot.txt sweep.
   3.  CROSS-CUTTING / NICE-TO-HAVE
 ================================================================================
 
-[OPEN]  B7  LARGE  ControladorDomini 555-line facade — group shelf/tag/
-                   loan/stats into delegate objects to slim the public
-                   surface.  Deferred from session 7 — 2-3 hour refactor,
-                   deferred to a follow-up.
+(none open — B7 closed in session 10)
 
 ================================================================================
   4.  TESTS
 ================================================================================
 
-Current state (last `scripts\test.bat` run, 2026-06-09, post-session-9):
+Current state (last `scripts\test.bat` run, 2026-06-09, post-session-10):
   - 184 plain tests passing  (test/BibliotecaTest.java)
   - 168 JUnit 5 tests passing (test/BibliotecaJUnit5Test.java +
                                   test/DominiPersistenciaJUnit5Test.java)

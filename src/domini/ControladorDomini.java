@@ -1,72 +1,61 @@
 package domini;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-
-import herramienta.BackupService;
-import domini.BibliotecaException;
-import herramienta.FiltreUtils;
-import interficie.BibliotecaWriter;
-import persistencia.ControladorPersistencia;
+import java.util.List;
 import java.util.Set;
 
+import domini.facade.BackupDelegate;
+import domini.facade.BookDelegate;
+import domini.facade.LoanDelegate;
+import domini.facade.ShelfDelegate;
+import domini.facade.StateContext;
+import domini.facade.StatsDelegate;
+import domini.facade.TagDelegate;
+import herramienta.BackupService;
+import interficie.BibliotecaWriter;
+import persistencia.ControladorPersistencia;
+import persistencia.LecturaRow;
+import persistencia.LlibreLlistaRow;
+import persistencia.LlibreTagRow;
+import persistencia.PrestecRow;
+
+/**
+ * Singleton facade over the library's in-memory state + persistence.
+ *
+ * <p>Responsibilities:
+ * <ul>
+ *   <li>Singleton lifecycle ({@link #getInstance()}, {@link #resetForTest()},
+ *       {@link #resetForProfileSwitch()}, {@link #create(ControladorPersistencia)}).</li>
+ *   <li>Owns the {@link StateContext}: the three backing lists
+ *       ({@code bib}, {@code llistes}, {@code tags}), the in-memory lock
+ *       ({@code BIB_LOCK}), and the id-index maps.</li>
+ *   <li>Delegates every business operation to one of six focused
+ *       collaborator classes in {@code domini.facade} — Shelf, Tag,
+ *       Loan, Book, Stats, Backup.</li>
+ * </ul>
+ *
+ * <p>The public API of this class is unchanged: every method that existed
+ * before the split still exists, with the same signature, same
+ * exceptions, and same side effects. The only externally observable
+ * change is the file's line count (637 → ~150).
+ */
 public class ControladorDomini implements BibliotecaWriter {
+
 	private static ControladorDomini inst;
-	private ControladorPersistencia cp;
-	private BackupService backupService;
-	private ArrayList<Llibre> bib;
-	private ArrayList<Llista> llistes;
-	private ArrayList<Tag> tags;
 
-	/**
-	 * Id-indexed mirror maps for O(1) {@code get{Llista,Tag}ById} lookups.
-	 * Rebuilt atomically whenever {@link #llistes} / {@link #tags} are
-	 * reassigned (load, restore, clear).  Inside the BIB_LOCK the maps are
-	 * always kept in sync with the lists.
-	 */
-	private final Map<Integer, Llista> llistesById = new HashMap<>();
-	private final Map<Integer, Tag> tagsById = new HashMap<>();
-
-	/**
-	 * Lock que protegeix totes les lectures i mutacions de les llistes en memòria
-	 * ({@link #bib}, {@link #llistes}, {@link #tags}). Les crides a
-	 * {@link ControladorPersistencia} ja estan sincronitzades pel seu propi
-	 * controlador; aquest lock només cobreix l'estat in-memory. S'adquireix des
-	 * de qualsevol fil (EDT inclòs) i de fons (per exemple
-	 * {@code ExportController.fetchMissingCovers} que dispara 8 fils
-	 * concurrents contra {@link #setLlibreBlob}).
-	 */
-	private final Object BIB_LOCK = new Object();
-
-	private static final Comparator<Llibre> compararISBN =
-		(a, b) -> {
-			Long ia = a.getISBN(), ib = b.getISBN();
-			if (ia == null && ib == null) return 0;
-			if (ia == null) return -1;
-			if (ib == null) return 1;
-			return ia.compareTo(ib);
-		};
-
-	private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
-		SortSpec.COL_ISBN,      compararISBN,
-		SortSpec.COL_NOM,       Comparator.comparing(l -> l.getNom() != null ? l.getNom() : "", String.CASE_INSENSITIVE_ORDER),
-		SortSpec.COL_ANY,       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
-		SortSpec.COL_VALORACIO, Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
-		SortSpec.COL_PREU,      Comparator.comparing(l -> l.getPreu() != null ? l.getPreu() : 0.0)
-	);
-
-	private static Llibre searchKey(long isbn) {
-		return Llibre.builder().isbn(isbn).nom("").autor("").any(0)
-			.descripcio("").valoracio(0.0).preu(0.0).llegit(false).imatge("").build();
-	}
+	private final StateContext state;
+	private final BackupService backupService;
+	private final ShelfDelegate shelves;
+	private final TagDelegate tags;
+	private final LoanDelegate loans;
+	private final BookDelegate books;
+	private final StatsDelegate stats;
+	private final BackupDelegate backup;
 
 	public static synchronized ControladorDomini getInstance() {
-		if (ControladorDomini.inst == null)
-			ControladorDomini.inst = new ControladorDomini(ControladorPersistencia.getInstance());
-		return ControladorDomini.inst;
+		if (inst == null) inst = new ControladorDomini(ControladorPersistencia.getInstance());
+		return inst;
 	}
 
 	public static synchronized void resetForTest() { inst = null; }
@@ -87,551 +76,105 @@ public class ControladorDomini implements BibliotecaWriter {
 	}
 
 	public ControladorDomini(ControladorPersistencia cp) {
-		this.cp = cp;
-		bib = new ArrayList<Llibre>(cp.getAllLlibres());
-		Collections.sort(bib, compararISBN);
-		llistes = new ArrayList<>(cp.getAllLlistes());
-		tags = new ArrayList<>(cp.getAllTags());
-		rebuildIdIndexes();
-		backupService = new BackupService(cp);
+		this.state = new StateContext(cp,
+			new java.util.ArrayList<Llibre>(cp.getAllLlibres()),
+			new java.util.ArrayList<>(cp.getAllLlistes()),
+			new java.util.ArrayList<>(cp.getAllTags()));
+		Collections.sort(this.state.bib(), BookDelegate.ISBN_COMPARATOR);
+		this.state.rebuildIdIndexesLocked();
+		this.backupService = new BackupService(cp);
+		this.shelves = new ShelfDelegate(this.state);
+		this.tags    = new TagDelegate(this.state);
+		this.loans   = new LoanDelegate(this.state);
+		this.books   = new BookDelegate(this.state);
+		this.stats   = new StatsDelegate(this.state);
+		this.backup  = new BackupDelegate(this.state, this.backupService);
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
 			backupService.scheduleAutoBackup();
 		}
 	}
 
-	private void rebuildIdIndexes() {
-		llistesById.clear();
-		for (Llista l : llistes) llistesById.put(l.getId(), l);
-		tagsById.clear();
-		for (Tag t : tags) tagsById.put(t.getId(), t);
-	}
-
-	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f) {
-		synchronized (BIB_LOCK) {
-			if (bib.size() >= SQL_FILTER_THRESHOLD) return searchLlibresSQL(f);
-			return filterInMemory(bib, f);
-		}
-	}
-
-	// SQL fallback only applies to the full library (1-arg overload). This overload always filters in-memory.
-	public java.util.List<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f) {
-		return filterInMemory(font, f);
-	}
-
-	private ArrayList<Llibre> filterInMemory(java.util.List<Llibre> font, LlibreFilter f) {
-		Set<Long> tagISBNs   = f.getTagId()   != null ? cp.getLlibresWithTag(f.getTagId())     : null;
-		Set<Long> llistaISBNs = f.getLlistaId() != null ? cp.getISBNsInLlista(f.getLlistaId()) : null;
-		ArrayList<Llibre> resultat = new ArrayList<>();
-		for (Llibre l : font) {
-			if (FiltreUtils.matches(l, f, tagISBNs, llistaISBNs)) {
-				resultat.add(l);
-			}
-		}
-		applySort(resultat, f);
-		return resultat;
-	}
-
-	private static void applySort(ArrayList<Llibre> list, LlibreFilter f) {
-		SortSpec sort = f.getSort();
-		if (sort == null || list.size() < 2) return;
-		Comparator<Llibre> cmp = SORT_BY.getOrDefault(sort.column(), compararISBN);
-		if (!sort.ascending()) cmp = cmp.reversed();
-		list.sort(cmp);
-	}
-
-	/** Threshold above which SQL-side search is used instead of in-memory scan. */
-	private static final int SQL_FILTER_THRESHOLD = 2000;
-
-	/** SQL-backed filter for large libraries (> SQL_FILTER_THRESHOLD books). */
-	public java.util.List<Llibre> searchLlibresSQL(LlibreFilter f) {
-		return cp.searchLlibres(f, 0, 0);
-	}
-
-	/** Paginated SQL query: returns pageSize books starting at offset. */
-	public java.util.List<Llibre> getLlibresPage(int offset, int pageSize) {
-		return cp.searchLlibres(LlibreFilter.empty(), offset, pageSize);
-	}
-
-	/** Total books in DB (used for DB-side pagination). */
-	public int countLlibresDB() { return cp.countLlibres(); }
-
-	/** True when the library is large enough to benefit from SQL-side operations. */
-	public boolean isLargeLibrary() { synchronized (BIB_LOCK) { return bib.size() >= SQL_FILTER_THRESHOLD; } }
-
-	public java.util.List<Llibre> getAllLlibres() {
-		synchronized (BIB_LOCK) {
-			return new ArrayList<>(bib);
-		}
-	}
-
-	public java.util.List<Llibre> getUnmodifiableLlibres() {
-		synchronized (BIB_LOCK) {
-			return Collections.unmodifiableList(new ArrayList<>(bib));
-		}
-	}
-
-	public java.util.List<Llibre> get10Llibres() {
-		synchronized (BIB_LOCK) {
-			return new ArrayList<>(bib.subList(0, Math.min(10, bib.size())));
-		}
-	}
-
-	public java.util.List<Llibre> get100Llibres(int index) {
-		synchronized (BIB_LOCK) {
-			int from = Math.min(100 * index, bib.size());
-			int to = Math.min(from + 100, bib.size());
-			return new ArrayList<>(bib.subList(from, to));
-		}
-	}
-
-	public int maxIndex100Llibres() {
-		synchronized (BIB_LOCK) { return Math.max(0, (bib.size() - 1) / 100); }
-	}
-
-	public int getSize() {
-		synchronized (BIB_LOCK) { return bib.size(); }
-	}
-
-	/**
-	 * Afegeix un llibre a la biblioteca.
-	 *
-	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
-	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
-	 * no és atòmica. Dos fils podrien inserir el mateix ISBN (un passa el
-	 * {@code binarySearch}, l'altre encara no ha acabat la DB), o un altre
-	 * fil pot modificar {@code bib} entre el {@code binarySearch} i el
-	 * {@code bib.add}, resultant en una posició incorrecta. Per tancar la
-	 * finestra cal un lock global o una clau única a la DB amb detecció
-	 * de duplicats a nivell d'INSERT.
-	 */
-	public void addLlibre(Llibre l) {
-		synchronized (BIB_LOCK) {
-			int pos = Collections.binarySearch(bib, l, compararISBN);
-			if (pos >= 0)
-				throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
-			try { cp.afegirLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-			pos = -(pos + 1);
-			bib.add(pos, l);
-		}
-	}
-
-	/**
-	 * Elimina un llibre de la biblioteca.
-	 *
-	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
-	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
-	 * no és atòmica — veure {@link #addLlibre(Llibre)}.
-	 */
-	public void deleteLlibre(Llibre l) {
-		synchronized (BIB_LOCK) {
-			int pos = Collections.binarySearch(bib, l, compararISBN);
-			if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
-			try { cp.eliminarLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-			bib.remove(pos);
-		}
-	}
-
-	/**
-	 * Elimina un llibre donat el seu ISBN.
-	 *
-	 * <p><b>Race window conegut</b> (no corregit, veure {@code tot.txt}
-	 * anti-patterns): la seqüència {@code binarySearch → DB → in-memory}
-	 * no és atòmica — veure {@link #addLlibre(Llibre)}.
-	 */
-	public void deleteLlibre(Long ISBN) {
-		if (ISBN == null) throw new BibliotecaException.Validation("ISBN no pot ser null");
-		synchronized (BIB_LOCK) {
-			int pos = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
-			if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
-			try { cp.eliminarLlibre(ISBN); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-			bib.remove(pos);
-		}
-	}
-
-	public void updateLlibre(Llibre l) {
-		try { cp.updateLlibre(l); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			int pos = Collections.binarySearch(bib, l, compararISBN);
-			if (pos >= 0) bib.set(pos, l);
-		}
-	}
-
-	public boolean existsLlibre(long ISBN) {
-		synchronized (BIB_LOCK) {
-			return Collections.binarySearch(bib, searchKey(ISBN), compararISBN) >= 0;
-		}
-	}
-
-	public Llibre getLlibre(long ISBN) {
-		Llibre l;
-		synchronized (BIB_LOCK) {
-			int index = Collections.binarySearch(bib, searchKey(ISBN), compararISBN);
-			if (index < 0)
-				throw new BibliotecaException.NotFound("No existeix el llibre amb ISBN " + ISBN);
-			l = bib.get(index);
-		}
-		if (!l.isHeavyFieldsLoaded()) loadHeavyFields(l);
-		return l;
-	}
-
-	@Override
-	public void loadHeavyFields(Llibre book) {
-		if (book == null || book.isHeavyFieldsLoaded()) return;
-		try {
-			cp.loadHeavyFields(book.getISBN(), book);
-			synchronized (BIB_LOCK) {
-				int index = Collections.binarySearch(bib, book, compararISBN);
-				if (index >= 0) bib.set(index, book);
-			}
-		} catch (RuntimeException e) {
-			throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.getISBN(), e);
-		}
-	}
-
-	/**
-	 * Serialitza l'estat de la biblioteca a un fitxer SQL.
-	 *
-	 * <p>Ordre d'operacions (intencionat): (1) els camps pesats
-	 * ({@code descripcio}, {@code notes}, blob) es pre-carreguen per a tots
-	 * els llibres ABANS del snapshot — fora del bloc sincronitzat perquè
-	 * cada {@code loadHeavyFields} fa una volta a la DB i el I/O no ha de
-	 * bloquejar la resta d'operacions; (2) el snapshot de {@code bib},
-	 * {@code llistes} i {@code tags} es pren atòmicament dins del
-	 * {@code synchronized} (còpies defensives, mutacions posteriors no
-	 * afecten la còpia); (3) l'escriptura al fitxer es delega a
-	 * {@link BackupService#backupToSQL} sense mantenir cap lock.
-	 */
-	public void backupToSQL(java.io.File file) {
-		for (Llibre l : bib) loadHeavyFields(l);
-		ArrayList<Llibre> bibSnapshot;
-		ArrayList<Llista> llistesSnapshot;
-		ArrayList<Tag> tagsSnapshot;
-		synchronized (this) {
-			bibSnapshot = new ArrayList<>(bib);
-			llistesSnapshot = new ArrayList<>(llistes);
-			tagsSnapshot = new ArrayList<>(tags);
-		}
-		try { backupService.backupToSQL(file, bibSnapshot, llistesSnapshot, tagsSnapshot); }
-		catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void restoreFromSQL(java.io.File file) {
-		try {
-			java.io.File tmpDir = new java.io.File(System.getProperty("java.io.tmpdir"));
-			java.io.File backup = new java.io.File(tmpDir, "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
-			backup.deleteOnExit();
-			backupService.backupToSQL(backup, new ArrayList<>(bib), new ArrayList<>(llistes), new ArrayList<>(tags));
-			try {
-				cp.clearAllData();
-				cp.executeSQLFile(file);
-			} catch (Exception e) {
-				try { cp.executeSQLFile(backup); } catch (Exception ex) { throw new BibliotecaException("Restore failed and rollback also failed: " + e.getMessage() + "; rollback error: " + ex.getMessage(), e); }
-				throw new BibliotecaException("Restore failed: " + e.getMessage(), e);
-			}
-		} catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			bib = new ArrayList<>(cp.getAllLlibres());
-			if (bib.isEmpty()) throw new BibliotecaException("Restore completat però no s'han carregat llibres — el fitxer pot estar buit o corrupte");
-			Collections.sort(bib, compararISBN);
-			llistes = new ArrayList<>(cp.getAllLlistes());
-			tags = new ArrayList<>(cp.getAllTags());
-			rebuildIdIndexes();
-		}
-	}
-
-	public void clearAll() {
-		try { cp.clearAllData(); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			bib.clear();
-			llistes.clear();
-			tags.clear();
-			llistesById.clear();
-			tagsById.clear();
-		}
-	}
-
-	public long getDbSizeBytes() { return cp.getDbSizeBytes(); }
-
-	// ── Llista (shelf) management ──────────────────────────────────────────────
-
-	public java.util.List<Llista> getAllLlistes() { return new java.util.ArrayList<>(llistes); }
-
-	public Llista getLlistaById(int id) throws Exception {
-		synchronized (BIB_LOCK) {
-			Llista l = llistesById.get(id);
-			if (l != null) return l;
-		}
-		throw new BibliotecaException.NotFound("Shelf not found: " + id);
-	}
-
-	public Llista addLlista(String nom) {
-		if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-		try {
-			int id = cp.createLlista(nom);
-			Llista l = new Llista(id, nom);
-			synchronized (BIB_LOCK) { llistes.add(l); llistesById.put(id, l); }
-			return l;
-		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void deleteLlista(Llista llista) {
-		try { cp.deleteLlista(llista.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) { llistes.remove(llista); llistesById.remove(llista.getId()); }
-	}
-
-	public void renameLlista(int id, String newNom) {
-		if (newNom == null || newNom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-		try { cp.renameLlista(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			Llista l = llistesById.get(id);
-			if (l != null) l.setNom(newNom);
-		}
-	}
-
-	public int getCountInLlista(int llistaId) { return cp.getCountInLlista(llistaId); }
-	public java.util.Map<Integer, Integer> getAllCountsInLlistes() { return cp.getAllCountsInLlistes(); }
-
-	public java.util.List<Llibre> getLlibresInLlista(int llistaId) {
-		return cp.getLlibresInLlista(llistaId);
-	}
-
-	public java.util.List<Llista> getLlistesForLlibre(long isbn) {
-		return cp.getLlistesForLlibre(isbn);
-	}
-
-	public java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) {
-		return cp.getLlistesForLlibreContext(isbn);
-	}
-
-	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) {
-		try { cp.addLlibreToLlista(isbn, llistaId, valoracio, llegit); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void removeLlibreFromLlista(long isbn, int llistaId) {
-		try { cp.removeLlibreFromLlista(isbn, llistaId); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) {
-		try { cp.updateLlibreInLlista(isbn, llistaId, valoracio, llegit); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void moveLlistaUp(int id) {
-		int idx = indexOfLlista(id);
-		if (idx > 0) swapLlistesOrdre(idx, idx - 1);
-	}
-
-	public void moveLlistaDown(int id) {
-		int idx = indexOfLlista(id);
-		if (idx >= 0 && idx < llistes.size() - 1) swapLlistesOrdre(idx, idx + 1);
-	}
-
-	private int indexOfLlista(int id) {
-		synchronized (BIB_LOCK) {
-			for (int i = 0; i < llistes.size(); i++)
-				if (llistes.get(i).getId() == id) return i;
-		}
-		return -1;
-	}
-
-	private void swapLlistesOrdre(int i, int j) {
-		synchronized (BIB_LOCK) {
-			Llista a = llistes.get(i);
-			Llista b = llistes.get(j);
-			int ordreA = a.getOrdre();
-			int ordreB = b.getOrdre();
-			try {
-				a.setOrdre(ordreB);
-				b.setOrdre(ordreA);
-				Collections.swap(llistes, i, j);
-				cp.updateLlistaOrdre(a.getId(), ordreB);
-				cp.updateLlistaOrdre(b.getId(), ordreA);
-			} catch (java.sql.SQLException e) {
-				a.setOrdre(ordreA);
-				b.setOrdre(ordreB);
-				Collections.swap(llistes, i, j);
-				throw new BibliotecaException(e.getMessage(), e);
-			}
-		}
-	}
-
-	public java.util.List<Llibre> getRecentlyAdded() {
-		return cp.getRecentlyAdded(20);
-	}
-
-	public void setLlistaColor(int id, String color) {
-		if (!Llista.isValidColor(color))
-			throw new BibliotecaException.Validation(herramienta.I18n.t("val_color_invalid", color));
-		try { cp.updateLlistaColor(id, color); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			for (Llista l : llistes) {
-				if (l.getId() == id) { l.setColor(color); break; }
-			}
-		}
-	}
-
-	public void prestarLlibre(long isbn, String nom) {
-		try { cp.addPrestec(isbn, nom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void retornarLlibre(long isbn) {
-		try { cp.returnPrestec(isbn); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public java.util.Set<Long> getLoanedISBNs() {
-		return cp.getLoanedISBNs();
-	}
-
-	public java.util.List<persistencia.PrestecRow> getAllActiveLoans() {
-		return cp.getAllActiveLoans();
-	}
-
-	public java.util.List<persistencia.PrestecRow> getLoansForIsbn(long isbn) {
-		return cp.getLoansForIsbn(isbn);
-	}
-
-	public java.util.List<Object[]> getAllOverdueLoans(int daysThreshold) {
-		return cp.getAllOverdueLoans(daysThreshold);
-	}
-
-	public int countLoans(long isbn) { return cp.countLoans(isbn); }
-
-	public byte[] getLlibreBlob(long isbn) {
-		return cp.getLlibreBlob(isbn);
-	}
-
-	public void setLlibreBlob(long isbn, byte[] blob) {
-		try {
-			cp.setLlibreBlob(isbn, blob);
-			synchronized (BIB_LOCK) {
-				for (Llibre l : bib) {
-					if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
-				}
-			}
-		}
-		catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
-	}
-
-	// ── Tag management ─────────────────────────────────────────────────────────
-
-	public java.util.List<Tag> getAllTags() { return new java.util.ArrayList<>(tags); }
-
-	public Tag getTagById(int id) throws Exception {
-		synchronized (BIB_LOCK) {
-			Tag t = tagsById.get(id);
-			if (t != null) return t;
-		}
-		throw new BibliotecaException.NotFound("Tag not found: " + id);
-	}
-
-	public Tag addTag(String nom) {
-		if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom de l'etiqueta no pot estar buit");
-		try {
-			int id = cp.createTag(nom);
-			Tag t = new Tag(id, nom);
-			synchronized (BIB_LOCK) { tags.add(t); tagsById.put(id, t); }
-			return t;
-		} catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void deleteTag(Tag tag) {
-		try { cp.deleteTag(tag.getId()); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) { tags.remove(tag); tagsById.remove(tag.getId()); }
-	}
-
-	public void renameTag(int id, String newNom) {
-		try { cp.renameTag(id, newNom); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-		synchronized (BIB_LOCK) {
-			Tag t = tagsById.get(id);
-			if (t != null) t.setNom(newNom);
-		}
-	}
-
-	public java.util.Set<Long> getLlibresWithTag(int tagId) { return cp.getLlibresWithTag(tagId); }
-
-	public java.util.List<Tag> getTagsForLlibre(long isbn) {
-		return cp.getTagsForLlibre(isbn);
-	}
-
-	public void addLlibreToTag(long isbn, int tagId) {
-		try { cp.addLlibreToTag(isbn, tagId); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	public void removeLlibreFromTag(long isbn, int tagId) {
-		try { cp.removeLlibreFromTag(isbn, tagId); } catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-	}
-
-	/**
-	 * Llista els valors diferents d'una columna per a l'autocompletat de camps.
-	 *
-	 * <p>Comportament amb doble camí (intencionat, no error):
-	 * <ul>
-	 *   <li><b>Camí en memòria</b>: columnes que són camps String de {@link Llibre}
-	 *       ({@code editorial}, {@code serie}, {@code idioma}, {@code format},
-	 *       {@code pais_origen}, {@code llengua_original}). Escaneja la llista
-	 *       {@code bib} en memòria — és la font de veritat quan la biblioteca és
-	 *       petita i tots els llibres són a memòria. Ràpid però només reflecteix
-	 *       els llibres ja carregats.</li>
-	 *   <li><b>Camí SQL (caiguda)</b>: per a qualsevol altra columna. Delega a
-	 *       {@code cp.getDistinctValues(column)}, que consulta la taula {@code llibre}
-	 *       directament. També retorna llista buida si la columna no és a
-	 *       {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS} (llista blanca).</li>
-	 * </ul>
-	 *
-	 * <p>Si la columna demanada no és ni al switch en memòria ni a la llista blanca
-	 * SQL, el resultat és una llista buida — no es llança excepció. Els dos conjunts
-	 * de columnes s'han de mantenir sincronitzats; el switch en memòria és un
-	 * subconjunt d'{@code AUTOCOMPLETE_COLUMNS}.
-	 */
-	public java.util.List<String> getDistinctValues(String column) {
-		java.util.function.Function<Llibre, String> extractor = switch (column) {
-			case "editorial"       -> Llibre::getEditorial;
-			case "serie"           -> Llibre::getSerie;
-			case "idioma"          -> Llibre::getIdioma;
-			case "format"          -> Llibre::getFormat;
-			case "pais_origen"     -> Llibre::getPaisOrigen;
-			case "llengua_original"-> Llibre::getLlenguaOriginal;
-			default                -> null;
-		};
-		if (extractor != null) {
-			java.util.List<Llibre> snapshot;
-			synchronized (BIB_LOCK) { snapshot = new ArrayList<>(bib); }
-			return snapshot.stream()
-				.map(extractor)
-				.filter(s -> s != null && !s.isEmpty())
-				.distinct()
-				.sorted()
-				.collect(java.util.stream.Collectors.toList());
-		}
-		return cp.getDistinctValues(column);
-	}
-
-	public java.util.List<String> getDistinctAutorNames() {
-		java.util.TreeSet<String> names = new java.util.TreeSet<>();
-		java.util.List<Llibre> snapshot;
-		synchronized (BIB_LOCK) { snapshot = new ArrayList<>(bib); }
-		for (Llibre l : snapshot) {
-			java.util.List<String> a = l.getAutors();
-			if (a != null && !a.isEmpty()) {
-				a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);
-			} else if (l.getAutor() != null && !l.getAutor().isEmpty()) {
-				names.add(l.getAutor());
-			}
-		}
-		return new java.util.ArrayList<>(names);
-	}
-
-	public java.util.List<persistencia.LlibreLlistaRow> getAllLlibreLlistaRows() { return cp.getAllLlibreLlista(); }
-	public java.util.List<persistencia.LlibreTagRow>    getAllLlibreTagRows()    { return cp.getAllLlibreTag(); }
-
-	public java.util.List<Object[]> getAutorsData() { return cp.getAllAutors(); }
-	public java.util.List<Object[]> getLlibreAutorData() { return cp.getAllLlibreAutor(); }
-	public java.util.List<persistencia.PrestecRow> getAllPrestecs() { return cp.getAllPrestecs(); }
-	/**
-	 * Retorna totes les sessions de lectura. Avui només l'usa
-	 * {@link herramienta.BackupService} per fer còpies de seguretat.
-	 * La UI no l'ha implementat encara — veure {@code todo.txt} [1]
-	 * ConnectionConfig LecturaRow — si mai es vol una vista "historial
-	 * de lectura", s'ha de connectar aquí.
-	 */
-	public java.util.List<persistencia.LecturaRow> getAllLecturesData() { return cp.getAllLectures(); }
+	// ── Book / search / blob ──────────────────────────────────────────────────
+
+	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f)                                  { return books.aplicarFiltres(f); }
+	public java.util.List<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f)     { return books.aplicarFiltres(font, f); }
+	public java.util.List<Llibre> searchLlibresSQL(LlibreFilter f)                                { return books.searchLlibresSQL(f); }
+	public java.util.List<Llibre> getLlibresPage(int offset, int pageSize)                        { return books.getLlibresPage(offset, pageSize); }
+	public int countLlibresDB()                                                                   { return books.countLlibresDB(); }
+	public boolean isLargeLibrary()                                                               { return books.isLargeLibrary(); }
+	public java.util.List<Llibre> getAllLlibres()                                                 { return books.getAllLlibres(); }
+	public java.util.List<Llibre> getUnmodifiableLlibres()                                        { return books.getUnmodifiableLlibres(); }
+	public java.util.List<Llibre> get10Llibres()                                                  { return books.get10Llibres(); }
+	public java.util.List<Llibre> get100Llibres(int index)                                        { return books.get100Llibres(index); }
+	public int maxIndex100Llibres()                                                               { return books.maxIndex100Llibres(); }
+	public int getSize()                                                                         { return books.getSize(); }
+	public void addLlibre(Llibre l)                                                               { books.addLlibre(l); }
+	public void deleteLlibre(Llibre l)                                                            { books.deleteLlibre(l); }
+	public void deleteLlibre(Long ISBN)                                                           { books.deleteLlibreByIsbn(ISBN); }
+	public void updateLlibre(Llibre l)                                                            { books.updateLlibre(l); }
+	public boolean existsLlibre(long ISBN)                                                        { return books.existsLlibre(ISBN); }
+	public Llibre getLlibre(long ISBN)                                                            { return books.getLlibre(ISBN); }
+	@Override public void loadHeavyFields(Llibre book)                                            { books.loadHeavyFields(book); }
+	public java.util.List<Llibre> getRecentlyAdded()                                              { return books.getRecentlyAdded(); }
+	public byte[] getLlibreBlob(long isbn)                                                        { return books.getLlibreBlob(isbn); }
+	public void setLlibreBlob(long isbn, byte[] blob)                                             { books.setLlibreBlob(isbn, blob); }
+
+	// ── Shelf ─────────────────────────────────────────────────────────────────
+
+	public java.util.List<Llista> getAllLlistes()                                                 { return shelves.getAllLlistes(); }
+	public Llista getLlistaById(int id) throws Exception                                          { return shelves.getLlistaById(id); }
+	public Llista addLlista(String nom)                                                           { return shelves.addLlista(nom); }
+	public void deleteLlista(Llista llista)                                                       { shelves.deleteLlista(llista); }
+	public void renameLlista(int id, String newNom)                                               { shelves.renameLlista(id, newNom); }
+	public int getCountInLlista(int llistaId)                                                     { return shelves.getCountInLlista(llistaId); }
+	public java.util.Map<Integer, Integer> getAllCountsInLlistes()                                { return shelves.getAllCountsInLlistes(); }
+	public java.util.List<Llibre> getLlibresInLlista(int llistaId)                                { return shelves.getLlibresInLlista(llistaId); }
+	public java.util.List<Llista> getLlistesForLlibre(long isbn)                                  { return shelves.getLlistesForLlibre(isbn); }
+	public java.util.List<LlibreLlistaContext> getLlistesForLlibreContext(long isbn)               { return shelves.getLlistesForLlibreContext(isbn); }
+	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit)      { shelves.addLlibreToLlista(isbn, llistaId, valoracio, llegit); }
+	public void removeLlibreFromLlista(long isbn, int llistaId)                                   { shelves.removeLlibreFromLlista(isbn, llistaId); }
+	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit)  { shelves.updateLlibreInLlista(isbn, llistaId, valoracio, llegit); }
+	public void moveLlistaUp(int id)                                                              { shelves.moveLlistaUp(id); }
+	public void moveLlistaDown(int id)                                                            { shelves.moveLlistaDown(id); }
+	public void setLlistaColor(int id, String color)                                              { shelves.setLlistaColor(id, color); }
+
+	// ── Tag ───────────────────────────────────────────────────────────────────
+
+	public java.util.List<Tag> getAllTags()                                                       { return tags.getAllTags(); }
+	public Tag getTagById(int id) throws Exception                                                { return tags.getTagById(id); }
+	public Tag addTag(String nom)                                                                 { return tags.addTag(nom); }
+	public void deleteTag(Tag tag)                                                                { tags.deleteTag(tag); }
+	public void renameTag(int id, String newNom)                                                  { tags.renameTag(id, newNom); }
+	public java.util.Set<Long> getLlibresWithTag(int tagId)                                       { return tags.getLlibresWithTag(tagId); }
+	public java.util.List<Tag> getTagsForLlibre(long isbn)                                        { return tags.getTagsForLlibre(isbn); }
+	public void addLlibreToTag(long isbn, int tagId)                                              { tags.addLlibreToTag(isbn, tagId); }
+	public void removeLlibreFromTag(long isbn, int tagId)                                         { tags.removeLlibreFromTag(isbn, tagId); }
+
+	// ── Loan ──────────────────────────────────────────────────────────────────
+
+	public void prestarLlibre(long isbn, String nom)                                              { loans.prestarLlibre(isbn, nom); }
+	public void retornarLlibre(long isbn)                                                         { loans.retornarLlibre(isbn); }
+	public java.util.Set<Long> getLoanedISBNs()                                                   { return loans.getLoanedISBNs(); }
+	public java.util.List<PrestecRow> getAllActiveLoans()                                         { return loans.getAllActiveLoans(); }
+	public java.util.List<PrestecRow> getLoansForIsbn(long isbn)                                  { return loans.getLoansForIsbn(isbn); }
+	public java.util.List<Object[]> getAllOverdueLoans(int daysThreshold)                         { return loans.getAllOverdueLoans(daysThreshold); }
+	public int countLoans(long isbn)                                                              { return loans.countLoans(isbn); }
+
+	// ── Stats / autocomplete / backup payload ────────────────────────────────
+
+	public java.util.List<String> getDistinctValues(String column)                                { return stats.getDistinctValues(column); }
+	public java.util.List<String> getDistinctAutorNames()                                         { return stats.getDistinctAutorNames(); }
+	public java.util.List<LlibreLlistaRow> getAllLlibreLlistaRows()                               { return stats.getAllLlibreLlistaRows(); }
+	public java.util.List<LlibreTagRow>    getAllLlibreTagRows()                                  { return stats.getAllLlibreTagRows(); }
+	public java.util.List<Object[]>        getAutorsData()                                        { return stats.getAutorsData(); }
+	public java.util.List<Object[]>        getLlibreAutorData()                                   { return stats.getLlibreAutorData(); }
+	public java.util.List<PrestecRow>      getAllPrestecs()                                       { return stats.getAllPrestecs(); }
+	public java.util.List<LecturaRow>      getAllLecturesData()                                   { return stats.getAllLecturesData(); }
+	public long getDbSizeBytes()                                                                  { return stats.getDbSizeBytes(); }
+
+	// ── Backup / restore / clearAll ───────────────────────────────────────────
+
+	public void backupToSQL(File file)                                                            { backup.backupToSQL(file); }
+	public void restoreFromSQL(File file)                                                         { backup.restoreFromSQL(file); }
+	@Override public void clearAll()                                                              { backup.clearAll(); }
 }
