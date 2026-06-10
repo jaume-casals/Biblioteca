@@ -1,0 +1,278 @@
+[17:03:19.565] === Biblioteca StressTest ===
+[17:03:19.570] Started: 2026-06-10T17:03:19.569418300
+[17:03:22.356] OK: main window visible — "Biblioteca"
+[17:03:23.160] 
+══════════════════════════════════════════════════════
+[17:03:23.162] PHASE 01: Validation: empty ISBN
+[17:03:23.162] ══════════════════════════════════════════════════════
+[17:03:24.580]   ✓ PASS: Empty ISBN → save rejected (form still open: "Nou llibre")
+[17:03:25.097] 
+══════════════════════════════════════════════════════
+[17:03:25.098] PHASE 02: Validation: non-numeric ISBN
+[17:03:25.099] ══════════════════════════════════════════════════════
+[17:03:26.532]   ✓ PASS: Non-numeric ISBN → save rejected (form still open: "Nou llibre")
+[17:03:27.046] 
+══════════════════════════════════════════════════════
+[17:03:27.047] PHASE 03: Validation: 3-digit ISBN
+[17:03:27.047] ══════════════════════════════════════════════════════
+[17:03:28.480]   ✓ PASS: 3-digit ISBN → save rejected (form still open: "Nou llibre")
+[17:03:28.988] 
+══════════════════════════════════════════════════════
+[17:03:28.988] PHASE 04: Validation: empty title
+[17:03:28.988] ══════════════════════════════════════════════════════
+[17:03:30.389]   ✓ PASS: Empty title → save rejected (form still open: "Nou llibre")
+[17:03:30.904] 
+══════════════════════════════════════════════════════
+[17:03:30.904] PHASE 05: Validation: rating 11.0
+[17:03:30.904] ══════════════════════════════════════════════════════
+[17:03:32.367]   ✓ PASS: Rating 11.0 → save rejected (form still open: "Nou llibre")
+[17:03:32.880] 
+══════════════════════════════════════════════════════
+[17:03:32.882] PHASE 06: Validation: rating -1.0
+[17:03:32.882] ══════════════════════════════════════════════════════
+[17:03:34.377]   ✓ PASS: Rating -1.0 → save rejected (form still open: "Nou llibre")
+[17:03:34.883] 
+══════════════════════════════════════════════════════
+[17:03:34.883] PHASE 07: Validation: negative price
+[17:03:34.884] ══════════════════════════════════════════════════════
+[17:03:36.374]   ✓ PASS: Negative price → save rejected (form still open)
+[17:03:36.878] 
+══════════════════════════════════════════════════════
+[17:03:36.878] PHASE 08: Validation: year non-numeric
+[17:03:36.879] ══════════════════════════════════════════════════════
+[17:03:38.343]   ✓ PASS: Non-numeric year → save rejected (form still open)
+[17:03:38.858] 
+══════════════════════════════════════════════════════
+[17:03:38.858] PHASE 09: Chaos: SQL injection in title/autor
+[17:03:38.859] ══════════════════════════════════════════════════════
+[17:03:40.618]   ✓ PASS: SQL injection saved without crash — no error dialog
+[17:03:40.771] 
+══════════════════════════════════════════════════════
+[17:03:40.772] PHASE 10: Chaos: emoji + unicode title
+[17:03:40.772] ══════════════════════════════════════════════════════
+[17:03:42.501]   ✓ PASS: Unicode emoji title saved without crash
+[17:03:42.661] 
+══════════════════════════════════════════════════════
+[17:03:42.662] PHASE 11: Chaos: 500-char title
+[17:03:42.662] ══════════════════════════════════════════════════════
+[17:03:44.405]   ✓ PASS: 500-char title → save rejected (form still open)
+[17:03:44.905] 
+══════════════════════════════════════════════════════
+[17:03:44.906] PHASE 12: Chaos: whitespace-only fields
+[17:03:44.906] ══════════════════════════════════════════════════════
+[17:03:46.323]   ✓ PASS: Whitespace-only fields → save rejected (form still open)
+[17:03:46.827] 
+══════════════════════════════════════════════════════
+[17:03:46.827] PHASE 13: Chaos: duplicate ISBN
+[17:03:46.827] ══════════════════════════════════════════════════════
+[17:03:48.444]   ✓ PASS: Duplicate ISBN → save rejected (form still open)
+[17:03:48.946] 
+══════════════════════════════════════════════════════
+[17:03:48.947] PHASE 14: Create 5 valid test books
+[17:03:48.948] ══════════════════════════════════════════════════════
+[17:03:50.834]   ✓ PASS: Valid book 0 created (ISBN=9780333085509)
+[17:03:52.711]   ✓ PASS: Valid book 1 created (ISBN=9780333085510)
+[17:03:54.576]   ✓ PASS: Valid book 2 created (ISBN=9780333085511)
+[17:03:56.444]   ✓ PASS: Valid book 3 created (ISBN=9780333085512)
+[17:03:58.312]   ✓ PASS: Valid book 4 created (ISBN=9780333085513)
+[17:03:58.312]   ✓ PASS: All 5 test books created
+[17:03:58.477] 
+══════════════════════════════════════════════════════
+[17:03:58.478] PHASE 15: Rapid pagination fwd+bwd
+[17:03:58.478] ══════════════════════════════════════════════════════
+[17:04:11.886]   ✓ PASS: Pagination stress: fwd/bwd/last/first — no crash
+[17:04:12.042] 
+══════════════════════════════════════════════════════
+[17:04:12.042] PHASE 16: Search: SQL wildcard chars
+[17:04:12.043] ══════════════════════════════════════════════════════
+[17:04:14.677]   ✓ PASS: SQL injection search patterns → no crash
+[17:04:14.835] 
+══════════════════════════════════════════════════════
+[17:04:14.835] PHASE 17: Search: regex metacharacters
+[17:04:14.835] ══════════════════════════════════════════════════════
+[17:04:18.064]   ✓ PASS: Regex metachar searches → no crash
+[17:04:18.220] 
+══════════════════════════════════════════════════════
+[17:04:18.220] PHASE 18: Search: whitespace / empty
+[17:04:18.221] ══════════════════════════════════════════════════════
+[17:04:19.552]   ✓ PASS: Empty/whitespace search → no crash
+[17:04:19.710] 
+══════════════════════════════════════════════════════
+[17:04:19.711] PHASE 19: Search: very long string
+[17:04:19.711] ══════════════════════════════════════════════════════
+[17:04:20.369]   ✓ PASS: 5000-char search → no crash
+[17:04:20.776] 
+══════════════════════════════════════════════════════
+[17:04:20.776] PHASE 20: Filter: llegit + no llegit both
+[17:04:20.777] ══════════════════════════════════════════════════════
+[17:04:21.907]   ✓ PASS: Filter llegit+noLlegit → no crash
+[17:04:22.802] 
+══════════════════════════════════════════════════════
+[17:04:22.803] PHASE 21: Filter: inverted year range
+[17:04:22.803] ══════════════════════════════════════════════════════
+[17:04:24.238]   ✓ PASS: Inverted year range handled without crash
+[17:04:25.116] 
+══════════════════════════════════════════════════════
+[17:04:25.117] PHASE 22: Filter: apply then clear
+[17:04:25.117] ══════════════════════════════════════════════════════
+[17:04:26.662]   ✓ PASS: Filter apply+clear → no crash
+[17:04:27.205] 
+══════════════════════════════════════════════════════
+[17:04:27.205] PHASE 23: Rapid dark mode toggle x6
+[17:04:27.205] ══════════════════════════════════════════════════════
+[17:04:29.121]   ✓ PASS: Dark mode toggled 6x → no crash (even count → restored)
+[17:04:29.281] 
+══════════════════════════════════════════════════════
+[17:04:29.282] PHASE 24: Rapid gallery toggle x4
+[17:04:29.282] ══════════════════════════════════════════════════════
+[17:04:31.088]   ✓ PASS: Gallery toggled 4x → no crash
+[17:04:31.245] 
+══════════════════════════════════════════════════════
+[17:04:31.245] PHASE 25: Rapid series toggle x4
+[17:04:31.245] ══════════════════════════════════════════════════════
+[17:04:33.035]   ✓ PASS: Series toggled 4x → no crash
+[17:04:33.192] 
+══════════════════════════════════════════════════════
+[17:04:33.193] PHASE 26: Rapid filter drawer toggle x6
+[17:04:33.193] ══════════════════════════════════════════════════════
+[17:04:34.625]   ✓ PASS: Filter drawer toggled 6x → no crash
+[17:04:34.783] 
+══════════════════════════════════════════════════════
+[17:04:34.783] PHASE 27: Book details: open/close x5 rapid
+[17:04:34.784] ══════════════════════════════════════════════════════
+[17:04:44.294]   ✓ PASS: Rapid open/close x5: 5 dialogs — no crash
+[17:04:44.457] 
+══════════════════════════════════════════════════════
+[17:04:44.458] PHASE 28: Book details: Llistes sub-dialog
+[17:04:44.458] ══════════════════════════════════════════════════════
+[17:04:47.319]   ✓ PASS: Llistes sub-dialog: "Llistes de: '; DROP TABLE llibres; --"
+[17:04:48.434] 
+══════════════════════════════════════════════════════
+[17:04:48.434] PHASE 29: Book details: Etiquetes sub-dialog
+[17:04:48.434] ══════════════════════════════════════════════════════
+[17:04:51.289]   ✓ PASS: Etiquetes sub-dialog: "Etiquetes de: '; DROP TABLE llibres; --"
+[17:04:52.409] 
+══════════════════════════════════════════════════════
+[17:04:52.409] PHASE 30: Book details: Historial préstamos
+[17:04:52.410] ══════════════════════════════════════════════════════
+[17:04:55.248]   ✓ PASS: Historial préstamos dialog: "Historial de préstecs"
+[17:04:56.362] 
+══════════════════════════════════════════════════════
+[17:04:56.362] PHASE 31: Book details: Imprimir fitxa
+[17:04:56.362] ══════════════════════════════════════════════════════
+[17:04:59.342]   ✓ PASS: Imprimir clicked — no Swing sub-dialog (native print UI may be headless/no-op)
+[17:05:00.380] 
+══════════════════════════════════════════════════════
+[17:05:00.380] PHASE 32: Gestionar llistes: CRUD stress
+[17:05:00.381] ══════════════════════════════════════════════════════
+[17:05:01.613]   ✓ PASS: Empty list name → error dialog
+[17:05:02.880]   Created: StressTestList_1_221
+[17:05:03.532]   Created: StressTestList_2_880
+[17:05:04.191]   Created: StressTestList_3_532
+[17:05:04.191]   ✓ PASS: Created 3 test lists
+[17:05:04.723]   ✓ PASS: Reorder buttons: up/down work
+[17:05:05.489]   ✓ PASS: Color picker dialog opened
+[17:05:09.311]   ✓ PASS: Deleted 3 test lists
+[17:05:09.875] 
+══════════════════════════════════════════════════════
+[17:05:09.875] PHASE 33: Stats dialog
+[17:05:09.876] ══════════════════════════════════════════════════════
+[17:05:10.740]   ✓ PASS: Stats: no shelf table (no list assignments — expected)
+[17:05:10.741]   ✓ PASS: Stats: has llegit count
+[17:05:10.956]   ✓ PASS: Stats: objective field editable
+[17:05:11.520] 
+══════════════════════════════════════════════════════
+[17:05:11.520] PHASE 34: Configuració dialog
+[17:05:11.520] ══════════════════════════════════════════════════════
+[17:05:15.563]   ! WARN: Configuració dialog missing
+[17:05:15.718]   PHASE 34 produced new issues (fails: +0, warns: +1)
+[17:05:15.719] 
+══════════════════════════════════════════════════════
+[17:05:15.719] PHASE 35: Export buttons no crash
+[17:05:15.719] ══════════════════════════════════════════════════════
+[17:05:17.718]   ! WARN: Export CSV → no dialog (may have cancelled or auto-saved)
+[17:05:19.588]   ✓ PASS: Export JSON → dialog appeared
+[17:05:21.495]   ✓ PASS: Export HTML → dialog appeared
+[17:05:22.690]   PHASE 35 produced new issues (fails: +0, warns: +1)
+[17:05:22.691] 
+══════════════════════════════════════════════════════
+[17:05:22.691] PHASE 36: Backup BD dialog
+[17:05:22.692] ══════════════════════════════════════════════════════
+[17:05:24.319]   ✓ PASS: Backup BD → dialog: "Save"
+[17:05:25.371] 
+══════════════════════════════════════════════════════
+[17:05:25.372] PHASE 37: Ctrl+A select all
+[17:05:25.372] ══════════════════════════════════════════════════════
+[17:05:26.580]   ✓ PASS: Ctrl+A selected 6 rows
+[17:05:26.737] 
+══════════════════════════════════════════════════════
+[17:05:26.737] PHASE 38: Ctrl+F focus search
+[17:05:26.738] ══════════════════════════════════════════════════════
+[17:05:27.067]   ✓ PASS: Ctrl+F → search field focused
+[17:05:27.222] 
+══════════════════════════════════════════════════════
+[17:05:27.222] PHASE 39: Ctrl+N new book (then Esc)
+[17:05:27.222] ══════════════════════════════════════════════════════
+[17:05:28.262]   ✓ PASS: Ctrl+N → new book dialog: "Nou llibre"
+[17:05:28.764] 
+══════════════════════════════════════════════════════
+[17:05:28.764] PHASE 40: Llibre aleatori dialog
+[17:05:28.765] ══════════════════════════════════════════════════════
+[17:05:29.527]   Aleatori dialog 1: "Expedient del llibre '; DROP TABLE llibres; --"
+[17:05:30.643]   Aleatori dialog 2: "Expedient del llibre StressBook_1"
+[17:05:31.758]   Aleatori dialog 3: "Expedient del llibre '; DROP TABLE llibres; --"
+[17:05:32.103]   ✓ PASS: Llibre aleatori clicked 3x → no crash
+[17:05:32.261] 
+══════════════════════════════════════════════════════
+[17:05:32.261] PHASE 41: Sidebar: all buttons exercised
+[17:05:32.262] ══════════════════════════════════════════════════════
+[17:05:32.826]   ✓ PASS: Sidebar "Tots els" → panel update, no dialog
+[17:05:33.392]   ✓ PASS: Sidebar "Afegits recentment" → panel update, no dialog
+[17:05:34.576]   ✓ PASS: Sidebar "Llegits" → dialog dismissed, no crash
+[17:05:35.140]   ✓ PASS: Sidebar "Llista de desitjos" → panel update, no dialog
+[17:05:35.704]   ✓ PASS: Sidebar "En curs" → panel update, no dialog
+[17:05:36.435] 
+══════════════════════════════════════════════════════
+[17:05:36.435] PHASE 41B: Data integrity: full DB round-trip
+[17:05:36.435] ══════════════════════════════════════════════════════
+[17:05:36.448]   ✓ PASS: DataIntegrity: nom persists
+[17:05:36.448]   ✓ PASS: DataIntegrity: nom_ca persists
+[17:05:36.448]   ✓ PASS: DataIntegrity: nom_es persists
+[17:05:36.448]   ✓ PASS: DataIntegrity: nom_en persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: editorial persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: serie persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: volum persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: estat persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: exemplars persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: idioma persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: format persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: pagines persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: pagines_llegides persists
+[17:05:36.449]   ✓ PASS: DataIntegrity: llegit persists
+[17:05:36.452]   ✓ PASS: DataIntegrity: loan registered (active)
+[17:05:36.453]   ✓ PASS: DataIntegrity: countLoans >= 1
+[17:05:36.454]   ✓ PASS: DataIntegrity: loan returned (not active)
+[17:05:36.524]   ✓ PASS: DataIntegrity: tag membership added
+[17:05:36.527]   ✓ PASS: DataIntegrity: tag membership removed
+[17:05:36.685] 
+══════════════════════════════════════════════════════
+[17:05:36.685] PHASE 42: Cleanup: delete all test books
+[17:05:36.685] ══════════════════════════════════════════════════════
+[17:05:36.685] Cleaning 7 test books...
+[17:05:39.076]   ! WARN: No delete confirm for ISBN 9780333085506 — book may remain
+[17:05:39.950]   ! WARN: No delete confirm for ISBN 9780333085507 — book may remain
+[17:05:40.829]   ! WARN: No delete confirm for ISBN 9780333085509 — book may remain
+[17:05:41.694]   ! WARN: No delete confirm for ISBN 9780333085510 — book may remain
+[17:05:42.558]   ! WARN: No delete confirm for ISBN 9780333085511 — book may remain
+[17:05:43.426]   ! WARN: No delete confirm for ISBN 9780333085512 — book may remain
+[17:05:44.282]   ! WARN: No delete confirm for ISBN 9780333085513 — book may remain
+[17:05:45.304]   ✓ PASS: Cleanup: deleted 0/7 test books
+[17:05:45.464]   PHASE 42 produced new issues (fails: +0, warns: +7)
+[17:05:45.464] 
+══════════ SUMMARY ══════════
+[17:05:45.464] PASS : 76
+[17:05:45.464] FAIL : 0
+[17:05:45.464] WARN : 9
+[17:05:45.464] TOTAL: 85
+[17:05:45.464] Finished: 2026-06-10T17:05:45.464707900
+[17:05:45.465] === StressTest finished ===

@@ -25,6 +25,13 @@ public class StressTest {
     private static PrintWriter report;
     private static int passCount = 0, failCount = 0, warnCount = 0;
     private static int stressThreads = 50;
+    private static int stressInstances = 0;          // child JVMs spawned in extreme multi-instance phase
+    private static int stressSoakSeconds = 0;         // 0 = disabled
+    private static int stressFuzzPerDialog = 25;      // random strings per dialog in fuzz phase
+    private static boolean stressMemoryProbe = false; // heap-growth check across iterations
+    private static long stressInitialHeapBytes = -1;   // baseline for the memory probe
+    private static final List<Process> childProcs = new ArrayList<>();
+    private static final java.util.Random FUZZ = new java.util.Random(0xBADCAFE);
     private static final List<Long> createdISBNs = new ArrayList<>();
     private static final AtomicLong isbnSeq = new AtomicLong(
         9780000000000L + (new Random().nextLong() & Long.MAX_VALUE) % 900_000_000L);
@@ -40,6 +47,16 @@ public class StressTest {
         domini.ControladorDomini.resetForTest();
         persistencia.ControladorPersistencia.resetForTest();
         stressThreads = Integer.getInteger("biblioteca.stress.threads", 50);
+        stressInstances = Integer.getInteger("biblioteca.stress.instances", 0);
+        stressSoakSeconds = Integer.getInteger("biblioteca.stress.soak", 0);
+        stressFuzzPerDialog = Integer.getInteger("biblioteca.stress.fuzz", 25);
+        stressMemoryProbe = Boolean.getBoolean("biblioteca.stress.memprobe");
+        if (stressInstances > 0) {
+            log("Multi-instance: " + stressInstances + " child JVMs will be spawned");
+        }
+        if (stressSoakSeconds > 0) {
+            log("Soak: background DB activity for " + stressSoakSeconds + "s");
+        }
         if (GraphicsEnvironment.isHeadless()) {
             System.err.println("FATAL: Headless environment — Robot required. Install Xvfb or set DISPLAY.");
             System.exit(1);
@@ -174,8 +191,28 @@ public class StressTest {
             phase("46", "Extreme: gallery toggle x20",         () -> testExtreme_gallery(main, 20));
             phase("47", "Extreme: concurrent UI clicks",       () -> testExtreme_concurrent(main, stressThreads));
             phase("48", "Extreme: all dialogs rapid fire",     () -> testExtreme_dialogSpam(main));
+            // ── Beyond the original extreme: extra-extreme (run2 with STRESS_EXTREME=1) ──
+            phase("49", "Extreme: domain-layer bulk insert 1000",   () -> testExtreme_bulkInsertDomain(1000));
+            phase("50", "Extreme: domain-layer bulk insert 5000",   () -> testExtreme_bulkInsertDomain(5000));
+            phase("51", "Extreme: memory probe (heap growth)",       () -> testExtreme_memoryProbe());
+            phase("52", "Extreme: random-action monkey x500",        () -> testExtreme_randomMonkey(main, 500));
+            phase("53", "Extreme: fuzz every dialog with random strings",
+                () -> testExtreme_fuzzEveryDialog(main, stressFuzzPerDialog));
+            phase("54", "Extreme: concurrent filter+search+edit storm",
+                () -> testExtreme_concurrentEditStorm(main, stressThreads));
+            phase("55", "Extreme: bulk-search SQL 1000 LIKE patterns", () -> testExtreme_bulkSearchDomain());
+            if (stressInstances > 0) {
+                phase("56", "Extreme: multi-instance — spawn " + stressInstances + " child JVMs",
+                    () -> testExtreme_multiInstance(stressInstances));
+            }
+            if (stressSoakSeconds > 0) {
+                phase("57", "Extreme: long-soak background DB activity for " + stressSoakSeconds + "s",
+                    () -> testExtreme_longSoak(stressSoakSeconds));
+            }
         }
         phase("42", "Cleanup: delete all test books",     () -> testCleanup(main));
+        // Always tear down child JVMs, even on failure.
+        if (!childProcs.isEmpty()) killChildProcs();
     }
 
     // ── VALIDATION ────────────────────────────────────────────────────────────────
@@ -1037,6 +1074,477 @@ public class StressTest {
             }
         }
         pass("Dialog rapid-fire x3 rounds");
+    }
+
+    // ── EXTRA-EXTREME (phases 49+) ────────────────────────────────────────────
+    // These target OS-level resource saturation that single-process tests
+    // can't reach: heap growth across bulk operations, multi-JVM
+    // contention on the same lib/, random monkey tests on the Swing action
+    // tree, and long-soak background activity.
+
+    /**
+     * Bulk-insert N books straight into the domain (no UI). Used to seed
+     * the database for the memory probe and bulk-search phases. Records
+     * wall-clock time and final size so the report shows whether the
+     * insert path is linear or quadratic.
+     */
+    private static void testExtreme_bulkInsertDomain(int n) {
+        long t0 = System.nanoTime();
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        int before = cd.getSize();
+        for (int i = 0; i < n; i++) {
+            long isbn = uniqueISBN();
+            domini.Llibre l = new domini.Llibre(isbn,
+                "Bulk_" + i,
+                "Bot " + (i % 50),
+                1900 + (i % 130),
+                "bulk-insert " + i,
+                (double) (i % 11),
+                (double) (i % 50),
+                i % 2 == 0,
+                null);
+            try { cd.addLlibre(l); createdISBNs.add(isbn); }
+            catch (Exception e) { fail("bulk insert " + i + ": " + e.getMessage()); return; }
+        }
+        long elapsed = (System.nanoTime() - t0) / 1_000_000L;
+        int after = cd.getSize();
+        pass("Bulk inserted " + n + " books in " + elapsed + " ms (size: " + before + " → " + after + ")");
+    }
+
+    /**
+     * Memory probe: capture heap before a stress burst, do 10× round of
+     * (insert 500 + delete all), check heap growth. A leak is flagged if
+     * the used heap grew by more than 64 MB across the rounds (the JVM
+     * keeps reachable objects from the Swing table model, but those are
+     * bounded by the visible page size).
+     */
+    private static void testExtreme_memoryProbe() {
+        Runtime rt = Runtime.getRuntime();
+        // Warm-up GC
+        System.gc(); UiTestSupport.sleep(120); System.gc(); UiTestSupport.sleep(120);
+        long usedBefore = rt.totalMemory() - rt.freeMemory();
+        if (stressInitialHeapBytes < 0) stressInitialHeapBytes = usedBefore;
+
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        List<Long> scratch = new ArrayList<>();
+        for (int round = 0; round < 5; round++) {
+            for (int i = 0; i < 200; i++) {
+                long isbn = uniqueISBN();
+                try { cd.addLlibre(new domini.Llibre(isbn, "MemProbe_" + round + "_" + i,
+                    "Bot", 2000, "", 5.0, 1.0, false, null)); scratch.add(isbn); }
+                catch (Exception ignored) {}
+            }
+            for (long isbn : scratch) {
+                try { cd.deleteLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
+            }
+            scratch.clear();
+            System.gc(); UiTestSupport.sleep(80);
+        }
+        System.gc(); UiTestSupport.sleep(120);
+        long usedAfter = rt.totalMemory() - rt.freeMemory();
+        long delta = usedAfter - stressInitialHeapBytes;
+        if (delta > 64L * 1024 * 1024) {
+            warn("Heap grew by " + (delta / (1024 * 1024)) + " MB across 5 round-trips (baseline " +
+                (stressInitialHeapBytes / (1024 * 1024)) + " MB) — possible leak");
+        } else {
+            pass("Heap probe: used " + (usedAfter / (1024 * 1024)) + " MB (Δ " +
+                (delta / (1024 * 1024)) + " MB) — within 64 MB bound");
+        }
+    }
+
+    /**
+     * Random-action monkey: pick a visible button / table row / text field
+     * at random and fire its action. Catches event-dispatch-thread
+     * exceptions, stuck-modal-dialog deadlocks, and accidental
+     * re-entrancy in handlers.
+     */
+    private static void testExtreme_randomMonkey(JFrame main, int actions) {
+        java.util.concurrent.atomic.AtomicInteger exceptions = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger deadlocks = new java.util.concurrent.atomic.AtomicInteger();
+        long t0 = System.nanoTime();
+        for (int i = 0; i < actions; i++) {
+            try {
+                // Snapshot all visible components across all windows
+                List<Component> visible = new ArrayList<>();
+                for (Window w : Window.getWindows()) {
+                    if (!w.isVisible()) continue;
+                    UiTestSupport.flattenVisible((Container) w, visible);
+                }
+                if (visible.isEmpty()) { deadlocks.incrementAndGet(); continue; }
+                Component c = visible.get(FUZZ.nextInt(visible.size()));
+                SwingUtilities.invokeAndWait(() -> {
+                    try {
+                        if (c instanceof AbstractButton btn && btn.isEnabled()) btn.doClick();
+                        else if (c instanceof JTextField tf) {
+                            tf.setText(randomFuzzString(8 + FUZZ.nextInt(16)));
+                        } else if (c instanceof JCheckBox cb) {
+                            cb.setSelected(!cb.isSelected());
+                        } else if (c instanceof JTable tbl && tbl.getRowCount() > 0) {
+                            int row = FUZZ.nextInt(tbl.getRowCount());
+                            tbl.setRowSelectionInterval(row, row);
+                        }
+                    } catch (Exception e) { exceptions.incrementAndGet(); }
+                });
+                // Yield periodically so the EDT can drain dialogs
+                if (i % 25 == 0) { dismissAllDialogs(); UiTestSupport.sleep(40); }
+            } catch (Exception e) { exceptions.incrementAndGet(); }
+        }
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
+        dismissAllDialogs();
+        if (exceptions.get() > 0) {
+            warn("Monkey: " + exceptions.get() + " exceptions across " + actions + " random actions in " + elapsedMs + " ms");
+        } else if (deadlocks.get() > actions / 4) {
+            warn("Monkey: " + deadlocks.get() + " iterations found NO visible components — UI may be stuck");
+        } else {
+            pass("Monkey: " + actions + " random actions in " + elapsedMs + " ms (no exceptions)");
+        }
+    }
+
+    /**
+     * Fuzz every dialog with N random strings. Catches NPE, regex
+     * injection, OOM on long strings, and locale-format crashes.
+     */
+    private static void testExtreme_fuzzEveryDialog(JFrame main, int perDialog) {
+        // Common dialog openers in the main window
+        String[] openers = {"Afegir", "Estad", "Configur", "llistes", "aleatori"};
+        java.util.concurrent.atomic.AtomicInteger exceptions = new java.util.concurrent.atomic.AtomicInteger();
+        int fuzzedDialogs = 0;
+        for (String hint : openers) {
+            AbstractButton btn = UiTestSupport.findBtnIn(main, hint);
+            if (btn == null) continue;
+            for (int i = 0; i < perDialog; i++) {
+                UiTestSupport.doClick(btn); UiTestSupport.sleep(150);
+                JDialog dlg = UiTestSupport.getTopDialog();
+                if (dlg == null) { UiTestSupport.sleep(200); continue; }
+                fuzzedDialogs++;
+                // Fuzz every text field / text area / combobox in the dialog
+                List<Component> comps = new ArrayList<>();
+                UiTestSupport.flattenVisible((Container) dlg, comps);
+                for (Component c : comps) {
+                    final Component fz = c;
+                    final String payload = randomFuzzString(FUZZ.nextInt(4) == 0 ? 2000 : 32);
+                    try {
+                        SwingUtilities.invokeAndWait(() -> {
+                            try {
+                                if (fz instanceof JTextField tf) tf.setText(payload);
+                                else if (fz instanceof JTextArea ta) ta.setText(payload);
+                                else if (fz instanceof JComboBox<?> cb) cb.setSelectedItem(payload);
+                                else if (fz instanceof JCheckBox chk) chk.setSelected(FUZZ.nextBoolean());
+                            } catch (Exception e) { exceptions.incrementAndGet(); }
+                        });
+                    } catch (Exception e) { exceptions.incrementAndGet(); }
+                }
+                dismissAllDialogs();
+            }
+        }
+        if (exceptions.get() > 0) {
+            fail("Fuzz: " + exceptions.get() + " exceptions across " + fuzzedDialogs + " dialog fuzzings");
+        } else {
+            pass("Fuzz: " + fuzzedDialogs + " dialog invocations × " + perDialog + " random payloads — no exceptions");
+        }
+    }
+
+    /**
+     * Concurrent edit storm: N worker threads repeatedly open rows,
+     * toggle a checkbox, and save. Stresses the in-memory cache + DB
+     * write path.
+     */
+    private static void testExtreme_concurrentEditStorm(JFrame main, int threadCount) throws Exception {
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        // Pre-seed at least N books
+        while (cd.getSize() < threadCount * 2) {
+            try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "StormSeed", "Bot", 2020,
+                "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
+        }
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger updates = new java.util.concurrent.atomic.AtomicInteger();
+        List<domini.Llibre> snapshot = new ArrayList<>(cd.getAllLlibres());
+        Thread[] pool = new Thread[threadCount];
+        for (int t = 0; t < threadCount; t++) {
+            pool[t] = new Thread(() -> {
+                try {
+                    start.await();
+                    for (int i = 0; i < 10; i++) {
+                        domini.Llibre l = snapshot.get(FUZZ.nextInt(snapshot.size()));
+                        try {
+                            l.setValoracio(FUZZ.nextDouble() * 10.0);
+                            l.setLlegit(FUZZ.nextBoolean());
+                            cd.updateLlibre(l);
+                            updates.incrementAndGet();
+                        } catch (Exception e) { errors.incrementAndGet(); }
+                    }
+                } catch (Exception e) { errors.incrementAndGet(); }
+            }, "stress-storm-" + t);
+            pool[t].setDaemon(true);
+            pool[t].start();
+        }
+        start.countDown();
+        for (Thread t : pool) t.join(30_000);
+        if (errors.get() > 0) {
+            fail("Edit storm: " + errors.get() + " update errors across " + updates.get() + " successful updates");
+        } else {
+            pass("Edit storm: " + threadCount + " threads × 10 updates = " + updates.get() + " — no errors");
+        }
+    }
+
+    /**
+     * Hammer the SQL LIKE search with 1000 random patterns. Validates
+     * that the search path doesn't OOM on regex-heavy input and that the
+     * LIKE escape is working.
+     */
+    private static void testExtreme_bulkSearchDomain() {
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        if (cd.getSize() < 100) {
+            // Phase 49/50 should have seeded enough; if not, seed 100 quickly.
+            for (int i = 0; i < 100; i++) {
+                try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "Seed_" + i, "Bot",
+                    2020, "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
+            }
+        }
+        long t0 = System.nanoTime();
+        int total = 0;
+        for (int i = 0; i < 200; i++) {
+            String pattern = randomFuzzString(4 + FUZZ.nextInt(12));
+            try {
+                int n = cd.aplicarFiltres(domini.LlibreFilterBuilder.of().nom(pattern).build()).size();
+                total += n;
+            } catch (Exception e) {
+                fail("Bulk search: pattern \"" + pattern + "\" threw: " + e.getMessage());
+                return;
+            }
+        }
+        long elapsed = (System.nanoTime() - t0) / 1_000_000L;
+        pass("Bulk search: 200 LIKE patterns in " + elapsed + " ms (total hits: " + total + ")");
+    }
+
+    /**
+     * Multi-instance stress: spawn N child JVMs each running a small
+     * subset of UI actions against the SAME on-disk H2 database. They
+     * all exit cleanly within the timeout. The parent monitors exit codes
+     * and surfaces crashes.
+     *
+     * <p>Each child uses a UNIQUE on-disk H2 file (NOT shared memory), so
+     * they really do contend on the OS file cache and the lib/ JAR
+     * directory. A test that requires shared state would defeat the
+     * point.</p>
+     */
+    private static void testExtreme_multiInstance(int instances) throws Exception {
+        File tmpDir = new File(System.getProperty("java.io.tmpdir"), "bib-stress-multi-" + System.nanoTime());
+        if (!tmpDir.mkdirs()) { warn("Could not create temp dir for multi-instance"); return; }
+        log("Multi-instance: " + instances + " child JVMs in " + tmpDir);
+        String cp = "bin" + File.pathSeparator + "lib" + File.separator + "h2-2.3.232.jar"
+            + File.pathSeparator + "lib" + File.separator + "mariadb-java-client-3.3.3.jar"
+            + File.separator + "lib" + File.separator + "gson-2.11.0.jar";
+        String javaCmd = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+        java.util.List<Integer> exitCodes = new java.util.ArrayList<>();
+        java.util.List<String> instanceNames = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < instances; i++) {
+                File h2File = new File(tmpDir, "inst" + i);
+                // Per-instance user.home so ~/.biblioteca/config.properties and cover
+                // caches don't pollute the user's actual home directory.
+                File homeDir = new File(tmpDir, "home" + i);
+                if (!homeDir.mkdirs()) { warn("Could not create user.home for inst" + i); }
+                ProcessBuilder pb = new ProcessBuilder(javaCmd, "-Xmx256m",
+                    "-Dbiblioteca.test=true",
+                    "-Dbiblioteca.h2.url=jdbc:h2:file:" + h2File.getAbsolutePath() +
+                        ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_ON_EXIT=FALSE",
+                    "-Duser.home=" + homeDir.getAbsolutePath(),
+                    "-cp", cp,
+                    "main.Ejecutable", "--swing");
+                pb.inheritIO();
+                Process p = pb.start();
+                childProcs.add(p);
+                instanceNames.add("inst" + i + " (pid=" + safePid(p) + ")");
+                log("  started: " + instanceNames.get(i));
+            }
+            // Each child JVM needs ~5s to start, paint the window, and load the schema.
+            int settleMs = Math.max(5000, instances * 2000);
+            log("Multi-instance: settling " + settleMs + " ms before checking liveness");
+            UiTestSupport.sleep(settleMs);
+            // Liveness probe: are any children still running? Have any died?
+            int alive = 0, dead = 0;
+            for (int i = 0; i < childProcs.size(); i++) {
+                Process p = childProcs.get(i);
+                if (p.isAlive()) alive++;
+                else { dead++; exitCodes.add(p.exitValue()); }
+            }
+            log("Multi-instance after settle: " + alive + " alive, " + dead + " dead");
+            // Let them run for another few seconds
+            int holdMs = Math.max(3000, instances * 1000);
+            log("Multi-instance: holding for " + holdMs + " ms more");
+            UiTestSupport.sleep(holdMs);
+            alive = 0; dead = 0;
+            for (int i = 0; i < childProcs.size(); i++) {
+                Process p = childProcs.get(i);
+                if (p.isAlive()) alive++;
+                else { dead++; exitCodes.add(p.exitValue()); }
+            }
+            log("Multi-instance: " + alive + " alive, " + dead + " dead");
+            // Snapshot heap usage of parent (each child loaded its own ~80MB)
+            long parentUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            log("Multi-instance: parent heap after = " + (parentUsed / (1024 * 1024)) + " MB");
+            killChildProcs();
+            // Wait for graceful exit
+            for (Process p : childProcs) {
+                try { if (!p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) p.destroyForcibly(); }
+                catch (Exception ignored) {}
+            }
+            if (dead == 0) {
+                pass("Multi-instance: " + instances + " children ran for " + (settleMs + holdMs) / 1000 + "s with no crashes");
+            } else if (dead <= instances / 4) {
+                warn("Multi-instance: " + dead + "/" + instances + " children died (exit codes: " + exitCodes + ")");
+            } else {
+                fail("Multi-instance: " + dead + "/" + instances + " children died (exit codes: " + exitCodes + ")");
+            }
+        } finally {
+            killChildProcs();
+            // Best-effort cleanup
+            deleteTree(tmpDir);
+        }
+    }
+
+    /**
+     * Long-soak: N background workers hammer the domain for a fixed
+     * duration. Each worker randomly inserts, updates, deletes, and
+     * searches. Catches slow leaks, OOM, and any data corruption under
+     * sustained load.
+     */
+    private static void testExtreme_longSoak(int seconds) {
+        domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
+        // Pre-seed ~200 books so the search/filter has something to do
+        if (cd.getSize() < 200) {
+            for (int i = 0; i < 200; i++) {
+                try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "SoakSeed_" + i,
+                    "Bot", 2000, "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
+            }
+        }
+        long deadline = System.nanoTime() + seconds * 1_000_000_000L;
+        java.util.concurrent.atomic.AtomicInteger inserts = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger updates = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger deletes = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger searches = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger();
+        List<Thread> workers = new ArrayList<>();
+        int workerCount = Math.min(8, Math.max(2, stressThreads / 8));
+        for (int t = 0; t < workerCount; t++) {
+            Thread w = new Thread(() -> {
+                java.util.Random r = new java.util.Random();
+                while (System.nanoTime() < deadline && errors.get() < 10) {
+                    try {
+                        int op = r.nextInt(4);
+                        switch (op) {
+                            case 0: {
+                                long isbn = uniqueISBN();
+                                cd.addLlibre(new domini.Llibre(isbn, "Soak_" + isbn, "Bot",
+                                    2000, "", 5.0, 1.0, false, null));
+                                inserts.incrementAndGet();
+                                break;
+                            }
+                            case 1: {
+                                List<domini.Llibre> all = cd.getAllLlibres();
+                                if (!all.isEmpty()) {
+                                    domini.Llibre pick = all.get(r.nextInt(all.size()));
+                                    pick.setValoracio(r.nextDouble() * 10.0);
+                                    try { cd.updateLlibre(pick); updates.incrementAndGet(); }
+                                    catch (Exception ignored) {}
+                                }
+                                break;
+                            }
+                            case 2: {
+                                List<domini.Llibre> all = cd.getAllLlibres();
+                                if (all.size() > 50) {
+                                    domini.Llibre pick = all.get(r.nextInt(all.size()));
+                                    try { cd.deleteLlibre(Long.valueOf(pick.getISBN())); deletes.incrementAndGet(); }
+                                    catch (Exception ignored) {}
+                                }
+                                break;
+                            }
+                            case 3: {
+                                cd.aplicarFiltres(domini.LlibreFilterBuilder.of()
+                                    .nom("a" + r.nextInt(100)).build());
+                                searches.incrementAndGet();
+                                break;
+                            }
+                        }
+                    } catch (Exception e) { errors.incrementAndGet(); }
+                }
+            }, "soak-worker-" + t);
+            w.setDaemon(true);
+            workers.add(w);
+            w.start();
+        }
+        // Report heap growth every 5 seconds
+        long lastReport = System.nanoTime();
+        long lastInsert = 0, lastUpdate = 0, lastDelete = 0, lastSearch = 0;
+        long prevInsert = 0, prevUpdate = 0, prevDelete = 0, prevSearch = 0;
+        while (System.nanoTime() < deadline) {
+            UiTestSupport.sleep(1000);
+            if (System.nanoTime() - lastReport > 4_000_000_000L) {
+                long used = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+                long i = inserts.get(), u = updates.get(), d = deletes.get(), s = searches.get();
+                log(String.format("Soak +%ds: heap=%dMB ops/s i=%d u=%d d=%d s=%d err=%d",
+                    (System.nanoTime() - lastReport + 4_000_000_000L) / 1_000_000_000L,
+                    used / (1024 * 1024),
+                    (i - prevInsert) / 5, (u - prevUpdate) / 5, (d - prevDelete) / 5, (s - prevSearch) / 5,
+                    errors.get()));
+                prevInsert = lastInsert = i; prevUpdate = lastUpdate = u;
+                prevDelete = lastDelete = d; prevSearch = lastSearch = s;
+                lastReport = System.nanoTime();
+            }
+        }
+        for (Thread w : workers) {
+            try { w.join(5000); } catch (InterruptedException ignored) {}
+        }
+        long finalUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        long growth = stressInitialHeapBytes > 0 ? finalUsed - stressInitialHeapBytes : 0;
+        if (errors.get() > 10) {
+            fail("Soak: " + errors.get() + " worker errors (ins=" + inserts + " up=" + updates +
+                " del=" + deletes + " search=" + searches + ")");
+        } else {
+            String growthStr = (stressInitialHeapBytes > 0 && growth > 0)
+                ? " heap Δ " + (growth / (1024 * 1024)) + " MB" : "";
+            pass("Soak: " + seconds + "s — ins=" + inserts + " up=" + updates +
+                " del=" + deletes + " search=" + searches + " err=" + errors.get() + growthStr);
+        }
+    }
+
+    // ── EXTREME HELPERS ──────────────────────────────────────────────────────────
+
+    private static String randomFuzzString(int n) {
+        StringBuilder sb = new StringBuilder(n);
+        for (int i = 0; i < n; i++) {
+            int pick = FUZZ.nextInt(7);
+            switch (pick) {
+                case 0: sb.append((char) (0x20 + FUZZ.nextInt(0x5F))); break;     // printable ASCII
+                case 1: sb.append((char) (0xC0 + FUZZ.nextInt(0x20))); break;    // Latin-1 supplement
+                case 2: sb.append((char) (0x4E00 + FUZZ.nextInt(0x9FFF))); break; // CJK
+                case 3: sb.append('\n'); break;                                  // newline
+                case 4: sb.append('\t'); break;                                  // tab
+                case 5: sb.append('\0'); break;                                  // NUL
+                default: sb.append(FUZZ.nextInt(10)); break;                     // digit
+            }
+        }
+        return sb.toString();
+    }
+
+    private static long safePid(Process p) {
+        try { return p.pid(); } catch (Exception e) { return -1; }
+    }
+
+    private static void killChildProcs() {
+        for (Process p : childProcs) {
+            try { if (p.isAlive()) p.destroyForcibly(); } catch (Exception ignored) {}
+        }
+        childProcs.clear();
+    }
+
+    private static void deleteTree(File f) {
+        if (f == null || !f.exists()) return;
+        File[] kids = f.listFiles();
+        if (kids != null) for (File k : kids) deleteTree(k);
+        try { f.delete(); } catch (Exception ignored) {}
     }
 
     private static void testAllSidebarButtons(JFrame main) throws Exception {

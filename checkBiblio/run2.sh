@@ -16,9 +16,13 @@ for arg in "$@"; do
     case "$arg" in
         -h|--help)
             echo "Usage: $0 [StressTest args...]"
-            echo "  STRESS_EXTREME=1     extreme mode (default threads 100)"
-            echo "  STRESS_TIMEOUT=N     watchdog seconds (default 600)"
-            echo "  STRESS_THREADS=N     worker threads (default 50, 100 if extreme)"
+            echo "  STRESS_EXTREME=1     extreme mode (default threads 100, timeout 1800s)"
+            echo "  STRESS_TIMEOUT=N     watchdog seconds (default 600, 1800 in extreme)"
+            echo "  STRESS_THREADS=N     worker threads (default 50, 100 in extreme)"
+            echo "  STRESS_INSTANCES=N   in extreme: spawn N child JVMs (default 3)"
+            echo "  STRESS_SOAK=N        in extreme: background DB activity for N seconds (0=off)"
+            echo "  STRESS_FUZZ=N        in extreme: random strings per dialog in fuzz phase (default 25)"
+            echo "  STRESS_MEMPROBE=0|1  in extreme: heap-growth probe (default 1)"
             exit 0
             ;;
     esac
@@ -106,10 +110,19 @@ if [ -z "$DISPLAY" ]; then
 fi
 
 if [ -n "$STRESS_EXTREME" ]; then
-    TIMEOUT=${STRESS_TIMEOUT:-600}
+    TIMEOUT=${STRESS_TIMEOUT:-1800}
     STRESS_THREADS=${STRESS_THREADS:-100}
+    STRESS_INSTANCES=${STRESS_INSTANCES:-3}
+    STRESS_SOAK=${STRESS_SOAK:-0}        # seconds; 0 = disabled
+    STRESS_FUZZ=${STRESS_FUZZ:-25}       # payloads per dialog in fuzz phase
+    STRESS_MEMPROBE=${STRESS_MEMPROBE:-1} # 0/1; default on
     STRESS_JAVA_OPTS="-Dbiblioteca.stress.extreme=true -Dbiblioteca.stress.threads=${STRESS_THREADS}"
-    echo "STRESS_EXTREME=1 (timeout=${TIMEOUT}s, threads=${STRESS_THREADS})"
+    [ "$STRESS_INSTANCES" -gt 0 ] && STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.instances=${STRESS_INSTANCES}"
+    [ "$STRESS_SOAK" -gt 0 ]      && STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.soak=${STRESS_SOAK}"
+    STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.fuzz=${STRESS_FUZZ}"
+    [ "$STRESS_MEMPROBE" = "1" ]  && STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.memprobe=true"
+    echo "STRESS_EXTREME=1 (timeout=${TIMEOUT}s, threads=${STRESS_THREADS}"
+    echo "                  instances=${STRESS_INSTANCES}, soak=${STRESS_SOAK}s, fuzz=${STRESS_FUZZ})"
 else
     TIMEOUT=${STRESS_TIMEOUT:-600}
     STRESS_THREADS=${STRESS_THREADS:-50}

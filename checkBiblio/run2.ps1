@@ -28,18 +28,31 @@ try {
 
     if ($StressArgs -contains "-h" -or $StressArgs -contains "--help") {
         Write-Host "Usage: .\checkBiblio\run2.ps1 [StressTest args...]"
-        Write-Host "  STRESS_EXTREME=1     extreme mode (default threads 100)"
-        Write-Host "  STRESS_TIMEOUT=N     watchdog seconds (default 600)"
-        Write-Host "  STRESS_THREADS=N     worker threads (default 50, 100 if extreme)"
+        Write-Host "  STRESS_EXTREME=1     extreme mode (default threads 100, timeout 1800s)"
+        Write-Host "  STRESS_TIMEOUT=N     watchdog seconds (default 600, 1800 in extreme)"
+        Write-Host "  STRESS_THREADS=N     worker threads (default 50, 100 in extreme)"
+        Write-Host "  STRESS_INSTANCES=N   in extreme: spawn N child JVMs (default 3)"
+        Write-Host "  STRESS_SOAK=N        in extreme: background DB activity for N seconds (0=off)"
+        Write-Host "  STRESS_FUZZ=N        in extreme: random strings per dialog in fuzz phase (default 25)"
+        Write-Host "  STRESS_MEMPROBE=0|1  in extreme: heap-growth probe (default 1)"
         exit 0
     }
 
     # ── Configuration ──────────────────────────────────────────────────────
     if ($env:STRESS_EXTREME) {
-        $timeout = if ($env:STRESS_TIMEOUT) { [int]$env:STRESS_TIMEOUT } else { 600 }
+        $timeout = if ($env:STRESS_TIMEOUT) { [int]$env:STRESS_TIMEOUT } else { 1800 }
         $threads = if ($env:STRESS_THREADS) { [int]$env:STRESS_THREADS } else { 100 }
+        $instances = if ($env:STRESS_INSTANCES) { [int]$env:STRESS_INSTANCES } else { 3 }
+        $soak     = if ($env:STRESS_SOAK)      { [int]$env:STRESS_SOAK      } else { 0 }
+        $fuzz     = if ($env:STRESS_FUZZ)      { [int]$env:STRESS_FUZZ      } else { 25 }
+        $memprobe = if ($env:STRESS_MEMPROBE)  { [int]$env:STRESS_MEMPROBE  } else { 1 }
         $javaOpts = @("-Dbiblioteca.stress.extreme=true", "-Dbiblioteca.stress.threads=$threads")
+        if ($instances -gt 0) { $javaOpts += "-Dbiblioteca.stress.instances=$instances" }
+        if ($soak -gt 0)      { $javaOpts += "-Dbiblioteca.stress.soak=$soak" }
+        $javaOpts += "-Dbiblioteca.stress.fuzz=$fuzz"
+        if ($memprobe -eq 1) { $javaOpts += "-Dbiblioteca.stress.memprobe=true" }
         Write-Host "STRESS_EXTREME=1 (timeout=${timeout}s, threads=$threads)" -ForegroundColor Yellow
+        Write-Host "                  instances=$instances, soak=${soak}s, fuzz=$fuzz)" -ForegroundColor Yellow
     } else {
         $timeout = if ($env:STRESS_TIMEOUT) { [int]$env:STRESS_TIMEOUT } else { 600 }
         $threads = if ($env:STRESS_THREADS) { [int]$env:STRESS_THREADS } else { 50 }
@@ -83,6 +96,7 @@ try {
 
         $job = Start-Job -ScriptBlock {
             param($cp, $opts, $args)
+            Set-Location $using:ProjectRoot
             java -Xmx512m @opts -cp $cp checkBiblio.StressTest @args
         } -ArgumentList $cp, $javaOpts, $StressArgs
 

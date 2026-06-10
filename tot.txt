@@ -13,7 +13,7 @@
 Active [OPEN] items:  0.
 Last test run: 184 plain + 596 JUnit 5 (auto-discovered across 46 test
                 classes); 0 failures.  780 total tests, all green.
-Last session:   16  (closed C4-C13 backlog, 2026-06-10).
+Last session:   17  (run2.ps1 Start-Job CWD fix, 2026-06-10).
 Codebase:       ~84 production .java files in src/.
                 Largest src/ files (lines):
                   1.  I18n.java                                   610 (i18n data)
@@ -58,6 +58,23 @@ candidate from section 3 at the same time.  Keep entries terse —
 
 (latest at the top)
 
+Session 17 (2026-06-10) — Fixed run2.ps1 -Auto: Start-Job scriptblock ran
+                          in the user's home CWD, so `bin\checkBiblio\
+                          StressTest.class` was not on the relative
+                          classpath and the run failed with
+                          ClassNotFoundException while the script still
+                          reported `Result: PASS` (the failure wasn't
+                          tracked because the job state was "Completed"
+                          — java's non-zero exit is a non-terminating
+                          PowerShell error inside the runspace). Added
+                          `Set-Location $using:ProjectRoot` to the
+                          scriptblock. StressTest now reports PASS=76
+                          FAIL=0 WARN=9 (8 cleanup-delete warnings, 1
+                          "Configuració dialog missing" / "Export CSV"
+                          headless artifact). run.ps1 -Auto also re-run,
+                          still PASS. scripts\test.bat not re-run (no
+                          source changes since session 16).
+
 Session 16 (2026-06-10) — Closed the C4-C13 backlog. C8 ControladorPersistencia
                           reformat (5 min, tabs). C11 Ejecutable: System.err +
                           e.printStackTrace → java.util.logging.Logger. C12
@@ -100,6 +117,31 @@ Session 15 (2026-06-10) — Per-class JUnit 5 test files for all
                           thin-wrappers (HtmlExporter / JsonExporter /
                           CsvExporter all delegate to BookExporter).
                           780 total tests, 0 failures.
+
+Session 16 (2026-06-10) — Stress test hardening: added 9 new extreme
+                          phases (49–57) to checkBiblio/StressTest.java.
+                          Phases 49–50: bulk insert 1000 / 5000 books
+                          straight into the domain layer. Phase 51: memory
+                          probe — 5 round-trips of insert 200 + delete all
+                          with heap-growth check (fails if Δ > 64 MB).
+                          Phase 52: random-action monkey — 500 random button
+                          / textfield / checkbox / table-row clicks via
+                          Robot, catches EDT exceptions and stuck dialogs.
+                          Phase 53: fuzz every dialog with random CJK /
+                          Latin-1 / control-char payloads. Phase 54:
+                          concurrent edit storm — N threads x 10
+                          updateLlibre calls each. Phase 55: 200 random
+                          LIKE-pattern searches. Phase 56: multi-instance
+                          — spawn N child JVMs each running a Swing app
+                          against its own on-disk H2 file, monitor for
+                          crashes. Phase 57: long-soak — background
+                          worker pool hammer insert / update / delete /
+                          search for N seconds with periodic heap reports.
+                          run2.sh / run2.ps1 wire up the new env vars
+                          (STRESS_INSTANCES, STRESS_SOAK, STRESS_FUZZ,
+                          STRESS_MEMPROBE) and bumped the extreme-mode
+                          watchdog to 1800s. Compiles cleanly; 780 unit
+                          tests still green.
 
 Session 14 (2026-06-10) — Fixed scripts\test.bat auto-discovery bug. The
                           in-flight auto-discovery rewrite had a broken
