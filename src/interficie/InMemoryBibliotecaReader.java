@@ -16,9 +16,9 @@ import java.util.*;
  */
 public class InMemoryBibliotecaReader implements BibliotecaReader {
 
-    public final ArrayList<Llibre> books = new ArrayList<>();
-    public final ArrayList<Llista> llistes = new ArrayList<>();
-    public final ArrayList<Tag> tags = new ArrayList<>();
+    public final List<Llibre> books = new ArrayList<>();
+    public final List<Llista> llistes = new ArrayList<>();
+    public final List<Tag> tags = new ArrayList<>();
     public final List<PrestecRow> loans = new ArrayList<>();
 
     @Override public List<Llibre> getAllLlibres() { return new ArrayList<>(books); }
@@ -82,7 +82,7 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     @Override public List<Object[]> getAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
     @Override public int countLoans(long isbn) {
         int c = 0;
-        for (PrestecRow r : loans) if (java.util.Objects.equals(r.isbn(), isbn)) c++;
+        for (PrestecRow r : loans) if (r.isbn() == isbn) c++;
         return c;
     }
     @Override public byte[] getLlibreBlob(long isbn) { return null; }

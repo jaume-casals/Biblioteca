@@ -34,7 +34,10 @@ public class ControladorPersistencia {
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
 	private final ServerConect sc;
-	private final LlibreDao libreDao;
+	private final LlibreDaoCore libreDaoCore;
+	private final LlibreBlobDao libreBlobDao;
+	private final LlibreSearchDao libreSearchDao;
+	private final LlibreLecturaDao libreLecturaDao;
 	private final LlistaDao llistaDao;
 	private final TagDao tagDao;
 	private final PrestecDao prestecDao;
@@ -48,7 +51,7 @@ public class ControladorPersistencia {
 
 	public static synchronized void resetForTest() {
         if (inst != null) {
-            try { inst.libreDao.clearAllData(); } catch (Exception e) {
+            try { inst.libreDaoCore.clearAllData(); } catch (Exception e) {
                 System.err.println("Warning: failed to clear test data: " + e.getMessage());
             }
         }
@@ -57,7 +60,7 @@ public class ControladorPersistencia {
 
 	public static synchronized void resetForProfileSwitch() {
 		if (inst != null) {
-			try { inst.sc.closeConection(); } catch (Exception ignored) {}
+			try { inst.sc.closeConnection(); } catch (Exception ignored) {}
 		}
 		inst = null;
 	}
@@ -75,7 +78,10 @@ public class ControladorPersistencia {
 		sc = new ServerConect();
 		sc.createDatabase(cfg);
 		java.sql.Connection con = sc.getConnection();
-		libreDao  = new LlibreDao(con);
+		libreDaoCore     = new LlibreDaoCore(con);
+		libreBlobDao     = new LlibreBlobDao(con);
+		libreSearchDao   = new LlibreSearchDao(con);
+		libreLecturaDao  = new LlibreLecturaDao(con);
 		llistaDao = new LlistaDao(con);
 		tagDao    = new TagDao(con);
 		prestecDao = new PrestecDao(con);
@@ -86,12 +92,12 @@ public class ControladorPersistencia {
 	private void registerShutdownHook() {
 		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
 			main.ShutdownHooks.register(() -> {
-				try { sc.closeConection(); } catch (Exception ignored) {}
+				try { sc.closeConnection(); } catch (Exception ignored) {}
 			});
 		}
 	}
 
-	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDao.getAll(); }
+	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDaoCore.getAll(); }
 
 	/**
 	 * Lean variant of {@link #getAllLlibres()}: returns books with only the
@@ -99,32 +105,32 @@ public class ControladorPersistencia {
 	 * no cover blob).  Callers that need the heavy text/blob columns must
 	 * invoke {@link #loadHeavyFields} per book.
 	 */
-	public synchronized ArrayList<Llibre> getAllLlibresSummary() { return libreDao.getAll(); }
+	public synchronized ArrayList<Llibre> getAllLlibresSummary() { return libreDaoCore.getAll(); }
 
-	public synchronized void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.insert(llibre); }
+	public synchronized void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDaoCore.insert(llibre); }
 	public synchronized void eliminarLlibre(Llibre llibre) throws java.sql.SQLException {
-		libreDao.delete(llibre);
+		libreDaoCore.delete(llibre);
 		tagDao.invalidateLlibreTagCache();
 	}
 	public synchronized void eliminarLlibre(long ISBN) throws java.sql.SQLException {
-		libreDao.delete(ISBN);
+		libreDaoCore.delete(ISBN);
 		tagDao.invalidateLlibreTagCache();
 	}
-	public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDao.executeSQLFile(file); }
-	public synchronized void updateLlibre(Llibre llibre) throws java.sql.SQLException { libreDao.update(llibre); }
-	public synchronized ArrayList<Llibre> getRecentlyAdded(int n) { return libreDao.getRecentlyAdded(n); }
-	public synchronized byte[] getLlibreBlob(long isbn) { return libreDao.getBlob(isbn); }
+	public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDaoCore.executeSQLFile(file); }
+	public synchronized void updateLlibre(Llibre llibre) throws java.sql.SQLException { libreDaoCore.update(llibre); }
+	public synchronized ArrayList<Llibre> getRecentlyAdded(int n) { return libreDaoCore.getRecentlyAdded(n); }
+	public synchronized byte[] getLlibreBlob(long isbn) { return libreBlobDao.getBlob(isbn); }
 
 	public synchronized void loadHeavyFields(long isbn, domini.Llibre target) {
-		libreDao.loadHeavyFields(isbn, target);
+		libreBlobDao.loadHeavyFields(isbn, target);
 	}
-	public synchronized void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreDao.setBlob(isbn, blob); }
+	public synchronized void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreBlobDao.setBlob(isbn, blob); }
 	public synchronized void clearAllData() throws java.sql.SQLException {
-		libreDao.clearAllData();
+		libreDaoCore.clearAllData();
 		tagDao.invalidateLlibreTagCache();
 	}
-	public synchronized long getDbSizeBytes() { return libreDao.getDbSizeBytes(); }
-	public synchronized int countLlibres() { return libreDao.count(); }
+	public synchronized long getDbSizeBytes() { return libreDaoCore.getDbSizeBytes(); }
+	public synchronized int countLlibres() { return libreDaoCore.count(); }
 
 	public synchronized ArrayList<Llista> getAllLlistes() { return llistaDao.getAll(); }
 	public synchronized int createLlista(String nom) throws SQLException { return llistaDao.create(nom); }
@@ -181,13 +187,13 @@ public class ControladorPersistencia {
 		return autorDao.getAllLlibreAutor();
 	}
 	/** For backup/export only — no UI consumer yet. */
-	public synchronized java.util.List<LecturaRow> getAllLectures() { return libreDao.getAllLectures(); }
+	public synchronized java.util.List<LecturaRow> getAllLectures() { return libreLecturaDao.getAllLectures(); }
 
 	public synchronized ArrayList<Llibre> searchLlibres(domini.LlibreFilter f, int offset, int pageSize) {
-		return libreDao.search(f, offset, pageSize);
+		return libreSearchDao.search(f, offset, pageSize);
 	}
 
 	public synchronized ArrayList<Llibre> searchAll(int offset, int pageSize) {
-		return libreDao.search(domini.LlibreFilter.empty(), offset, pageSize);
+		return libreSearchDao.search(domini.LlibreFilter.empty(), offset, pageSize);
 	}
 }

@@ -1,8 +1,11 @@
 package presentacio.config;
 
 import herramienta.Config;
+import herramienta.DbConfig;
+import herramienta.FilterConfig;
 import herramienta.I18n;
 import herramienta.UITheme;
+import herramienta.UiConfig;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -65,21 +68,21 @@ public final class ConfiguracioButtonBar {
             }
             Config.withBatch(() -> {
                 if (external) {
-                    Config.setDbHost(txtHost.getText().trim());
-                    Config.setDbUser(txtUser.getText().trim());
-                    Config.setDbPassword(new String(txtPass.getPassword()));
+                    DbConfig.setHost(txtHost.getText().trim());
+                    DbConfig.setUser(txtUser.getText().trim());
+                    DbConfig.setPassword(new String(txtPass.getPassword()));
                 }
-                Config.setDbType(external ? "mariadb" : "h2");
+                DbConfig.setType(external ? "mariadb" : "h2");
                 String imgDir = txtImgDir.getText().trim();
-                if (!imgDir.isEmpty()) Config.setDefaultImgDir(imgDir);
+                if (!imgDir.isEmpty()) FilterConfig.setDefaultImgDir(imgDir);
                 UITheme.Theme selTheme = themeValues[Math.max(0, cmbTheme.getSelectedIndex())];
                 UITheme.setTheme(selTheme);
-                Config.setTheme(selTheme);
-                Config.setFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
-                Config.setCurrencySymbol((String) cmbCurrency.getSelectedItem());
-                Config.setLang(langKeys[Math.max(0, cmbLang.getSelectedIndex())]);
+                UiConfig.setTheme(selTheme);
+                UiConfig.setFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
+                UiConfig.setCurrency((String) cmbCurrency.getSelectedItem());
+                UiConfig.setLang(langKeys[Math.max(0, cmbLang.getSelectedIndex())]);
                 I18n.applySwingOptionPane();
-                try { Config.setDefaultValoracio(Double.parseDouble(txtDefVal.getText().trim())); }
+                try { UiConfig.setDefaultValoracio(Double.parseDouble(txtDefVal.getText().trim())); }
                 catch (NumberFormatException ignored) {}
             });
             if (listener != null) listener.onThemeChange();

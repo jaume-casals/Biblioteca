@@ -9,11 +9,11 @@ import javax.swing.JComponent;
  * ("id", ...)} so the dialog can look them up by name in
  * {@link #reloadFromConfig(Container, String)}.
  */
-final class ConfigSections {
+public final class ConfigSections {
     private ConfigSections() {}
 
     /** Locate a tagged child by id. Recurses into nested containers. */
-    static JComponent findById(Container root, String id) {
+    public static JComponent findById(Container root, String id) {
         for (java.awt.Component c : root.getComponents()) {
             if (c instanceof JComponent jc && id.equals(jc.getClientProperty("id"))) return jc;
             if (c instanceof Container cont) {

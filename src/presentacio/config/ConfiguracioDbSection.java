@@ -73,20 +73,23 @@ public final class ConfiguracioDbSection {
             String dbType = external ? "mariadb" : "h2";
             java.util.Properties testProps = new java.util.Properties();
             testProps.setProperty("dbType", dbType);
+            char[] passChars = new char[0];
             if (external) {
                 testProps.setProperty("dbHost", txtHost.getText().trim());
                 testProps.setProperty("dbUser", txtUser.getText().trim());
-                testProps.setProperty("dbPassword", new String(txtPass.getPassword()));
+                passChars = txtPass.getPassword();
             }
+            final char[] passSnapshot = passChars;
             btnTestConn.setEnabled(false);
             btnTestConn.setText(t("btn_test_connection") + "…");
             new SwingWorker<Void, Void>() {
                 @Override protected Void doInBackground() throws Exception {
-                    java.sql.Connection conn = persistencia.ServerConect.testConnection(testProps);
+                    java.sql.Connection conn = persistencia.ServerConect.testConnection(testProps, passSnapshot);
                     conn.close();
                     return null;
                 }
                 @Override protected void done() {
+                    java.util.Arrays.fill(passSnapshot, '\0');
                     btnTestConn.setEnabled(true);
                     btnTestConn.setText(t("btn_test_connection"));
                     try {
@@ -149,12 +152,12 @@ public final class ConfiguracioDbSection {
     public static void reloadFromConfig(JPanel root) {
         javax.swing.JComponent jc;
         jc = ConfigSections.findById(root, "cmbType");
-        if (jc instanceof JComboBox) ((JComboBox<?>) jc).setSelectedIndex("h2".equals(Config.getDbType()) ? 0 : 1);
+        if (jc instanceof JComboBox<?> cmb) cmb.setSelectedIndex("h2".equals(Config.getDbType()) ? 0 : 1);
         jc = ConfigSections.findById(root, "txtHost");
-        if (jc instanceof JTextField) ((JTextField) jc).setText(Config.getDbHost());
+        if (jc instanceof JTextField tf) tf.setText(Config.getDbHost());
         jc = ConfigSections.findById(root, "txtUser");
-        if (jc instanceof JTextField) ((JTextField) jc).setText(Config.getDbUser());
+        if (jc instanceof JTextField tf) tf.setText(Config.getDbUser());
         jc = ConfigSections.findById(root, "txtPass");
-        if (jc instanceof JPasswordField) ((JPasswordField) jc).setText(Config.getDbPassword());
+        if (jc instanceof JPasswordField pf) pf.setText(Config.getDbPassword());
     }
 }

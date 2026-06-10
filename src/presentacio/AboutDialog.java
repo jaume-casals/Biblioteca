@@ -1,8 +1,6 @@
 package presentacio;
 
 
-
-import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
@@ -25,6 +23,8 @@ import herramienta.I18n;
 import herramienta.UITheme;
 
 public class AboutDialog extends JDialog {
+
+	private static final String SOURCE_URL = "https://github.com/jaume-casals/Biblioteca";
 
 	private static String getVersion() {
 		try (var in = AboutDialog.class.getResourceAsStream("/version.properties")) {
@@ -108,8 +108,8 @@ public class AboutDialog extends JDialog {
 		btnSource.setMaximumSize(new Dimension(200, 32));
 		btnSource.addActionListener(e -> {
 			try {
-				Desktop.getDesktop().browse(new URI("https://github.com/jaume-casals/Biblioteca"));
-			} catch (Exception ex) { ex.printStackTrace(); }
+				Desktop.getDesktop().browse(new URI(SOURCE_URL));
+			} catch (Exception ex) { new herramienta.DialogoError(ex).showErrorMessage(); }
 		});
 		main.add(btnSource);
 		main.add(Box.createVerticalStrut(8));

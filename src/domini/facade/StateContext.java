@@ -47,8 +47,15 @@ public final class StateContext {
 
     public Object lock() { return lock; }
     public ControladorPersistencia persistence() { return cp; }
+    /** Returns the live backing list. Callers MUST hold {@link #lock()} before
+     *  reading or mutating; iterating without the lock risks
+     *  {@link java.util.ConcurrentModificationException} and mutating without
+     *  the lock can desync the list from the id-index maps. Prefer
+     *  {@link #withLock} / {@link #withLockReturning} for read+copy patterns. */
     public ArrayList<Llibre> bib() { return bib; }
+    /** See {@link #bib()} for the locking contract. */
     public ArrayList<Llista> llistes() { return llistes; }
+    /** See {@link #bib()} for the locking contract. */
     public ArrayList<Tag> tags() { return tags; }
     public Map<Integer, Llista> llistesById() { return llistesById; }
     public Map<Integer, Tag> tagsById() { return tagsById; }

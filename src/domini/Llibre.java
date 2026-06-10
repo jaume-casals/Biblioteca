@@ -231,7 +231,7 @@ public class Llibre {
 	public void setFormat(String format) { this.format = (format != null && !format.trim().isEmpty()) ? format.trim() : null; }
 	public String getPaisOrigen() { return paisOrigen; }
 	public void setPaisOrigen(String paisOrigen) { this.paisOrigen = (paisOrigen != null && !paisOrigen.trim().isEmpty()) ? paisOrigen.trim() : null; }
-	public boolean getDesitjat() { return desitjat; }
+	public boolean isDesitjat() { return desitjat; }
 	public void setDesitjat(boolean desitjat) { this.desitjat = desitjat; }
 	public String getEstat() { return estat; }
 	public void setEstat(String estat) { this.estat = (estat != null && !estat.trim().isEmpty()) ? estat.trim() : null; }
@@ -252,7 +252,7 @@ public class Llibre {
 		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>();
 		c.nomCa = src.nomCa; c.nomEs = src.nomEs; c.nomEn = src.nomEn;
 		c.hasBlob = src.hasBlob;
-		c.imatgeBlob = src.imatgeBlob;
+		c.imatgeBlob = src.imatgeBlob != null ? src.imatgeBlob.clone() : null;
 		c.heavyFieldsLoaded = src.heavyFieldsLoaded;
 		return c;
 	}

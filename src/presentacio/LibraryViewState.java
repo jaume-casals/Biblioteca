@@ -19,7 +19,7 @@ final class LibraryViewState {
     final EnActualizarBBDD enActualizarBBDD;
 
     java.util.List<Llibre> biblio;
-    ArrayList<Llibre> modelLibres;
+    java.util.List<Llibre> modelLibres;
     Integer currentLlistaId;
     Set<Long> loanedISBNs = new HashSet<>();
     boolean groupBySeries;

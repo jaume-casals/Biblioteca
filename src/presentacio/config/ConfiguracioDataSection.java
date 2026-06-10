@@ -1,6 +1,7 @@
 package presentacio.config;
 
 import herramienta.Config;
+import herramienta.DbConfig;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
 import presentacio.UIComponents;
@@ -103,7 +104,7 @@ public final class ConfiguracioDataSection {
                 t("dlg_perfil_confirmar", chosen), t("dlg_perfil_confirmar_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
             if (confirm != JOptionPane.YES_OPTION) return;
-            Config.setDbProfile(chosen);
+            DbConfig.setProfile(chosen);
             String finalChosen = chosen;
             JOptionPane.showMessageDialog(owner,
                 t("dlg_perfil_canviat", finalChosen),

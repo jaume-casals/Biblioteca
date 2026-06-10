@@ -641,7 +641,7 @@ public class BibliotecaTest {
             Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Desitjat Book", null, null, null, null, null, null, null);
             l.setDesitjat(true);
             cd.addLlibre(l);
-            assertEqual(true, cd.getLlibre(9780306406157L).getDesitjat());
+            assertEqual(true, cd.getLlibre(9780306406157L).isDesitjat());
         });
 
         test("desitjat false by default", () -> {
@@ -649,7 +649,7 @@ public class BibliotecaTest {
             ControladorDomini cd = ControladorDomini.getInstance();
             Llibre l = LlibreValidator.checkLlibre(9780306406157L, "No Desitjat", null, null, null, null, null, null, null);
             cd.addLlibre(l);
-            assertEqual(false, cd.getLlibre(9780306406157L).getDesitjat());
+            assertEqual(false, cd.getLlibre(9780306406157L).isDesitjat());
         });
 
         test("desitjat backup and restore", () -> {
@@ -663,7 +663,7 @@ public class BibliotecaTest {
             cd.backupToSQL(f);
             cd.clearAll();
             cd.restoreFromSQL(f);
-            assertEqual(true, cd.getLlibre(9780306406157L).getDesitjat());
+            assertEqual(true, cd.getLlibre(9780306406157L).isDesitjat());
         });
 
         // ── OpenLibraryClient error contract ─────────────────────────────────
@@ -1608,14 +1608,14 @@ public class BibliotecaTest {
             try {
                 System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
                 herramienta.Config.reload();
-                herramienta.Config.setDbType("mariadb");
-                herramienta.Config.setDbHost("db.example.com");
-                herramienta.Config.setDbUser("admin");
+                herramienta.DbConfig.setType("mariadb");
+                herramienta.DbConfig.setHost("db.example.com");
+                herramienta.DbConfig.setUser("admin");
                 Thread.sleep(400);
                 assertEqual("db.example.com", herramienta.Config.getDbHost());
                 assertEqual("admin", herramienta.Config.getDbUser());
 
-                herramienta.Config.setDbType("h2");
+                herramienta.DbConfig.setType("h2");
                 Thread.sleep(400);
                 assertEqual("h2", herramienta.Config.getDbType());
                 assertEqual("localhost", herramienta.Config.getDbHost());
@@ -1805,22 +1805,22 @@ public class BibliotecaTest {
 
 // ── Config: column visibility round-trip ───────────────────────────────
         test("Config column visibility round-trip", () -> {
-            herramienta.Config.setColVisible(3, false);
+            herramienta.WindowConfig.setColVisible(3, false);
             assertEqual(false, herramienta.Config.getColVisible(3));
-            herramienta.Config.setColVisible(3, true);
+            herramienta.WindowConfig.setColVisible(3, true);
             assertEqual(true, herramienta.Config.getColVisible(3));
         });
 
         // ── Config: column width round-trip ───────────────────────────────────
         test("Config column width round-trip", () -> {
-            herramienta.Config.setColWidths(new int[]{80, 100, 120, 140, 160, 220, 180});
+            herramienta.WindowConfig.setColWidths(new int[]{80, 100, 120, 140, 160, 220, 180});
             assertEqual(220, herramienta.Config.getColWidth(5, 100));
         });
 
         // ── Config: column width round-trip ───────────────────────────────────
         test("Config column width round-trip", () -> {
             int[] widths = {80, 100, 120, 140, 160, 220, 180};
-            herramienta.Config.setColWidths(widths);
+            herramienta.WindowConfig.setColWidths(widths);
             assertEqual(220, herramienta.Config.getColWidth(5, 100));
         });
 

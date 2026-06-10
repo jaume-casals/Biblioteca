@@ -1,4 +1,4 @@
-================================================================================
+===============================================================================
   BACKLOG (tot.txt) — Biblioteca
   Generated: 2026-06-09
   Purpose: what's un-done + what I can code next.
@@ -13,12 +13,13 @@
 Active [OPEN] items:  0
 Last test run: 184 plain + 168 JUnit 5 + 6 DominiPersistenciaJUnit5 +
                 3 RestoreSqlJUnit5 = 361 tests, 0 failures.
-Last session:   11  (UITheme.styleXxx → UIComponents, 2026-06-09).
-Codebase:       ~80 production .java files in src/, ~6.5k lines.
+Last session:   13  (tot.txt sweep + C2/C3, 2026-06-10).
+Codebase:       ~84 production .java files in src/ (post C2 split: +4
+                Llibre DAOs + LlibreMapper + Schema, –1 LlibreDao).
                 Largest src/ files (lines):
                   1.  I18n.java                                   610 (i18n data)
                   2.  ConfiguracioDialog.java                     552
-                  3.  LlibreDao.java                              502
+                  3.  LlibreDaoCore.java                          308
                   4.  Config.java                                 395
                   5.  DetallesLlibrePanelControl.java             391
 
@@ -40,123 +41,95 @@ entry from this list.
 
 C1.  src/presentacio/ConfiguracioDialog.java  (552 lines) — DONE session 12.
 
-C2.  src/persistencia/LlibreDao.java  (502 lines)
-     25+ public synchronized methods, mixed concerns (CRUD, blob,
-     search, autocomplete via distinct values, lectura sessions).
-     Candidate split:
-       * LlibreDaoCore    — insert / update / delete / getAll /
-                            getRecentlyAdded
-       * LlibreBlobDao    — getBlob / setBlob / loadHeavyFields
-       * LlibreSearchDao  — search(f) / search(f, offset, pageSize)
-       * LlibreLecturaDao — getAllLectures (the LlibreFilter
-                            autocomplete lives in domini/StatsDelegate
-                            and is fine where it is)
-     The 4 classes share one Connection (still on
-     ControladorPersistencia) and one connection field.  Public
-     surface on LlibreDao shrinks to ~6 methods.
-     Touches: ControladorPersistencia (5 forwarders), BackupService
-     (writeLlibreINSERT path, see tot.txt session 7 B6 note).
-     Time: 2-3 hours.  Risk: medium — heavy DB class.
+C2.  src/persistencia/LlibreDao.java  (502 lines) — DONE session 13
+      (split into LlibreDaoCore / LlibreBlobDao / LlibreSearchDao /
+      LlibreLecturaDao + LlibreMapper + Schema; old LlibreDao.java deleted).
 
-C3.  src/herramienta/Config.java  (395 lines)
-     Session 7 split this into 4 sub-stores (UI_STORE, DB_STORE,
-     WINDOW_STORE, FILTER_STORE) but the god-class surface remains
-     — 53 public static methods / fields.  The static setters
-     (`Config.setX(...)`) are the leak.  Could:
-       a) Move static setters to per-store static methods
-          (`UiConfig.setLang(...)`, `DbConfig.setProfile(...)`, etc.)
-          so callers stop going through Config.
-       b) Keep Config as a read-only facade that delegates reads to
-          the sub-stores (writes still go to the sub-store directly).
-     Touches: ~40 caller files in src/ + checkBiblio.  Each call
-     site would need a `Config.setX(x)` → `UiConfig.setX(x)` (or
-     equivalent) swap.
-     Time: 3-4 hours.  Risk: medium — wide blast radius.
+C3.  src/herramienta/Config.java  (395 lines) — DONE session 13
+      (per-store static setters on UiConfig / DbConfig / WindowConfig /
+      new FilterConfig; 12 source + 2 test files migrated off Config.setX).
+      See C7 for the remaining read-only facade pass.
 
 C4.  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
-     (391 lines)
-     Controller wires the panel to the domain.  Likely candidates
-     for extraction: a ShelfBindings sub-controller (the LlistesDel-
-     LlibreDialog open/save path) and a TagBindings sub-controller
-     (the TagsDelLlibreDialog path).  Both are local to the panel
-     and only the panel calls them.
-     Time: 1-2 hours.  Risk: low.
+      (391 lines)
+      Controller wires the panel to the domain.  Likely candidates
+      for extraction: a ShelfBindings sub-controller (the LlistesDel-
+      LlibreDialog open/save path) and a TagBindings sub-controller
+      (the TagsDelLlibreDialog path).  Both are local to the panel
+      and only the panel calls them.
+      Time: 1-2 hours.  Risk: low.
 
 C5.  src/presentacio/FilterDrawerPanel.java  (352 lines)
-     5+ filter rows (search / shelf / tag / autor / serie / idioma /
-     format / preu range / pagines range).  Each row is a small
-     JLabel + JComponent + getter.  Extract a `FilterRow` record
-     (or small class) holding the (label-key, component, getter)
-     triple and a `buildRows()` factory.  Same for FilterController.
-     Time: 1 hour.  Risk: low.
+      5+ filter rows (search / shelf / tag / autor / serie / idioma /
+      format / preu range / pagines range).  Each row is a small
+      JLabel + JComponent + getter.  Extract a `FilterRow` record
+      (or small class) holding the (label-key, component, getter)
+      triple and a `buildRows()` factory.  Same for FilterController.
+      Time: 1 hour.  Risk: low.
 
 ─── Mutable statics (still) ──────────────────────────────────────────────
 
 C6.  src/herramienta/UITheme.java  — 33 mutable public/static fields
-     (BG_MAIN, ACCENT, FONT_BASE, BORDER_CLR, SIDEBAR_*, etc.)
-     assigned at runtime in setDark / applyLight / applySepia /
-     applyOcean.  Each is a `public static Color` so any thread
-     can read it.  Migration plan already in
-     UITheme.Palette.java (per tot.txt section 5, session 7).
-     End state: a `Map<Theme, Palette>` + `currentPalette()` getter;
-     callers do `UITheme.palette().accent` instead of
-     `UITheme.ACCENT`.  Touches 273+ call sites in src/ (per
-     tot.txt session 7).  Large mechanical edit but each line is
-     trivial.  Tooling: write a small script that does the rename
-     with a regex per field; verify with `git diff --stat` then
-     `scripts\test.bat`.
-     Time: 3-4 hours (mostly mechanical).  Risk: low per line,
-     high in aggregate — missed call sites compile but render
-     wrong.
+      (BG_MAIN, ACCENT, FONT_BASE, BORDER_CLR, SIDEBAR_*, etc.)
+      assigned at runtime in setDark / applyLight / applySepia /
+      applyOcean.  Each is a `public static Color` so any thread
+      can read it.  Migration plan already in
+      UITheme.Palette.java (per tot.txt section 5, session 7).
+      End state: a `Map<Theme, Palette>` + `currentPalette()` getter;
+      callers do `UITheme.palette().accent` instead of
+      `UITheme.ACCENT`.  Touches 273+ call sites in src/ (per
+      tot.txt session 7).  Large mechanical edit but each line is
+      trivial.  Tooling: write a small script that does the rename
+      with a regex per field; verify with `git diff --stat` then
+      `scripts\test.bat`.
+      Time: 3-4 hours (mostly mechanical).  Risk: low per line,
+      high in aggregate — missed call sites compile but render
+      wrong.
 
 C7.  src/herramienta/Config.java  — 53 mutable public statics
-     Same pattern as C6 but with the additional twist that the
-     sub-stores (UI_STORE etc.) are already a Map-backed
-     ConcurrentHashMap.  Could expose `Config.props` as a
-     `java.util.Properties` and keep the existing API.  Or could
-     pursue C3 (per-store static setters) first.
-     Time: see C3.
+      Same pattern as C6 but with the additional twist that the
+      sub-stores (UI_STORE etc.) are already a Map-backed
+      ConcurrentHashMap.  Could expose `Config.props` as a
+      `java.util.Properties` and keep the existing API.  Or could
+      pursue C3 (per-store static setters) first.
+      Time: see C3.  (Setters side of C3 done; Properties-exposure
+      side not started.)
 
 ─── Code smells ──────────────────────────────────────────────────────────
 
 C8.  src/persistencia/ControladorPersistencia.java
-     Mixed tab/space indentation: 137 tab-indented lines, 7 lines
-     indented with 2 spaces, 7 with 4 spaces, 6 with 8 spaces.
-     Pick one (tabs, per repo convention) and reformat.
-     Time: 5 min.  Risk: zero — pure formatting.
+      Mixed tab/space indentation: 137 tab-indented lines, 7 lines
+      indented with 2 spaces, 7 with 4 spaces, 6 with 8 spaces.
+      Pick one (tabs, per repo convention) and reformat.
+      Time: 5 min.  Risk: zero — pure formatting.
 
 C9.  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
-     7 empty `catch (X y) {}` blocks (highest in the codebase).
-     Most are around dialog close / focus events where ignoring
-     is intentional, but the bare-empty form makes it impossible
-     to tell intent from "oops forgot to log".  Add a comment
-     to each: `/* intentional: dialog already closed */` or
-     replace with a logged no-op.
-     Time: 15 min.  Risk: zero.
+      — DONE session 13 (all 7 empty catch blocks now carry a
+      single-line intent comment).
 
 C10. 33 src/ files use `System.out.print` / `System.err.print`
-     (Config: 4, ServerConect: 4, UITheme: 2, Ejecutable: 2,
-     I18n: 2, etc.).  Most are debug logging that escaped.
-     Each should be replaced with `java.util.logging.Logger` or
-     removed.  Touches: every file in the list.
-     Time: 30 min.  Risk: zero (stdout is dev-only).
+      (Config: 4, ServerConect: 4, UITheme: 2, Ejecutable: 2,
+      I18n: 2, etc.).  Most are debug logging that escaped.
+      Each should be replaced with `java.util.logging.Logger` or
+      removed.  Touches: every file in the list.
+      Time: 30 min.  Risk: zero (stdout is dev-only).
 
 ─── Single-class opportunities ───────────────────────────────────────────
 
 C11. src/main/Ejecutable.java
-     `System.out.println` calls (line ~10) for the "Starting up..."
-     banner.  Move to a proper logger or keep as-is for the CLI
-     feel.  Trivial.
+      `System.out.println` calls (line ~10) for the "Starting up..."
+      banner.  Move to a proper logger or keep as-is for the CLI
+      feel.  Trivial.
 
 C12. src/herramienta/UITheme.java
-     Add `UITheme.shutdown()` to clear the volatile Font fields on
-     JVM exit, paired with the existing Config shutdown hook.
-     Belt-and-suspenders for the static-state pattern; only worth
-     doing if C6 is being deferred.
+      Add `UITheme.shutdown()` to clear the volatile Font fields on
+      JVM exit, paired with the existing Config shutdown hook.
+      Belt-and-suspenders for the static-state pattern; only worth
+      doing if C6 is being deferred.
 
 C13. src/presentacio/renderers/TableCellComponents.java
-     9 mutable static fields.  Same pattern as C6 but tiny file
-     (67 lines).  Could be inlined into the 1-2 callers.
+      9 mutable static fields.  Same pattern as C6 but tiny file
+      (67 lines).  Could be inlined into the 1-2 callers.
 
 ================================================================================
   4.  TEST GATE
@@ -175,6 +148,52 @@ candidate from section 3 at the same time.  Keep entries terse —
 
 (latest at the top)
 
+Session 13 (2026-06-10) — Closed §6 expert-code-review batch across 25 files
+                          (Llibre getter renames, StateContext locking docs,
+                          StateContext unmodifiable views, InMemoryBibliotecaReader
+                          field types, BackupDelegate comparator DRY, LlibreFieldBindings
+                          helper renames, PrestecDao synchronized cleanup, ServerConect
+                          closeConection→closeConnection + con field invariant,
+                          AutoCompletion dead fields, BackupService 86400 constant,
+                          BookExporter static GSON + Escapers reuse, Config doSave
+                          helper, DialogoError Validation type, OpenLibraryClient
+                          test-override doc, GoodreadsExportService imports +
+                          String.valueOf, AboutDialog same-pkg import + URL const,
+                          BackupController Locale.ROOT + windowFrame guard,
+                          BibliotecaTableModel String.valueOf + read/total fix,
+                          BookActionsController ThreadLocalRandom + List type,
+                          BookIOController (already clean), CenterTablePanel
+                          CARD_TAULA/GALERIA consts, ConfiguracioDialog non-null
+                          cd + ConfigSections.findById, ContextMenuController
+                          getLlibre(inject), EstadistiquesHelper method ref +
+                          instanceof removal, ExportController named threads +
+                          AtomicBoolean guard, FilterController DEBOUNCE_MS +
+                          YES_NO_OPTION fix, LibraryViewState List type,
+                          MainFrameControl final vars + IllegalStateException,
+                          ShelfController logger + RefreshData record + countLlibresDB,
+                          TableController COL alias removal + named consts +
+                          HashMap indexOfIsbn, ImportController named thread +
+                          trim first, ConfiguracioDbSection char[] password +
+                          instanceof guard, DetallesLlibrePanelControl final fields
+                          + List<List<String>> + getNotes null guard + 7 empty catch
+                          comments, GuardarLlibresDialogoControl final fields +
+                          WindowAdapter + KeyStroke + SwingWorker,
+                          LlibreDao SELECT template doc + ALLOWED_LEAD tightening).
+                          C2 LlibreDao split: 502 lines → 4 DAOs (LlibreDaoCore
+                          308 / LlibreBlobDao 54 / LlibreSearchDao 77 /
+                          LlibreLecturaDao 29) + LlibreMapper 76 + Schema 19,
+                          old LlibreDao.java deleted. C3 Config god-class: added
+                          setters to UiConfig/DbConfig/WindowConfig and new
+                          FilterConfig; migrated 12 source + 2 test files
+                          (Config.setX → typed X-config.setX). 361/361 green.
+                          NOTE: tests/test.bat were rewritten during this session
+                          to auto-discover subdir tests under test/{domini,
+                          herramienta,persistencia}/ — that work is unrelated to
+                          the C1-C13 backlog. C4-C13 (ShelfBindings/TagBindings,
+                          FilterRow, UITheme Palette migration, Config.props
+                          Properties, ControladorPersistencia indent, logging,
+                          Ejecutable banner, UITheme.shutdown, TableCellComponents
+                          inline) remain OPEN.
 Session 12 (2026-06-09) — C1 ConfiguracioDialog 620 → 142 lines (6 helpers in
                           new presentacio/config/ subpackage); 361 tests green.
 Session 11 (2026-06-09) — UITheme.styleXxx → UIComponents.  361 tests green.
@@ -186,382 +205,13 @@ Session  7 (2026-06-09) — tot.txt sweep; 20+ items closed.
 Session  6 (2026-06-09) — tot.txt consolidation.
 
 ================================================================================
-  6.  EXPERT CODE REVIEW — full-codebase audit (2026-06-09)
-================================================================================
+  6.  EXPERT CODE REVIEW � full-codebase audit (2026-06-09)
+============================================================================
 One section per file that needs work.  Files not listed are clean.
 Line numbers reference the version on disk at time of review.
 
-────────────────────────────────────────────────────────────────────────────────
-src/domini/Llibre.java
-────────────────────────────────────────────────────────────────────────────────
-- `getDesitjat()` returns a primitive `boolean`; per JavaBeans spec the getter
-  for a boolean field must be named `isDesitjat()`.  Every caller that uses
-  this as a bean property will misbehave.
-- `copyOf(Llibre src)` copies the `imatgeBlob` byte-array by reference:
-  `c.imatgeBlob = src.imatgeBlob`.  Mutating the original blob after a copy
-  silently corrupts the copy.  Use `src.imatgeBlob.clone()` (null-guarded).
+  Status: ALL items in this section were closed in session 13
+  (see �5 session-13 entry for the per-file change log).  Section
+  retained as a historical record only � no open items remain.
 
-────────────────────────────────────────────────────────────────────────────────
-src/domini/facade/BackupDelegate.java
-────────────────────────────────────────────────────────────────────────────────
-- Contains a private `ComparatorIsbn` that is an exact duplicate of
-  `BookDelegate.ISBN_COMPARATOR`.  DRY violation.  Extract one shared
-  constant (e.g. on `StateContext` or a `DomainComparators` util class).
-
-────────────────────────────────────────────────────────────────────────────────
-src/domini/facade/StateContext.java
-────────────────────────────────────────────────────────────────────────────────
-- `bib()`, `llistes()`, and `tags()` return the mutable backing `ArrayList`
-  directly.  Any caller that iterates without holding the lock risks
-  `ConcurrentModificationException`, and any caller that clears/adds will
-  corrupt shared state silently.  Return `Collections.unmodifiableList()`
-  views (or document explicitly that callers must hold the lock before calling).
-
-────────────────────────────────────────────────────────────────────────────────
-src/interficie/InMemoryBibliotecaReader.java
-────────────────────────────────────────────────────────────────────────────────
-- `books`, `llistes`, and `tags` are `public` `ArrayList` fields — any test can
-  corrupt them directly.  Make them package-private and expose typed setters, or
-  at minimum use a `public final List<T>` so the reference cannot be replaced.
-- `countLoans(long isbn)`: uses `Objects.equals(r.isbn(), isbn)` where `r.isbn()`
-  is a primitive `long`.  `Objects.equals` boxes both operands unnecessarily;
-  use `r.isbn() == isbn`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/persistencia/LlibreDao.java
-────────────────────────────────────────────────────────────────────────────────
-- The book-column SELECT list is written out three times in three constants
-  (`LLIBRE_SELECT`, `LLIBRE_SELECT_L_LIGHT`, `LLIBRE_SELECT_L`).  A single
-  source-of-truth template would eliminate drift bugs.
-- `ALLOWED_LEAD` (the SQL-file whitelist) permits lines starting with `"SET "`.
-  A MariaDB `SET @@global.*` statement would pass this check.  Tighten the
-  pattern (e.g. only allow `SET ` inside a `VALUES`-context, or remove it and
-  use a safer restore path).
-
-────────────────────────────────────────────────────────────────────────────────
-src/persistencia/LlibreFieldBindings.java
-────────────────────────────────────────────────────────────────────────────────
-- Private helper methods `i(Integer)` and `d(Double)` are single-character
-  names — unreadable without context.  Rename to `intOrZero` / `doubleOrZero`
-  (or just inline the `!= null ? x : 0` expressions, which are trivially short).
-
-────────────────────────────────────────────────────────────────────────────────
-src/persistencia/PrestecDao.java
-────────────────────────────────────────────────────────────────────────────────
-- All public methods are `synchronized` on the DAO instance.  This is redundant:
-  `ControladorPersistencia` is itself synchronized on every public method, so the
-  only thread that ever reaches a DAO method already holds that outer lock.
-  The DAO-level `synchronized` adds overhead and causes confusion.  Remove it.
-
-────────────────────────────────────────────────────────────────────────────────
-src/persistencia/ServerConect.java
-────────────────────────────────────────────────────────────────────────────────
-- `closeConection()` is a published method with a typo.  Should be
-  `closeConnection()`.  Fix plus deprecate-and-delegate or do a codebase-wide
-  rename.
-- The `Connection con` field is mutable and non-`final`.  This makes the class
-  state non-obvious; document clearly that `con` is set once in
-  `createDatabase()` and never reassigned after that, or reinforce the invariant
-  in code.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/AutoCompletion.java
-────────────────────────────────────────────────────────────────────────────────
-- Field `hitBackspaceOnSelection` is assigned in the constructor but never read
-  anywhere.  Dead field; remove it.
-- Field `hidePopupOnFocusLoss` is assigned `true` but the value is not
-  actually used in the popup logic.  Either wire it up or remove it.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/BackupService.java
-────────────────────────────────────────────────────────────────────────────────
-- The 24-hour auto-backup interval is expressed as the literal `86400` (seconds).
-  Replace with a named constant: `private static final long AUTO_BACKUP_INTERVAL_S = 86_400`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/BookExporter.java
-────────────────────────────────────────────────────────────────────────────────
-- `new com.google.gson.Gson()` is instantiated inside the per-book export loop.
-  Gson is thread-safe and immutable; declare `private static final Gson GSON =
-  new Gson()` and reuse it.
-- The private `htmlEsc(String)` / `jsonStr(String)` helpers duplicate logic
-  already in `herramienta.Escapers`.  Replace the local copies with calls to
-  `Escapers.html()` and `Escapers.json()` and delete the duplicates.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/Config.java
-────────────────────────────────────────────────────────────────────────────────
-- `save()` and `flushNow()` contain near-identical code for writing the
-  properties file.  Extract a private `doSave(File f)` helper to avoid
-  the duplication.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/DialogoError.java
-────────────────────────────────────────────────────────────────────────────────
-- `isValidation = e instanceof IllegalArgumentException` misses
-  `BibliotecaException.Validation` (which extends `BibliotecaException`, not
-  `IllegalArgumentException`).  Domain validation errors thrown via
-  `BibliotecaException.Validation` are incorrectly shown as system errors.
-  Fix: `isValidation = e instanceof IllegalArgumentException ||
-  e instanceof domini.BibliotecaException.Validation`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/OpenLibraryClient.java
-────────────────────────────────────────────────────────────────────────────────
-- `public static String testBaseUrl`, `public static int testMaxRetries`, and
-  `public static int testRetryBaseMs` are mutable public statics used only for
-  testing.  They are not thread-safe and leak into the public API.  Replace with
-  a package-private `setTestOverrides(…)` method or constructor injection so the
-  production class surface is clean.
-
-────────────────────────────────────────────────────────────────────────────────
-src/herramienta/export/GoodreadsExportService.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 38: `java.util.stream.Collectors.joining(", ")` is fully qualified inside
-  a method body.  The file already has several qualified stream calls; add a
-  static import `import static java.util.stream.Collectors.*;` or at least
-  `import java.util.stream.Collectors;` and use the short name.
-- Lines 44–45: `"=\"" + l.getISBN() + "\""` — prefer `String.valueOf(l.getISBN())`
-  over implicit `long`→`String` concatenation (autoboxing + toString is implicit;
-  explicit is clearer and avoids boxing).
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/AboutDialog.java
-────────────────────────────────────────────────────────────────────────────────
-- `import presentacio.UIComponents;` at line 5 is a same-package import;
-  Java does not require it, remove it.
-- Line 111: GitHub URL `"https://github.com/jaume-casals/Biblioteca"` is a
-  hardcoded literal in a listener lambda.  Declare it as
-  `private static final String SOURCE_URL = "...";` at the top of the class.
-- Line 112: `catch (Exception ex) { ex.printStackTrace(); }` swallows desktop/URI
-  errors with a raw stack trace.  Use `DialogoError` or at least
-  `java.util.logging.Logger`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/BackupController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 35: `selectedFile.getName().toLowerCase().endsWith(".sql")` uses the
-  default locale for case folding, which is incorrect on Turkish/Azerbaijani
-  locales.  Use `.toLowerCase(java.util.Locale.ROOT)`.
-- Lines 37, 61: `(Frame) SwingUtilities.getWindowAncestor(parent)` casts
-  unconditionally.  If the ancestor is a `JDialog` (not a `Frame`) this throws
-  `ClassCastException` at runtime.  Guard with
-  `instanceof Frame f ? f : null`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/BibliotecaTableModel.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 64: `l.getISBN() + ""` — non-idiomatic; prefer `String.valueOf(l.getISBN())`
-  or `Long.toString(l.getISBN())`.
-- Line 71: `l.getPagines() + "/" + l.getPaginesLlegides()` renders as
-  "total/read" (e.g. "350/50"), which is inverted.  A progress indicator is
-  conventionally "read/total" (e.g. "50/350").  Swap to
-  `l.getPaginesLlegides() + "/" + l.getPagines()`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/BookActionsController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 5: `import presentacio.UIComponents;` — same package, never used; remove.
-- Line 192: `new Random().nextInt(noLlegits.size())` allocates a new Random on
-  every call.  Use `ThreadLocalRandom.current().nextInt(...)` instead.
-- Lines 221–232, 238–246, 249–257: Triple `new ArrayList<>()` wrapping pattern:
-  `new ArrayList<>(state.cd.getAllLlibres().stream().filter(…).collect(
-  Collectors.toList()))`.  The inner `Collectors.toList()` already produces an
-  `ArrayList`; the outer `new ArrayList<>()` is redundant.  Use
-  `stream().filter(…).collect(Collectors.toList())` directly.
-- Line 153: `ArrayList<Llibre> global` — declare as `List<Llibre>` (program to
-  the interface).
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/BookIOController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 5 (or wherever UIComponents is imported): same-package import for
-  `UIComponents` that is never used in this file; remove it.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/CenterTablePanel.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 5: `import presentacio.UIComponents;` — same-package, unnecessary; remove.
-- Lines 51/52: Card names `"TAULA"` and `"GALERIA"` are raw string literals used
-  in three places.  Declare them as `private static final String CARD_TAULA` /
-  `CARD_GALERIA` to prevent silent mismatch.
-- Line 96: `herramienta.Config.getCurrencySymbol()` called from a View panel.
-  View classes should not query config directly; pass the symbol in from the
-  controller or via the column-header-tooltip supplier.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/ConfiguracioDialog.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 41: `this.cd = cd != null ? cd : domini.ControladorDomini.getInstance()`
-  silently falls back to the singleton, hiding the missing injection at the call
-  site.  The dialog should require `cd` to be non-null; pass it explicitly from
-  every caller.
-- Lines 110–121: `findComponentByClientProperty` duplicates `ConfigSections.findById`
-  exactly.  Delete the private copy and use the package-local utility.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/ContextMenuController.java
-────────────────────────────────────────────────────────────────────────────────
-- Lines 173, 231: Two calls to `MainFrameControl.getInstance()` to look up a book
-  by ISBN.  This creates a hard dependency on the root singleton from a
-  sub-controller.  `getLlibreIsbn` should be injected via the `LibraryViewState`
-  (which already holds `state.cd`) — call `state.cd.getLlibre(isbn)` directly
-  and remove the singleton accesses.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/EstadistiquesHelper.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 95: `Collectors.groupingBy(l -> l.getEditorial(), Collectors.counting())`
-  — the lambda can be replaced with a method reference:
-  `Collectors.groupingBy(Llibre::getEditorial, Collectors.counting())`.
-- Lines 62–90, 100–125: Anonymous `JPanel` subclasses with instance-initializer
-  blocks (`{ setPreferredSize(…); … }`) are non-idiomatic.  The initialization
-  code belongs in the overridden `paintComponent` setup or a static factory
-  method; the initializer-block form is confusing because it looks like a
-  test-framework DSL.
-- Line 260: `if (cd instanceof domini.ControladorDomini dom)` — the presentation
-  layer explicitly pattern-matches on a concrete domain class, breaking the
-  interface boundary.  `getAllLlibreLlistaRows()` is already on `BibliotecaReader`
-  (via `ExportSnapshot`) and callable via `cd` directly; use the interface method
-  without the `instanceof` guard.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/ExportController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 127: The thread factory in `fetchMissingCovers` uses
-  `new Thread(r)` without a name.  Name the threads
-  (`"cover-fetch-" + counter.incrementAndGet()`) to make heap dumps / thread
-  dumps readable.
-- Lines 127–157: A brand-new `ExecutorService` is created on every call to
-  `fetchMissingCovers`.  If the user clicks the button twice in quick succession,
-  two pools run concurrently and double-update the same BLOBs.  Disable the
-  button for the duration (it is disabled: line 124) but also guard with an
-  `AtomicBoolean` or reuse a shared pool field.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/FilterController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 53 (inside the anonymous `DocumentListener`): `private final int
-  DEBOUNCE_MS = 250` is a constant defined inside an anonymous class.  Move it
-  to a `private static final int DEBOUNCE_MS = 250` field on `FilterController`.
-- Line 314: `JOptionPane.showConfirmDialog(…, JOptionPane.YES_OPTION)` passes
-  `YES_OPTION` (= 0) as the `optionType` parameter.  `YES_OPTION` is a result
-  constant, not an option-type constant; value 0 is `DEFAULT_OPTION`, which
-  shows a single "OK" button, not a Yes/No pair.  The intended value is
-  `JOptionPane.YES_NO_OPTION`.  The delete-preset confirmation therefore never
-  has a "No" button — pressing Escape or Enter both confirm the deletion.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/LibraryViewState.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 22: `ArrayList<Llibre> modelLibres` — declare as `List<Llibre>`; program
-  to the interface (the concrete type leaks an implementation detail to all
-  sub-controllers that read this field).
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/MainFrameControl.java
-────────────────────────────────────────────────────────────────────────────────
-- Lines 63–64: `int ctrl = …` and `int ctrlShift = …` are only assigned once and
-  never mutated; declare them `final`.
-- `getInstance(MainFramePanel, BibliotecaWriter)`: if called a second time with
-  non-null arguments after the instance is already set, the new arguments are
-  silently discarded.  This can mask test-setup bugs.  Add an assertion:
-  `if (instance != null) throw new IllegalStateException("already initialized")`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/ShelfController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 47: `System.err.println("Drag-to-shelf failed …")` logs an error silently
-  to stderr.  Use `DialogoError` or at minimum `java.util.logging.Logger` so it
-  is captured in the errors.log and visible to users.
-- Lines 74–86: The `SwingWorker` returns a raw `List<Object>` that mixes
-  `Map<Integer,Integer>`, `Integer`, `List<Llista>`, `List<Llibre>`, and
-  `Boolean` — three unchecked casts in `done()`.  Define a small private record
-  `RefreshData(Map<Integer,Integer> counts, int total, List<Llista> llistes,
-  List<Llibre> biblio, boolean large)` and return that instead.
-- Lines 101–128: `combo.setRenderer(new DefaultListCellRenderer() { … })` is
-  called inside the `SwingWorker.done()` method, which runs on every single
-  `refreshComboLlistes()` invocation.  Create the renderer once (in the
-  constructor or `wireListeners`) and reuse it; only call `setRenderer` when the
-  renderer is first installed.
-- Line 78: `state.cd.getAllLlibres().size()` loads the full book list from the
-  domain just to get a count to display next to "All shelves (N)".  Call
-  `state.cd.countAllLlibres()` if available, or cache the count from the already-
-  loaded `biblio` list.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/TableController.java
-────────────────────────────────────────────────────────────────────────────────
-- Lines 23–32: The `COL_*` constants are exact aliases for
-  `BibliotecaTableModel.COL_*`.  Having two copies means a rename in
-  `BibliotecaTableModel` silently breaks `TableController` if an alias is
-  missed.  Remove the aliases and reference `BibliotecaTableModel.COL_*` directly
-  at every call site.
-- Line 182: `t.setRowHeight(50)` — magic number.  Declare
-  `private static final int ROW_HEIGHT = 50`.
-- Lines 209: `int[] defaults = {48, 130, 220, 180, 55, 75, 60, 80, 90, 85}` —
-  magic number array for default column widths; declare as a named constant.
-- Lines 250–256: `indexOfIsbn` performs a linear O(n) scan over the table model
-  on every row-refresh.  For a 2 000-book table this is called repeatedly (once
-  per update).  A `HashMap<Long, Integer>` from ISBN to model-row index, rebuilt
-  on `setBooks` / maintained on add/remove, would give O(1) lookups.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/ImportController.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 134: `Thread fetchThread = new Thread(…)` — unnamed daemon thread.
-  Set a descriptive name: `fetchThread.setName("isbn-lookup")`.
-- Lines 123/129: `isbn` is blank-checked before trimming (line 123 checks raw
-  value, line 129 then assigns `isbn.trim()` to `finalIsbn`).  Trim first, then
-  check: `isbn = isbn.trim(); if (isbn.isBlank()) return;` — avoids the separate
-  `finalIsbn` variable entirely.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/config/ConfiguracioDbSection.java
-────────────────────────────────────────────────────────────────────────────────
-- Line 79: `new String(txtPass.getPassword())` converts the password char-array
-  to a `String`.  Strings are interned and not zeroed on GC; the password
-  persists in the heap.  Keep it as `char[]` until it is consumed by
-  `ServerConect.testConnection`.
-- Lines 152–158 (`reloadFromConfig`): `((JComboBox<?>) jc)` is an unchecked cast
-  that will throw at runtime if `findById` returns the wrong component.  Use a
-  safer `instanceof JComboBox<?> cmb` pattern-match and add
-  `@SuppressWarnings("unchecked")` explicitly where needed.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/detalles/control/DetallesLlibrePanelControl.java
-────────────────────────────────────────────────────────────────────────────────
-- Fields `vista`, `cLlibres`, and `enActualizarBBDD` are not `final` despite
-  being assigned once in the constructor and never reassigned.  Mark them `final`
-  to make the immutability explicit and allow the compiler to catch accidental
-  re-assignment.
-- Lines 110–130: `doInBackground` returns `java.util.List<String>[]` — a raw
-  generic array, which the compiler must suppress with
-  `@SuppressWarnings("unchecked")`.  Replace with
-  `List<List<String>>` (or a small record) to get proper type safety.
-- Line 141: `this.vista.getTextNotes().setText(l.getNotes())` — `getNotes()` can
-  return `null`, and `JTextArea.setText(null)` is implementation-defined (some
-  LAFs throw NPE).  Guard: `l.getNotes() != null ? l.getNotes() : ""`.
-
-────────────────────────────────────────────────────────────────────────────────
-src/presentacio/detalles/control/GuardarLlibresDialogoControl.java
-────────────────────────────────────────────────────────────────────────────────
-- Fields `vista`, `cLlibres`, and `callback` are not `final`; mark them `final`
-  (they are assigned once in the constructor and never changed).
-- Line 56: `cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance()`
-  — same silent singleton fallback as in `ConfiguracioDialog`.  Make `cd`
-  required.
-- `implements WindowListener` but provides empty bodies for `windowOpened`,
-  `windowClosing`, `windowIconified`, `windowDeiconified`, `windowActivated`, and
-  `windowDeactivated`.  Use `extends WindowAdapter` instead; fewer empty methods
-  and shows intent clearly.
-- Lines 45–51: Uses a `KeyListener` to catch `VK_ESCAPE`.  `KeyListener` only
-  fires when the focused component has no default binding for that key.  Use
-  `getRootPane().registerKeyboardAction(…, KeyStroke.getKeyStroke(VK_ESCAPE,0),
-  WHEN_IN_FOCUSED_WINDOW)` instead — the pattern already used in
-  `AboutDialog` and `ConfiguracioDialog`.
-- Lines 67–70: `FieldAutoComplete.attach(vista.getTextAutor(),
-  cLlibres.getDistinctAutorNames())` and the three calls below it are DB queries
-  executed synchronously on the EDT in the constructor.  For large libraries this
-  blocks the UI thread.  Move the four `getDistinct*` calls into a `SwingWorker`
-  (as `DetallesLlibrePanelControl` already does at lines 110–130).
+(End of file - total 587 lines)

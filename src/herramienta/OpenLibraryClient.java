@@ -35,7 +35,10 @@ public class OpenLibraryClient {
 		lastRequestMs = System.currentTimeMillis();
 	}
 
-	// @VisibleForTesting
+	// @VisibleForTesting — test-only override of base URL / retry policy.
+	// Public so the test tree (which lives in the default package, not herramienta)
+	// can read the previous value to restore it after a test. Not thread-safe;
+	// tests must not run OpenLibraryClient in parallel while these are set.
 	public static String testBaseUrl = null;
 	public static int testMaxRetries = -1;
 	public static long testRetryBaseMs = -1;

@@ -1,8 +1,6 @@
 package presentacio;
 
 
-
-import presentacio.UIComponents;
 import presentacio.config.ConfiguracioDialogListener;
 import domini.Llibre;
 import domini.Llista;
@@ -20,7 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 /** Book CRUD, details dialogs, stats, quick views, and undo. */
@@ -101,13 +98,13 @@ class BookActionsController {
         int[] rows = t.getSelectedRows();
         if (rows.length == 0) return;
         String msg = rows.length == 1
-            ? I18n.t("dlg_confirm_delete_one", t.getValueAt(rows[0], TableController.COL_NOM))
+            ? I18n.t("dlg_confirm_delete_one", t.getValueAt(rows[0], BibliotecaTableModel.COL_NOM))
             : I18n.t("dlg_confirm_delete_n", rows.length);
         if (JOptionPane.showConfirmDialog(state.vista, msg, I18n.t("dlg_confirm_delete_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         List<Long> isbns = new ArrayList<>();
         for (int row : rows) {
-            Object cell = t.getValueAt(row, TableController.COL_ISBN);
+            Object cell = t.getValueAt(row, BibliotecaTableModel.COL_ISBN);
             if (!(cell instanceof String) && !(cell instanceof Number)) continue;
             try { isbns.add(Long.parseLong(cell.toString())); }
             catch (NumberFormatException nfe) { /* skip non-numeric cell */ }
@@ -150,7 +147,7 @@ class BookActionsController {
     }
 
     void mostrarEstadistiques() {
-        ArrayList<Llibre> global = new ArrayList<>(state.cd.getAllLlibres());
+        List<Llibre> global = state.cd.getAllLlibres();
         if (global.isEmpty()) {
             JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_empty_library"), I18n.t("dlg_stats_title"),
                 JOptionPane.INFORMATION_MESSAGE);
@@ -189,10 +186,10 @@ class BookActionsController {
                 JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        Llibre aleatori = noLlegits.get(new Random().nextInt(noLlegits.size()));
+        Llibre aleatori = noLlegits.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(noLlegits.size()));
         JTable t = state.vista.getjTableBilio();
         for (int row = 0; row < t.getRowCount(); row++) {
-            if (String.valueOf(aleatori.getISBN()).equals(t.getValueAt(row, TableController.COL_ISBN))) {
+            if (String.valueOf(aleatori.getISBN()).equals(t.getValueAt(row, BibliotecaTableModel.COL_ISBN))) {
                 t.setRowSelectionInterval(row, row);
                 t.scrollRectToVisible(t.getCellRect(row, 0, true));
                 break;
@@ -218,10 +215,9 @@ class BookActionsController {
     }
 
     private void mostrarLlegitsRecentment() {
-        ArrayList<Llibre> llegits = new ArrayList<>(
-            state.cd.getAllLlibres().stream()
-                .filter(l -> Boolean.TRUE.equals(l.getLlegit()))
-                .collect(Collectors.toList()));
+        List<Llibre> llegits = state.cd.getAllLlibres().stream()
+            .filter(l -> Boolean.TRUE.equals(l.getLlegit()))
+            .collect(Collectors.toList());
         if (llegits.isEmpty()) {
             JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_no_read"), I18n.t("dlg_read_title"),
                 JOptionPane.INFORMATION_MESSAGE);
@@ -235,10 +231,9 @@ class BookActionsController {
     }
 
     private void mostrarDesitjats() {
-        state.biblio = new ArrayList<>(
-            state.cd.getAllLlibres().stream()
-                .filter(l -> Boolean.TRUE.equals(l.getDesitjat()))
-                .collect(Collectors.toList()));
+        state.biblio = state.cd.getAllLlibres().stream()
+            .filter(l -> Boolean.TRUE.equals(l.isDesitjat()))
+            .collect(Collectors.toList());
         host.pageCtrl().setUseDBPagination(false);
         state.currentLlistaId = null;
         host.pageCtrl().setCurrentPage(0);
@@ -246,10 +241,9 @@ class BookActionsController {
     }
 
     private void mostrarEnCurs() {
-        state.biblio = new ArrayList<>(
-            state.cd.getAllLlibres().stream()
-                .filter(l -> l.getPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.getLlegit()))
-                .collect(Collectors.toList()));
+        state.biblio = state.cd.getAllLlibres().stream()
+            .filter(l -> l.getPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.getLlegit()))
+            .collect(Collectors.toList());
         host.pageCtrl().setUseDBPagination(false);
         state.currentLlistaId = null;
         host.pageCtrl().setCurrentPage(0);

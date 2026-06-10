@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.stream.Collectors.joining;
+
 /** Shared Goodreads-compatible CSV export used by API and Swing. */
 public final class GoodreadsExportService {
     private GoodreadsExportService() {}
@@ -35,14 +37,14 @@ public final class GoodreadsExportService {
             String shelf = Boolean.TRUE.equals(l.getLlegit()) ? "read"
                 : (!llistes.isEmpty() ? llistes.get(0).getNom() : "to-read");
             String bookshelves = llistes.stream().map(Llista::getNom)
-                .collect(java.util.stream.Collectors.joining(", "));
+                .collect(joining(", "));
             sb.append(rowId++).append(',')
               .append(CsvUtils.csvQ(l.getNom())).append(',')
               .append(CsvUtils.csvQ(l.getAutor())).append(',')
               .append(CsvUtils.csvQ(l.getAutor())).append(',')
               .append(',')
-              .append(CsvUtils.csvQ("=\"" + l.getISBN() + "\"")).append(',')
-              .append(CsvUtils.csvQ("=\"" + l.getISBN() + "\"")).append(',')
+              .append(CsvUtils.csvQ("=\"" + String.valueOf(l.getISBN()) + "\"")).append(',')
+              .append(CsvUtils.csvQ("=\"" + String.valueOf(l.getISBN()) + "\"")).append(',')
               .append(l.getValoracio() > 0 ? (int) Math.round(l.getValoracio() / 2.0) : 0).append(',')
               .append(',')
               .append(CsvUtils.csvQ(l.getEditorial() != null ? l.getEditorial() : "")).append(',')

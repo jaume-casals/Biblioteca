@@ -22,7 +22,8 @@ public class DialogoError {
     }
 
     public DialogoError(String titol, Exception e) {
-        this.isValidation = e instanceof IllegalArgumentException;
+        this.isValidation = e instanceof IllegalArgumentException
+            || e instanceof domini.BibliotecaException.Validation;
         this.titol = isValidation ? I18n.t("dlg_validacio_title") : titol;
 
         this.missatge = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();

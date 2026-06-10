@@ -44,7 +44,10 @@ class ShelfController {
     private void onDragToShelf(int shelfId, List<Long> isbns) {
         for (long isbn : isbns) {
             try { state.cd.addLlibreToLlista(isbn, shelfId, 0.0, false); }
-            catch (Exception e) { System.err.println("Drag-to-shelf failed isbn=" + isbn + ": " + e.getMessage()); }
+            catch (Exception e) {
+                java.util.logging.Logger.getLogger(ShelfController.class.getName())
+                    .warning("Drag-to-shelf failed isbn=" + isbn + ": " + e.getMessage());
+            }
         }
         refreshComboLlistes();
     }
@@ -71,62 +74,35 @@ class ShelfController {
         combo.removeAllItems();
         combo.addItem(I18n.t("lbl_all_lists") + " (...)");
 
-        new javax.swing.SwingWorker<java.util.List<Object>, Void>() {
-            @Override protected java.util.List<Object> doInBackground() {
-                java.util.List<Object> out = new java.util.ArrayList<>();
+        new javax.swing.SwingWorker<RefreshData, Void>() {
+            @Override protected RefreshData doInBackground() {
                 Map<Integer, Integer> counts = state.cd.getAllCountsInLlistes();
-                int total = state.cd.getAllLlibres().size();
+                int total = state.cd.countLlibresDB();
                 java.util.List<Llista> llistes = new ArrayList<>(state.cd.getAllLlistes());
-                out.add(counts); out.add(total); out.add(llistes);
-                if (state.currentLlistaId != null) {
-                    out.add(new ArrayList<>(state.cd.getLlibresInLlista(state.currentLlistaId)));
-                } else {
-                    out.add(new ArrayList<>(state.cd.getAllLlibres()));
-                }
-                out.add(state.cd.isLargeLibrary());
-                return out;
+                java.util.List<domini.Llibre> biblio = state.currentLlistaId != null
+                    ? new ArrayList<>(state.cd.getLlibresInLlista(state.currentLlistaId))
+                    : new ArrayList<>(state.cd.getAllLlibres());
+                boolean largeLib = state.cd.isLargeLibrary();
+                return new RefreshData(counts, total, llistes, biblio, largeLib);
             }
             @Override protected void done() {
                 try {
-                    java.util.List<Object> data = get();
-                    @SuppressWarnings("unchecked") Map<Integer, Integer> counts = (Map<Integer, Integer>) data.get(0);
-                    int total = (Integer) data.get(1);
-                    @SuppressWarnings("unchecked") java.util.List<Llista> llistes = (java.util.List<Llista>) data.get(2);
-                    @SuppressWarnings("unchecked") java.util.List<domini.Llibre> biblio = (java.util.List<domini.Llibre>) data.get(3);
-                    boolean largeLib = (Boolean) data.get(4);
+                    RefreshData data = get();
+                    Map<Integer, Integer> counts = data.counts();
+                    int total = data.total();
+                    java.util.List<Llista> llistes = data.llistes();
+                    java.util.List<domini.Llibre> biblio = data.biblio();
+                    boolean largeLib = data.large();
 
                     combo.removeAllItems();
                     combo.addItem(I18n.t("lbl_all_lists") + " (" + total + ")");
                     for (Llista l : llistes) combo.addItem(l);
-                    combo.setRenderer(new javax.swing.DefaultListCellRenderer() {
-                        @Override
-                        public java.awt.Component getListCellRendererComponent(
-                                javax.swing.JList<?> list, Object value, int index,
-                                boolean isSelected, boolean cellHasFocus) {
-                            javax.swing.Icon icon = null;
-                            if (value instanceof Llista ll) {
-                                if (ll.getColor() != null) {
-                                    try {
-                                        java.awt.Color c = java.awt.Color.decode(ll.getColor());
-                                        icon = new javax.swing.Icon() {
-                                            public int getIconWidth()  { return 12; }
-                                            public int getIconHeight() { return 12; }
-                                            public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
-                                                g.setColor(c);
-                                                g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
-                                                g.setColor(c.darker());
-                                                g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
-                                            }
-                                        };
-                                    } catch (Exception ignored) {}
-                                }
-                                value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
-                            }
-                            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                            setIcon(icon);
-                            return this;
-                        }
-                    });
+                    if (comboRenderer == null) {
+                        comboRenderer = new ShelfCellRenderer(counts);
+                        combo.setRenderer(comboRenderer);
+                    } else {
+                        comboRenderer.updateCounts(counts);
+                    }
                     int selectIdx = 0;
                     if (state.currentLlistaId != null) {
                         for (int i = 1; i < combo.getItemCount(); i++) {
@@ -151,6 +127,44 @@ class ShelfController {
             }
         }.execute();
     }
+
+    private record RefreshData(Map<Integer, Integer> counts, int total,
+                               java.util.List<Llista> llistes, java.util.List<domini.Llibre> biblio,
+                               boolean large) {}
+
+    private static final class ShelfCellRenderer extends javax.swing.DefaultListCellRenderer {
+        private Map<Integer, Integer> counts;
+        ShelfCellRenderer(Map<Integer, Integer> counts) { this.counts = counts; }
+        void updateCounts(Map<Integer, Integer> c) { this.counts = c; }
+        @Override
+        public java.awt.Component getListCellRendererComponent(
+                javax.swing.JList<?> list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+            javax.swing.Icon icon = null;
+            if (value instanceof Llista ll) {
+                if (ll.getColor() != null) {
+                    try {
+                        java.awt.Color c = java.awt.Color.decode(ll.getColor());
+                        icon = new javax.swing.Icon() {
+                            public int getIconWidth()  { return 12; }
+                            public int getIconHeight() { return 12; }
+                            public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
+                                g.setColor(c);
+                                g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
+                                g.setColor(c.darker());
+                                g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
+                            }
+                        };
+                    } catch (Exception ignored) {}
+                }
+                value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";
+            }
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            setIcon(icon);
+            return this;
+        }
+    }
+    private ShelfCellRenderer comboRenderer;
 
     void refreshComboTags() {
         javax.swing.JComboBox<Object> combo = state.vista.getComboTagFilter();
@@ -188,7 +202,7 @@ class ShelfController {
         JTable t = state.vista.getjTableBilio();
         for (int row : rows) {
             try {
-                long isbn = Long.parseLong((String) t.getValueAt(row, TableController.COL_ISBN));
+                long isbn = Long.parseLong((String) t.getValueAt(row, BibliotecaTableModel.COL_ISBN));
                 state.cd.addLlibreToLlista(isbn, sel.getId(), 0.0, false);
                 ok++;
             } catch (Exception ignored) { skip++; }

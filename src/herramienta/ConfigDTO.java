@@ -31,19 +31,19 @@ public record ConfigDTO(
 
     public void apply() {
         Config.withBatch(() -> {
-            Config.setTheme(UITheme.Theme.fromKey(theme));
-            Config.setDarkMode(darkMode);
-            Config.setDbType(dbType);
-            Config.setDbHost(dbHost);
-            Config.setDbUser(dbUser);
-            if (!"***".equals(dbPassword)) Config.setDbPassword(dbPassword);
-            Config.setFontSize(fontSize);
-            Config.setCurrencySymbol(currencySymbol);
-            Config.setDefaultValoracio(defaultValoracio);
-            Config.setReadingGoal(readingGoal);
-            Config.setViewMode(viewMode);
-            Config.setGalleryZoom(galleryZoom);
-            Config.setDefaultImgDir(defaultImgDir);
+            UiConfig.setTheme(UITheme.Theme.fromKey(theme));
+            UiConfig.setDarkMode(darkMode);
+            DbConfig.setType(dbType);
+            DbConfig.setHost(dbHost);
+            DbConfig.setUser(dbUser);
+            if (!"***".equals(dbPassword)) DbConfig.setPassword(dbPassword);
+            UiConfig.setFontSize(fontSize);
+            UiConfig.setCurrency(currencySymbol);
+            UiConfig.setDefaultValoracio(defaultValoracio);
+            UiConfig.setReadingGoal(readingGoal);
+            UiConfig.setViewMode(viewMode);
+            UiConfig.setGalleryZoom(galleryZoom);
+            FilterConfig.setDefaultImgDir(defaultImgDir);
         });
     }
 }

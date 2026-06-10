@@ -17,6 +17,7 @@ import domini.LlibreFilter;
 import herramienta.Config;
 import herramienta.DialogoError;
 import herramienta.I18n;
+import herramienta.WindowConfig;
 import interficie.BibliotecaWriter;
 import presentacio.listener.EnActualizarBBDD;
 
@@ -60,8 +61,8 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 
 		ioCtrl = new BookIOController(panel, cd, () -> cLlibres.getAllLlibres(), () -> mostrarControl.refresh());
 
-		int ctrl = java.awt.event.InputEvent.CTRL_DOWN_MASK;
-		int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
+		final int ctrl = java.awt.event.InputEvent.CTRL_DOWN_MASK;
+		final int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 		JComponent root = frame.getRootPane();
 		javax.swing.InputMap im = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 		javax.swing.ActionMap am = root.getActionMap();
@@ -177,9 +178,9 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 						I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 						javax.swing.JOptionPane.YES_NO_OPTION) != javax.swing.JOptionPane.YES_OPTION) return;
 				boolean max = (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0;
-				Config.setWindowMaximized(max);
+				WindowConfig.setMaximized(max);
 				java.awt.Rectangle r = normalBounds[0];
-				Config.setWindowBounds(r.x, r.y, r.width, r.height);
+				WindowConfig.setBounds(r.x, r.y, r.width, r.height);
 				System.exit(0);
 			}
 		});
@@ -187,6 +188,7 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 
 	public static MainFrameControl getInstance(MainFramePanel panel, BibliotecaWriter cd) {
 		if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
+		else if (instance != null && panel != null) throw new IllegalStateException("MainFrameControl already initialized");
 		return instance;
 	}
 

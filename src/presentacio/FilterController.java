@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 /** Filter drawer, search bar, and preset management. */
 class FilterController {
 
+    private static final int DEBOUNCE_MS = 250;
+
     private final LibraryViewState state;
     private final LibraryScreenHost host;
 
@@ -49,7 +51,6 @@ class FilterController {
 
         vista.getSearchBar().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             private javax.swing.Timer debounce;
-            private final int DEBOUNCE_MS = 250;
             private void scheduleSearch() {
                 if (debounce != null && debounce.isRunning()) debounce.stop();
                 debounce = new javax.swing.Timer(DEBOUNCE_MS, e -> {
@@ -176,7 +177,7 @@ class FilterController {
             @Override
             public boolean include(javax.swing.RowFilter.Entry<? extends javax.swing.table.TableModel, ? extends Integer> entry) {
                 try {
-                    long isbn = Long.parseLong(entry.getStringValue(TableController.COL_ISBN));
+                        long isbn = Long.parseLong(entry.getStringValue(BibliotecaTableModel.COL_ISBN));
                     Llibre l = isbnMap.get(isbn);
                     if (l == null) return false;
                     return FiltreUtils.matches(l, f, tagISBNs, llistaISBNs);
@@ -228,7 +229,7 @@ class FilterController {
                         if (entry.getStringValue(i).toLowerCase(java.util.Locale.ROOT).contains(q)) return true;
                     }
                     try {
-                        long isbn = Long.parseLong(entry.getStringValue(TableController.COL_ISBN));
+                    long isbn = Long.parseLong(entry.getStringValue(BibliotecaTableModel.COL_ISBN));
                         Llibre l = isbnMap.get(isbn);
                         if (l != null) {
                             String desc  = l.getDescripcio();
@@ -311,7 +312,7 @@ class FilterController {
         if (idx < 0 || Config.getPresetCount() == 0) return;
         String name = Config.getPresetName(idx);
         if (JOptionPane.showConfirmDialog(state.vista, I18n.t("dlg_delete_preset", name),
-                I18n.t("dlg_delete_preset_title"), JOptionPane.YES_OPTION) != JOptionPane.YES_OPTION) return;
+                I18n.t("dlg_delete_preset_title"), JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
         Config.deletePreset(idx);
         refreshComboPresets();
     }

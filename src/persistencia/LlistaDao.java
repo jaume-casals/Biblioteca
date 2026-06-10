@@ -108,7 +108,7 @@ public class LlistaDao {
                     "FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN")) {
                 ps.setInt(1, llistaId);
                 try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) llibres.add(LlibreDao.buildLlibre(rs));
+                    while (rs.next()) llibres.add(LlibreMapper.buildLlibre(rs));
                 }
             }
         } catch (SQLException e) {

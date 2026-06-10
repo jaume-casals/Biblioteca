@@ -44,7 +44,7 @@ class ContextMenuController {
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0) return;
                 if (!table.isRowSelected(row)) table.setRowSelectionInterval(row, row);
-                String isbnStr = (String) table.getValueAt(row, TableController.COL_ISBN);
+                String isbnStr = (String) table.getValueAt(row, BibliotecaTableModel.COL_ISBN);
 
                 JPopupMenu menu = new JPopupMenu();
                 int[] selectedRows = table.getSelectedRows();
@@ -73,7 +73,7 @@ class ContextMenuController {
                     JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selectedRows.length));
                     List<Long> batchIsbns = new ArrayList<>();
                     for (int r : selectedRows)
-                        batchIsbns.add(Long.parseLong((String) table.getValueAt(r, TableController.COL_ISBN)));
+                        batchIsbns.add(Long.parseLong((String) table.getValueAt(r, BibliotecaTableModel.COL_ISBN)));
                     itemBatchEdit.addActionListener(ev -> batchEdit(batchIsbns));
                     menu.add(itemBatchEdit);
                 }
@@ -170,8 +170,7 @@ class ContextMenuController {
         List<Long> isbns = llibres.stream().map(Llibre::getISBN).collect(Collectors.toList());
         for (long isbn : isbns) {
             try {
-                Llibre l = MainFrameControl.getInstance().getLlibreIsbn(isbn);
-                if (l == null) continue;
+                Llibre l = state.cd.getLlibre(isbn);
                 state.undoBuffer.push(l);
                 if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
                 state.cd.deleteLlibre(l);
@@ -228,8 +227,7 @@ class ContextMenuController {
 
     void duplicarLlibre(String isbnStr) {
         try {
-            Llibre src = MainFrameControl.getInstance().getLlibreIsbn(Long.parseLong(isbnStr));
-            if (src == null) return;
+            Llibre src = state.cd.getLlibre(Long.parseLong(isbnStr));
             Llibre copy = Llibre.copyOf(src);
             GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
             new GuardarLlibresDialogoControl(dialeg, null, state.cd);
@@ -244,7 +242,7 @@ class ContextMenuController {
             dialeg.getTextVolum().setText(copy.getVolum() > 0 ? String.valueOf(copy.getVolum()) : "");
             dialeg.getTextIdioma().setText(copy.getIdioma() != null ? copy.getIdioma() : "");
             dialeg.getChckLlegit().setSelected(Boolean.TRUE.equals(copy.getLlegit()));
-            dialeg.getChckDesitjat().setSelected(copy.getDesitjat());
+            dialeg.getChckDesitjat().setSelected(copy.isDesitjat());
             dialeg.getTextISBN().setText("");
             dialeg.getTextISBN().requestFocusInWindow();
             dialeg.setLocationRelativeTo(state.vista);

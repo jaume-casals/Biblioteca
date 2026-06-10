@@ -32,6 +32,7 @@ import javax.swing.SwingUtilities;
 import domini.Llibre;
 import herramienta.Config;
 import herramienta.UITheme;
+import herramienta.UiConfig;
 import interficie.BibliotecaWriter;
 import presentacio.galeria.CoverCardFactory;
 import presentacio.galeria.CoverImageService;
@@ -182,7 +183,7 @@ public class GaleriaCobertesPanel extends JPanel {
         int newZoom = Math.max(0, Math.min(ZOOM_WIDTHS.length - 1, zoomLevel + delta));
         if (newZoom == zoomLevel) return;
         zoomLevel = newZoom;
-        Config.setGalleryZoom(zoomLevel);
+        UiConfig.setGalleryZoom(zoomLevel);
         applyZoom(zoomLevel);
         imageService.clear();
         if (currentLlibres != null) {

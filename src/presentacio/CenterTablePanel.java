@@ -27,6 +27,9 @@ import herramienta.UITheme;
 
 public class CenterTablePanel extends JPanel {
 
+	private static final String CARD_TAULA = "TAULA";
+	private static final String CARD_GALERIA = "GALERIA";
+
 	private JTable jTableBilio;
 	private JScrollPane scrollPaneJTable;
 	private JPanel paginationPanel;
@@ -48,8 +51,8 @@ public class CenterTablePanel extends JPanel {
 		cardLayout = new CardLayout();
 		contentCards = new JPanel(cardLayout);
 		contentCards.setBackground(UITheme.BG_MAIN);
-		contentCards.add(scrollPaneJTable, "TAULA");
-		contentCards.add(galeria, "GALERIA");
+		contentCards.add(scrollPaneJTable, CARD_TAULA);
+		contentCards.add(galeria, CARD_GALERIA);
 
 		buildPagination();
 
@@ -158,12 +161,12 @@ public class CenterTablePanel extends JPanel {
 
 	public void showGaleria() {
 		galeriaMode = true;
-		cardLayout.show(contentCards, "GALERIA");
+		cardLayout.show(contentCards, CARD_GALERIA);
 	}
 
 	public void showTaula() {
 		galeriaMode = false;
-		cardLayout.show(contentCards, "TAULA");
+		cardLayout.show(contentCards, CARD_TAULA);
 	}
 
 	public void applyTheme() {

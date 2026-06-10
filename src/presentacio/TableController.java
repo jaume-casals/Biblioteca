@@ -1,8 +1,9 @@
 package presentacio;
 
 import domini.Llibre;
-import herramienta.Config;
 import herramienta.I18n;
+import herramienta.UiConfig;
+import herramienta.WindowConfig;
 import interficie.BibliotecaWriter;
 import presentacio.renderers.TableCellComponents;
 
@@ -20,19 +21,11 @@ import java.util.function.Supplier;
 /** Table view: model, renderers, column visibility, table UX listeners. */
 class TableController {
 
-    static final int COL_COVER = BibliotecaTableModel.COL_COVER;
-    static final int COL_ISBN = BibliotecaTableModel.COL_ISBN;
-    static final int COL_NOM = BibliotecaTableModel.COL_NOM;
-    static final int COL_AUTOR = BibliotecaTableModel.COL_AUTOR;
-    static final int COL_ANY = BibliotecaTableModel.COL_ANY;
-    static final int COL_VALORACIO = BibliotecaTableModel.COL_VALORACIO;
-    static final int COL_PREU = BibliotecaTableModel.COL_PREU;
-    static final int COL_LLEGIT = BibliotecaTableModel.COL_LLEGIT;
-    static final int COL_PROGRES = BibliotecaTableModel.COL_PROGRES;
-    static final int COL_DETALLS = BibliotecaTableModel.COL_DETALLS;
-
     private static final boolean[] COL_TOGGLEABLE =
         {true, false, false, true, true, true, true, true, true, false};
+
+    private static final int ROW_HEIGHT = 50;
+    private static final int[] DEFAULT_COL_WIDTHS = {48, 130, 220, 180, 55, 75, 60, 80, 90, 85};
 
     private static String[] colNames() {
         return new String[]{
@@ -49,6 +42,8 @@ class TableController {
     private boolean sortListenerAttached;
     private TableCellComponents.SearchHighlightRenderer highlightRenderer;
     private final java.util.TreeMap<Integer, TableColumn> hiddenCols = new java.util.TreeMap<>();
+    /** O(1) lookup from ISBN to model row index. Rebuilt on {@link #setBooks}; updated incrementally on row mutations. */
+    private final java.util.HashMap<Long, Integer> isbnToRow = new java.util.HashMap<>();
 
     TableController(MostrarBibliotecaPanel vista) {
         this.vista = vista;
@@ -61,6 +56,7 @@ class TableController {
                   Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
                   Supplier<Set<Long>> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         tableModel.setBooks(books);
+        rebuildIsbnIndex();
         JTable t = vista.getjTableBilio();
         if (t.getModel() != tableModel) {
             t.setModel(tableModel);
@@ -69,6 +65,14 @@ class TableController {
         }
         attachSortPersistenceListener(t);
         if (!columnsInstalled) installColumns(t, cd, detallesBtn, coverCache, coverLoading, loanedIsbns, onRowUpdated);
+    }
+
+    private void rebuildIsbnIndex() {
+        isbnToRow.clear();
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            Llibre b = tableModel.getBookAt(i);
+            if (b != null) isbnToRow.put(b.getISBN(), i);
+        }
     }
 
     void installInteractionListeners(LibraryScreenHost host, Runnable onOpenDetails,
@@ -88,9 +92,9 @@ class TableController {
                 int col = table.columnAtPoint(e.getPoint());
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0 || col < 0) return;
-                if (table.convertColumnIndexToModel(col) != COL_AUTOR) return;
+                if (table.convertColumnIndexToModel(col) != BibliotecaTableModel.COL_AUTOR) return;
                 int modelRow = table.convertRowIndexToModel(row);
-                Object val = table.getModel().getValueAt(modelRow, COL_AUTOR);
+                Object val = table.getModel().getValueAt(modelRow, BibliotecaTableModel.COL_AUTOR);
                 if (val == null) return;
                 String autor = val.toString().trim();
                 if (autor.isEmpty()) return;
@@ -135,7 +139,7 @@ class TableController {
             }
             for (var entry : hiddenCols.entrySet())
                 widths[entry.getKey()] = entry.getValue().getWidth();
-            Config.setColWidths(widths);
+            WindowConfig.setColWidths(widths);
         });
         saveWidthsTimer.setRepeats(false);
         table.getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
@@ -150,7 +154,7 @@ class TableController {
     void applyColumnVisibility() {
         for (int col = 0; col < colNames().length; col++) {
             if (!COL_TOGGLEABLE[col]) continue;
-            boolean shouldBeVisible = Config.getColVisible(col);
+            boolean shouldBeVisible = WindowConfig.colVisible(col);
             boolean isVisible = !hiddenCols.containsKey(col);
             if (isVisible != shouldBeVisible) toggleColumn(col);
         }
@@ -166,49 +170,48 @@ class TableController {
                 if (!hiddenCols.containsKey(i)) targetView++;
             int currentView = t.getColumnCount() - 1;
             if (currentView != targetView) t.moveColumn(currentView, targetView);
-            Config.setColVisible(modelIndex, true);
+            WindowConfig.setColVisible(modelIndex, true);
         } else {
             TableColumn tc = columnByModelIndex(t, modelIndex);
             if (tc == null) return;
             hiddenCols.put(modelIndex, tc);
             t.removeColumn(tc);
-            Config.setColVisible(modelIndex, false);
+            WindowConfig.setColVisible(modelIndex, false);
         }
     }
 
     private void installColumns(JTable t, BibliotecaWriter cd, JButton detallesBtn,
                                 Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
                                 Supplier<Set<Long>> loanedIsbns, Consumer<Llibre> onRowUpdated) {
-        t.setRowHeight(50);
-        setWidth(t, COL_COVER, 48, 48, 56);
-        setWidth(t, COL_ISBN, 130, 80, Integer.MAX_VALUE);
-        setWidth(t, COL_NOM, 220, 80, Integer.MAX_VALUE);
-        setWidth(t, COL_AUTOR, 180, 80, Integer.MAX_VALUE);
-        setWidth(t, COL_ANY, 55, 40, Integer.MAX_VALUE);
-        setWidth(t, COL_VALORACIO, 75, 50, Integer.MAX_VALUE);
-        setWidth(t, COL_PREU, 60, 40, Integer.MAX_VALUE);
-        setWidth(t, COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
-        setWidth(t, COL_PROGRES, 90, 50, Integer.MAX_VALUE);
-        t.getColumnModel().getColumn(COL_COVER).setCellRenderer(
+        t.setRowHeight(ROW_HEIGHT);
+        setWidth(t, BibliotecaTableModel.COL_COVER, 48, 48, 56);
+        setWidth(t, BibliotecaTableModel.COL_ISBN, 130, 80, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_NOM, 220, 80, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_AUTOR, 180, 80, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_ANY, 55, 40, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_VALORACIO, 75, 50, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_PREU, 60, 40, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
+        setWidth(t, BibliotecaTableModel.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_COVER).setCellRenderer(
             new TableCellComponents.CoverCellRenderer(t, coverCache, coverLoading, cd));
         // Details column hidden — double-click row or Enter opens details (see installInteractionListeners)
-        TableColumn detallsCol = t.getColumnModel().getColumn(COL_DETALLS);
-        hiddenCols.put(COL_DETALLS, detallsCol);
+        TableColumn detallsCol = t.getColumnModel().getColumn(BibliotecaTableModel.COL_DETALLS);
+        hiddenCols.put(BibliotecaTableModel.COL_DETALLS, detallsCol);
         t.removeColumn(detallsCol);
-        Config.setColVisible(COL_DETALLS, false);
-        t.getColumnModel().getColumn(COL_LLEGIT).setCellRenderer(new TableCellComponents.LlegitCheckBoxRenderer());
-        t.getColumnModel().getColumn(COL_LLEGIT).setCellEditor(
+        WindowConfig.setColVisible(BibliotecaTableModel.COL_DETALLS, false);
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellRenderer(new TableCellComponents.LlegitCheckBoxRenderer());
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellEditor(
             new TableCellComponents.LlegitCheckBoxEditor(cd, onRowUpdated));
-        t.getColumnModel().getColumn(COL_PROGRES).setCellRenderer(new TableCellComponents.ProgressBarRenderer());
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_PROGRES).setCellRenderer(new TableCellComponents.ProgressBarRenderer());
         highlightRenderer = new TableCellComponents.SearchHighlightRenderer(loanedIsbns);
         for (int v = 0; v < t.getColumnCount(); v++) {
             int modelIndex = t.getColumnModel().getColumn(v).getModelIndex();
-            if (modelIndex != COL_COVER && modelIndex != COL_LLEGIT && modelIndex != COL_PROGRES)
+            if (modelIndex != BibliotecaTableModel.COL_COVER && modelIndex != BibliotecaTableModel.COL_LLEGIT && modelIndex != BibliotecaTableModel.COL_PROGRES)
                 t.getColumnModel().getColumn(v).setCellRenderer(highlightRenderer);
         }
-        int[] defaults = {48, 130, 220, 180, 55, 75, 60, 80, 90, 85};
-        for (int i = 0; i < defaults.length; i++) {
-            int saved = Config.getColWidth(i, -1);
+        for (int i = 0; i < DEFAULT_COL_WIDTHS.length; i++) {
+            int saved = WindowConfig.colWidth(i, -1);
             if (saved > 0) {
                 TableColumn tc = columnByModelIndex(t, i);
                 if (tc != null) tc.setPreferredWidth(saved);
@@ -223,10 +226,10 @@ class TableController {
         if (sorter == null) return;
         sorter.addRowSorterListener(e -> {
             var keys = sorter.getSortKeys();
-            if (keys.isEmpty()) Config.setSortColumn(-1);
+            if (keys.isEmpty()) UiConfig.setSortColumn(-1);
             else {
-                Config.setSortColumn(keys.get(0).getColumn());
-                Config.setSortOrder(keys.get(0).getSortOrder().name());
+                UiConfig.setSortColumn(keys.get(0).getColumn());
+                UiConfig.setSortOrder(keys.get(0).getSortOrder().name());
             }
         });
         sortListenerAttached = true;
@@ -248,16 +251,16 @@ class TableController {
     }
 
     int indexOfIsbn(long isbn) {
-        for (int i = 0; i < tableModel.getRowCount(); i++) {
-            Llibre b = tableModel.getBookAt(i);
-            if (b != null && b.getISBN() == isbn) return i;
-        }
-        return -1;
+        Integer row = isbnToRow.get(isbn);
+        return row == null ? -1 : row;
     }
 
     void refreshRow(int row, Llibre l) {
         if (row >= 0 && row < tableModel.getRowCount()) {
+            Long oldIsbn = tableModel.getBookAt(row) != null ? tableModel.getBookAt(row).getISBN() : null;
             tableModel.getBooks().set(row, l);
+            if (oldIsbn != null) isbnToRow.remove(oldIsbn);
+            isbnToRow.put(l.getISBN(), row);
             tableModel.fireTableRowsUpdated(row, row);
         }
     }
@@ -266,12 +269,21 @@ class TableController {
         int idx = indexOfIsbn(isbn);
         if (idx >= 0) {
             tableModel.getBooks().remove(idx);
+            isbnToRow.remove(isbn);
+            // shift down all entries with row > idx
+            java.util.Iterator<java.util.Map.Entry<Long, Integer>> it = isbnToRow.entrySet().iterator();
+            while (it.hasNext()) {
+                java.util.Map.Entry<Long, Integer> e = it.next();
+                if (e.getValue() > idx) e.setValue(e.getValue() - 1);
+            }
             tableModel.fireTableRowsDeleted(idx, idx);
         }
     }
 
     void appendBook(Llibre l) {
+        int row = tableModel.getRowCount();
         tableModel.getBooks().add(l);
-        tableModel.fireTableRowsInserted(tableModel.getRowCount() - 1, tableModel.getRowCount() - 1);
+        isbnToRow.put(l.getISBN(), row);
+        tableModel.fireTableRowsInserted(row, row);
     }
 }

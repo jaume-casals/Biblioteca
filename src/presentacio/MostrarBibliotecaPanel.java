@@ -18,6 +18,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import herramienta.UITheme;
+import herramienta.UiConfig;
 
 public class MostrarBibliotecaPanel extends JPanel {
 
@@ -79,7 +80,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	public void applyTheme() {
 		UITheme.rebuildFonts(herramienta.FontSize.fromKey(herramienta.Config.getFontSize()));
-		herramienta.Config.setTheme(UITheme.getTheme());
+        UiConfig.setTheme(UITheme.getTheme());
 
 		setBackground(UITheme.BG_MAIN);
 

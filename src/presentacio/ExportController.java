@@ -16,6 +16,20 @@ import interficie.BibliotecaWriter;
 
 public class ExportController {
 
+    /** Reused cover-fetch pool — guard against concurrent invocations of
+     *  {@link #fetchMissingCovers(JButton)} (the button is also disabled). */
+    private static final java.util.concurrent.ExecutorService COVER_POOL =
+        java.util.concurrent.Executors.newFixedThreadPool(8, new java.util.concurrent.ThreadFactory() {
+            private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
+            @Override public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "cover-fetch-" + counter.incrementAndGet());
+                t.setDaemon(true);
+                return t;
+            }
+        });
+    private static final java.util.concurrent.atomic.AtomicBoolean COVER_FETCH_RUNNING =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+
     private final Component parent;
     private final BibliotecaWriter cd;
     private final Supplier<List<Llibre>> currentBooks;
@@ -99,11 +113,13 @@ public class ExportController {
     }
 
     public void fetchMissingCovers(JButton fetchBtn) {
+        if (!COVER_FETCH_RUNNING.compareAndSet(false, true)) return;
         ArrayList<Llibre> all = new ArrayList<>(cd.getAllLlibres());
         List<Llibre> missing = all.stream()
             .filter(l -> !l.hasBlob() && l.getImatgeBlob() == null)
             .collect(java.util.stream.Collectors.toList());
         if (missing.isEmpty()) {
+            COVER_FETCH_RUNNING.set(false);
             JOptionPane.showMessageDialog(parent,
                 I18n.t("dlg_fetch_portades_all_done"), I18n.t("dlg_fetch_portades_title"), JOptionPane.INFORMATION_MESSAGE);
             return;
@@ -124,11 +140,9 @@ public class ExportController {
         if (fetchBtn != null) fetchBtn.setEnabled(false);
         java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger(0);
         java.util.concurrent.atomic.AtomicInteger fetched = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8,
-            r -> { Thread t = new Thread(r); t.setDaemon(true); return t; });
         try {
             for (Llibre l : missing) {
-                pool.submit(() -> {
+                COVER_POOL.submit(() -> {
                     try {
                         byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
                         if (blob != null && blob.length > 0) {
@@ -147,13 +161,15 @@ public class ExportController {
                                     I18n.t("dlg_fetch_portades_done", fetched.get(), total),
                                     I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
                                 onDataChanged.run();
+                                COVER_FETCH_RUNNING.set(false);
                             }
                         });
                     }
                 });
             }
-        } finally {
-            pool.shutdown();
+        } catch (RuntimeException ex) {
+            COVER_FETCH_RUNNING.set(false);
+            throw ex;
         }
     }
 

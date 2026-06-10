@@ -12,7 +12,7 @@ public class PrestecDao {
 
     PrestecDao(Connection con) { this.con = con; }
 
-    public synchronized void add(long isbn, String nom) throws SQLException {
+    public void add(long isbn, String nom) throws SQLException {
         // Comprova que el llibre existeix abans d'insertar — la FK ho faria
         // igual, però el missatge d'error SQL és opac. Així donem un
         // missatge clar en català.
@@ -30,7 +30,7 @@ public class PrestecDao {
         }
     }
 
-    public synchronized void returnLoan(long isbn) throws SQLException {
+    public void returnLoan(long isbn) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "UPDATE prestec SET retornat = TRUE WHERE isbn = ? AND retornat = FALSE")) {
             ps.setLong(1, isbn);
@@ -44,7 +44,7 @@ public class PrestecDao {
      *  {@link #getAllActiveLoans()} (exposat a través de
      *  {@code ControladorPersistencia.getAllActiveLoans} i
      *  {@code ControladorDomini.getAllActiveLoans}). */
-    public synchronized List<persistencia.PrestecRow> getAll() {
+    public List<persistencia.PrestecRow> getAll() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -59,7 +59,7 @@ public class PrestecDao {
         return rows;
     }
 
-    public synchronized List<persistencia.PrestecRow> getActiveLoans() {
+    public List<persistencia.PrestecRow> getActiveLoans() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -74,7 +74,7 @@ public class PrestecDao {
         return rows;
     }
 
-    public synchronized Set<Long> getLoanedISBNs() {
+    public Set<Long> getLoanedISBNs() {
         Set<Long> set = new HashSet<>();
         try {
             try (Statement s = con.createStatement();
@@ -88,7 +88,7 @@ public class PrestecDao {
         return set;
     }
 
-    public synchronized List<persistencia.PrestecRow> getForIsbn(long isbn) {
+    public List<persistencia.PrestecRow> getForIsbn(long isbn) {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -105,7 +105,7 @@ public class PrestecDao {
         return rows;
     }
 
-    public synchronized int count(long isbn) {
+    public int count(long isbn) {
         try {
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT COUNT(*) FROM prestec WHERE isbn = ?")) {
@@ -120,7 +120,7 @@ public class PrestecDao {
         return 0;
     }
 
-    public synchronized List<Object[]> getOverdue(int daysThreshold) {
+    public List<Object[]> getOverdue(int daysThreshold) {
         List<Object[]> rows = new ArrayList<>();
         try {
             java.sql.Date cutoff = java.sql.Date.valueOf(

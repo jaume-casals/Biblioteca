@@ -5,6 +5,7 @@ import herramienta.Config;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
+import herramienta.UiConfig;
 import presentacio.detalles.control.DetallesLlibrePanelControl;
 
 import javax.swing.JFrame;
@@ -74,11 +75,11 @@ class ViewModeController {
                 state.biblio instanceof java.util.ArrayList<Llibre> a ? a : new java.util.ArrayList<>(state.biblio));
             state.vista.showGaleria();
             state.vista.getBtnToggleVista().setText(I18n.t("btn_table_view"));
-            Config.setViewMode("galeria");
+            UiConfig.setViewMode("galeria");
         } else {
             state.vista.showTaula();
             state.vista.getBtnToggleVista().setText(I18n.t("btn_gallery_view"));
-            Config.setViewMode("taula");
+            UiConfig.setViewMode("taula");
         }
     }
 

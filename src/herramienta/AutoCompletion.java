@@ -26,9 +26,6 @@ public class AutoCompletion extends PlainDocument {
 	private ComboBoxModel<String> model;
 	private JTextComponent editor;
 	private boolean selecting = false;
-	private boolean hidePopupOnFocusLoss;
-	private boolean hitBackspace = false;
-	private boolean hitBackspaceOnSelection;
 
 	private KeyListener editorKeyListener;
 	private FocusListener editorFocusListener;
@@ -47,12 +44,8 @@ public class AutoCompletion extends PlainDocument {
 			@Override public void keyPressed(KeyEvent e) {
 				if (comboBox.isDisplayable() && e.getKeyCode() != KeyEvent.VK_ALT && !e.isAltDown())
 					comboBox.setPopupVisible(true);
-				hitBackspace = e.getKeyCode() == KeyEvent.VK_BACK_SPACE;
-				if (hitBackspace)
-					hitBackspaceOnSelection = editor.getSelectionStart() != editor.getSelectionEnd();
 			}
 		};
-		hidePopupOnFocusLoss = true;
 		editorFocusListener = new FocusAdapter() {
 			@Override public void focusGained(FocusEvent e) { highlightCompletedText(0); }
 			@Override public void focusLost(FocusEvent e) { comboBox.setPopupVisible(false); }

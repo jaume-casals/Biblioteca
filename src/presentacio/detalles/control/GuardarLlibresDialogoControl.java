@@ -2,14 +2,16 @@ package presentacio.detalles.control;
 
 import java.awt.Dialog;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.io.File;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JOptionPane;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import interficie.BibliotecaWriter;
@@ -22,12 +24,12 @@ import presentacio.FormValidator;
 import presentacio.listener.EnActualizarBBDD;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
 
-public class GuardarLlibresDialogoControl implements WindowListener {
+public class GuardarLlibresDialogoControl {
 
-	private GuardarLlibresDialogo vista;
-	private BibliotecaWriter cLlibres;
+	private final GuardarLlibresDialogo vista;
+	private final BibliotecaWriter cLlibres;
 	private byte[] selectedBlob;
-	private EnActualizarBBDD callback;
+	private final EnActualizarBBDD callback;
 	private volatile OpenLibrarySearchTask searchTask;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
@@ -42,18 +44,20 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 		this.callback = callback;
 		this.vista = vista;
 		this.vista.setFocusable(true);
-		this.vista.addKeyListener(new KeyListener() {
-			@Override public void keyTyped(KeyEvent e) {}
-			@Override public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) vista.dispose();
-			}
-			@Override public void keyReleased(KeyEvent e) {}
-		});
+		this.vista.getRootPane().registerKeyboardAction(
+			e -> vista.dispose(),
+			KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+			JComponent.WHEN_IN_FOCUSED_WINDOW);
 		this.vista.getBtnGuardar().addActionListener(e -> crearLlibre());
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnCercaInternet().addActionListener(e -> cercaInternet());
-		this.vista.addWindowListener(this);
-		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
+		this.vista.addWindowListener(new WindowAdapter() {
+			@Override public void windowClosed(WindowEvent e) {
+				OpenLibrarySearchTask t = searchTask; if (t != null) { t.cancel(true); searchTask = null; }
+			}
+		});
+		if (cd == null) throw new IllegalArgumentException("GuardarLlibresDialogoControl requires non-null cd");
+		cLlibres = cd;
 
 		double defVal = herramienta.Config.getDefaultValoracio();
 		if (defVal > 0.0) this.vista.getTextValoracio().setText(String.valueOf(defVal));
@@ -64,10 +68,27 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 			public void changedUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
 		});
 
-		FieldAutoComplete.attach(vista.getTextAutor(),    cLlibres.getDistinctAutorNames());
-		FieldAutoComplete.attach(vista.getTextEditorial(), cLlibres.getDistinctValues("editorial"));
-		FieldAutoComplete.attach(vista.getTextSerie(),     cLlibres.getDistinctValues("serie"));
-		FieldAutoComplete.attach(vista.getTextIdioma(),    cLlibres.getDistinctValues("idioma"));
+		// Load distinct autocomplete lists off the EDT — they're DB queries that
+		// can block the UI for large libraries.
+		new SwingWorker<java.util.List<java.util.List<String>>, Void>() {
+			@Override protected java.util.List<java.util.List<String>> doInBackground() {
+				java.util.List<java.util.List<String>> lists = new java.util.ArrayList<>();
+				lists.add(cLlibres.getDistinctAutorNames());
+				lists.add(cLlibres.getDistinctValues("editorial"));
+				lists.add(cLlibres.getDistinctValues("serie"));
+				lists.add(cLlibres.getDistinctValues("idioma"));
+				return lists;
+			}
+			@Override protected void done() {
+				try {
+					java.util.List<java.util.List<String>> lists = get();
+					FieldAutoComplete.attach(vista.getTextAutor(),     lists.get(0));
+					FieldAutoComplete.attach(vista.getTextEditorial(), lists.get(1));
+					FieldAutoComplete.attach(vista.getTextSerie(),     lists.get(2));
+					FieldAutoComplete.attach(vista.getTextIdioma(),    lists.get(3));
+				} catch (Exception ignored) {}
+			}
+		}.execute();
 
 		javax.swing.event.DocumentListener live = new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
@@ -188,14 +209,4 @@ public class GuardarLlibresDialogoControl implements WindowListener {
 	}
 
 	public Dialog getVista() { return vista; }
-
-	@Override public void windowOpened(WindowEvent e) {}
-	@Override public void windowClosing(WindowEvent e) {}
-	@Override public void windowClosed(WindowEvent e) {
-		OpenLibrarySearchTask t = searchTask; if (t != null) { t.cancel(true); searchTask = null; }
-	}
-	@Override public void windowIconified(WindowEvent e) {}
-	@Override public void windowDeiconified(WindowEvent e) {}
-	@Override public void windowActivated(WindowEvent e) {}
-	@Override public void windowDeactivated(WindowEvent e) {}
 }

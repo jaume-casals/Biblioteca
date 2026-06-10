@@ -61,14 +61,14 @@ public class BibliotecaTableModel extends AbstractTableModel {
         Llibre l = books.get(row);
         return switch (column) {
             case COL_COVER -> "";
-            case COL_ISBN -> l.getISBN() + "";
+            case COL_ISBN -> String.valueOf(l.getISBN());
             case COL_NOM -> l.getDisplayNom(Config.getLang());
             case COL_AUTOR -> l.getAutor();
             case COL_ANY -> l.getAny();
             case COL_VALORACIO -> l.getValoracio();
             case COL_PREU -> l.getPreu();
             case COL_LLEGIT -> Boolean.TRUE.equals(l.getLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
-            case COL_PROGRES -> l.getPagines() + "/" + l.getPaginesLlegides();
+            case COL_PROGRES -> l.getPaginesLlegides() + "/" + l.getPagines();
             case COL_DETALLS -> "";
             default -> null;
         };

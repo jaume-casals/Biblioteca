@@ -108,6 +108,9 @@ public class ServerConect {
 		new Migration(39, "CREATE INDEX IF NOT EXISTS idx_llibre_editorial_serie ON llibre(editorial, serie)"),
 	};
 
+	/** Set once inside {@link #createDatabase(ConnectionConfig)} or
+	 *  {@link #createDatabase()} and never reassigned; {@link #closeConnection()}
+	 *  nulls the field after closing. Do not assign a new Connection elsewhere. */
 	private Connection con;
 
 	public ServerConect() {}
@@ -115,6 +118,12 @@ public class ServerConect {
 	public Connection getConnection() { return con; }
 
 	public static Connection testConnection(java.util.Properties props) throws Exception {
+		return testConnection(props, props.getProperty("dbPassword", "").toCharArray());
+	}
+
+	/** Variant that takes the password as a {@code char[]} so the caller can
+	 *  zero it after the call instead of leaving a {@code String} in the heap. */
+	public static Connection testConnection(java.util.Properties props, char[] password) throws Exception {
 		String dbType = props.getProperty("dbType", "h2");
 		ServerConect sc = new ServerConect();
 		if ("h2".equals(dbType)) {
@@ -128,7 +137,7 @@ public class ServerConect {
 			String host = props.getProperty("dbHost", "localhost");
 			String url = "jdbc:mariadb://" + host + "/?characterEncoding=UTF-8&useUnicode=true";
 			return sc.connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
-				url, props.getProperty("dbUser", ""), props.getProperty("dbPassword", ""));
+				url, props.getProperty("dbUser", ""), new String(password));
 		}
 	}
 
@@ -349,7 +358,7 @@ public class ServerConect {
 		return files != null && files.length > 0;
 	}
 
-	public void closeConection() {
+	public void closeConnection() {
 		if (con == null) return;
 		try { con.close(); }
 		catch (SQLException e) {

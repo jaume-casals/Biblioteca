@@ -7,6 +7,7 @@ import presentacio.config.ConfiguracioDbSection;
 import presentacio.config.ConfiguracioDialogListener;
 import presentacio.config.ConfiguracioImagesSection;
 import presentacio.config.ConfiguracioLanguageSection;
+import presentacio.config.ConfigSections;
 
 import java.awt.Frame;
 import javax.swing.GroupLayout;
@@ -38,7 +39,8 @@ public class ConfiguracioDialog extends JDialog {
 
     public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, BibliotecaWriter cd) {
         super(parent, herramienta.I18n.t("modal_settings"), true);
-        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
+        if (cd == null) throw new IllegalArgumentException("ConfiguracioDialog requires non-null cd");
+        this.cd = cd;
         this.listener = listener;
 
         JPanel dbSection        = ConfiguracioDbSection.build(this);
@@ -47,16 +49,16 @@ public class ConfiguracioDialog extends JDialog {
         JPanel languageSection  = ConfiguracioLanguageSection.build(this);
         JPanel dataSection      = ConfiguracioDataSection.build(this, this.cd, this.listener);
         JPanel buttonBar = ConfiguracioButtonBar.build(this,
-            (JComboBox<String>) findComponentByClientProperty(dbSection, "cmbType"),
-            (JTextField) findComponentByClientProperty(dbSection, "txtHost"),
-            (JTextField) findComponentByClientProperty(dbSection, "txtUser"),
-            (JPasswordField) findComponentByClientProperty(dbSection, "txtPass"),
-            (JTextField) findComponentByClientProperty(imgSection, "txtImgDir"),
-            (JComboBox<String>) findComponentByClientProperty(appearanceSection, "cmbTheme"),
-            (JComboBox<String>) findComponentByClientProperty(appearanceSection, "cmbFont"),
-            (JComboBox<String>) findComponentByClientProperty(appearanceSection, "cmbCurrency"),
-            (JComboBox<String>) findComponentByClientProperty(languageSection, "cmbLang"),
-            (JTextField) findComponentByClientProperty(appearanceSection, "txtDefVal"),
+            (JComboBox<String>) ConfigSections.findById(dbSection, "cmbType"),
+            (JTextField) ConfigSections.findById(dbSection, "txtHost"),
+            (JTextField) ConfigSections.findById(dbSection, "txtUser"),
+            (JPasswordField) ConfigSections.findById(dbSection, "txtPass"),
+            (JTextField) ConfigSections.findById(imgSection, "txtImgDir"),
+            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbTheme"),
+            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbFont"),
+            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbCurrency"),
+            (JComboBox<String>) ConfigSections.findById(languageSection, "cmbLang"),
+            (JTextField) ConfigSections.findById(appearanceSection, "txtDefVal"),
             this.listener);
 
         JPanel content = new JPanel();
@@ -105,18 +107,5 @@ public class ConfiguracioDialog extends JDialog {
         ConfiguracioAppearanceSection.reloadFromConfig(root);
         ConfiguracioLanguageSection.reloadFromConfig(root);
         ConfiguracioDataSection.reloadFromConfig(root);
-    }
-
-    private static javax.swing.JComponent findComponentByClientProperty(java.awt.Container panel, String id) {
-        for (java.awt.Component c : panel.getComponents()) {
-            if (c instanceof javax.swing.JComponent jc) {
-                if (id.equals(jc.getClientProperty("id"))) return jc;
-            }
-            if (c instanceof java.awt.Container cont) {
-                javax.swing.JComponent found = findComponentByClientProperty(cont, id);
-                if (found != null) return found;
-            }
-        }
-        return null;
     }
 }

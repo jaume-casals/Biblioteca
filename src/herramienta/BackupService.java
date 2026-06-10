@@ -19,6 +19,9 @@ public class BackupService {
     private final java.util.concurrent.atomic.AtomicBoolean schedulerStarted = new java.util.concurrent.atomic.AtomicBoolean(false);
     private java.util.concurrent.ScheduledExecutorService scheduler;
 
+    /** Seconds between auto-backup runs (24 hours). */
+    private static final long AUTO_BACKUP_INTERVAL_S = 86_400;
+
     public BackupService(ControladorPersistencia cp) {
         this.cp = cp;
     }
@@ -30,7 +33,7 @@ public class BackupService {
             t.setDaemon(true);
             return t;
         });
-        scheduler.scheduleWithFixedDelay(this::autoBackup, 30, 86400, java.util.concurrent.TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(this::autoBackup, 30, AUTO_BACKUP_INTERVAL_S, java.util.concurrent.TimeUnit.SECONDS);
         main.ShutdownHooks.register(this::shutdownScheduler);
     }
 
@@ -74,7 +77,7 @@ public class BackupService {
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
-            for (String t : persistencia.LlibreDao.CLEAR_ORDER) pw.println("DELETE FROM " + t + ";");
+            for (String t : persistencia.Schema.CLEAR_ORDER) pw.println("DELETE FROM " + t + ";");
             for (Llibre l : bib) {
                 writeLlibreINSERT(pw, l);
             }
@@ -146,7 +149,7 @@ public class BackupService {
         pw.print(',');
         pw.print(sqlNullable(l.getFormat()));
         pw.print(',');
-        pw.print(l.getDesitjat());
+        pw.print(l.isDesitjat());
         pw.print(',');
         pw.print(sqlNullable(l.getPaisOrigen()));
         pw.print(',');

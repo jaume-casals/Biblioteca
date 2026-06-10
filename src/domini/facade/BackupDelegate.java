@@ -89,7 +89,7 @@ public final class BackupDelegate {
         synchronized (state.lock()) {
             newBib = new ArrayList<>(state.persistence().getAllLlibres());
             if (newBib.isEmpty()) throw new BibliotecaException("Restore completat però no s'han carregat llibres — el fitxer pot estar buit o corrupte");
-            Collections.sort(newBib, ComparatorIsbn.INSTANCE);
+            Collections.sort(newBib, BookDelegate.ISBN_COMPARATOR);
             newLlistes = new ArrayList<>(state.persistence().getAllLlistes());
             newTags = new ArrayList<>(state.persistence().getAllTags());
         }
@@ -100,17 +100,5 @@ public final class BackupDelegate {
         try { state.persistence().clearAllData(); }
         catch (java.sql.SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.clearAll();
-    }
-
-    /** ISBN comparator used after restore to keep {@code bib} sorted, matching the ctor. */
-    private static final class ComparatorIsbn implements java.util.Comparator<Llibre> {
-        static final ComparatorIsbn INSTANCE = new ComparatorIsbn();
-        @Override public int compare(Llibre a, Llibre b) {
-            Long ia = a.getISBN(), ib = b.getISBN();
-            if (ia == null && ib == null) return 0;
-            if (ia == null) return -1;
-            if (ib == null) return 1;
-            return ia.compareTo(ib);
-        }
     }
 }

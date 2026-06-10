@@ -120,13 +120,15 @@ public class ImportController {
         String isbn = JOptionPane.showInputDialog(parent,
             I18n.t("dlg_scan_isbn_msg"),
             I18n.t("dlg_scan_isbn_title"), JOptionPane.QUESTION_MESSAGE);
-        if (isbn == null || isbn.isBlank()) return;
+        if (isbn == null) return;
+        isbn = isbn.trim();
+        if (isbn.isEmpty()) return;
 
         GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
         new GuardarLlibresDialogoControl(dialeg, null, cd);
-        dialeg.getTextISBN().setText(isbn.trim());
+        dialeg.getTextISBN().setText(isbn);
 
-        String finalIsbn = isbn.trim();
+        final String finalIsbn = isbn;
         java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
         dialeg.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override public void windowClosed(java.awt.event.WindowEvent e) { cancelled.set(true); }
@@ -153,6 +155,7 @@ public class ImportController {
                     dialeg.getTextAny().setText(any);
             });
         });
+        fetchThread.setName("isbn-lookup");
         fetchThread.setDaemon(true);
         fetchThread.start();
 

@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 public class BookExporter {
 
+    private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
+
     public static void exportCSV(File f, List<Llibre> view, BibliotecaWriter cd) throws Exception {
         domini.ShelfParser.exportToCsv(f, view, cd);
     }
@@ -89,10 +91,10 @@ public class BookExporter {
 
     private static void writeHtmlHeader(PrintWriter pw) {
         pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
-        pw.println("<title>" + htmlEsc(I18n.t("dlg_export_html_title")) + "</title><style>");
+        pw.println("<title>" + Escapers.html(I18n.t("dlg_export_html_title")) + "</title><style>");
         pw.println(HTML_CSS);
         pw.println("</style></head><body>");
-        pw.println("<h1>" + htmlEsc(I18n.t("export_html_heading")) + "</h1>");
+        pw.println("<h1>" + Escapers.html(I18n.t("export_html_heading")) + "</h1>");
     }
 
     private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) {
@@ -130,8 +132,8 @@ public class BookExporter {
     }
 
     private static void writeHtmlShelfHeader(PrintWriter pw, String name, int count) {
-        if (count > 0) pw.println("<h2>" + htmlEsc(name) + " (" + count + ")</h2>");
-        else pw.println("<h2>" + htmlEsc(name) + "</h2>");
+        if (count > 0) pw.println("<h2>" + Escapers.html(name) + " (" + count + ")</h2>");
+        else pw.println("<h2>" + Escapers.html(name) + "</h2>");
     }
 
     public static void exportPDF(List<Llibre> view) {
@@ -207,8 +209,8 @@ public class BookExporter {
             } else {
                 pw.println("<div class=\"no-cover\">📖</div>");
             }
-            pw.println("<div class=\"title\">" + htmlEsc(l.getNom()) + "</div>");
-            pw.println("<div class=\"autor\">" + htmlEsc(l.getAutor()) + " (" + l.getAny() + ")</div>");
+            pw.println("<div class=\"title\">" + Escapers.html(l.getNom()) + "</div>");
+            pw.println("<div class=\"autor\">" + Escapers.html(l.getAutor()) + " (" + l.getAny() + ")</div>");
             if (l.getValoracio() != null && l.getValoracio() > 0) {
                 int stars = (int) Math.round(l.getValoracio());
                 pw.println("<div class=\"stars\">" + "★".repeat(stars) + "☆".repeat(Math.max(0, 5-stars)) + "</div>");
@@ -223,27 +225,22 @@ public class BookExporter {
 
     private static void printHtmlTable(PrintWriter pw, List<Llibre> books) {
         pw.println("<table><thead><tr>");
-        pw.println("<th>ISBN</th><th>" + htmlEsc(I18n.t("field_title")) + "</th><th>" + htmlEsc(I18n.t("field_author")) + "</th>");
-        pw.println("<th>" + htmlEsc(I18n.t("field_year")) + "</th><th>" + htmlEsc(I18n.t("field_publisher")) + "</th>");
-        pw.println("<th>" + htmlEsc(I18n.t("field_rating")) + "</th><th>" + htmlEsc(I18n.t("field_read")) + "</th>");
+        pw.println("<th>ISBN</th><th>" + Escapers.html(I18n.t("field_title")) + "</th><th>" + Escapers.html(I18n.t("field_author")) + "</th>");
+        pw.println("<th>" + Escapers.html(I18n.t("field_year")) + "</th><th>" + Escapers.html(I18n.t("field_publisher")) + "</th>");
+        pw.println("<th>" + Escapers.html(I18n.t("field_rating")) + "</th><th>" + Escapers.html(I18n.t("field_read")) + "</th>");
         pw.println("</tr></thead><tbody>");
         for (Llibre l : books) {
             pw.println("<tr>");
             pw.println("<td>" + l.getISBN() + "</td>");
-            pw.println("<td>" + htmlEsc(l.getNom()) + "</td>");
-            pw.println("<td>" + htmlEsc(l.getAutor()) + "</td>");
+            pw.println("<td>" + Escapers.html(l.getNom()) + "</td>");
+            pw.println("<td>" + Escapers.html(l.getAutor()) + "</td>");
             pw.println("<td>" + (l.getAny() > 0 ? l.getAny() : "") + "</td>");
-            pw.println("<td>" + htmlEsc(l.getEditorial() != null ? l.getEditorial() : "") + "</td>");
+            pw.println("<td>" + Escapers.html(l.getEditorial() != null ? l.getEditorial() : "") + "</td>");
             pw.println("<td>" + (l.getValoracio() != null && l.getValoracio() > 0 ? l.getValoracio() : "") + "</td>");
             pw.println("<td>" + (Boolean.TRUE.equals(l.getLlegit()) ? "✓" : "") + "</td>");
             pw.println("</tr>");
         }
         pw.println("</tbody></table>");
-    }
-
-    private static String htmlEsc(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private static String jsonLlibre(Llibre l,
@@ -257,7 +254,7 @@ public class BookExporter {
         m.put("valoracio", l.getValoracio());
         m.put("preu", l.getPreu());
         m.put("llegit", l.getLlegit());
-        m.put("desitjat", l.getDesitjat());
+        m.put("desitjat", l.isDesitjat());
         m.put("imatge", l.getImatge());
         m.put("notes", l.getNotes());
         m.put("pagines", l.getPagines());
@@ -282,18 +279,14 @@ public class BookExporter {
         java.util.List<Integer> tagIds = new java.util.ArrayList<>();
         for (persistencia.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
         m.put("tags", tagIds);
-        return new com.google.gson.Gson().toJson(m);
+        return GSON.toJson(m);
     }
 
+    /** Wraps {@link Escapers#json(String)} in double quotes and renders
+     *  {@code null} as the JSON literal {@code null}. */
     private static String jsonStr(String s) {
         if (s == null) return "null";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) {
-            char ch = s.charAt(i);
-            if (ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r') sb.append("\\u").append(String.format("%04x", (int)ch));
-            else sb.append(switch(ch) { case '"' -> "\\\""; case '\\' -> "\\\\"; case '\n' -> "\\n"; case '\r' -> ""; case '\t' -> "\\t"; case '\b' -> "\\b"; case '\f' -> "\\f"; default -> String.valueOf(ch); });
-        }
-        return '"' + sb.toString() + '"';
+        return '"' + Escapers.json(s) + '"';
     }
 
     private static String esc(String s) {

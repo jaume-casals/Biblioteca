@@ -15,9 +15,9 @@ import presentacio.detalles.vista.TagsDelLlibreDialog;
 
 public class DetallesLlibrePanelControl {
 
-	private DetallesLlibrePanel vista;
-	private BibliotecaWriter cLlibres;
-	private EnActualizarBBDD enActualizarBBDD;
+	private final DetallesLlibrePanel vista;
+	private final BibliotecaWriter cLlibres;
+	private final EnActualizarBBDD enActualizarBBDD;
 	private byte[] pendingBlob;
 	private javax.swing.SwingWorker<byte[], Void> imageWorker;
 	private static final java.util.concurrent.ExecutorService IMAGE_EXECUTOR =
@@ -67,19 +67,20 @@ public class DetallesLlibrePanelControl {
 
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
-		if (l != null && !l.isHeavyFieldsLoaded()) {
-			final Llibre book = l;
-			new javax.swing.SwingWorker<Void, Void>() {
-				@Override protected Void doInBackground() {
-					try { cLlibres.loadHeavyFields(book); } catch (Exception ignored) {}
-					return null;
+				if (l != null && !l.isHeavyFieldsLoaded()) {
+					final Llibre book = l;
+					new javax.swing.SwingWorker<Void, Void>() {
+						@Override protected Void doInBackground() {
+							try { cLlibres.loadHeavyFields(book); }
+							catch (Exception e) { /* heavy-field load is opportunistic; panel renders without it */ }
+							return null;
+						}
+						@Override protected void done() {
+							vista.getTextDescripcio().setText(java.util.Objects.toString(book.getDescripcio(), ""));
+							vista.getTextNotes().setText(book.getNotes() != null ? book.getNotes() : "");
+						}
+					}.execute();
 				}
-				@Override protected void done() {
-					vista.getTextDescripcio().setText(java.util.Objects.toString(book.getDescripcio(), ""));
-					vista.getTextNotes().setText(book.getNotes() != null ? book.getNotes() : "");
-				}
-			}.execute();
-		}
 
 		pendingBlob = l.getImatgeBlob();
 		if (pendingBlob != null) {
@@ -107,25 +108,23 @@ public class DetallesLlibrePanelControl {
 			public void changedUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
 		});
 
-		new javax.swing.SwingWorker<java.util.List<String>[], Void>() {
-			@Override protected java.util.List<String>[] doInBackground() {
-				@SuppressWarnings("unchecked")
-				java.util.List<String>[] lists = new java.util.List[] {
-					cLlibres.getDistinctAutorNames(),
-					cLlibres.getDistinctValues("editorial"),
-					cLlibres.getDistinctValues("serie"),
-					cLlibres.getDistinctValues("idioma")
-				};
+		new javax.swing.SwingWorker<java.util.List<java.util.List<String>>, Void>() {
+			@Override protected java.util.List<java.util.List<String>> doInBackground() {
+				java.util.List<java.util.List<String>> lists = new java.util.ArrayList<>();
+				lists.add(cLlibres.getDistinctAutorNames());
+				lists.add(cLlibres.getDistinctValues("editorial"));
+				lists.add(cLlibres.getDistinctValues("serie"));
+				lists.add(cLlibres.getDistinctValues("idioma"));
 				return lists;
 			}
 			@Override protected void done() {
 				try {
-					java.util.List<String>[] lists = get();
-					FieldAutoComplete.attach(vista.getTextAutor(), lists[0]);
-					FieldAutoComplete.attach(vista.getTextEditorial(), lists[1]);
-					FieldAutoComplete.attach(vista.getTextSerie(), lists[2]);
-					FieldAutoComplete.attach(vista.getTextIdioma(), lists[3]);
-				} catch (Exception ignored) {}
+					java.util.List<java.util.List<String>> lists = get();
+					FieldAutoComplete.attach(vista.getTextAutor(), lists.get(0));
+					FieldAutoComplete.attach(vista.getTextEditorial(), lists.get(1));
+					FieldAutoComplete.attach(vista.getTextSerie(), lists.get(2));
+					FieldAutoComplete.attach(vista.getTextIdioma(), lists.get(3));
+				} catch (Exception e) { /* autocomplete attach is best-effort; dialog still works without it */ }
 			}
 		}.execute();
 
@@ -138,7 +137,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getTextPreu().setText(java.util.Objects.toString(l.getPreu(), ""));
 		this.vista.getTextValoracio().setText(java.util.Objects.toString(l.getValoracio(), ""));
 		this.vista.getChckLlegit().setSelected(Boolean.TRUE.equals(l.getLlegit()));
-		this.vista.getTextNotes().setText(l.getNotes());
+		this.vista.getTextNotes().setText(l.getNotes() != null ? l.getNotes() : "");
 		this.vista.getTextEditorial().setText(l.getEditorial() != null ? l.getEditorial() : "");
 		this.vista.getTextSerie().setText(l.getSerie() != null ? l.getSerie() : "");
 		this.vista.getTextVolum().setText(l.getVolum() > 0 ? String.valueOf(l.getVolum()) : "");
@@ -150,7 +149,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.getComboEstat().setSelectedItem(l.getEstat() != null ? l.getEstat() : "");
 		this.vista.getTextExemplars().setText(l.getExemplars() > 1 ? String.valueOf(l.getExemplars()) : "");
 		this.vista.getTextLlenguaOriginal().setText(l.getLlenguaOriginal() != null ? l.getLlenguaOriginal() : "");
-		this.vista.getChckDesitjat().setSelected(l.getDesitjat());
+		this.vista.getChckDesitjat().setSelected(l.isDesitjat());
 		this.vista.getTextPagines().setText(l.getPagines() > 0 ? String.valueOf(l.getPagines()) : "");
 		this.vista.getTextPaginesLlegides().setText(l.getPaginesLlegides() > 0 ? String.valueOf(l.getPaginesLlegides()) : "");
 		this.vista.getTextNomCa().setText(l.getNomCa() != null ? l.getNomCa() : "");
@@ -175,7 +174,7 @@ public class DetallesLlibrePanelControl {
 				javax.swing.SwingUtilities.invokeLater(() ->
 					this.vista.getTextPaginesLlegides().setText(clamped));
 			}
-		} catch (NumberFormatException ignored) {}
+		} catch (NumberFormatException e) { /* empty or non-numeric input — leave pagina field untouched */ }
 	}
 
 	private void previewPortada() {
@@ -203,7 +202,8 @@ public class DetallesLlibrePanelControl {
 						pendingBlob = data;
 						carregarImatgeBlob(data);
 					}
-				} catch (Exception ignored) {
+				} catch (Exception e) {
+					/* image load failed — clear the icon */
 					vista.getLabelIcono().setIcon(null);
 				}
 			}
@@ -348,7 +348,7 @@ public class DetallesLlibrePanelControl {
 							vista.getTextPortada().getText());
 					a.setEditorial(vista.getTextEditorial().getText().trim());
 					a.setSerie(vista.getTextSerie().getText().trim());
-					try { a.setVolum(Integer.parseInt(vista.getTextVolum().getText().trim())); } catch (NumberFormatException ignored) {}
+					try { a.setVolum(Integer.parseInt(vista.getTextVolum().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric volum — leave default 0 */ }
 					a.setDataCompra(vista.getTextDataCompra().getText().trim());
 					a.setDataLectura(vista.getTextDataLectura().getText().trim());
 					a.setIdioma(vista.getTextIdioma().getText().trim());
@@ -357,7 +357,7 @@ public class DetallesLlibrePanelControl {
 					a.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
 					String estat = (String) vista.getComboEstat().getSelectedItem();
 					a.setEstat(estat != null && !estat.isEmpty() ? estat : null);
-					try { a.setExemplars(Integer.parseInt(vista.getTextExemplars().getText().trim())); } catch (NumberFormatException ignored) {}
+					try { a.setExemplars(Integer.parseInt(vista.getTextExemplars().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric exemplars — leave default 1 */ }
 					a.setLlenguaOriginal(vista.getTextLlenguaOriginal().getText().trim());
 					String nc = vista.getTextNomCa().getText().trim(); a.setNomCa(nc.isEmpty() ? null : nc);
 					String nse = vista.getTextNomEs().getText().trim(); a.setNomEs(nse.isEmpty() ? null : nse);
@@ -367,8 +367,8 @@ public class DetallesLlibrePanelControl {
 						.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
 					a.setAutors(autors);
 					a.setNotes(vista.getTextNotes().getText());
-					try { a.setPagines(Integer.parseInt(vista.getTextPagines().getText().trim())); } catch (NumberFormatException ignored) {}
-					try { a.setPaginesLlegides(Integer.parseInt(vista.getTextPaginesLlegides().getText().trim())); } catch (NumberFormatException ignored) {}
+				try { a.setPagines(Integer.parseInt(vista.getTextPagines().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric pagines — leave default 0 */ }
+				try { a.setPaginesLlegides(Integer.parseInt(vista.getTextPaginesLlegides().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric paginesLlegides — leave default 0 */ }
 					if (a.getPagines() > 0 && a.getPaginesLlegides() > a.getPagines()) {
 						a.setPaginesLlegides(a.getPagines());
 						vista.getTextPaginesLlegides().setText(String.valueOf(a.getPagines()));

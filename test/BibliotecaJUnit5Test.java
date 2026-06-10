@@ -896,7 +896,7 @@ class BibliotecaJUnit5Test {
         assertThat(c.getVolum()).isEqualTo(src.getVolum());
         assertThat(c.getIdioma()).isEqualTo(src.getIdioma());
         assertThat(c.getFormat()).isEqualTo(src.getFormat());
-        assertThat(c.getDesitjat()).isEqualTo(src.getDesitjat());
+        assertThat(c.isDesitjat()).isEqualTo(src.isDesitjat());
         assertThat(c.getPaisOrigen()).isEqualTo(src.getPaisOrigen());
         assertThat(c.getEstat()).isEqualTo(src.getEstat());
         assertThat(c.getExemplars()).isEqualTo(src.getExemplars());
@@ -1262,7 +1262,7 @@ class BibliotecaJUnit5Test {
                 }
                 assertThat(llistaCols).contains("ID", "NOM", "ORDRE", "COLOR");
             } finally {
-                sc.closeConection();
+                sc.closeConnection();
             }
         } finally {
             System.setProperty("biblioteca.h2.url",
@@ -1364,7 +1364,7 @@ class BibliotecaJUnit5Test {
         assertThat(herramienta.Config.getColVisible(7)).isTrue();
         assertThat(herramienta.Config.getColVisible(2)).isTrue(); // default
 
-        herramienta.Config.setColVisible(5, false);
+        herramienta.WindowConfig.setColVisible(5, false);
         // Wait for async save (300ms scheduler)
         Thread.sleep(500);
         assertThat(herramienta.Config.getColVisible(5)).isFalse();
@@ -1559,9 +1559,9 @@ class BibliotecaJUnit5Test {
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
             herramienta.Config.reload();
-            herramienta.Config.setDbType("mariadb");
-            herramienta.Config.setDbHost("db.example.com");
-            herramienta.Config.setDbUser("admin");
+            herramienta.DbConfig.setType("mariadb");
+            herramienta.DbConfig.setHost("db.example.com");
+            herramienta.DbConfig.setUser("admin");
             Thread.sleep(500);
 
             assertThat(herramienta.Config.getDbType()).isEqualTo("mariadb");
@@ -1569,7 +1569,7 @@ class BibliotecaJUnit5Test {
             assertThat(herramienta.Config.getDbUser()).isEqualTo("admin");
 
             // Switch back to H2 — host/user should return defaults
-            herramienta.Config.setDbType("h2");
+            herramienta.DbConfig.setType("h2");
             Thread.sleep(500);
             assertThat(herramienta.Config.getDbType()).isEqualTo("h2");
             assertThat(herramienta.Config.getDbHost()).isEqualTo("localhost");
@@ -1893,11 +1893,11 @@ class BibliotecaJUnit5Test {
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
             herramienta.Config.reload();
-            herramienta.Config.setDarkMode(true);
+            herramienta.UiConfig.setDarkMode(true);
             Thread.sleep(500);
             herramienta.Config.withBatch(() -> {
-                herramienta.Config.setDarkMode(false);
-                herramienta.Config.setFontSize("large");
+                herramienta.UiConfig.setDarkMode(false);
+                herramienta.UiConfig.setFontSize("large");
             });
             Thread.sleep(500);
             assertThat(herramienta.Config.isDarkMode()).isFalse();

@@ -35,8 +35,8 @@ public final class LlibreFieldBindings {
         public Null(int sqlType) { this.sqlType = sqlType; }
     }
 
-    private static Integer i(Integer n) { return n == null ? Integer.valueOf(0) : n; }
-    private static Double d(Double n) { return n == null ? Double.valueOf(0.0) : n; }
+    private static Integer intOrZero(Integer n) { return n == null ? Integer.valueOf(0) : n; }
+    private static Double doubleOrZero(Double n) { return n == null ? Double.valueOf(0.0) : n; }
     private static String sOrNull(String v) { return (v == null || v.isBlank()) ? null : v; }
     private static String sOrEmpty(String v) { return v == null ? "" : v; }
 
@@ -48,10 +48,10 @@ public final class LlibreFieldBindings {
         return new Object[] {
             ll.getISBN(),
             sOrEmpty(ll.getNom()),
-            i(ll.getAny()),
+            intOrZero(ll.getAny()),
             sOrEmpty(ll.getDescripcio()),
-            d(ll.getValoracio()),
-            d(ll.getPreu()),
+            doubleOrZero(ll.getValoracio()),
+            doubleOrZero(ll.getPreu()),
             Boolean.TRUE.equals(ll.getLlegit()),
             sOrEmpty(ll.getImatge()),
             ll.getImatgeBlob(),
@@ -65,7 +65,7 @@ public final class LlibreFieldBindings {
             dateOrNull(ll.getDataLectura()),
             sOrNull(ll.getIdioma()),
             sOrNull(ll.getFormat()),
-            ll.getDesitjat(),
+            ll.isDesitjat(),
             sOrNull(ll.getPaisOrigen()),
             sOrNull(ll.getEstat()),
             Math.max(1, ll.getExemplars()),
@@ -83,10 +83,10 @@ public final class LlibreFieldBindings {
     public static Object[] forUpdate(Llibre ll) {
         return new Object[] {
             sOrEmpty(ll.getNom()),
-            i(ll.getAny()),
+            intOrZero(ll.getAny()),
             sOrEmpty(ll.getDescripcio()),
-            d(ll.getValoracio()),
-            d(ll.getPreu()),
+            doubleOrZero(ll.getValoracio()),
+            doubleOrZero(ll.getPreu()),
             Boolean.TRUE.equals(ll.getLlegit()),
             sOrEmpty(ll.getImatge()),
             ll.getNotes(),
@@ -99,7 +99,7 @@ public final class LlibreFieldBindings {
             dateOrNull(ll.getDataLectura()),
             sOrNull(ll.getIdioma()),
             sOrNull(ll.getFormat()),
-            ll.getDesitjat(),
+            ll.isDesitjat(),
             sOrNull(ll.getPaisOrigen()),
             sOrNull(ll.getEstat()),
             Math.max(1, ll.getExemplars()),

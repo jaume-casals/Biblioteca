@@ -92,7 +92,7 @@ public class EstadistiquesHelper {
     public static javax.swing.JPanel buildPublisherChart(List<Llibre> books) {
         java.util.Map<String, Long> byPublisher = books.stream()
             .filter(l -> l.getEditorial() != null && !l.getEditorial().isEmpty())
-            .collect(Collectors.groupingBy(l -> l.getEditorial(), Collectors.counting()));
+            .collect(Collectors.groupingBy(Llibre::getEditorial, Collectors.counting()));
         java.util.List<java.util.Map.Entry<String, Long>> top = byPublisher.entrySet().stream()
             .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
             .limit(10).collect(Collectors.toList());
@@ -257,11 +257,9 @@ public class EstadistiquesHelper {
         java.util.Map<Long, Llibre> byIsbn = new java.util.HashMap<>();
         for (Llibre l : global) byIsbn.put(l.getISBN(), l);
         java.util.Map<Integer, java.util.List<Llibre>> shelfBooks = new java.util.HashMap<>();
-        if (cd instanceof domini.ControladorDomini dom) {
-            for (persistencia.LlibreLlistaRow row : dom.getAllLlibreLlistaRows()) {
-                Llibre l = byIsbn.get(row.isbn());
-                if (l != null) shelfBooks.computeIfAbsent(row.llistaId(), k -> new java.util.ArrayList<>()).add(l);
-            }
+        for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows()) {
+            Llibre l = byIsbn.get(row.isbn());
+            if (l != null) shelfBooks.computeIfAbsent(row.llistaId(), k -> new java.util.ArrayList<>()).add(l);
         }
         javax.swing.table.DefaultTableModel shelfModel = new javax.swing.table.DefaultTableModel(
             new String[]{I18n.t("col_stats_llista"), I18n.t("col_stats_llibres"), I18n.t("col_stats_llegits"),
@@ -312,7 +310,7 @@ public class EstadistiquesHelper {
         goalSpinner.setPreferredSize(new java.awt.Dimension(70, 28));
         goalSpinner.addChangeListener(ev -> {
             int goal = (int) goalSpinner.getValue();
-            herramienta.Config.setReadingGoal(goal);
+            herramienta.UiConfig.setReadingGoal(goal);
             goalBar.setMaximum(goal);
             goalBar.setValue(Math.min(totalLlegits, goal));
             goalBar.setString(totalLlegits + " / " + goal);
