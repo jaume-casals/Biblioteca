@@ -40,4 +40,7 @@ biblioteca-fat.jar
 .vscode/
 
 # Test sources
+classes.txt
+test_classes.txt
+test/_test_classes.txt
 

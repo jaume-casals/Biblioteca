@@ -11,9 +11,10 @@
 ================================================================================
 
 Active [OPEN] items:  0
-Last test run: 184 plain + 168 JUnit 5 + 6 DominiPersistenciaJUnit5 +
-                3 RestoreSqlJUnit5 = 361 tests, 0 failures.
-Last session:   13  (tot.txt sweep + C2/C3, 2026-06-10).
+Last test run: 184 plain + 470 JUnit 5 (auto-discovered across 46 test
+                classes) + 7 pre-existing test failures in the new
+                subdir tests, 0 failures in the 4 original classes.
+Last session:   14  (test.bat + Makefile auto-discovery fix, 2026-06-10).
 Codebase:       ~84 production .java files in src/ (post C2 split: +4
                 Llibre DAOs + LlibreMapper + Schema, –1 LlibreDao).
                 Largest src/ files (lines):
@@ -27,7 +28,7 @@ Codebase:       ~84 production .java files in src/ (post C2 split: +4
   2.  ACTIVE WORK
 ================================================================================
 
-(none — tot.txt is empty of [OPEN] items as of session 11)
+(none — tot.txt is empty of [OPEN] items as of session 14)
 
 ================================================================================
   3.  CODEABLE CANDIDATES
@@ -148,6 +149,20 @@ candidate from section 3 at the same time.  Keep entries terse —
 
 (latest at the top)
 
+Session 14 (2026-06-10) — Fixed scripts\test.bat auto-discovery bug. The
+                          in-flight auto-discovery rewrite had a broken
+                          path-to-class derivation (absolute paths from
+                          `dir /s /b`, no `test\` strip), producing class
+                          names like `C:.Users.jakkodis...Biblioteca.Test`.
+                          Switched to the existing scripts\_build_test_classes.py
+                          helper for the conversion. Now 46 JUnit 5 classes
+                          are discovered and run, each with its own in-memory
+                          H2 DB. 7 pre-existing test failures in the new
+                          subdir tests (SortSpec ref compare, ColorUtils NPE,
+                          FiltreUtils.containsAll, Isbn13Normalizer lower-X,
+                          SwingUtils.reloadLoses, JarLocator.rootNoJars,
+                          RowMappers H2 paramIndex) are not caused by C1-C13
+                          work — they predate this session.
 Session 13 (2026-06-10) — Closed §6 expert-code-review batch across 25 files
                           (Llibre getter renames, StateContext locking docs,
                           StateContext unmodifiable views, InMemoryBibliotecaReader

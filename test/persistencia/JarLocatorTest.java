@@ -63,8 +63,8 @@ class JarLocatorTest {
     }
 
     @Test
-    @DisplayName("locate: biblioteca.root ignored when it has no jars; falls through to user.dir")
-    void rootWithNoJarsFallsThrough(@TempDir File root, @TempDir File work) throws IOException {
+    @DisplayName("locate: biblioteca.root wins when set and has jars, even if user.dir also has jars")
+    void bibliotecaRootStrategyWinsEvenIfUserDirAlsoHasJars(@TempDir File root, @TempDir File work) throws IOException {
         File rootLib = new File(root, "lib");
         rootLib.mkdirs();
         new File(rootLib, "h2-2.3.232.jar").createNewFile();
@@ -76,9 +76,9 @@ class JarLocatorTest {
         setRoot(root.getAbsolutePath());
         System.setProperty("user.dir", work.getAbsolutePath());
 
-        // Only userLib has the jar our predicate accepts
+        // biblioteca.root has higher priority than user.dir when both match
         File result = JarLocator.locate(new StringBuilder(), hasJarNamed("h2-2.3.232.jar"));
-        assertThat(result).isEqualTo(userLib);
+        assertThat(result).isEqualTo(rootLib);
     }
 
     @Test

@@ -25,9 +25,9 @@ REM Discover and run every JUnit 5 test class. The naming convention is that a
 REM test class is any *.java under test\ whose name ends in "Test" and that is
 REM NOT the plain-Java runner "BibliotecaTest". Each class gets its own H2
 REM in-memory DB so the @BeforeEach reset pattern in the existing tests works.
-REM We run the discovery from inside test\ so the captured paths are
-REM relative — otherwise %%~dpC yields absolute paths and the package
-REM derivation below strips nothing, producing broken class names.
+REM `dir /s /b` returns absolute paths, and cmd.exe's `set X=!Y:*\test\=!`
+REM substring extraction is brittle, so the conversion is done in Python
+REM via scripts\_build_test_classes.py.
 set "DB_COUNTER=0"
 REM Use a Python helper to enumerate JUnit 5 test classes. This avoids
 REM the brittle `set X=!Y:*\test\=!` substring extraction in cmd.exe
@@ -38,12 +38,12 @@ for /f "delims=" %%C in ('dir /s /b test\*.java ^| findstr /i "Test\.java$"') do
   set "FNAME=%%~nC"
   if /i not "!FNAME!"=="BibliotecaTest" echo %%C>> test\_test_classes.txt
 )
-REM Convert absolute paths to FQ class names via Python
+REM Convert absolute paths to FQ class names via Python. The directory
+REM separator is matched explicitly because os.sep is '/' on Windows but
+REM the `dir` output uses '\'.
 if exist test\_test_classes.txt (
-  python -c "import os, sys, pathlib; lines=open(r'test\_test_classes.txt', encoding='utf-8').read().splitlines(); out=[os.path.join(os.path.dirname(p), os.path.splitext(os.path.basename(p))[0]).replace(os.sep, '.') for p in lines if p]; open(r'test\_test_classes.txt','w', encoding='utf-8').write('\n'.join(out))" 2>nul
-  if errorlevel 1 (
-    python3 -c "import os, sys, pathlib; lines=open(r'test\_test_classes.txt', encoding='utf-8').read().splitlines(); out=[os.path.join(os.path.dirname(p), os.path.splitext(os.path.basename(p))[0]).replace(os.sep, '.') for p in lines if p]; open(r'test\_test_classes.txt','w', encoding='utf-8').write('\n'.join(out))" 2>nul
-  )
+  python scripts\_build_test_classes.py 2>nul
+  if errorlevel 1 python3 scripts\_build_test_classes.py 2>nul
 )
 for /f "usebackq delims=" %%L in ("test\_test_classes.txt") do (
   set "CLS=%%L"

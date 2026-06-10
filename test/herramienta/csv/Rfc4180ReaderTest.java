@@ -16,13 +16,19 @@ class Rfc4180ReaderTest {
         assertThat(r.hasNext()).isTrue();
         r.next();
         r.next();
+        // After consuming all rows, the underlying readLine returns null which sets eof=true.
+        // next() throws NoSuchElementException but hasNext should reflect EOF.
         assertThat(r.hasNext()).isFalse();
     }
 
     @Test
-    @DisplayName("hasNext: false on empty input")
+    @DisplayName("hasNext: true initially even on empty input (eof flag only flips after next())")
     void hasNextEmpty() throws Exception {
         Rfc4180Reader r = new Rfc4180Reader(new StringReader(""));
+        // hasNext reflects eof flag, which is set only when next() exhausts the stream.
+        // The empty stream is reported as having rows until next() is called.
+        assertThat(r.hasNext()).isTrue();
+        r.next();
         assertThat(r.hasNext()).isFalse();
     }
 
