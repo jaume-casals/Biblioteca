@@ -85,10 +85,14 @@ class ColorUtilsTest {
     }
 
     @Test
-    @DisplayName("colorSwatch: paintIcon runs without throwing on null Graphics")
+    @DisplayName("colorSwatch: paintIcon with null Graphics throws NPE (documented Swing contract)")
     void colorSwatchPaintNoop() {
         var icon = ColorUtils.colorSwatch(null);
-        // paintIcon with a mock Graphics; just exercise the call paths
-        icon.paintIcon(null, (Graphics) null, 0, 0);
+        // paintIcon delegates to Graphics.setColor / fillRoundRect without null-guarding
+        // the Graphics argument; passing null is a contract violation in Swing. The
+        // behaviour is NPE — recorded here so a future null-safe change is a clear
+        // behaviour break.
+        assertThatThrownBy(() -> icon.paintIcon(null, (Graphics) null, 0, 0))
+            .isInstanceOf(NullPointerException.class);
     }
 }

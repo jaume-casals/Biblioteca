@@ -30,6 +30,8 @@ import herramienta.Config;
  */
 public class ControladorPersistencia {
 
+	private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(ControladorPersistencia.class.getName());
+
 	private static ControladorPersistencia inst;
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -50,13 +52,13 @@ public class ControladorPersistencia {
 	}
 
 	public static synchronized void resetForTest() {
-        if (inst != null) {
-            try { inst.libreDaoCore.clearAllData(); } catch (Exception e) {
-                System.err.println("Warning: failed to clear test data: " + e.getMessage());
-            }
-        }
-        inst = null;
-    }
+		if (inst != null) {
+			try { inst.libreDaoCore.clearAllData(); } catch (Exception e) {
+				LOG.log(java.util.logging.Level.WARNING, "Warning: failed to clear test data", e);
+			}
+		}
+		inst = null;
+	}
 
 	public static synchronized void resetForProfileSwitch() {
 		if (inst != null) {

@@ -54,8 +54,16 @@ class CsvImportStrategyTest {
     void goodreadsCanHandle() {
         GoodreadsCsvStrategy s = new GoodreadsCsvStrategy();
         assertThat(s.canHandle("Book Id,Title,Author,ISBN13,Exclusive Shelf,A,B,C,D,E,F")).isTrue();
-        assertThat(s.canHandle("Book Id,Title,Author,ISBN13,Exclusive Shelf")).isTrue(); // ≥5 cols, starts with the 5 magic cols
+        // Short header (< 10 columns) is rejected even if it has the magic substrings
+        assertThat(s.canHandle("Book Id,Title,Author,ISBN13,Exclusive Shelf")).isFalse();
         assertThat(s.canHandle("isbn,nom,autor")).isFalse();
+        // Missing required substrings → false
+        assertThat(s.canHandle("Title,Author,ISBN13,Exclusive Shelf,A,B,C,D,E,F,G")).isFalse(); // no "Book Id"
+        assertThat(s.canHandle("Book Id,Title,Author,ISBN13,A,B,C,D,E,F,G")).isFalse(); // no "Exclusive Shelf"
+        assertThat(s.canHandle("Book Id,Author,ISBN13,Exclusive Shelf,A,B,C,D,E,F,G")).isFalse(); // no "Title"
+        // Empty / null / blank
+        assertThat(s.canHandle("")).isFalse();
+        assertThat(s.canHandle(null)).isFalse();
     }
 
     @Test
@@ -98,9 +106,17 @@ class CsvImportStrategyTest {
     @DisplayName("LibraryThing: canHandle recognises BCID column")
     void libraryThingCanHandle() {
         LibraryThingCsvStrategy s = new LibraryThingCsvStrategy();
-        assertThat(s.canHandle("Book Id,ISBN,ISBN13,BCID,Title,Authors")).isTrue();
-        assertThat(s.canHandle("isbn,nom,autor,BCID,Title")).isTrue();
-        assertThat(s.canHandle("isbn,nom,autor")).isFalse();
+        assertThat(s.canHandle("Book Id,ISBN,ISBN13,BCID,Title,Authors,Original Pub Year,Rating")).isTrue();
+        // Without BCID → false
+        assertThat(s.canHandle("Book Id,ISBN,ISBN13,Title,Authors,Original Pub Year,Rating,Summary")).isFalse();
+        // Short header (< 8 cols) → false
+        assertThat(s.canHandle("BCID,Title,Authors")).isFalse();
+        // Missing required columns → false
+        assertThat(s.canHandle("BCID,Title,Rating,Summary,Comments,Review,Collections,Tags")).isFalse(); // no Authors
+        assertThat(s.canHandle("BCID,Authors,Rating,Summary,Comments,Review,Collections,Tags")).isFalse(); // no Title
+        // Empty / null
+        assertThat(s.canHandle("")).isFalse();
+        assertThat(s.canHandle(null)).isFalse();
     }
 
     @Test

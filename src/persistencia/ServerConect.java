@@ -13,6 +13,8 @@ import herramienta.I18n;
 
 public class ServerConect {
 
+	private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(ServerConect.class.getName());
+
 	private static final String CREATE_TABLE =
 		"CREATE TABLE IF NOT EXISTS llibre(" +
 		"ISBN BIGINT PRIMARY KEY, " +
@@ -259,7 +261,7 @@ public class ServerConect {
 			return true;
 		} catch (SQLException e) {
 			try { con.rollback(); } catch (SQLException ex) {
-				System.err.println("Migration " + m.version() + " rollback failed: " + ex.getMessage());
+				LOG.log(java.util.logging.Level.WARNING, "Migration " + m.version() + " rollback failed", ex);
 			}
 			throw e;
 		} finally {
@@ -278,7 +280,7 @@ public class ServerConect {
 			ins.execute();
 			return true;
 		} catch (SQLException e) {
-			System.err.println("Migration " + m.version() + " schema_version insert failed: " + e.getMessage());
+			LOG.log(java.util.logging.Level.WARNING, "Migration " + m.version() + " schema_version insert failed", e);
 			return false;
 		}
 	}
@@ -297,7 +299,7 @@ public class ServerConect {
 			unmigrated = rs.getInt(1);
 		}
 		if (unmigrated > 0) {
-			System.err.println("Migration 34: skipping DROP COLUMN autor — " + unmigrated
+			LOG.warning("Migration 34: skipping DROP COLUMN autor — " + unmigrated
 				+ " book(s) still lack llibre_autor rows (re-run after fixing data)");
 			return false;
 		}
@@ -362,7 +364,7 @@ public class ServerConect {
 		if (con == null) return;
 		try { con.close(); }
 		catch (SQLException e) {
-			System.err.println(MessageFormat.format(I18n.t("err_db_close"), e.getMessage()));
+			LOG.log(java.util.logging.Level.WARNING, MessageFormat.format(I18n.t("err_db_close"), e.getMessage()), e);
 		} finally {
 			con = null;
 		}

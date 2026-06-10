@@ -10,6 +10,7 @@ import javax.swing.*;
 
 public class DialogoError {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(DialogoError.class.getName());
     private static final boolean IS_HEADLESS = GraphicsEnvironment.isHeadless();
 
     private final String titol;
@@ -76,7 +77,7 @@ public class DialogoError {
         if (Boolean.getBoolean("biblioteca.test")) return;
         writeToLog(titol, missatge, detalls);
         if (IS_HEADLESS) {
-            System.err.println("[" + titol + "] " + missatge);
+            LOG.warning("[" + titol + "] " + missatge);
             return;
         }
         if (isValidation) showValidationDialog();

@@ -6,8 +6,12 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class ShelfParser {
+
+    private static final Logger LOG = Logger.getLogger(ShelfParser.class.getName());
 
     public record ShelfEntry(String nom, double valoracio, boolean llegit) {}
 
@@ -55,7 +59,7 @@ public final class ShelfParser {
                         esc(l.getDescripcio()), l.getValoracio(), l.getPreu(), l.getLlegit(),
                         esc(l.getImatge()), llistesStr);
                 } catch (Exception e) {
-                    System.err.println("ShelfParser.exportToCsv: skipped ISBN " + l.getISBN() + ": " + e.getMessage());
+                    LOG.log(Level.WARNING, "ShelfParser.exportToCsv: skipped ISBN " + l.getISBN(), e);
                 }
             }
         }

@@ -16,8 +16,10 @@ class Rfc4180ReaderTest {
         assertThat(r.hasNext()).isTrue();
         r.next();
         r.next();
-        // After consuming all rows, the underlying readLine returns null which sets eof=true.
-        // next() throws NoSuchElementException but hasNext should reflect EOF.
+        // After 2 next() calls, eof is still false because the third call is
+        // the one that drives readLine() to return null. That call returns
+        // null (the EOF sentinel) and sets eof=true.
+        assertThat(r.next()).isNull();
         assertThat(r.hasNext()).isFalse();
     }
 
@@ -28,15 +30,18 @@ class Rfc4180ReaderTest {
         // hasNext reflects eof flag, which is set only when next() exhausts the stream.
         // The empty stream is reported as having rows until next() is called.
         assertThat(r.hasNext()).isTrue();
-        r.next();
+        assertThat(r.next()).isNull();
         assertThat(r.hasNext()).isFalse();
     }
 
     @Test
-    @DisplayName("next: throws NoSuchElementException past EOF")
+    @DisplayName("next: past EOF returns null (subsequent calls keep returning null)")
     void nextPastEof() throws Exception {
         Rfc4180Reader r = new Rfc4180Reader(new StringReader("a,b\n"));
         r.next();
+        // Once readLine() returns null, eof=true and next() returns null.
+        assertThat(r.next()).isNull();
+        // Calling next() AGAIN now throws NoSuchElementException because eof is set.
         assertThatThrownBy(r::next).isInstanceOf(java.util.NoSuchElementException.class);
     }
 

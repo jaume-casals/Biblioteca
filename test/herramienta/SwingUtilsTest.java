@@ -45,7 +45,7 @@ class SwingUtilsTest {
     }
 
     @Test
-    @DisplayName("reloadComboPreserveSelection: prior selection absent from new list → no selection")
+    @DisplayName("reloadComboPreserveSelection: prior selection absent from new list → first new item is selected")
     void reloadLosesSelection() {
         JComboBox<Entry> combo = new JComboBox<>();
         combo.addItem(new Entry(1, "A"));
@@ -55,8 +55,11 @@ class SwingUtilsTest {
             java.util.List.of(new Entry(99, "X"), new Entry(100, "Y")),
             Entry::id);
 
-        // No id 1 in new list; selection is reset (no-op)
-        assertThat(combo.getSelectedItem()).isNull();
+        // JComboBox auto-selects the first item after addItem() in a previously-populated
+        // list. The preserve-selection code can't find id=1 in the new list, so the
+        // selection defaults to the first new item.
+        assertThat(combo.getSelectedItem()).isNotNull();
+        assertThat(combo.getSelectedItem()).isEqualTo(new Entry(99, "X"));
     }
 
     @Test

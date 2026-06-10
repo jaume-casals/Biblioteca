@@ -151,9 +151,18 @@ public class FilterDrawerPanel extends JPanel {
 
 		JPanel row1b = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row1b.setBackground(UITheme.BG_PANEL);
-		row1b.add(makeFieldWrap(I18n.t("filter_editorial_lbl"), filterEditorial = new JTextField(14)));
-		row1b.add(makeFieldWrap(I18n.t("filter_serie_lbl"),     filterSerie     = new JTextField(12)));
-		row1b.add(makeFieldWrap(I18n.t("filter_idioma_lbl"),    filterIdioma    = new JTextField(10)));
+		// Use the FilterRow helper for the three text-field rows: one
+		// (label, field, columns) triple per row keeps the call site
+		// declarative and the helper centralises the label/field wrap.
+		for (FilterRow r : List.of(
+				new FilterRow(I18n.t("filter_editorial_lbl"),
+					filterEditorial = new JTextField(14)),
+				new FilterRow(I18n.t("filter_serie_lbl"),
+					filterSerie     = new JTextField(12)),
+				new FilterRow(I18n.t("filter_idioma_lbl"),
+					filterIdioma    = new JTextField(10)))) {
+			row1b.add(makeFieldWrap(r.labelKey(), r.field()));
+		}
 		JLabel lblFormat = new JLabel(I18n.t("filter_format_lbl") + ":");
 		UIComponents.styleLabel(lblFormat);
 		row1b.add(lblFormat);
@@ -166,9 +175,17 @@ public class FilterDrawerPanel extends JPanel {
 		JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row2.setBackground(UITheme.BG_PANEL);
 
-		row2.add(makeRangeWrap(I18n.t("filter_any_lbl"), anyMin = new JTextField(5), anyMax = new JTextField(5)));
-		row2.add(makeRangeWrap(I18n.t("filter_valoracio_lbl"), valoracioMin = new JTextField(5), valoracioMax = new JTextField(5)));
-		row2.add(makeRangeWrap(I18n.t("filter_preu_lbl"), preuMin = new JTextField(5), preuMax = new JTextField(5)));
+		// Three numeric-range rows: each declared as a (label, min, max)
+		// triple so the range-wrap helper applies consistently.
+		for (FilterRange r : List.of(
+				new FilterRange(I18n.t("filter_any_lbl"),
+					anyMin = new JTextField(5), anyMax = new JTextField(5)),
+				new FilterRange(I18n.t("filter_valoracio_lbl"),
+					valoracioMin = new JTextField(5), valoracioMax = new JTextField(5)),
+				new FilterRange(I18n.t("filter_preu_lbl"),
+					preuMin = new JTextField(5), preuMax = new JTextField(5)))) {
+			row2.add(makeRangeWrap(r.labelKey(), r.min(), r.max()));
+		}
 
 		row2.add(makeSep());
 
@@ -401,4 +418,20 @@ public class FilterDrawerPanel extends JPanel {
 	public JButton getBtnEscanejarISBN()      { return btnEscanejarISBN; }
 	public JButton getBtnBackupBD()           { return btnBackupBD; }
 	public JButton getBtnRestaurarBD()        { return btnRestaurarBD; }
+
+	/**
+	 * Declarative triple for a single labelled text-field filter row.
+	 * Used by {@link #buildFilterDrawer()} to declare the three "row1b"
+	 * text fields (editorial / serie / idioma) without repeating the
+	 * label-key + new-JTextField boilerplate three times.
+	 */
+	record FilterRow(String labelKey, JTextField field) {}
+
+	/**
+	 * Declarative triple for a single numeric-range filter row.
+	 * Used by {@link #buildFilterDrawer()} to declare the three "row2"
+	 * range fields (any / valoracio / preu) without repeating the
+	 * label-key + two new-JTextFields boilerplate three times.
+	 */
+	record FilterRange(String labelKey, JTextField min, JTextField max) {}
 }

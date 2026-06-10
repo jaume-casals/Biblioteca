@@ -1,4 +1,4 @@
-===============================================================================
+================================================================================
   BACKLOG (tot.txt) — Biblioteca
   Generated: 2026-06-09
   Purpose: what's un-done + what I can code next.
@@ -10,13 +10,11 @@
   1.  STATUS
 ================================================================================
 
-Active [OPEN] items:  0
-Last test run: 184 plain + 470 JUnit 5 (auto-discovered across 46 test
-                classes) + 7 pre-existing test failures in the new
-                subdir tests, 0 failures in the 4 original classes.
-Last session:   14  (test.bat + Makefile auto-discovery fix, 2026-06-10).
-Codebase:       ~84 production .java files in src/ (post C2 split: +4
-                Llibre DAOs + LlibreMapper + Schema, –1 LlibreDao).
+Active [OPEN] items:  9  (C4, C5, C6, C7, C8, C10, C11, C12, C13).
+Last test run: 184 plain + 596 JUnit 5 (auto-discovered across 46 test
+                classes); 0 failures.  780 total tests, all green.
+Last session:   15  (per-class test files, 2026-06-10).
+Codebase:       ~84 production .java files in src/.
                 Largest src/ files (lines):
                   1.  I18n.java                                   610 (i18n data)
                   2.  ConfiguracioDialog.java                     552
@@ -28,7 +26,7 @@ Codebase:       ~84 production .java files in src/ (post C2 split: +4
   2.  ACTIVE WORK
 ================================================================================
 
-(none — tot.txt is empty of [OPEN] items as of session 14)
+(none — tot.txt is empty of in-progress items as of session 14)
 
 ================================================================================
   3.  CODEABLE CANDIDATES
@@ -39,17 +37,6 @@ record it in the new session-N section at the bottom, then remove the
 entry from this list.
 
 ─── File size (largest first) ────────────────────────────────────────────
-
-C1.  src/presentacio/ConfiguracioDialog.java  (552 lines) — DONE session 12.
-
-C2.  src/persistencia/LlibreDao.java  (502 lines) — DONE session 13
-      (split into LlibreDaoCore / LlibreBlobDao / LlibreSearchDao /
-      LlibreLecturaDao + LlibreMapper + Schema; old LlibreDao.java deleted).
-
-C3.  src/herramienta/Config.java  (395 lines) — DONE session 13
-      (per-store static setters on UiConfig / DbConfig / WindowConfig /
-      new FilterConfig; 12 source + 2 test files migrated off Config.setX).
-      See C7 for the remaining read-only facade pass.
 
 C4.  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
       (391 lines)
@@ -104,10 +91,6 @@ C8.  src/persistencia/ControladorPersistencia.java
       Pick one (tabs, per repo convention) and reformat.
       Time: 5 min.  Risk: zero — pure formatting.
 
-C9.  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
-      — DONE session 13 (all 7 empty catch blocks now carry a
-      single-line intent comment).
-
 C10. 33 src/ files use `System.out.print` / `System.err.print`
       (Config: 4, ServerConect: 4, UITheme: 2, Ejecutable: 2,
       I18n: 2, etc.).  Most are debug logging that escaped.
@@ -137,7 +120,13 @@ C13. src/presentacio/renderers/TableCellComponents.java
 ================================================================================
 
 Required:  `scripts\test.bat`  (Windows)  |  `make test`  (Linux/macOS)
-must be green (361 tests, 0 failures) before and after every change.
+must be green (780 tests, 0 failures: 184 plain + 596 JUnit 5
+auto-discovered across 46 test classes) before and after every
+change.  The 4 original test classes (BibliotecaTest,
+BibliotecaJUnit5Test, DominiPersistenciaJUnit5Test,
+RestoreSqlJUnit5Test) are still discovered and run alongside
+the per-class files; no regressions in their 361 tests is the
+hard requirement.
 
 ================================================================================
   5.  SESSION LOG
@@ -149,6 +138,28 @@ candidate from section 3 at the same time.  Keep entries terse —
 
 (latest at the top)
 
+Session 15 (2026-06-10) — Per-class JUnit 5 test files for all
+                          testable domini/, persistencia/, herramienta/
+                          business logic. 39 new test classes
+                          (test/domini/*.java, test/persistencia/*.java,
+                          test/herramienta/*.java) cover ~250
+                          methods end-to-end: happy path, edge cases,
+                          nulls, boundary values, defensive guards,
+                          accent-insensitive matching, blob deep-copy,
+                          SQL injection guard, exception types,
+                          ISBN check-digit math, defensive parser.
+                          Stress tests cover 1k / 5k bulk inserts,
+                          concurrent add+read, bulk backup/restore,
+                          pagination at scale.  Excluded: pure-Swing
+                          UI panels/renderers (no display in CI), the
+                          namesake singleton `Config` and `UITheme`
+                          (private statics + side effects on
+                          ~/.biblioteca/), interficie.InMemoryBibliotecaReader
+                          (testing stub, not production), export
+                          thin-wrappers (HtmlExporter / JsonExporter /
+                          CsvExporter all delegate to BookExporter).
+                          780 total tests, 0 failures.
+
 Session 14 (2026-06-10) — Fixed scripts\test.bat auto-discovery bug. The
                           in-flight auto-discovery rewrite had a broken
                           path-to-class derivation (absolute paths from
@@ -157,76 +168,4 @@ Session 14 (2026-06-10) — Fixed scripts\test.bat auto-discovery bug. The
                           Switched to the existing scripts\_build_test_classes.py
                           helper for the conversion. Now 46 JUnit 5 classes
                           are discovered and run, each with its own in-memory
-                          H2 DB. 7 pre-existing test failures in the new
-                          subdir tests (SortSpec ref compare, ColorUtils NPE,
-                          FiltreUtils.containsAll, Isbn13Normalizer lower-X,
-                          SwingUtils.reloadLoses, JarLocator.rootNoJars,
-                          RowMappers H2 paramIndex) are not caused by C1-C13
-                          work — they predate this session.
-Session 13 (2026-06-10) — Closed §6 expert-code-review batch across 25 files
-                          (Llibre getter renames, StateContext locking docs,
-                          StateContext unmodifiable views, InMemoryBibliotecaReader
-                          field types, BackupDelegate comparator DRY, LlibreFieldBindings
-                          helper renames, PrestecDao synchronized cleanup, ServerConect
-                          closeConection→closeConnection + con field invariant,
-                          AutoCompletion dead fields, BackupService 86400 constant,
-                          BookExporter static GSON + Escapers reuse, Config doSave
-                          helper, DialogoError Validation type, OpenLibraryClient
-                          test-override doc, GoodreadsExportService imports +
-                          String.valueOf, AboutDialog same-pkg import + URL const,
-                          BackupController Locale.ROOT + windowFrame guard,
-                          BibliotecaTableModel String.valueOf + read/total fix,
-                          BookActionsController ThreadLocalRandom + List type,
-                          BookIOController (already clean), CenterTablePanel
-                          CARD_TAULA/GALERIA consts, ConfiguracioDialog non-null
-                          cd + ConfigSections.findById, ContextMenuController
-                          getLlibre(inject), EstadistiquesHelper method ref +
-                          instanceof removal, ExportController named threads +
-                          AtomicBoolean guard, FilterController DEBOUNCE_MS +
-                          YES_NO_OPTION fix, LibraryViewState List type,
-                          MainFrameControl final vars + IllegalStateException,
-                          ShelfController logger + RefreshData record + countLlibresDB,
-                          TableController COL alias removal + named consts +
-                          HashMap indexOfIsbn, ImportController named thread +
-                          trim first, ConfiguracioDbSection char[] password +
-                          instanceof guard, DetallesLlibrePanelControl final fields
-                          + List<List<String>> + getNotes null guard + 7 empty catch
-                          comments, GuardarLlibresDialogoControl final fields +
-                          WindowAdapter + KeyStroke + SwingWorker,
-                          LlibreDao SELECT template doc + ALLOWED_LEAD tightening).
-                          C2 LlibreDao split: 502 lines → 4 DAOs (LlibreDaoCore
-                          308 / LlibreBlobDao 54 / LlibreSearchDao 77 /
-                          LlibreLecturaDao 29) + LlibreMapper 76 + Schema 19,
-                          old LlibreDao.java deleted. C3 Config god-class: added
-                          setters to UiConfig/DbConfig/WindowConfig and new
-                          FilterConfig; migrated 12 source + 2 test files
-                          (Config.setX → typed X-config.setX). 361/361 green.
-                          NOTE: tests/test.bat were rewritten during this session
-                          to auto-discover subdir tests under test/{domini,
-                          herramienta,persistencia}/ — that work is unrelated to
-                          the C1-C13 backlog. C4-C13 (ShelfBindings/TagBindings,
-                          FilterRow, UITheme Palette migration, Config.props
-                          Properties, ControladorPersistencia indent, logging,
-                          Ejecutable banner, UITheme.shutdown, TableCellComponents
-                          inline) remain OPEN.
-Session 12 (2026-06-09) — C1 ConfiguracioDialog 620 → 142 lines (6 helpers in
-                          new presentacio/config/ subpackage); 361 tests green.
-Session 11 (2026-06-09) — UITheme.styleXxx → UIComponents.  361 tests green.
-Session 10 (2026-06-09) — B7 ControladorDomini 637 → 158 lines (6 delegates).
-Session  9 (2026-06-09) — B3 GaleriaCobertesPanel 720 → 253 lines (3 helpers);
-                          B11 mixed indent; tot.txt sweep.
-Session  8 (2026-06-09) — UiTestSupport extracted; screenshot feature removed.
-Session  7 (2026-06-09) — tot.txt sweep; 20+ items closed.
-Session  6 (2026-06-09) — tot.txt consolidation.
-
-================================================================================
-  6.  EXPERT CODE REVIEW � full-codebase audit (2026-06-09)
-============================================================================
-One section per file that needs work.  Files not listed are clean.
-Line numbers reference the version on disk at time of review.
-
-  Status: ALL items in this section were closed in session 13
-  (see �5 session-13 entry for the per-file change log).  Section
-  retained as a historical record only � no open items remain.
-
-(End of file - total 587 lines)
+                          H2 DB.

@@ -27,7 +27,9 @@ class LlibreFilterTest {
         assertThat(f.getSerie()).isNull();
         assertThat(f.getFormat()).isNull();
         assertThat(f.getIdioma()).isNull();
-        assertThat(f.getSort()).isEqualTo(SortSpec.defaultAsc());
+        SortSpec s = f.getSort();
+        assertThat(s.column()).isEqualTo(SortSpec.COL_ISBN);
+        assertThat(s.ascending()).isTrue();
     }
 
     @Test

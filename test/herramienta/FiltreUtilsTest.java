@@ -76,8 +76,11 @@ class FiltreUtilsTest {
     @Test
     @DisplayName("matchStringContainsAll: all words must appear (any order)")
     void containsAllMultiWord() {
-        assertThat(FiltreUtils.matchStringContainsAll("tolkien ring", "The Lord of the Rings")).isTrue();
-        assertThat(FiltreUtils.matchStringContainsAll("ring tolkien", "The Lord of the Rings")).isTrue();
+        // Both "ring" and "lord" appear in the haystack
+        assertThat(FiltreUtils.matchStringContainsAll("lord ring", "The Lord of the Rings")).isTrue();
+        assertThat(FiltreUtils.matchStringContainsAll("ring lord", "The Lord of the Rings")).isTrue();
+        // All single word: any order
+        assertThat(FiltreUtils.matchStringContainsAll("rings", "The Lord of the Rings")).isTrue();
     }
 
     @Test

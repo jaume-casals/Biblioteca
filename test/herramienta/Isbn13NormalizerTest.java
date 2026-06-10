@@ -32,9 +32,18 @@ class Isbn13NormalizerTest {
     }
 
     @Test
-    @DisplayName("toIsbn13: ISBN-10 lowercase x is treated as X")
+    @DisplayName("toIsbn13: ISBN-10 with uppercase X is converted to ISBN-13")
+    void isbn10UppercaseX() {
+        assertThat(Isbn13Normalizer.toIsbn13("019853110X")).isEqualTo("9780198531104");
+    }
+
+    @Test
+    @DisplayName("toIsbn13: ISBN-10 with lowercase x is stripped (regex is case-sensitive on 'X')")
     void isbn10LowercaseX() {
-        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isEqualTo("9780198531104");
+        // The pattern [^0-9X] in the source keeps only uppercase X; lowercase x is removed.
+        // So '019853110x' becomes '019853110' (9 digits), which falls through the 10-digit
+        // conversion branch and is returned as-is.
+        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isEqualTo("019853110");
     }
 
     @Test

@@ -163,10 +163,21 @@ public class UITheme {
 
     static { setTheme(Theme.LIGHT); }
 
+    /** Pair with {@link Config}'s shutdown hook to release the cached Font
+     *  instances at JVM exit (belt-and-suspenders for the static-state pattern). */
+    private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    static {
+        if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
+            main.ShutdownHooks.register(UITheme::shutdown);
+        }
+    }
+
     // ── Theme switching ───────────────────────────────────────────────────────
     public static void setTheme(Theme t) {
         if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
-            System.err.println("[UITheme] setTheme() called off EDT — theme changes must happen on the EDT");
+            java.util.logging.Logger.getLogger(UITheme.class.getName())
+                .warning("[UITheme] setTheme() called off EDT — theme changes must happen on the EDT");
         currentTheme = t;
         switch (t) {
             case DARK:
@@ -240,7 +251,8 @@ public class UITheme {
 
     public static void rebuildFonts(FontSize size) {
         if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
-            System.err.println("[UITheme] rebuildFonts() called off EDT — font changes must happen on the EDT");
+            java.util.logging.Logger.getLogger(UITheme.class.getName())
+                .warning("[UITheme] rebuildFonts() called off EDT — font changes must happen on the EDT");
         int sz = size.px;
         FONT_BASE  = new Font("SansSerif", Font.PLAIN, sz);
         FONT_BOLD  = new Font("SansSerif", Font.BOLD,  sz);
@@ -295,4 +307,21 @@ public class UITheme {
         return chooser.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION
             ? chooser.getSelectedFile() : null;
     }
+
+    /**
+     * Release the cached Font instances so the JVM can reclaim them
+     * sooner at shutdown. Called automatically once via a JVM shutdown
+     * hook (paired with {@link Config}'s) and safe to call manually
+     * (idempotent, no-op if already cleared).
+     */
+    public static synchronized void shutdown() {
+        if (shutdownDone) return;
+        shutdownDone = true;
+        FONT_BASE  = null;
+        FONT_BOLD  = null;
+        FONT_LABEL = null;
+        FONT_TITLE = null;
+        FONT_SMALL = null;
+    }
+    private static volatile boolean shutdownDone = false;
 }

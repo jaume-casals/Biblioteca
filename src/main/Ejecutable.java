@@ -3,6 +3,7 @@ package main;
 import domini.ControladorDomini;
 import interficie.BibliotecaWriter;
 import herramienta.Config;
+import herramienta.DialogoError;
 import herramienta.FontSize;
 import herramienta.UITheme;
 import presentacio.MainFrameControl;
@@ -11,10 +12,13 @@ import presentacio.SplashScreen;
 
 import java.awt.Color;
 import java.awt.EventQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.UIManager;
 
 public class Ejecutable {
 
+    private static final Logger LOG = Logger.getLogger(Ejecutable.class.getName());
     private static SplashScreen splashRef;
 
     public static void main(String[] args) throws Exception {
@@ -25,12 +29,13 @@ public class Ejecutable {
         // --swing accepted as no-op for backward-compatible launch scripts
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            LOG.log(Level.SEVERE, "Uncaught exception in thread " + t.getName(), e);
             if (splashRef != null) splashRef.forceHide();
             if (java.awt.GraphicsEnvironment.isHeadless()) {
                 System.err.println("Fatal error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 System.exit(1);
             }
-            herramienta.DialogoError err = e instanceof Exception ? new herramienta.DialogoError((Exception) e) : new herramienta.DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
+            DialogoError err = e instanceof Exception ? new DialogoError((Exception) e) : new DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
             err.showErrorMessage();
         });
 
@@ -66,6 +71,7 @@ public class Ejecutable {
                         cdRef.set(ControladorDomini.getInstance());
                     } catch (RuntimeException e) {
                         final String msg = e.getMessage();
+                        LOG.log(Level.SEVERE, "Failed to initialise ControladorDomini", e);
                         EventQueue.invokeLater(() -> {
                             javax.swing.JOptionPane.showMessageDialog(null, msg);
                             System.exit(1);
@@ -78,14 +84,14 @@ public class Ejecutable {
                             MainFramePanel vista = new MainFramePanel();
                             MainFrameControl.getInstance(vista, cdRef.get()).setVisible(true);
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            LOG.log(Level.SEVERE, "Failed to start main frame", e);
                         }
                     });
                 });
                 loader.setDaemon(true);
                 loader.start();
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.log(Level.SEVERE, "Failed to start Swing UI", e);
             }
         });
     }

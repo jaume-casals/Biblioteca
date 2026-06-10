@@ -79,8 +79,11 @@ class RowMappersTest {
             s.executeUpdate("CREATE TABLE t (id INT)");
             s.executeUpdate("INSERT INTO t VALUES (1), (2), (3)");
             AtomicInteger callCount = new AtomicInteger();
+            // We pass a parameter placeholder that the binder fills. Using a
+            // query with a literal WHERE ensures the parameter is referenced
+            // (H2 requires 1-based indices for setInt).
             List<Integer> r = RowMappers.queryWithParams(c,
-                "SELECT id FROM t",
+                "SELECT id FROM t WHERE id > ?",
                 ps -> { ps.setInt(1, 0); callCount.incrementAndGet(); },
                 rs -> rs.getInt(1));
             assertThat(r).containsExactly(1, 2, 3);

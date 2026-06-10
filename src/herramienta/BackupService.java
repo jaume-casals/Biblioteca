@@ -8,12 +8,16 @@ import persistencia.ControladorPersistencia;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** BackupService reads all data from ControladorPersistencia to produce SQL dumps.
  *  Constructed with cp (not cd) because cp is the single source of truth for backup data —
  *  all rows come from DAO queries, not the in-memory cache. This avoids a desync where
  *  cd.allLlibres() might lag behind cp.getAllLlibres() after recent mutations. */
 public class BackupService {
+
+    private static final Logger LOG = Logger.getLogger(BackupService.class.getName());
 
     private final ControladorPersistencia cp;
     private final java.util.concurrent.atomic.AtomicBoolean schedulerStarted = new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -69,7 +73,7 @@ public class BackupService {
                 for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
             }
         } catch (Exception e) {
-            System.err.println("Backup automàtic fallat: " + e.getMessage());
+            LOG.log(Level.WARNING, "Backup automàtic fallat", e);
         }
     }
 

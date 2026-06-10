@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Config {
 
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(Config.class.getName());
+
     private Config() {}
 
     private static final ConcurrentHashMap<String, String> UI_STORE     = new ConcurrentHashMap<>();
@@ -121,7 +123,7 @@ public class Config {
                 tmp.load(in);
                 tmp.forEach((k, v) -> props.put((String) k, (String) v));
             } catch (IOException e) {
-                System.err.println("Config reload failed: " + e.getMessage());
+                LOG.log(java.util.logging.Level.WARNING, "Config reload failed", e);
             }
         }
     }
@@ -134,7 +136,7 @@ public class Config {
                 tmp.load(in);
                 tmp.forEach((k, v) -> props.put((String) k, (String) v));
             } catch (IOException e) {
-                System.err.println("Config load failed: " + e.getMessage());
+                LOG.log(java.util.logging.Level.WARNING, "Config load failed", e);
             }
         }
     }
@@ -424,7 +426,7 @@ public class Config {
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING,
                 java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            System.err.println(errPrefix + e.getMessage());
+            LOG.log(java.util.logging.Level.WARNING, errPrefix, e);
         }
     }
 

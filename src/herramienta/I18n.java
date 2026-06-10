@@ -3,9 +3,13 @@ package herramienta;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.UIManager;
 
 public class I18n {
+
+    private static final Logger LOG = Logger.getLogger(I18n.class.getName());
 
     // index: 0=ca  1=es  2=en
     private static final Map<String, String[]> TABLE = new LinkedHashMap<>();
@@ -588,7 +592,7 @@ public class I18n {
         String raw;
         if (vals == null) {
             String msg = "[I18n] Missing key: " + key;
-            System.err.println(msg);
+            LOG.warning(msg);
             if ("true".equals(System.getProperty("biblioteca.test")))
                 throw new IllegalStateException(msg);
             raw = key;
@@ -597,7 +601,7 @@ public class I18n {
             raw = vals[Math.min(idx, vals.length - 1)];
         }
         if (args.length > 0 && !raw.contains("{0}")) {
-            System.err.println("[I18n] Key '" + key + "' has no placeholder for args");
+            LOG.log(Level.WARNING, "[I18n] Key \u0027{0}\u0027 has no placeholder for args", key);
         }
         for (int i = 0; i < args.length; i++)
             raw = raw.replace("{" + i + "}", String.valueOf(args[i]));
