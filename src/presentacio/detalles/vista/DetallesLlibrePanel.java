@@ -83,10 +83,10 @@ public class DetallesLlibrePanel extends JDialog {
 		setMinimumSize(new Dimension(480, 480));
 		setPreferredSize(new Dimension(800, 680));
 		setLayout(new BorderLayout(0, 0));
-		getContentPane().setBackground(UITheme.BG_PANEL);
+		getContentPane().setBackground(UITheme.palette().bgPanel());
 
 		JPanel east = new JPanel();
-		east.setBackground(UITheme.BG_PANEL);
+		east.setBackground(UITheme.palette().bgPanel());
 		east.setPreferredSize(new Dimension(SIDE_W, 0));
 		east.setMinimumSize(new Dimension(SIDE_W, 0));
 		east.setMaximumSize(new Dimension(SIDE_W, Integer.MAX_VALUE));
@@ -94,7 +94,7 @@ public class DetallesLlibrePanel extends JDialog {
 		east.setBorder(new EmptyBorder(8, 6, 8, 8));
 
 		labelIcono = new JLabel("");
-		labelIcono.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		labelIcono.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		labelIcono.setPreferredSize(new Dimension(IMG_SIZE, IMG_SIZE));
 		labelIcono.setMaximumSize(new Dimension(SIDE_W - 14, IMG_SIZE));
 		labelIcono.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -161,7 +161,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	JScrollPane buildGeneralTab() {
 		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
-		grid.setBackground(UITheme.BG_PANEL);
+		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
 
 		textISBN            = addFieldEntry(grid, I18n.t("field_isbn"));
@@ -186,14 +186,14 @@ public class DetallesLlibrePanel extends JDialog {
 		textPortada         = addFieldEntry(grid, I18n.t("col_cover"));
 
 		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(UITheme.BG_PANEL);
+		wrapper.setBackground(UITheme.palette().bgPanel());
 		wrapper.add(grid, BorderLayout.NORTH);
 
 		JScrollPane scroll = new JScrollPane(wrapper,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
-		scroll.getViewport().setBackground(UITheme.BG_PANEL);
+		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
 			private int lastCols = 2;
@@ -216,7 +216,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	JPanel buildNotesTab() {
 		JPanel panel = new JPanel(new BorderLayout(4, 0));
-		panel.setBackground(UITheme.BG_PANEL);
+		panel.setBackground(UITheme.palette().bgPanel());
 		panel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
 		JLabel lblNotes = makeLabel(I18n.t("field_notes"));
@@ -229,11 +229,11 @@ public class DetallesLlibrePanel extends JDialog {
 		textNotes.setWrapStyleWord(true);
 		textNotes.setEnabled(false);
 		textNotes.setFont(UITheme.fontBase());
-		textNotes.setBackground(UITheme.BG_MAIN);
-		textNotes.setForeground(UITheme.TEXT_DARK);
+		textNotes.setBackground(UITheme.palette().bgMain());
+		textNotes.setForeground(UITheme.palette().textDark());
 
 		JScrollPane notesScroll = new JScrollPane(textNotes);
-		notesScroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		notesScroll.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		panel.add(notesScroll, BorderLayout.CENTER);
 
 		return panel;
@@ -241,7 +241,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	JScrollPane buildAdvancedTab() {
 		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
-		grid.setBackground(UITheme.BG_PANEL);
+		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
 
 		textDataCompra      = addFieldEntry(grid, I18n.t("field_purchased"));
@@ -255,14 +255,14 @@ public class DetallesLlibrePanel extends JDialog {
 		textNomEn           = addFieldEntry(grid, I18n.t("field_title_en"));
 
 		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(UITheme.BG_PANEL);
+		wrapper.setBackground(UITheme.palette().bgPanel());
 		wrapper.add(grid, BorderLayout.NORTH);
 
 		JScrollPane scroll = new JScrollPane(wrapper,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
-		scroll.getViewport().setBackground(UITheme.BG_PANEL);
+		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
 			private int lastCols = 2;
@@ -305,8 +305,8 @@ public class DetallesLlibrePanel extends JDialog {
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JComboBox<String> combo = new JComboBox<>(items);
 		combo.setEnabled(false);
-		combo.setBackground(UITheme.BG_MAIN);
-		combo.setForeground(UITheme.TEXT_DARK);
+		combo.setBackground(UITheme.palette().bgMain());
+		combo.setForeground(UITheme.palette().textDark());
 		combo.setFont(UITheme.fontBase());
 		entry.add(combo, BorderLayout.CENTER);
 		grid.add(entry);
@@ -318,7 +318,7 @@ public class DetallesLlibrePanel extends JDialog {
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JCheckBox chk = new JCheckBox("");
 		chk.setEnabled(false);
-		chk.setBackground(UITheme.BG_PANEL);
+		chk.setBackground(UITheme.palette().bgPanel());
 		chk.setHorizontalAlignment(SwingConstants.LEFT);
 		if (tooltip != null) chk.setToolTipText(tooltip);
 		entry.add(chk, BorderLayout.CENTER);
@@ -328,7 +328,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	JPanel entryPanel() {
 		JPanel p = new JPanel(new BorderLayout(4, 0));
-		p.setBackground(UITheme.BG_PANEL);
+		p.setBackground(UITheme.palette().bgPanel());
 		p.setBorder(new EmptyBorder(2, 2, 2, 2));
 		p.setPreferredSize(new Dimension(ENTRY_MIN_W, ENTRY_H));
 		return p;

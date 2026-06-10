@@ -32,8 +32,8 @@ public class ProgressBarRenderer extends JProgressBar implements TableCellRender
         } catch (Exception ignored) {
             setMaximum(1); setValue(0); setString("\u2014");
         }
-        setBackground(selected ? UITheme.ACCENT : UITheme.BG_PANEL);
-        setForeground(selected ? Color.WHITE : UITheme.TEXT_DARK);
+        setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
+        setForeground(selected ? Color.WHITE : UITheme.palette().textDark());
         return this;
     }
 }

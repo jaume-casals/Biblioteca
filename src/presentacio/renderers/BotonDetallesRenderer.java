@@ -17,7 +17,7 @@ public class BotonDetallesRenderer extends JButton implements TableCellRenderer 
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value,
             boolean isSelected, boolean hasFocus, int row, int col) {
-        setBackground(isSelected ? UITheme.ACCENT_ALT : UITheme.ACCENT);
+        setBackground(isSelected ? UITheme.palette().accentAlt() : UITheme.palette().accent());
         setForeground(Color.WHITE);
         setText(I18n.t("col_details"));
         return this;

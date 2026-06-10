@@ -43,17 +43,17 @@ public class GestioLlistesDialog extends JDialog {
         setResizable(false);
 
         JPanel panel = new JPanel(new BorderLayout(8, 8));
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
 
-        jList.setBackground(UITheme.BG_MAIN);
-        jList.setForeground(UITheme.TEXT_DARK);
+        jList.setBackground(UITheme.palette().bgMain());
+        jList.setForeground(UITheme.palette().textDark());
         jList.setFont(UITheme.fontBase());
         panel.add(new JScrollPane(jList), BorderLayout.CENTER);
 
         JPanel bottom = new JPanel(new BorderLayout(4, 6));
-        bottom.setBackground(UITheme.BG_PANEL);
+        bottom.setBackground(UITheme.palette().bgPanel());
 
         JTextField txtNom = new JTextField();
         UIComponents.styleField(txtNom);
@@ -65,7 +65,7 @@ public class GestioLlistesDialog extends JDialog {
 
         JButton btnEliminar = new JButton(I18n.t("btn_eliminar_seleccionada"));
         UIComponents.styleSecondaryButton(btnEliminar);
-        btnEliminar.setBackground(UITheme.DANGER);
+        btnEliminar.setBackground(UITheme.palette().danger());
         btnEliminar.addActionListener(e -> onDeleteLlista());
 
         JButton btnRename = new JButton(I18n.t("btn_rename_llista"));
@@ -89,14 +89,14 @@ public class GestioLlistesDialog extends JDialog {
         btnDown.addActionListener(e -> onMoveLlista(false));
 
         JPanel reorderRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
-        reorderRow.setBackground(UITheme.BG_PANEL);
+        reorderRow.setBackground(UITheme.palette().bgPanel());
         reorderRow.add(btnUp);
         reorderRow.add(btnDown);
         reorderRow.add(btnRename);
         reorderRow.add(btnColor);
 
         JPanel inputRow = new JPanel(new BorderLayout(4, 0));
-        inputRow.setBackground(UITheme.BG_PANEL);
+        inputRow.setBackground(UITheme.palette().bgPanel());
         inputRow.add(txtNom, BorderLayout.CENTER);
         inputRow.add(btnAfegir, BorderLayout.EAST);
 

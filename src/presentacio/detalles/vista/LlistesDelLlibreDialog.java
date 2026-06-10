@@ -54,17 +54,17 @@ public class LlistesDelLlibreDialog extends JDialog {
         setResizable(false);
 
         JPanel panel = new JPanel(new BorderLayout(8, 8));
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
 
         tableModel = new LlistesDelLlibreTableModel();
         table = new JTable(tableModel);
-        table.setBackground(UITheme.BG_PANEL);
-        table.setForeground(UITheme.TEXT_DARK);
+        table.setBackground(UITheme.palette().bgPanel());
+        table.setForeground(UITheme.palette().textDark());
         table.setRowHeight(30);
         table.setFont(UITheme.fontBase());
-        table.setSelectionBackground(UITheme.ACCENT);
+        table.setSelectionBackground(UITheme.palette().accent());
         table.setSelectionForeground(Color.WHITE);
         table.getColumnModel().getColumn(LlistesDelLlibreTableModel.COL_NOM).setPreferredWidth(200);
         table.getColumnModel().getColumn(LlistesDelLlibreTableModel.COL_VAL).setPreferredWidth(80);
@@ -74,11 +74,11 @@ public class LlistesDelLlibreDialog extends JDialog {
         shelfCheckList = new JList<>();
         shelfCheckList.setVisibleRowCount(8);
         shelfCheckList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        shelfCheckList.setBackground(UITheme.BG_PANEL);
-        shelfCheckList.setForeground(UITheme.TEXT_DARK);
+        shelfCheckList.setBackground(UITheme.palette().bgPanel());
+        shelfCheckList.setForeground(UITheme.palette().textDark());
         shelfCheckList.setFont(UITheme.fontBase());
         JPanel west = new JPanel(new BorderLayout(4, 4));
-        west.setBackground(UITheme.BG_PANEL);
+        west.setBackground(UITheme.palette().bgPanel());
         west.setPreferredSize(new Dimension(180, 0));
         JLabel lblChecks = new JLabel(I18n.t("lbl_llistes"));
         UIComponents.styleLabel(lblChecks);
@@ -88,7 +88,7 @@ public class LlistesDelLlibreDialog extends JDialog {
 
         // ── South: add-to-shelf controls + save/remove ───────────────────────
         JPanel south = new JPanel(new BorderLayout(4, 8));
-        south.setBackground(UITheme.BG_PANEL);
+        south.setBackground(UITheme.palette().bgPanel());
 
         comboAdd = new JComboBox<>();
         comboAdd.setPreferredSize(new Dimension(160, 30));
@@ -99,15 +99,15 @@ public class LlistesDelLlibreDialog extends JDialog {
         txtVal.setToolTipText(I18n.t("lbl_valoracio_tip"));
 
         chkLlegit = new JCheckBox(I18n.t("col_read"));
-        chkLlegit.setBackground(UITheme.BG_PANEL);
-        chkLlegit.setForeground(UITheme.TEXT_DARK);
+        chkLlegit.setBackground(UITheme.palette().bgPanel());
+        chkLlegit.setForeground(UITheme.palette().textDark());
         chkLlegit.setFont(UITheme.fontBase());
 
         btnAfegir = new JButton(I18n.t("btn_afegir_llista"));
         UIComponents.styleAccentButton(btnAfegir);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        addRow.setBackground(UITheme.BG_PANEL);
+        addRow.setBackground(UITheme.palette().bgPanel());
         JLabel lblLlista = new JLabel(I18n.t("lbl_llista_colon"));
         UIComponents.styleLabel(lblLlista);
         addRow.add(lblLlista);
@@ -118,13 +118,13 @@ public class LlistesDelLlibreDialog extends JDialog {
 
         btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
         UIComponents.styleSecondaryButton(btnTreure);
-        btnTreure.setBackground(UITheme.DANGER);
+        btnTreure.setBackground(UITheme.palette().danger());
 
         btnGuardar = new JButton(I18n.t("btn_guardar_canvis"));
         UIComponents.styleAccentButton(btnGuardar);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
-        btnRow.setBackground(UITheme.BG_PANEL);
+        btnRow.setBackground(UITheme.palette().bgPanel());
         btnRow.add(btnTreure);
         btnRow.add(btnGuardar);
 

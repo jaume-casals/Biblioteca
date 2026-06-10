@@ -35,7 +35,7 @@ public final class UIComponents {
 
     public static void styleAccentButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
-        btn.setBackground(UITheme.ACCENT);
+        btn.setBackground(UITheme.palette().accent());
         btn.setForeground(Color.WHITE);
         btn.setFont(UITheme.fontBold());
         btn.setFocusPainted(false);
@@ -46,7 +46,7 @@ public final class UIComponents {
 
     public static void styleSecondaryButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
-        btn.setBackground(UITheme.SECONDARY_BTN_BG);
+        btn.setBackground(UITheme.palette().secondaryBtnBg());
         btn.setForeground(Color.WHITE);
         btn.setFont(UITheme.fontBold());
         btn.setFocusPainted(false);
@@ -57,8 +57,8 @@ public final class UIComponents {
 
     public static void styleSidebarButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
-        btn.setBackground(UITheme.SIDEBAR_BG);
-        btn.setForeground(UITheme.SIDEBAR_TEXT);
+        btn.setBackground(UITheme.palette().sidebarBg());
+        btn.setForeground(UITheme.palette().sidebarText());
         btn.setFont(UITheme.fontBase());
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
@@ -69,19 +69,19 @@ public final class UIComponents {
 
     public static void styleLabel(JLabel lbl) {
         lbl.setFont(UITheme.FONT_LABEL);
-        lbl.setForeground(UITheme.TEXT_MID);
+        lbl.setForeground(UITheme.palette().textMid());
     }
 
     public static void stylePanel(JPanel panel) {
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
     }
 
     public static void styleField(JTextField field) {
         field.setFont(UITheme.fontBase());
-        field.setForeground(UITheme.TEXT_DARK);
-        field.setBackground(UITheme.FIELD_BG);
+        field.setForeground(UITheme.palette().textDark());
+        field.setBackground(UITheme.palette().fieldBg());
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UITheme.BORDER_CLR),
+            BorderFactory.createLineBorder(UITheme.palette().borderClr()),
             BorderFactory.createEmptyBorder(3, 7, 3, 7)
         ));
         if (field.getClientProperty("hoverInstalled") == null) {
@@ -89,12 +89,12 @@ public final class UIComponents {
                 @Override public void mouseEntered(java.awt.event.MouseEvent e) {
                     if (field.isEnabled())
                         field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(UITheme.ACCENT, 1),
+                            BorderFactory.createLineBorder(UITheme.palette().accent(), 1),
                             BorderFactory.createEmptyBorder(3, 7, 3, 7)));
                 }
                 @Override public void mouseExited(java.awt.event.MouseEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(UITheme.BORDER_CLR),
+                        BorderFactory.createLineBorder(UITheme.palette().borderClr()),
                         BorderFactory.createEmptyBorder(3, 7, 3, 7)));
                 }
             });
@@ -104,7 +104,7 @@ public final class UIComponents {
 
     public static Border cardBorder() {
         return BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UITheme.BORDER_CLR),
+            BorderFactory.createLineBorder(UITheme.palette().borderClr()),
             BorderFactory.createEmptyBorder(6, 6, 6, 6)
         );
     }

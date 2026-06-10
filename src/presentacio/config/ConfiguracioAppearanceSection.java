@@ -20,7 +20,7 @@ public final class ConfiguracioAppearanceSection {
 
     public static JPanel build(JDialog owner) {
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);
@@ -28,7 +28,7 @@ public final class ConfiguracioAppearanceSection {
 
         JLabel lblSeccio = new JLabel(t("lbl_appearance"));
         lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.ACCENT);
+        lblSeccio.setForeground(UITheme.palette().accent());
 
         JLabel lblTheme = new JLabel(t("lbl_theme"));
         UIComponents.styleLabel(lblTheme);

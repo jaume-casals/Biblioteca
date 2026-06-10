@@ -77,15 +77,15 @@ public final class CoverZoomPopup {
             img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
 
         JLabel lbl = new JLabel(new ImageIcon(scaled));
-        lbl.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR, 1));
+        lbl.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr(), 1));
 
         JRootPane root = SwingUtilities.getRootPane(card);
         if (root == null) return;
 
         overlay = new JPanel(new BorderLayout());
         overlay.setOpaque(true);
-        overlay.setBackground(UITheme.BG_PANEL);
-        overlay.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR, 1));
+        overlay.setBackground(UITheme.palette().bgPanel());
+        overlay.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr(), 1));
         overlay.add(lbl, BorderLayout.CENTER);
 
         java.awt.Point loc = SwingUtilities.convertPoint(card, card.getWidth() + 4, 0,

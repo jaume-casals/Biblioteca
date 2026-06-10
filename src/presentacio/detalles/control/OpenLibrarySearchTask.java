@@ -72,7 +72,7 @@ public class OpenLibrarySearchTask extends SwingWorker<OpenLibrarySearchTask.Sea
         JButton btn = vista.getBtnCercaInternet();
         btn.setEnabled(true);
         btn.setText(I18n.t("btn_cerca_internet"));
-        btn.setBackground(UITheme.GREEN);
+        btn.setBackground(UITheme.palette().green());
         vista.getProgressBar().setVisible(false);
         vista.getTextISBN().setEditable(true);
 

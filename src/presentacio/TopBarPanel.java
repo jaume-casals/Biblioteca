@@ -28,14 +28,14 @@ public class TopBarPanel extends JPanel {
 
 	private void buildTopBar() {
 		setLayout(new BorderLayout(8, 0));
-		setBackground(UITheme.BG_PANEL);
+		setBackground(UITheme.palette().bgPanel());
 		setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.BORDER_CLR),
+			BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.palette().borderClr()),
 			BorderFactory.createEmptyBorder(10, 16, 10, 16)
 		));
 
 		JPanel searchWrap = new JPanel(new BorderLayout(6, 0));
-		searchWrap.setBackground(UITheme.BG_PANEL);
+		searchWrap.setBackground(UITheme.palette().bgPanel());
 		searchBar = new JTextField();
 		searchBar.setToolTipText(I18n.t("tip_search_bar"));
 		UIComponents.styleField(searchBar);
@@ -43,7 +43,7 @@ public class TopBarPanel extends JPanel {
 		add(searchWrap, BorderLayout.CENTER);
 
 		JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-		rightBtns.setBackground(UITheme.BG_PANEL);
+		rightBtns.setBackground(UITheme.palette().bgPanel());
 
 		btnToggleFiltres = new JButton(I18n.t("btn_toggle_filtres_lbl"));
 		UIComponents.styleSecondaryButton(btnToggleFiltres);

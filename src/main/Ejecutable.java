@@ -50,16 +50,16 @@ public class Ejecutable {
             try {
                 UITheme.setTheme(Config.getTheme());
                 UITheme.rebuildFonts(FontSize.fromKey(Config.getFontSize()));
-                UIManager.put("nimbusBase",                UITheme.ACCENT);
+                UIManager.put("nimbusBase",                UITheme.palette().accent());
                 UIManager.put("nimbusBlueGrey",            UITheme.isDark() ? new Color(0x3D4451) : new Color(0x5D8AA8));
-                UIManager.put("control",                   UITheme.BG_MAIN);
-                UIManager.put("text",                      UITheme.TEXT_DARK);
-                UIManager.put("nimbusFocus",               UITheme.ACCENT);
-                UIManager.put("nimbusSelectionBackground", UITheme.ACCENT);
+                UIManager.put("control",                   UITheme.palette().bgMain());
+                UIManager.put("text",                      UITheme.palette().textDark());
+                UIManager.put("nimbusFocus",               UITheme.palette().accent());
+                UIManager.put("nimbusSelectionBackground", UITheme.palette().accent());
                 UIManager.put("nimbusSelectedText",        Color.WHITE);
                 UIManager.put("defaultFont",              UITheme.fontBase());
                 UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-                UIManager.put("Table.alternateRowColor",   UITheme.TABLE_ALT);
+                UIManager.put("Table.alternateRowColor",   UITheme.palette().tableAlt());
 
                 SplashScreen splash = new SplashScreen();
                 splashRef = splash;

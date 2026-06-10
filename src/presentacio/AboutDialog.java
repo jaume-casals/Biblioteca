@@ -43,18 +43,18 @@ public class AboutDialog extends JDialog {
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		setSize(420, 480);
 		setLocationRelativeTo(parent);
-		getContentPane().setBackground(UITheme.BG_PANEL);
+		getContentPane().setBackground(UITheme.palette().bgPanel());
 		setLayout(new BorderLayout(0, 0));
 
 		JPanel main = new JPanel();
-		main.setBackground(UITheme.BG_PANEL);
+		main.setBackground(UITheme.palette().bgPanel());
 		main.setLayout(new BoxLayout(main, BoxLayout.Y_AXIS));
 		main.setBorder(new EmptyBorder(24, 32, 16, 32));
 
 		// App name
 		JLabel lblApp = new JLabel(I18n.t("app_title") + " " + getVersion());
 		lblApp.setFont(UITheme.fontBold().deriveFont(22f));
-		lblApp.setForeground(UITheme.ACCENT);
+		lblApp.setForeground(UITheme.palette().accent());
 		lblApp.setAlignmentX(Component.CENTER_ALIGNMENT);
 		main.add(lblApp);
 
@@ -89,14 +89,14 @@ public class AboutDialog extends JDialog {
 		licText.setWrapStyleWord(true);
 		licText.setEditable(false);
 		licText.setFont(UITheme.FONT_SMALL);
-		licText.setBackground(UITheme.BG_MAIN);
-		licText.setForeground(UITheme.TEXT_MID);
+		licText.setBackground(UITheme.palette().bgMain());
+		licText.setForeground(UITheme.palette().textMid());
 		licText.setBorder(new EmptyBorder(6, 8, 6, 8));
 		JScrollPane licScroll = new JScrollPane(licText);
 		licScroll.setPreferredSize(new Dimension(0, 130));
 		licScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 		licScroll.setAlignmentX(Component.CENTER_ALIGNMENT);
-		licScroll.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		licScroll.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		main.add(licScroll);
 
 		main.add(Box.createVerticalStrut(12));
@@ -120,7 +120,7 @@ public class AboutDialog extends JDialog {
 		UIComponents.styleAccentButton(btnTancar);
 		btnTancar.addActionListener(e -> dispose());
 		JPanel bottom = new JPanel();
-		bottom.setBackground(UITheme.BG_PANEL);
+		bottom.setBackground(UITheme.palette().bgPanel());
 		bottom.setBorder(new EmptyBorder(0, 32, 16, 32));
 		bottom.add(btnTancar);
 		add(bottom, BorderLayout.SOUTH);
@@ -133,7 +133,7 @@ public class AboutDialog extends JDialog {
 
 	private void addRow(JPanel parent, String key, String value) {
 		JPanel row = new JPanel(new BorderLayout(8, 0));
-		row.setBackground(UITheme.BG_PANEL);
+		row.setBackground(UITheme.palette().bgPanel());
 		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
 		row.setAlignmentX(Component.CENTER_ALIGNMENT);
 		JLabel k = new JLabel(key + ":");
@@ -142,7 +142,7 @@ public class AboutDialog extends JDialog {
 		k.setHorizontalAlignment(SwingConstants.RIGHT);
 		JLabel v = new JLabel(value);
 		v.setFont(UITheme.fontBase());
-		v.setForeground(UITheme.TEXT_DARK);
+		v.setForeground(UITheme.palette().textDark());
 		row.add(k, BorderLayout.WEST);
 		row.add(v, BorderLayout.CENTER);
 		parent.add(row);

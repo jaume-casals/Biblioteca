@@ -87,7 +87,7 @@ public class DialogoError {
     // ── Validation (user mistake) ─────────────────────────────────────────────
 
     private void showValidationDialog() {
-        Color accent = UITheme.SIDEBAR_ACCENT;
+        Color accent = UITheme.palette().sidebarAccent();
 
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 11));
         header.setBackground(accent);
@@ -104,7 +104,7 @@ public class DialogoError {
         JLabel msgLbl = new JLabel(
             "<html><body style='width:300px'>" + escHtml(missatge) + "</body></html>");
         msgLbl.setFont(UITheme.fontBase());
-        msgLbl.setForeground(UITheme.TEXT_DARK);
+        msgLbl.setForeground(UITheme.palette().textDark());
         msgLbl.setBorder(BorderFactory.createEmptyBorder(18, 22, 10, 22));
 
         JButton btnOk = new JButton(I18n.t("btn_ok"));
@@ -119,11 +119,11 @@ public class DialogoError {
         btnOk.setPreferredSize(new Dimension(110, 32));
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 10));
-        btnPanel.setBackground(UITheme.BG_MAIN);
+        btnPanel.setBackground(UITheme.palette().bgMain());
         btnPanel.add(btnOk);
 
         JPanel content = new JPanel(new BorderLayout());
-        content.setBackground(UITheme.BG_MAIN);
+        content.setBackground(UITheme.palette().bgMain());
         content.add(msgLbl, BorderLayout.CENTER);
         content.add(btnPanel, BorderLayout.SOUTH);
 
@@ -154,7 +154,7 @@ public class DialogoError {
     private void showSystemErrorDialog() {
         JLabel lblTitol = new JLabel(titol, SwingConstants.LEFT);
         lblTitol.setFont(UITheme.fontBold());
-        lblTitol.setForeground(UITheme.DANGER);
+        lblTitol.setForeground(UITheme.palette().danger());
         lblTitol.setBorder(BorderFactory.createEmptyBorder(8, 10, 4, 10));
 
         String full = missatge + (detalls.isBlank() ? "" : detalls);
@@ -163,21 +163,21 @@ public class DialogoError {
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setFont(UITheme.FONT_SMALL);
-        textArea.setBackground(UITheme.BG_PANEL);
-        textArea.setForeground(UITheme.TEXT_DARK);
-        textArea.setCaretColor(UITheme.TEXT_DARK);
+        textArea.setBackground(UITheme.palette().bgPanel());
+        textArea.setForeground(UITheme.palette().textDark());
+        textArea.setCaretColor(UITheme.palette().textDark());
         textArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         textArea.setCaretPosition(0);
 
         JScrollPane scroll = new JScrollPane(textArea);
         scroll.setPreferredSize(new Dimension(520, 220));
-        scroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+        scroll.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 
         JButton btnTancar = new JButton(I18n.t("btn_close"));
         presentacio.UIComponents.styleSecondaryButton(btnTancar);
 
         JPanel btnPanel = new JPanel();
-        btnPanel.setBackground(UITheme.BG_MAIN);
+        btnPanel.setBackground(UITheme.palette().bgMain());
         btnPanel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
         btnPanel.add(btnTancar);
 
@@ -185,7 +185,7 @@ public class DialogoError {
         dialog.setTitle(titol);
         dialog.setModal(true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.getContentPane().setBackground(UITheme.BG_MAIN);
+        dialog.getContentPane().setBackground(UITheme.palette().bgMain());
         dialog.setLayout(new BorderLayout());
         dialog.add(lblTitol, BorderLayout.NORTH);
         dialog.add(scroll, BorderLayout.CENTER);

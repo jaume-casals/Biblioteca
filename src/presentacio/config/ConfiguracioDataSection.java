@@ -22,7 +22,7 @@ public final class ConfiguracioDataSection {
 
     public static JPanel build(JDialog owner, BibliotecaWriter cd, ConfiguracioDialogListener listener) {
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);
@@ -30,13 +30,13 @@ public final class ConfiguracioDataSection {
 
         JLabel lblSeccio = new JLabel(t("lbl_data"));
         lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.ACCENT);
+        lblSeccio.setForeground(UITheme.palette().accent());
 
         JLabel lblDbSize = new JLabel(t("lbl_db_size"));
         UIComponents.styleLabel(lblDbSize);
         JLabel lblDbSizeVal = new JLabel("...");
         lblDbSizeVal.setFont(UITheme.fontBase());
-        lblDbSizeVal.setForeground(UITheme.TEXT_DARK);
+        lblDbSizeVal.setForeground(UITheme.palette().textDark());
         new SwingWorker<Long, Void>() {
             @Override protected Long doInBackground() { return cd.getDbSizeBytes(); }
             @Override protected void done() {
@@ -54,7 +54,7 @@ public final class ConfiguracioDataSection {
 
         JButton btnBuidar = new JButton(t("btn_clear_library"));
         btnBuidar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        btnBuidar.setBackground(UITheme.DANGER);
+        btnBuidar.setBackground(UITheme.palette().danger());
         btnBuidar.setForeground(java.awt.Color.WHITE);
         btnBuidar.setFont(UITheme.fontBold());
         btnBuidar.setFocusPainted(false);

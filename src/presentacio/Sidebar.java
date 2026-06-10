@@ -17,8 +17,8 @@ public final class Sidebar {
 
     public static JButton makeBtn(String text, Color fg) {
         JButton b = new JButton(text);
-        b.setForeground(fg != null ? fg : UITheme.SIDEBAR_TEXT);
-        b.setBackground(UITheme.SIDEBAR_BG);
+        b.setForeground(fg != null ? fg : UITheme.palette().sidebarText());
+        b.setBackground(UITheme.palette().sidebarBg());
         b.setBorderPainted(false);
         b.setFocusPainted(false);
         b.setHorizontalAlignment(SwingConstants.LEFT);

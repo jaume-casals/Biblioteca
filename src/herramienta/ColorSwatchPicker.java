@@ -24,7 +24,7 @@ public final class ColorSwatchPicker {
     public static String chooseHex(java.awt.Component parent, Color initial, String titleKey) {
         final Color[] chosen = { initial != null ? initial : Color.decode("#3498DB") };
         JPanel grid = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        grid.setBackground(UITheme.BG_PANEL);
+        grid.setBackground(UITheme.palette().bgPanel());
         for (Color c : SHELF_PALETTE) {
             JButton btn = new JButton();
             btn.setPreferredSize(new Dimension(32, 32));
@@ -36,7 +36,7 @@ public final class ColorSwatchPicker {
             grid.add(btn);
         }
         JPanel wrap = new JPanel(new BorderLayout(0, 8));
-        wrap.setBackground(UITheme.BG_PANEL);
+        wrap.setBackground(UITheme.palette().bgPanel());
         wrap.add(grid, BorderLayout.CENTER);
         int result = JOptionPane.showConfirmDialog(parent, wrap,
             I18n.t(titleKey), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);

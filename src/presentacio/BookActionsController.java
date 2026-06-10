@@ -158,7 +158,7 @@ class BookActionsController {
         javax.swing.JPanel tab1 = EstadistiquesHelper.buildGeneralTab(global, globalStats, state.cd);
 
         javax.swing.JPanel tab2 = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 8));
-        tab2.setBackground(UITheme.BG_PANEL);
+        tab2.setBackground(UITheme.palette().bgPanel());
         tab2.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
         tab2.add(EstadistiquesHelper.buildReadingChart(globalStats.booksByReadYear));
         tab2.add(EstadistiquesHelper.buildPublisherChart(global));

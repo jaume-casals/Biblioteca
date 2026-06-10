@@ -17,14 +17,14 @@ public class LoadingDialog {
         dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 
         JPanel panel = new JPanel(new BorderLayout(12, 8));
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UITheme.ACCENT, 2),
+            BorderFactory.createLineBorder(UITheme.palette().accent(), 2),
             BorderFactory.createEmptyBorder(16, 24, 16, 24)));
 
         label = new JLabel(message, SwingConstants.CENTER);
         label.setFont(UITheme.fontBase());
-        label.setForeground(UITheme.TEXT_DARK);
+        label.setForeground(UITheme.palette().textDark());
 
         bar = new JProgressBar();
         bar.setIndeterminate(true);

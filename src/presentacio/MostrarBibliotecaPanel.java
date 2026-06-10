@@ -30,7 +30,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	public MostrarBibliotecaPanel() {
 		setLayout(new BorderLayout(0, 0));
-		setBackground(UITheme.BG_MAIN);
+		setBackground(UITheme.palette().bgMain());
 
 		comboLlistes = new JComboBox<>();
 
@@ -38,13 +38,13 @@ public class MostrarBibliotecaPanel extends JPanel {
 		add(leftSidebar, BorderLayout.WEST);
 
 		JPanel rightArea = new JPanel(new BorderLayout(0, 0));
-		rightArea.setBackground(UITheme.BG_MAIN);
+		rightArea.setBackground(UITheme.palette().bgMain());
 
 		topBar = new TopBarPanel();
 		rightArea.add(topBar, BorderLayout.NORTH);
 
 		JPanel contentArea = new JPanel(new BorderLayout(0, 0));
-		contentArea.setBackground(UITheme.BG_MAIN);
+		contentArea.setBackground(UITheme.palette().bgMain());
 
 		filterDrawer = new FilterDrawerPanel();
 		filterDrawer.setVisible(false);
@@ -82,7 +82,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 		UITheme.rebuildFonts(herramienta.FontSize.fromKey(herramienta.Config.getFontSize()));
         UiConfig.setTheme(UITheme.getTheme());
 
-		setBackground(UITheme.BG_MAIN);
+		setBackground(UITheme.palette().bgMain());
 
 		leftSidebar.applyTheme();
 		centerTable.applyTheme();
@@ -91,7 +91,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 		Window w = SwingUtilities.getWindowAncestor(this);
 		if (w instanceof JFrame) {
-			((JFrame) w).getContentPane().setBackground(UITheme.BG_MAIN);
+			((JFrame) w).getContentPane().setBackground(UITheme.palette().bgMain());
 		}
 
 		try {

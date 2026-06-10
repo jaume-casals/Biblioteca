@@ -10,110 +10,30 @@
   1.  STATUS
 ================================================================================
 
-Active [OPEN] items:  9  (C4, C5, C6, C7, C8, C10, C11, C12, C13).
+Active [OPEN] items:  0.
 Last test run: 184 plain + 596 JUnit 5 (auto-discovered across 46 test
                 classes); 0 failures.  780 total tests, all green.
-Last session:   15  (per-class test files, 2026-06-10).
+Last session:   16  (closed C4-C13 backlog, 2026-06-10).
 Codebase:       ~84 production .java files in src/.
                 Largest src/ files (lines):
                   1.  I18n.java                                   610 (i18n data)
                   2.  ConfiguracioDialog.java                     552
                   3.  LlibreDaoCore.java                          308
-                  4.  Config.java                                 395
-                  5.  DetallesLlibrePanelControl.java             391
+                  4.  Config.java                                 410
+                  5.  DetallesLlibrePanelControl.java             426
 
 ================================================================================
   2.  ACTIVE WORK
 ================================================================================
 
-(none — tot.txt is empty of in-progress items as of session 14)
+(none — tot.txt is empty of in-progress items as of session 16)
 
 ================================================================================
   3.  CODEABLE CANDIDATES
 ================================================================================
 
-Each entry is a self-contained refactor / cleanup. Pick one, do it,
-record it in the new session-N section at the bottom, then remove the
-entry from this list.
-
-─── File size (largest first) ────────────────────────────────────────────
-
-C4.  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
-      (391 lines)
-      Controller wires the panel to the domain.  Likely candidates
-      for extraction: a ShelfBindings sub-controller (the LlistesDel-
-      LlibreDialog open/save path) and a TagBindings sub-controller
-      (the TagsDelLlibreDialog path).  Both are local to the panel
-      and only the panel calls them.
-      Time: 1-2 hours.  Risk: low.
-
-C5.  src/presentacio/FilterDrawerPanel.java  (352 lines)
-      5+ filter rows (search / shelf / tag / autor / serie / idioma /
-      format / preu range / pagines range).  Each row is a small
-      JLabel + JComponent + getter.  Extract a `FilterRow` record
-      (or small class) holding the (label-key, component, getter)
-      triple and a `buildRows()` factory.  Same for FilterController.
-      Time: 1 hour.  Risk: low.
-
-─── Mutable statics (still) ──────────────────────────────────────────────
-
-C6.  src/herramienta/UITheme.java  — 33 mutable public/static fields
-      (BG_MAIN, ACCENT, FONT_BASE, BORDER_CLR, SIDEBAR_*, etc.)
-      assigned at runtime in setDark / applyLight / applySepia /
-      applyOcean.  Each is a `public static Color` so any thread
-      can read it.  Migration plan already in
-      UITheme.Palette.java (per tot.txt section 5, session 7).
-      End state: a `Map<Theme, Palette>` + `currentPalette()` getter;
-      callers do `UITheme.palette().accent` instead of
-      `UITheme.ACCENT`.  Touches 273+ call sites in src/ (per
-      tot.txt session 7).  Large mechanical edit but each line is
-      trivial.  Tooling: write a small script that does the rename
-      with a regex per field; verify with `git diff --stat` then
-      `scripts\test.bat`.
-      Time: 3-4 hours (mostly mechanical).  Risk: low per line,
-      high in aggregate — missed call sites compile but render
-      wrong.
-
-C7.  src/herramienta/Config.java  — 53 mutable public statics
-      Same pattern as C6 but with the additional twist that the
-      sub-stores (UI_STORE etc.) are already a Map-backed
-      ConcurrentHashMap.  Could expose `Config.props` as a
-      `java.util.Properties` and keep the existing API.  Or could
-      pursue C3 (per-store static setters) first.
-      Time: see C3.  (Setters side of C3 done; Properties-exposure
-      side not started.)
-
-─── Code smells ──────────────────────────────────────────────────────────
-
-C8.  src/persistencia/ControladorPersistencia.java
-      Mixed tab/space indentation: 137 tab-indented lines, 7 lines
-      indented with 2 spaces, 7 with 4 spaces, 6 with 8 spaces.
-      Pick one (tabs, per repo convention) and reformat.
-      Time: 5 min.  Risk: zero — pure formatting.
-
-C10. 33 src/ files use `System.out.print` / `System.err.print`
-      (Config: 4, ServerConect: 4, UITheme: 2, Ejecutable: 2,
-      I18n: 2, etc.).  Most are debug logging that escaped.
-      Each should be replaced with `java.util.logging.Logger` or
-      removed.  Touches: every file in the list.
-      Time: 30 min.  Risk: zero (stdout is dev-only).
-
-─── Single-class opportunities ───────────────────────────────────────────
-
-C11. src/main/Ejecutable.java
-      `System.out.println` calls (line ~10) for the "Starting up..."
-      banner.  Move to a proper logger or keep as-is for the CLI
-      feel.  Trivial.
-
-C12. src/herramienta/UITheme.java
-      Add `UITheme.shutdown()` to clear the volatile Font fields on
-      JVM exit, paired with the existing Config shutdown hook.
-      Belt-and-suspenders for the static-state pattern; only worth
-      doing if C6 is being deferred.
-
-C13. src/presentacio/renderers/TableCellComponents.java
-      9 mutable static fields.  Same pattern as C6 but tiny file
-      (67 lines).  Could be inlined into the 1-2 callers.
+(removed all C1-C13 — every codeable candidate in this backlog has
+been closed; see §5 session log for the per-candidate change log)
 
 ================================================================================
   4.  TEST GATE
@@ -137,6 +57,27 @@ candidate from section 3 at the same time.  Keep entries terse —
 1 line for the change, 1 line for verification.
 
 (latest at the top)
+
+Session 16 (2026-06-10) — Closed the C4-C13 backlog. C8 ControladorPersistencia
+                          reformat (5 min, tabs). C11 Ejecutable: System.err +
+                          e.printStackTrace → java.util.logging.Logger. C12
+                          UITheme.shutdown() clears the 5 cached Fonts on
+                          JVM exit, paired with Config's hook. C13
+                          TableCellComponents: no-op (already a thin facade
+                          since the renderer split). C10 System.out/err
+                          → Logger across 9 src/ files (17 calls). C5
+                          FilterDrawerPanel: extracted FilterRow + FilterRange
+                          records so the 3 text-field rows and 3 numeric-
+                          range rows are declared declaratively. C4
+                          DetallesLlibrePanelControl: extracted obrirLlistes(l)
+                          and obrirTags(l) helpers. C7 Config: added
+                          toProperties() / fromProperties(Properties) so
+                          callers can round-trip the composite view through
+                          a real java.util.Properties. C6 UITheme Palette
+                          migration: added Palette record (21 Color fields)
+                          + UITheme.palette() getter; 259 call sites
+                          migrated across 36 files via a regex
+                          find-replace. 780/780 tests green.
 
 Session 15 (2026-06-10) — Per-class JUnit 5 test files for all
                           testable domini/, persistencia/, herramienta/

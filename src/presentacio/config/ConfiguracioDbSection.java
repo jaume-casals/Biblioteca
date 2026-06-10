@@ -25,7 +25,7 @@ public final class ConfiguracioDbSection {
 
     public static JPanel build(JDialog owner) {
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);
@@ -33,7 +33,7 @@ public final class ConfiguracioDbSection {
 
         JLabel lblSeccio = new JLabel(t("lbl_database"));
         lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.ACCENT);
+        lblSeccio.setForeground(UITheme.palette().accent());
 
         JLabel lblTipus = new JLabel(t("lbl_type"));
         UIComponents.styleLabel(lblTipus);
@@ -64,7 +64,7 @@ public final class ConfiguracioDbSection {
 
         JLabel lblDbNote = new JLabel(t("lbl_db_restart"));
         lblDbNote.setFont(UITheme.FONT_SMALL);
-        lblDbNote.setForeground(UITheme.TEXT_MID);
+        lblDbNote.setForeground(UITheme.palette().textMid());
 
         JButton btnTestConn = new JButton(t("btn_test_connection"));
         UIComponents.styleSecondaryButton(btnTestConn);

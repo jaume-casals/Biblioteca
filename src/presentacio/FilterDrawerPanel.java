@@ -7,6 +7,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -70,11 +71,11 @@ public class FilterDrawerPanel extends JPanel {
 
 	private void buildFilterDrawer() {
 		setLayout(new BorderLayout(0, 0));
-		setBackground(UITheme.BG_MAIN);
-		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.BORDER_CLR));
+		setBackground(UITheme.palette().bgMain());
+		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.palette().borderClr()));
 
 		JPanel presetBar = new JPanel(null);
-		presetBar.setBackground(UITheme.BG_MAIN);
+		presetBar.setBackground(UITheme.palette().bgMain());
 		presetBar.setPreferredSize(new Dimension(0, 38));
 
 		JLabel lblPresets = new JLabel(I18n.t("lbl_preset_colon"));
@@ -110,23 +111,23 @@ public class FilterDrawerPanel extends JPanel {
 
 		panelFiltros = new JPanel();
 		panelFiltros.setLayout(new BoxLayout(panelFiltros, BoxLayout.Y_AXIS));
-		panelFiltros.setBackground(UITheme.BG_PANEL);
+		panelFiltros.setBackground(UITheme.palette().bgPanel());
 		panelFiltros.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
 		JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-		row1.setBackground(UITheme.BG_PANEL);
+		row1.setBackground(UITheme.palette().bgPanel());
 
 		chckbxLlegit = new JCheckBox(I18n.t("filter_llegit_chk"));
 		chckbxLlegit.setFont(UITheme.fontBase());
-		chckbxLlegit.setBackground(UITheme.BG_PANEL);
-		chckbxLlegit.setForeground(UITheme.TEXT_DARK);
+		chckbxLlegit.setBackground(UITheme.palette().bgPanel());
+		chckbxLlegit.setForeground(UITheme.palette().textDark());
 		chckbxLlegit.setToolTipText(I18n.t("tip_filter_llegit"));
 		row1.add(chckbxLlegit);
 
 		chckbxNoLlegit = new JCheckBox(I18n.t("filter_no_llegit_chk"));
 		chckbxNoLlegit.setFont(UITheme.fontBase());
-		chckbxNoLlegit.setBackground(UITheme.BG_PANEL);
-		chckbxNoLlegit.setForeground(UITheme.TEXT_DARK);
+		chckbxNoLlegit.setBackground(UITheme.palette().bgPanel());
+		chckbxNoLlegit.setForeground(UITheme.palette().textDark());
 		chckbxNoLlegit.setToolTipText(I18n.t("tip_filter_no_llegit"));
 		row1.add(chckbxNoLlegit);
 
@@ -150,7 +151,7 @@ public class FilterDrawerPanel extends JPanel {
 		panelFiltros.add(row1);
 
 		JPanel row1b = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-		row1b.setBackground(UITheme.BG_PANEL);
+		row1b.setBackground(UITheme.palette().bgPanel());
 		// Use the FilterRow helper for the three text-field rows: one
 		// (label, field, columns) triple per row keeps the call site
 		// declarative and the helper centralises the label/field wrap.
@@ -173,7 +174,7 @@ public class FilterDrawerPanel extends JPanel {
 		panelFiltros.add(row1b);
 
 		JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-		row2.setBackground(UITheme.BG_PANEL);
+		row2.setBackground(UITheme.palette().bgPanel());
 
 		// Three numeric-range rows: each declared as a (label, min, max)
 		// triple so the range-wrap helper applies consistently.
@@ -202,7 +203,7 @@ public class FilterDrawerPanel extends JPanel {
 		panelFiltros.add(row2);
 
 		JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-		row3.setBackground(UITheme.BG_PANEL);
+		row3.setBackground(UITheme.palette().bgPanel());
 
 		btnExportCSV = new JButton();
 		btnExportJSON = new JButton();
@@ -281,7 +282,7 @@ public class FilterDrawerPanel extends JPanel {
 		scrolpaneFiltro.setBorder(null);
 		scrolpaneFiltro.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		scrolpaneFiltro.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-		scrolpaneFiltro.getViewport().setBackground(UITheme.BG_PANEL);
+		scrolpaneFiltro.getViewport().setBackground(UITheme.palette().bgPanel());
 
 		add(scrolpaneFiltro, BorderLayout.CENTER);
 	}
@@ -300,7 +301,7 @@ public class FilterDrawerPanel extends JPanel {
 		UIComponents.styleSecondaryButton(btnDesaPreset);
 		UIComponents.styleSecondaryButton(btnEsborraPreset);
 		comboPresets.setFont(UITheme.fontBase());
-		setBackground(UITheme.BG_MAIN);
+		setBackground(UITheme.palette().bgMain());
 	}
 
 	public void applyThemePostLaf() {
@@ -320,7 +321,7 @@ public class FilterDrawerPanel extends JPanel {
 
 	private JPanel makeFieldWrap(String label, JTextField field) {
 		JPanel p = new JPanel(new BorderLayout(4, 0));
-		p.setBackground(UITheme.BG_PANEL);
+		p.setBackground(UITheme.palette().bgPanel());
 		JLabel lbl = new JLabel(label + ":");
 		UIComponents.styleLabel(lbl);
 		lbl.setPreferredSize(new Dimension(lbl.getPreferredSize().width, 28));
@@ -333,7 +334,7 @@ public class FilterDrawerPanel extends JPanel {
 
 	private JPanel makeRangeWrap(String label, JTextField min, JTextField max) {
 		JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
-		p.setBackground(UITheme.BG_PANEL);
+		p.setBackground(UITheme.palette().bgPanel());
 		JLabel lbl = new JLabel(label + ":");
 		UIComponents.styleLabel(lbl);
 		UIComponents.styleField(min);
@@ -341,7 +342,7 @@ public class FilterDrawerPanel extends JPanel {
 		min.setPreferredSize(new Dimension(min.getPreferredSize().width, 28));
 		max.setPreferredSize(new Dimension(max.getPreferredSize().width, 28));
 		JLabel dash = new JLabel("\u2013");
-		dash.setForeground(UITheme.TEXT_MID);
+		dash.setForeground(UITheme.palette().textMid());
 		p.add(lbl);
 		p.add(min);
 		p.add(dash);
@@ -352,27 +353,27 @@ public class FilterDrawerPanel extends JPanel {
 	private javax.swing.JSeparator makeSep() {
 		javax.swing.JSeparator sep = new javax.swing.JSeparator(SwingConstants.VERTICAL);
 		sep.setPreferredSize(new Dimension(1, 28));
-		sep.setForeground(UITheme.BORDER_CLR);
+		sep.setForeground(UITheme.palette().borderClr());
 		return sep;
 	}
 
 	private void styleFilterComponents() {
-		panelFiltros.setBackground(UITheme.BG_PANEL);
-		scrolpaneFiltro.getViewport().setBackground(UITheme.BG_PANEL);
+		panelFiltros.setBackground(UITheme.palette().bgPanel());
+		scrolpaneFiltro.getViewport().setBackground(UITheme.palette().bgPanel());
 		for (Component r : panelFiltros.getComponents()) {
 			if (r instanceof JPanel) {
-				((JPanel) r).setBackground(UITheme.BG_PANEL);
+				((JPanel) r).setBackground(UITheme.palette().bgPanel());
 				for (Component c : ((JPanel) r).getComponents()) {
 					if (c instanceof JCheckBox) {
-						((JCheckBox) c).setBackground(UITheme.BG_PANEL);
-						((JCheckBox) c).setForeground(UITheme.TEXT_DARK);
+						((JCheckBox) c).setBackground(UITheme.palette().bgPanel());
+						((JCheckBox) c).setForeground(UITheme.palette().textDark());
 						((JCheckBox) c).setFont(UITheme.fontBase());
 					} else if (c instanceof JLabel) {
 						UIComponents.styleLabel((JLabel) c);
 					} else if (c instanceof JTextField) {
 						UIComponents.styleField((JTextField) c);
 					} else if (c instanceof JPanel) {
-						((JPanel) c).setBackground(UITheme.BG_PANEL);
+						((JPanel) c).setBackground(UITheme.palette().bgPanel());
 						for (Component cc : ((JPanel) c).getComponents()) {
 							if (cc instanceof JLabel) UIComponents.styleLabel((JLabel) cc);
 							if (cc instanceof JTextField) UIComponents.styleField((JTextField) cc);

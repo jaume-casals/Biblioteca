@@ -41,7 +41,7 @@ public final class ConfiguracioButtonBar {
                                ConfiguracioDialogListener listener) {
 
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);

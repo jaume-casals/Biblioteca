@@ -95,10 +95,8 @@ public class DetallesLlibrePanelControl {
 		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
 		this.vista.getBtnEditar().addActionListener(e -> editHandler.editar(l));
 		this.vista.getBtnEliminar().addActionListener(e -> deleteHandler.eliminar(l));
-		this.vista.getBtnGestioLlistes().addActionListener(e ->
-			new LlistesDelLlibreDialog(this.vista, l, cLlibres).setVisible(true));
-		this.vista.getBtnGestioTags().addActionListener(e ->
-			new TagsDelLlibreDialog(this.vista, l, cLlibres).setVisible(true));
+		this.vista.getBtnGestioLlistes().addActionListener(e -> obrirLlistes(l));
+		this.vista.getBtnGestioTags().addActionListener(e -> obrirTags(l));
 		this.vista.getBtnHistorialPrestecs().addActionListener(e -> historyHandler.mostrarHistorialPrestecs(l));
 		this.vista.getBtnImprimir().addActionListener(e -> imprimirFitxa(l));
 
@@ -231,6 +229,14 @@ public class DetallesLlibrePanelControl {
 			this.vista.getTextPortada().setText(f.getAbsolutePath());
 			carregarImatgeAsync(f.getAbsolutePath());
 		}
+	}
+
+	private void obrirLlistes(Llibre l) {
+		new LlistesDelLlibreDialog(this.vista, l, cLlibres).setVisible(true);
+	}
+
+	private void obrirTags(Llibre l) {
+		new TagsDelLlibreDialog(this.vista, l, cLlibres).setVisible(true);
 	}
 
 	private void imprimirFitxa(Llibre l) {

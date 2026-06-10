@@ -43,14 +43,14 @@ public class CenterTablePanel extends JPanel {
 
 	public CenterTablePanel() {
 		setLayout(new BorderLayout(0, 0));
-		setBackground(UITheme.BG_MAIN);
+		setBackground(UITheme.palette().bgMain());
 
 		galeria = new GaleriaCobertesPanel();
 		buildTable();
 
 		cardLayout = new CardLayout();
 		contentCards = new JPanel(cardLayout);
-		contentCards.setBackground(UITheme.BG_MAIN);
+		contentCards.setBackground(UITheme.palette().bgMain());
 		contentCards.add(scrollPaneJTable, CARD_TAULA);
 		contentCards.add(galeria, CARD_GALERIA);
 
@@ -62,8 +62,8 @@ public class CenterTablePanel extends JPanel {
 
 	private void buildTable() {
 		scrollPaneJTable = new JScrollPane();
-		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
-		scrollPaneJTable.getViewport().setBackground(UITheme.BG_PANEL);
+		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
 		scrollPaneJTable.getVerticalScrollBar().setUnitIncrement(16);
 
 		jTableBilio = new JTable() {
@@ -84,10 +84,10 @@ public class CenterTablePanel extends JPanel {
 		jTableBilio.setDefaultEditor(Object.class, null);
 		jTableBilio.setAutoCreateRowSorter(true);
 		jTableBilio.getTableHeader().setReorderingAllowed(false);
-		jTableBilio.setBackground(UITheme.BG_PANEL);
-		jTableBilio.setSelectionBackground(UITheme.ACCENT);
+		jTableBilio.setBackground(UITheme.palette().bgPanel());
+		jTableBilio.setSelectionBackground(UITheme.palette().accent());
 		jTableBilio.setSelectionForeground(Color.WHITE);
-		jTableBilio.setGridColor(UITheme.TABLE_GRID);
+		jTableBilio.setGridColor(UITheme.palette().tableGrid());
 		jTableBilio.setRowHeight(32);
 		jTableBilio.setFont(UITheme.fontBase());
 		jTableBilio.setShowGrid(true);
@@ -102,12 +102,12 @@ public class CenterTablePanel extends JPanel {
 			@Override
 			public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int c) {
 				JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, c);
-				lbl.setBackground(UITheme.HEADER_BG);
-				lbl.setForeground(UITheme.HEADER_FG);
+				lbl.setBackground(UITheme.palette().headerBg());
+				lbl.setForeground(UITheme.palette().headerFg());
 				lbl.setFont(UITheme.fontBold());
 				lbl.setOpaque(true);
 				lbl.setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createMatteBorder(0, 0, 2, 1, UITheme.BORDER_CLR),
+					BorderFactory.createMatteBorder(0, 0, 2, 1, UITheme.palette().borderClr()),
 					BorderFactory.createEmptyBorder(5, 10, 5, 10)
 				));
 				String text = v != null ? v.toString() : "";
@@ -144,7 +144,7 @@ public class CenterTablePanel extends JPanel {
 
 	private void buildPagination() {
 		paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
-		paginationPanel.setBackground(UITheme.BG_MAIN);
+		paginationPanel.setBackground(UITheme.palette().bgMain());
 		btnPaginaAnterior = new JButton(I18n.t("btn_page_prev"));
 		UIComponents.styleSecondaryButton(btnPaginaAnterior);
 		lblPagina = new JLabel(I18n.t("page_info_java", 1, 1));
@@ -170,16 +170,16 @@ public class CenterTablePanel extends JPanel {
 	}
 
 	public void applyTheme() {
-		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
-		scrollPaneJTable.getViewport().setBackground(UITheme.BG_PANEL);
-		jTableBilio.setBackground(UITheme.BG_PANEL);
-		jTableBilio.setForeground(UITheme.TEXT_DARK);
-		jTableBilio.setSelectionBackground(UITheme.ACCENT);
+		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
+		jTableBilio.setBackground(UITheme.palette().bgPanel());
+		jTableBilio.setForeground(UITheme.palette().textDark());
+		jTableBilio.setSelectionBackground(UITheme.palette().accent());
 		jTableBilio.setSelectionForeground(Color.WHITE);
-		jTableBilio.setGridColor(UITheme.TABLE_GRID);
-		javax.swing.UIManager.put("Table.alternateRowColor", UITheme.TABLE_ALT);
+		jTableBilio.setGridColor(UITheme.palette().tableGrid());
+		javax.swing.UIManager.put("Table.alternateRowColor", UITheme.palette().tableAlt());
 
-		paginationPanel.setBackground(UITheme.BG_MAIN);
+		paginationPanel.setBackground(UITheme.palette().bgMain());
 		UIComponents.styleSecondaryButton(btnPaginaAnterior);
 		UIComponents.styleSecondaryButton(btnPaginaSeguent);
 		UIComponents.styleLabel(lblPagina);

@@ -114,6 +114,30 @@ public class Config {
         }
     };
 
+    /**
+     * Snapshot the composite key/value view as a real {@link Properties}.
+     * Useful for callers that need the JDK {@code Properties} contract
+     * (XML I/O, {@code System.getProperties()}-style iteration, etc.) but
+     * don't want to interact with the 4 sub-stores directly.  Returns a
+     * fresh, independent copy — mutations to the returned object do NOT
+     * affect the live configuration and vice versa.
+     */
+    public static java.util.Properties toProperties() {
+        java.util.Properties p = new java.util.Properties();
+        p.putAll(props);
+        return p;
+    }
+
+    /** Bulk-apply the entries of {@code src} into the live configuration,
+     *  routing each key to its sub-store via {@link #domainOf(String)}.
+     *  This is a write-through: the file save is NOT triggered here — call
+     *  {@link #save()} or {@link #withBatch} if you also want a flush. */
+    public static void fromProperties(java.util.Properties src) {
+        for (String name : src.stringPropertyNames()) {
+            props.put(name, src.getProperty(name));
+        }
+    }
+
     public static void reload() {
         props.clear();
         File cfgFile = currentFile();

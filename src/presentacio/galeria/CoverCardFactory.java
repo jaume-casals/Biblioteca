@@ -123,7 +123,7 @@ public final class CoverCardFactory {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                g2.setColor(UITheme.BG_MAIN);
+                g2.setColor(UITheme.palette().bgMain());
                 g2.fillRect(0, 0, getWidth(), getHeight());
 
                 boolean h = hov[0];
@@ -134,7 +134,7 @@ public final class CoverCardFactory {
                 g2.setColor(h ? SHADOW_HB : SHADOW_B);
                 g2.fillRoundRect(SDX + 2, sdY + 3, capW + 1, capCardH + 1, ARC + 4, ARC + 4);
 
-                g2.setColor(UITheme.BG_PANEL);
+                g2.setColor(UITheme.palette().bgPanel());
                 g2.fillRoundRect(0, 0, capW, capCardH, ARC, ARC);
 
                 Shape oldClip = g2.getClip();
@@ -158,9 +158,9 @@ public final class CoverCardFactory {
 
                 g2.setStroke(new BasicStroke(sel || h ? 2f : 1f));
                 Color bdr;
-                if (sel) bdr = UITheme.ACCENT;
-                else if (h) bdr = new Color(UITheme.ACCENT.getRed(), UITheme.ACCENT.getGreen(), UITheme.ACCENT.getBlue(), 140);
-                else bdr = new Color(UITheme.BORDER_CLR.getRed(), UITheme.BORDER_CLR.getGreen(), UITheme.BORDER_CLR.getBlue(), 180);
+                if (sel) bdr = UITheme.palette().accent();
+                else if (h) bdr = new Color(UITheme.palette().accent().getRed(), UITheme.palette().accent().getGreen(), UITheme.palette().accent().getBlue(), 140);
+                else bdr = new Color(UITheme.palette().borderClr().getRed(), UITheme.palette().borderClr().getGreen(), UITheme.palette().borderClr().getBlue(), 180);
                 g2.setColor(bdr);
                 g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
 
@@ -299,14 +299,14 @@ public final class CoverCardFactory {
         JLabel lblT = new JLabel("<html><body style='width:" + (cardW - 22) + "px; margin:0; padding:0;'><b>"
             + htmlEsc(l.getDisplayNom(Config.getLang())) + "</b></body></html>");
         lblT.setFont(UITheme.FONT_SMALL.deriveFont(Font.BOLD));
-        lblT.setForeground(UITheme.TEXT_DARK);
+        lblT.setForeground(UITheme.palette().textDark());
         lblT.setAlignmentX(0f);
         f.add(lblT);
         f.add(Box.createVerticalStrut(2));
 
         JLabel lblA = new JLabel(truncate(l.getAutor(), 24));
         lblA.setFont(UITheme.FONT_SMALL);
-        lblA.setForeground(UITheme.TEXT_MID);
+        lblA.setForeground(UITheme.palette().textMid());
         lblA.setAlignmentX(0f);
         f.add(lblA);
         f.add(Box.createVerticalStrut(4));
@@ -319,7 +319,7 @@ public final class CoverCardFactory {
         if (l.getAny() != null && l.getAny() > 0) {
             JLabel yr = new JLabel(String.valueOf(l.getAny()));
             yr.setFont(UITheme.FONT_SMALL);
-            yr.setForeground(UITheme.TEXT_MID);
+            yr.setForeground(UITheme.palette().textMid());
             starsRow.add(yr, BorderLayout.EAST);
         }
         f.add(starsRow);
@@ -356,7 +356,7 @@ public final class CoverCardFactory {
                 g2.setColor(UITheme.isDark() ? new Color(0x555555) : new Color(0xEEEEEE));
                 g2.fillRoundRect(0, 0, getWidth(), 3, 2, 2);
                 if (p > 0) {
-                    g2.setColor(UITheme.ACCENT);
+                    g2.setColor(UITheme.palette().accent());
                     g2.fillRoundRect(0, 0, Math.max(2, (int)(getWidth() * p)), 3, 2, 2);
                 }
                 g2.dispose();

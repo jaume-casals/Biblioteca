@@ -71,10 +71,10 @@ public class GuardarLlibresDialogo extends JDialog {
 		setMinimumSize(new Dimension(400, 500));
 		setPreferredSize(new Dimension(600, 720));
 		setLayout(new BorderLayout(0, 0));
-		getContentPane().setBackground(UITheme.BG_PANEL);
+		getContentPane().setBackground(UITheme.palette().bgPanel());
 
 		JPanel west = new JPanel();
-		west.setBackground(UITheme.BG_PANEL);
+		west.setBackground(UITheme.palette().bgPanel());
 		west.setPreferredSize(new Dimension(155, 0));
 		west.setMinimumSize(new Dimension(155, 0));
 		west.setMaximumSize(new Dimension(155, Integer.MAX_VALUE));
@@ -82,7 +82,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		west.setBorder(new EmptyBorder(8, 8, 8, 6));
 
 		labelPreview = new JLabel();
-		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_CLR));
+		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
 		labelPreview.setPreferredSize(new Dimension(135, 135));
 		labelPreview.setMinimumSize(new Dimension(135, 135));
@@ -111,7 +111,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		add(west, BorderLayout.WEST);
 
 		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
-		grid.setBackground(UITheme.BG_PANEL);
+		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
 		textISBN       = new JTextField(); textISBN.setColumns(10); UIComponents.styleField(textISBN);
@@ -130,22 +130,22 @@ public class GuardarLlibresDialogo extends JDialog {
 		textDataLectura.setToolTipText("YYYY-MM-DD");
 		textIdioma     = new JTextField(); textIdioma.setColumns(10); UIComponents.styleField(textIdioma);
 		comboFormat    = new JComboBox<>(herramienta.FormatOptions.withBlank());
-		comboFormat.setBackground(UITheme.BG_MAIN);
-		comboFormat.setForeground(UITheme.TEXT_DARK);
+		comboFormat.setBackground(UITheme.palette().bgMain());
+		comboFormat.setForeground(UITheme.palette().textDark());
 		comboFormat.setFont(UITheme.fontBase());
 		chckDesitjat   = new JCheckBox("");
-		chckDesitjat.setBackground(UITheme.BG_PANEL);
+		chckDesitjat.setBackground(UITheme.palette().bgPanel());
 		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);
 		chckDesitjat.setToolTipText(I18n.t("tip_desitjat"));
 		chckLlegit     = new JCheckBox("");
-		chckLlegit.setBackground(UITheme.BG_PANEL);
+		chckLlegit.setBackground(UITheme.palette().bgPanel());
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
 		textNotes      = new JTextField(); textNotes.setColumns(10); UIComponents.styleField(textNotes);
 		textPortada    = new JTextField(); textPortada.setColumns(10); UIComponents.styleField(textPortada);
 		textPaisOrigen = new JTextField(); textPaisOrigen.setColumns(10); UIComponents.styleField(textPaisOrigen);
 		comboEstat     = new JComboBox<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
-		comboEstat.setBackground(UITheme.BG_MAIN);
-		comboEstat.setForeground(UITheme.TEXT_DARK);
+		comboEstat.setBackground(UITheme.palette().bgMain());
+		comboEstat.setForeground(UITheme.palette().textDark());
 		comboEstat.setFont(UITheme.fontBase());
 		textExemplars  = new JTextField(); textExemplars.setColumns(10); UIComponents.styleField(textExemplars);
 		textNomCa      = new JTextField(); textNomCa.setColumns(10); UIComponents.styleField(textNomCa);
@@ -182,7 +182,7 @@ public class GuardarLlibresDialogo extends JDialog {
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
-		scroll.getViewport().setBackground(UITheme.BG_PANEL);
+		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 		add(scroll, BorderLayout.CENTER);
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
@@ -202,12 +202,12 @@ public class GuardarLlibresDialogo extends JDialog {
 		});
 
 		JPanel south = new JPanel(new BorderLayout(0, 2));
-		south.setBackground(UITheme.BG_PANEL);
+		south.setBackground(UITheme.palette().bgPanel());
 		south.setBorder(new EmptyBorder(0, 8, 8, 8));
 
 		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
 		UIComponents.styleAccentButton(btnCercaInternet);
-		btnCercaInternet.setBackground(herramienta.UITheme.GREEN);
+		btnCercaInternet.setBackground(herramienta.UITheme.palette().green());
 		btnCercaInternet.setForeground(java.awt.Color.WHITE);
 		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
 		south.add(btnCercaInternet, BorderLayout.CENTER);

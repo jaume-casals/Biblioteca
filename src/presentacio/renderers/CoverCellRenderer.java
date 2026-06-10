@@ -39,7 +39,7 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
     @Override
     public Component getTableCellRendererComponent(JTable t, Object value,
             boolean selected, boolean focus, int row, int col) {
-        setBackground(selected ? UITheme.ACCENT : UITheme.BG_PANEL);
+        setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
         setIcon(null);
         try {
             if (!(t.getModel() instanceof BibliotecaTableModel model)) return this;

@@ -19,6 +19,45 @@ public class UITheme {
 
     private UITheme() {}
 
+    /** Typed read-only view of the runtime theme palette.  A fresh snapshot
+     *  is returned by {@link #palette()} on every call so the record reflects
+     *  the current state of the mutable Color statics (which are still the
+     *  single source of truth — they get re-assigned by {@link #setTheme}
+     *  and the theme appliers).  Migration target: callers do
+     *  {@code UITheme.palette().bgMain} instead of {@code UITheme.palette().bgMain()}. */
+    public record Palette(
+            java.awt.Color bgMain,
+            java.awt.Color bgPanel,
+            java.awt.Color accent,
+            java.awt.Color accentAlt,
+            java.awt.Color textDark,
+            java.awt.Color textMid,
+            java.awt.Color borderClr,
+            java.awt.Color headerBg,
+            java.awt.Color headerFg,
+            java.awt.Color tableGrid,
+            java.awt.Color tableAlt,
+            java.awt.Color secondaryBtnBg,
+            java.awt.Color fieldBg,
+            java.awt.Color nimbusBlueGrey,
+            java.awt.Color danger,
+            java.awt.Color green,
+            java.awt.Color sidebarBg,
+            java.awt.Color sidebarAccent,
+            java.awt.Color sidebarText,
+            java.awt.Color sidebarTextMid,
+            java.awt.Color sidebarSelBg) {}
+
+    /** Snapshot the current Color state into an immutable Palette record.
+     *  Callers should prefer {@code UITheme.palette().xxx} over the raw
+     *  {@code UITheme.XXX} field accesses. */
+    public static Palette palette() {
+        return new Palette(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
+                BORDER_CLR, HEADER_BG, HEADER_FG, TABLE_GRID, TABLE_ALT,
+                SECONDARY_BTN_BG, FIELD_BG, NIMBUS_BLUE_GREY, DANGER, GREEN,
+                SIDEBAR_BG, SIDEBAR_ACCENT, SIDEBAR_TEXT, SIDEBAR_TEXT_MID, SIDEBAR_SEL_BG);
+    }
+
     public enum Theme {
         LIGHT(false),
         DARK( true),

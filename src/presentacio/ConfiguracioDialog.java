@@ -62,7 +62,7 @@ public class ConfiguracioDialog extends JDialog {
             this.listener);
 
         JPanel content = new JPanel();
-        content.setBackground(herramienta.UITheme.BG_PANEL);
+        content.setBackground(herramienta.UITheme.palette().bgPanel());
         GroupLayout layout = new GroupLayout(content);
         content.setLayout(layout);
         layout.setAutoCreateGaps(true);

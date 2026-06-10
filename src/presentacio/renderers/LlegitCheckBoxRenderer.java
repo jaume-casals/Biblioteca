@@ -18,8 +18,8 @@ public class LlegitCheckBoxRenderer extends JCheckBox implements TableCellRender
     public Component getTableCellRendererComponent(JTable t, Object val, boolean selected,
             boolean focus, int row, int col) {
         setSelected(I18n.t("filter_read").equals(val));
-        setBackground(selected ? UITheme.ACCENT : UITheme.BG_PANEL);
-        setForeground(selected ? Color.WHITE : UITheme.TEXT_DARK);
+        setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
+        setForeground(selected ? Color.WHITE : UITheme.palette().textDark());
         return this;
     }
 }

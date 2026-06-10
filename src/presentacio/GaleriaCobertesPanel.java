@@ -84,18 +84,18 @@ public class GaleriaCobertesPanel extends JPanel {
 
     public GaleriaCobertesPanel() {
         setLayout(new BorderLayout());
-        setBackground(UITheme.BG_MAIN);
+        setBackground(UITheme.palette().bgMain());
 
         applyZoom(zoomLevel);
 
         wrap = new JPanel(new WrapLayout(FlowLayout.LEADING, GAP, GAP));
-        wrap.setBackground(UITheme.BG_MAIN);
+        wrap.setBackground(UITheme.palette().bgMain());
 
         JScrollPane scroll = new JScrollPane(wrap);
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(60);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.getViewport().setBackground(UITheme.BG_MAIN);
+        scroll.getViewport().setBackground(UITheme.palette().bgMain());
         // SIMPLE_SCROLL_MODE forces full repaint on scroll — avoids blit artifacts with non-opaque cards
         scroll.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
         add(scroll, BorderLayout.CENTER);
@@ -230,7 +230,7 @@ public class GaleriaCobertesPanel extends JPanel {
         focusedIdx = -1;
         cardMap.clear();
         zoomPopup.hide();
-        wrap.setBackground(UITheme.BG_MAIN);
+        wrap.setBackground(UITheme.palette().bgMain());
         wrap.removeAll();
         if (llibres != null) {
             for (int i = 0; i < llibres.size(); i++) {
@@ -245,8 +245,8 @@ public class GaleriaCobertesPanel extends JPanel {
     }
 
     public void applyTheme() {
-        setBackground(UITheme.BG_MAIN);
-        wrap.setBackground(UITheme.BG_MAIN);
+        setBackground(UITheme.palette().bgMain());
+        wrap.setBackground(UITheme.palette().bgMain());
         if (currentLlibres != null) updateLlibres(currentLlibres);
     }
 

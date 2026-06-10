@@ -29,14 +29,14 @@ public class SplashScreen {
         dialog.setAlwaysOnTop(true);
 
         JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(UITheme.ACCENT, 2),
+            BorderFactory.createLineBorder(UITheme.palette().accent(), 2),
             BorderFactory.createEmptyBorder(20, 30, 20, 30)));
 
         JLabel lbl = new JLabel(I18n.t("splash_loading"), SwingConstants.CENTER);
         lbl.setFont(UITheme.FONT_TITLE);
-        lbl.setForeground(UITheme.ACCENT);
+        lbl.setForeground(UITheme.palette().accent());
 
         JProgressBar bar = new JProgressBar();
         bar.setIndeterminate(true);

@@ -58,7 +58,7 @@ public class LeftSidebarPanel extends JPanel {
 		this.comboLlistes = comboLlistes;
 		this.onThemeChange = onThemeChange;
 		setLayout(new BorderLayout(0, 0));
-		setBackground(UITheme.SIDEBAR_BG);
+		setBackground(UITheme.palette().sidebarBg());
 		setPreferredSize(new Dimension(220, 0));
 		setMinimumSize(new Dimension(220, 0));
 		buildSidebar();
@@ -67,14 +67,14 @@ public class LeftSidebarPanel extends JPanel {
 	private void buildSidebar() {
 		JPanel top = new JPanel();
 		top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
-		top.setBackground(UITheme.SIDEBAR_BG);
+		top.setBackground(UITheme.palette().sidebarBg());
 
 		JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 14));
-		logoPanel.setBackground(UITheme.SIDEBAR_BG);
+		logoPanel.setBackground(UITheme.palette().sidebarBg());
 		logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
 		JLabel logo = new JLabel("biblioteca");
 		logo.setFont(new Font("Serif", Font.BOLD | Font.ITALIC, 22));
-		logo.setForeground(UITheme.SIDEBAR_TEXT);
+		logo.setForeground(UITheme.palette().sidebarText());
 		logoPanel.add(logo);
 		top.add(logoPanel);
 
@@ -118,19 +118,19 @@ public class LeftSidebarPanel extends JPanel {
 
 		sidebarShelvesPanel = new JPanel();
 		sidebarShelvesPanel.setLayout(new BoxLayout(sidebarShelvesPanel, BoxLayout.Y_AXIS));
-		sidebarShelvesPanel.setBackground(UITheme.SIDEBAR_BG);
+		sidebarShelvesPanel.setBackground(UITheme.palette().sidebarBg());
 
 		shelvesScroll = new JScrollPane(sidebarShelvesPanel);
 		shelvesScroll.setBorder(null);
 		shelvesScroll.getVerticalScrollBar().setUnitIncrement(12);
-		shelvesScroll.setBackground(UITheme.SIDEBAR_BG);
-		shelvesScroll.getViewport().setBackground(UITheme.SIDEBAR_BG);
+		shelvesScroll.setBackground(UITheme.palette().sidebarBg());
+		shelvesScroll.getViewport().setBackground(UITheme.palette().sidebarBg());
 		shelvesScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		add(shelvesScroll, BorderLayout.CENTER);
 
 		JPanel bottom = new JPanel();
 		bottom.setLayout(new BoxLayout(bottom, BoxLayout.Y_AXIS));
-		bottom.setBackground(UITheme.SIDEBAR_BG);
+		bottom.setBackground(UITheme.palette().sidebarBg());
 
 		bottom.add(makeSidebarSep());
 
@@ -259,7 +259,7 @@ public class LeftSidebarPanel extends JPanel {
 	}
 
 	public void applyTheme() {
-		applyBgToNonButtons(this, UITheme.SIDEBAR_BG);
+		applyBgToNonButtons(this, UITheme.palette().sidebarBg());
 		for (JButton btn : sidebarBtns) {
 			UIComponents.styleSidebarButton(btn);
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
@@ -285,15 +285,15 @@ public class LeftSidebarPanel extends JPanel {
 		btn.setAlignmentX(Component.LEFT_ALIGNMENT);
 		btn.addMouseListener(new java.awt.event.MouseAdapter() {
 			@Override public void mouseEntered(java.awt.event.MouseEvent e) {
-				if (!btn.getBackground().equals(UITheme.SIDEBAR_SEL_BG))
+				if (!btn.getBackground().equals(UITheme.palette().sidebarSelBg()))
 					btn.setBackground(new Color(
-						Math.min(UITheme.SIDEBAR_BG.getRed()   + 20, 255),
-						Math.min(UITheme.SIDEBAR_BG.getGreen() + 15, 255),
-						Math.min(UITheme.SIDEBAR_BG.getBlue()  + 10, 255)));
+						Math.min(UITheme.palette().sidebarBg().getRed()   + 20, 255),
+						Math.min(UITheme.palette().sidebarBg().getGreen() + 15, 255),
+						Math.min(UITheme.palette().sidebarBg().getBlue()  + 10, 255)));
 			}
 			@Override public void mouseExited(java.awt.event.MouseEvent e) {
-				if (!btn.getBackground().equals(UITheme.SIDEBAR_SEL_BG))
-					btn.setBackground(UITheme.SIDEBAR_BG);
+				if (!btn.getBackground().equals(UITheme.palette().sidebarSelBg()))
+					btn.setBackground(UITheme.palette().sidebarBg());
 			}
 		});
 		return btn;
@@ -302,9 +302,9 @@ public class LeftSidebarPanel extends JPanel {
 	private JPanel makeSidebarSep() {
 		JPanel sep = new JPanel();
 		sep.setBackground(new Color(
-			Math.min(UITheme.SIDEBAR_BG.getRed()   + 30, 255),
-			Math.min(UITheme.SIDEBAR_BG.getGreen() + 25, 255),
-			Math.min(UITheme.SIDEBAR_BG.getBlue()  + 20, 255)));
+			Math.min(UITheme.palette().sidebarBg().getRed()   + 30, 255),
+			Math.min(UITheme.palette().sidebarBg().getGreen() + 25, 255),
+			Math.min(UITheme.palette().sidebarBg().getBlue()  + 20, 255)));
 		sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
 		sep.setPreferredSize(new Dimension(0, 1));
 		sep.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -313,12 +313,12 @@ public class LeftSidebarPanel extends JPanel {
 
 	private JPanel makeSectionLabel(String text) {
 		JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 6));
-		p.setBackground(UITheme.SIDEBAR_BG);
+		p.setBackground(UITheme.palette().sidebarBg());
 		p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
 		p.setAlignmentX(Component.LEFT_ALIGNMENT);
 		JLabel lbl = new JLabel(text);
 		lbl.setFont(new Font("SansSerif", Font.BOLD, 10));
-		lbl.setForeground(UITheme.SIDEBAR_TEXT_MID);
+		lbl.setForeground(UITheme.palette().sidebarTextMid());
 		p.add(lbl);
 		return p;
 	}

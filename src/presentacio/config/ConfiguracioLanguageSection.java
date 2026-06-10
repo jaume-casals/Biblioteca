@@ -19,7 +19,7 @@ public final class ConfiguracioLanguageSection {
 
     public static JPanel build(JDialog owner) {
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);

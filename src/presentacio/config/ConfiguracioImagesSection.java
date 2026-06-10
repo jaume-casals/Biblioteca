@@ -20,7 +20,7 @@ public final class ConfiguracioImagesSection {
 
     public static JPanel build(JDialog owner) {
         JPanel panel = new JPanel();
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
         panel.setLayout(gl);
         gl.setAutoCreateGaps(true);
@@ -28,7 +28,7 @@ public final class ConfiguracioImagesSection {
 
         JLabel lblSeccio = new JLabel(t("lbl_images"));
         lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.ACCENT);
+        lblSeccio.setForeground(UITheme.palette().accent());
 
         JLabel lblImgDir = new JLabel(t("lbl_default_folder"));
         UIComponents.styleLabel(lblImgDir);

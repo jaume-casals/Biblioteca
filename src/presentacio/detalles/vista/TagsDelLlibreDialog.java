@@ -60,7 +60,7 @@ public class TagsDelLlibreDialog extends JDialog {
         setResizable(false);
 
         JPanel panel = new JPanel(new BorderLayout(8, 8));
-        panel.setBackground(UITheme.BG_PANEL);
+        panel.setBackground(UITheme.palette().bgPanel());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(panel);
 
@@ -68,7 +68,7 @@ public class TagsDelLlibreDialog extends JDialog {
         UIComponents.styleField(filterField);
         filterField.setToolTipText(I18n.t("tip_filter_tags"));
         JPanel filterPanel = new JPanel(new BorderLayout(4, 0));
-        filterPanel.setBackground(UITheme.BG_PANEL);
+        filterPanel.setBackground(UITheme.palette().bgPanel());
         JLabel lblFilter = new JLabel(I18n.t("lbl_filter_colon"));
         UIComponents.styleLabel(lblFilter);
         filterPanel.add(lblFilter, BorderLayout.WEST);
@@ -79,16 +79,16 @@ public class TagsDelLlibreDialog extends JDialog {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(tableModel);
-        table.setBackground(UITheme.BG_PANEL);
-        table.setForeground(UITheme.TEXT_DARK);
+        table.setBackground(UITheme.palette().bgPanel());
+        table.setForeground(UITheme.palette().textDark());
         table.setRowHeight(28);
         table.setFont(UITheme.fontBase());
-        table.setSelectionBackground(UITheme.ACCENT);
+        table.setSelectionBackground(UITheme.palette().accent());
         table.setSelectionForeground(Color.WHITE);
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
 
         JPanel south = new JPanel(new BorderLayout(4, 8));
-        south.setBackground(UITheme.BG_PANEL);
+        south.setBackground(UITheme.palette().bgPanel());
 
         comboAdd = new JComboBox<>();
         comboAdd.setPreferredSize(new Dimension(180, 30));
@@ -104,7 +104,7 @@ public class TagsDelLlibreDialog extends JDialog {
         UIComponents.styleSecondaryButton(btnCrear);
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        addRow.setBackground(UITheme.BG_PANEL);
+        addRow.setBackground(UITheme.palette().bgPanel());
         JLabel lblEtiq = new JLabel(I18n.t("lbl_etiqueta_colon"));
         UIComponents.styleLabel(lblEtiq);
         addRow.add(lblEtiq);
@@ -112,7 +112,7 @@ public class TagsDelLlibreDialog extends JDialog {
         addRow.add(btnAfegir);
 
         JPanel createRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        createRow.setBackground(UITheme.BG_PANEL);
+        createRow.setBackground(UITheme.palette().bgPanel());
         JLabel lblNova = new JLabel(I18n.t("lbl_nova_colon"));
         UIComponents.styleLabel(lblNova);
         createRow.add(lblNova);
@@ -121,14 +121,14 @@ public class TagsDelLlibreDialog extends JDialog {
 
         btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
         UIComponents.styleSecondaryButton(btnTreure);
-        btnTreure.setBackground(UITheme.DANGER);
+        btnTreure.setBackground(UITheme.palette().danger());
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
-        btnRow.setBackground(UITheme.BG_PANEL);
+        btnRow.setBackground(UITheme.palette().bgPanel());
         btnRow.add(btnTreure);
 
         JPanel addArea = new JPanel(new BorderLayout(0, 2));
-        addArea.setBackground(UITheme.BG_PANEL);
+        addArea.setBackground(UITheme.palette().bgPanel());
         addArea.add(addRow, BorderLayout.NORTH);
         addArea.add(createRow, BorderLayout.CENTER);
         addArea.add(btnRow, BorderLayout.SOUTH);

@@ -58,7 +58,7 @@ public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCel
         editingRow = row;
         editingTable = table;
         cb.setSelected(I18n.t("filter_read").equals(value));
-        cb.setBackground(UITheme.ACCENT);
+        cb.setBackground(UITheme.palette().accent());
         cb.setForeground(Color.WHITE);
         return cb;
     }
