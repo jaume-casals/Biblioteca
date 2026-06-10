@@ -36,18 +36,9 @@ class FilterController {
         vista.getchckbxNoLlegit().addItemListener(this::enNoLlegitSeleccionado);
 
         java.awt.event.ActionListener enterFiltrar = e -> filtrar();
-        vista.getTextNom().addActionListener(enterFiltrar);
-        vista.getTextAutor().addActionListener(enterFiltrar);
-        vista.getTextISBN().addActionListener(enterFiltrar);
-        vista.getAnyMin().addActionListener(enterFiltrar);
-        vista.getAnyMax().addActionListener(enterFiltrar);
-        vista.getValoracioMin().addActionListener(enterFiltrar);
-        vista.getValoracioMax().addActionListener(enterFiltrar);
-        vista.getPreuMin().addActionListener(enterFiltrar);
-        vista.getPreuMax().addActionListener(enterFiltrar);
-        vista.getFilterEditorial().addActionListener(enterFiltrar);
-        vista.getFilterSerie().addActionListener(enterFiltrar);
-        vista.getFilterIdioma().addActionListener(enterFiltrar);
+        vista.getFilterRegistry().specsOfKind(presentacio.FormFieldRegistry.Kind.TEXT).stream()
+            .map(s -> vista.getFilterRegistry().textField(s.key()))
+            .forEach(tf -> tf.addActionListener(enterFiltrar));
 
         vista.getSearchBar().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             private javax.swing.Timer debounce;

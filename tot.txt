@@ -1,6 +1,6 @@
 ================================================================================
   BACKLOG (tot.txt) — Biblioteca
-  Generated: 2026-06-09
+  Generated: 2026-06-10
   Purpose: what's un-done + what I can code next.
   Session history is in git log; do not duplicate it here.
   Audit gate:  `scripts\test.bat`  (Windows)  |  `make test`  (Linux/macOS).
@@ -10,30 +10,471 @@
   1.  STATUS
 ================================================================================
 
-Active [OPEN] items:  0.
+Active [OPEN] items:  3 (R1, R2, S1) — all proposed; awaiting user sign-off.
 Last test run: 184 plain + 596 JUnit 5 (auto-discovered across 46 test
                 classes); 0 failures.  780 total tests, all green.
 Last session:   17  (run2.ps1 Start-Job CWD fix, 2026-06-10).
-Codebase:       ~84 production .java files in src/.
-                Largest src/ files (lines):
-                  1.  I18n.java                                   610 (i18n data)
-                  2.  ConfiguracioDialog.java                     552
-                  3.  LlibreDaoCore.java                          308
-                  4.  Config.java                                 410
-                  5.  DetallesLlibrePanelControl.java             426
+Codebase:       ~84 production .java files in src/ (tot.txt header stale;
+                recount: 84 files / 201 .java in repo including checkBiblio/
+                and test/).
+
+  Largest hand-written .java files by line count (line-based ranking
+  replaces the byte-based "Largest src/ files" in the old header):
+    1.  checkBiblio/StressTest.java              1746 (Robot-driven chaos
+                                                    harness; §3 S1)
+    2.  src/herramienta/I18n.java                 622 (AUTO-GENERATED —
+                                                    do not hand-edit; edit
+                                                    strings/strings.csv +
+                                                    run `make strings`)
+    3.  src/presentacio/ConfiguracioDialog.java    96 (post-C6 refactor:
+                                                    5 section classes
+                                                    under presentacio/config/)
+    4.  src/presentacio/FilterDrawerPanel.java    384 (filter UI builder;
+                                                    §3 R1)
+    5.  src/herramienta/Config.java               404 (post-C7 refactor:
+                                                    Properties round-trip)
+    6.  src/presentacio/FilterController.java     391 (search + debounce
+                                                    + presets; §3 R1)
+    7.  src/presentacio/galeria/CoverCardFactory  375 (cover-card painter)
+    8.  src/presentacio/EstadistiquesHelper.java  362 (stats computation
+                                                    + chart panels)
+    9.  src/presentacio/TableController.java      345
+   10.  src/presentacio/MainFrameControl.java     280
+   11.  src/presentacio/ContextMenuController.java 264
+   12.  src/persistencia/ServerConect.java        345
+   13.  src/persistencia/LlibreDaoCore.java       284
+   14.  src/presentacio/detalles/control/
+          DetallesLlibrePanelControl.java          430  (§3 R2)
+   15.  src/domini/ControladorDomini.java         348
 
 ================================================================================
   2.  ACTIVE WORK
 ================================================================================
 
-(none — tot.txt is empty of in-progress items as of session 16)
+(none — tot.txt is empty of in-progress items as of session 16; session 17
+was a run2.ps1 fix only, no code change.)
 
 ================================================================================
   3.  CODEABLE CANDIDATES
 ================================================================================
 
 (removed all C1-C13 — every codeable candidate in this backlog has
-been closed; see §5 session log for the per-candidate change log)
+been closed; see §5 session log for the per-candidate change log.
+A new wave of candidates R1, R2, S1, D1-D4 has been opened below.)
+
+────────────────────────────────────────────────────────────────────────────────
+  R1 — FilterDrawerPanel + FilterController: declarative table-driven
+       field registry to remove parallel-field boilerplate
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    FilterDrawerPanel.java:28-66 declares 32 JTextField/JCheckBox/
+        JComboBox/JButton fields one-per-line, and buildFilterDrawer()
+        (lines 72-385) instantiates them in the same order with the same
+        field-naming convention, then wires them in FilterController.java
+        :33-60 listener-by-listener. The hand-written 384-line panel has
+        grown organically across many sessions and is the most likely
+        place a new filter field will be forgotten (wiring, debounce, or
+        persistence). The same pattern recurs in DetallesLlibrePanel
+        (separate file) and is the reason those 430-line detail panels
+        exist.
+
+GOAL:   Replace the imperative `private JTextField textISBN; ...` block
+        with a single declarative table (List<FilterFieldSpec>) that
+        drives (a) field construction, (b) GroupLayout positioning,
+        (c) action-listener wiring, (d) filter-spec extraction.
+        End state: adding a new filter is a single-line table entry.
+
+FILES TO TOUCH:
+  src/presentacio/FilterDrawerPanel.java     refactor ~30 fields → table
+  src/presentacio/FilterController.java      use registry to wire listeners
+  src/presentacio/FormFieldRegistry.java     NEW — already exists as
+                                              skeleton (see §6 finding 2)
+  test/presentacio/FilterDrawerPanelTest.java
+                                             NEW — verify field count,
+                                              wiring, debounce, apply/clear
+
+APPROACH (4 steps, each independently mergeable):
+  1.  Extract `record FilterField(String key, String label, FilterKind
+      kind, Object defValue)` and a `Map<String,JComponent> components`
+      registry. Keep the public getters that callers already use
+      (`getTextISBN()`, `getTextNom()`, …) so nothing outside the
+      drawer/control changes. Add a build-time registry: for each
+      spec, instantiate the right JComponent subclass, store in
+      `components.put(key, c)`, and replace field reads with
+      `lookup(key)`.
+  2.  Replace the 32 individual field declarations + per-field
+      setters/getters with one getter per legacy call site that does
+      `return (JTextField) components.get(key)`. This keeps
+      FilterController and MainFrameControl compiling unchanged.
+  3.  Generate GroupLayout from the spec list. One method:
+      `GroupLayout.SequentialGroup vertical(GroupLayout gl,
+      List<FilterField> specs)` that loops and adds the label+control
+      pair. No more hand-rolled parallel-group chains.
+  4.  Replace FilterController's 12-line `addActionListener` chain
+      with `specs.stream().filter(s -> s.kind == TEXT)
+      .forEach(s -> lookup(s.key).addActionListener(enterFiltrar))`.
+
+RISKS:
+  -   32 getters are still public API; if any external class reads
+      them (MainFrameControl, StressTest, KeyboardShortcuts), the
+      find-replace has to be exhaustive. Mitigation: keep the
+      getters, just change their body to a map lookup.
+  -   Layouts with grouped rows (3 numeric-range rows, 2 read
+      checkboxes) need a `Row` wrapper. Mitigation: the FilterRow
+      + FilterRange records from C5 are the exact pattern to reuse
+      — the C5 split was the precondition for this refactor.
+  -   Theme color application (UITheme.palette().bgField(),
+      etc.) is scattered through buildFilterDrawer. Mitigation: a
+      single `applyTheme(Component c)` pass that walks the registry
+      after build.
+
+VERIFY:
+  scripts\test.bat   (the existing FilterController is covered by
+                      the per-class tests for MostrarBibliotecaPanel;
+                      add FilterDrawerPanelTest to lock the public
+                      getter returns)
+  /scripts\run.ps1 -Auto  (audit gates stay green)
+  run2.ps1           (StressTest phase 20-22 + 45 still pass)
+
+ESTIMATED SCOPE: ~250 LOC removed from FilterDrawerPanel; ~120 LOC
+                 added to FormFieldRegistry + spec list. Net: file
+                 drops from 384 lines to ~140.
+
+────────────────────────────────────────────────────────────────────────────────
+  R2 — DetallesLlibrePanelControl: split inner-class handlers into
+       separate files
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    DetallesLlibrePanelControl.java:296-430 contains 3 private
+        inner classes (DeleteHandler, HistoryHandler, EditHandler)
+        inside a 430-line file. The inner-class pattern was chosen
+        to keep related state private, but the file now has 4
+        unrelated responsibilities: (1) panel construction,
+        (2) SwingWorker coordination for image load, (3) printing
+        (imprimirFitxa, lines 242-290, a 50-line lambda), and (4) the
+        3 handlers. The printing lambda is a strong candidate for
+        extraction; the handlers should be top-level package-private
+        classes in the same package so they're individually testable.
+
+GOAL:   Reduce the file to its single responsibility (panel ctor +
+        state plumbing) and pull the 3 handlers + the printer into
+        their own files.
+
+FILES TO TOUCH:
+  src/presentacio/detalles/control/DetallesLlibrePanelControl.java
+  src/presentacio/detalles/control/DeleteHandler.java      NEW
+  src/presentacio/detalles/control/HistoryHandler.java    NEW
+  src/presentacio/detalles/control/EditHandler.java       NEW
+  src/presentacio/detalles/control/BookDetailPrinter.java NEW
+  test/presentacio/detalles/DeleteHandlerJUnit5Test.java  NEW
+  test/presentacio/detalles/BookDetailPrinterJUnit5Test.java
+                                                          NEW
+
+APPROACH:
+  1.  Promote DeleteHandler to a package-private top-level class.
+      Constructor takes `(DetallesLlibrePanel vista, BibliotecaWriter
+      cd)`. The class becomes individually instantiable and testable
+      without standing up a full DetallesLlibrePanelControl.
+  2.  Same for HistoryHandler, EditHandler.
+  3.  Extract imprimirFitxa's 50-line lambda body into
+      BookDetailPrinter.print(Graphics2D, PageFormat, Llibre,
+      byte[] pendingBlob). Returns a Printable for
+      `job.setPrintable(printer)`. Move the MAX_DESCRIPTION_CHARS,
+      MAX_NOTES_CHARS constants here.
+  4.  In DetallesLlibrePanelControl, replace the inner class
+      declarations with single field references:
+      `private final DeleteHandler deleteHandler = new
+      DeleteHandler(vista, cLlibres);`
+
+RISKS:
+  -   The handlers currently access `vista`, `cLlibres`, and
+      `enActualizarBBDD` as implicit outer-class fields. The new
+      constructors must take all 3 by argument.
+  -   Swing EDT rules: any UI access must be on the EDT. The
+      current code relies on `this` being created on the EDT; the
+      extracted classes must not break that assumption. Mitigation:
+      keep the handlers as classes, not lambdas, and require
+      construction on the EDT (assert via SwingUtilities.isEventDispatchThread()
+      in debug builds).
+
+VERIFY:
+  scripts\test.bat   (the JUnit 5 tests for the new handler classes
+                      are added; the existing 780 tests stay green)
+  /scripts\run.ps1 -Auto  (audit gates stay green)
+  run2.ps1           (StressTest phase 27-31 still pass — they
+                      exercise the handlers)
+
+ESTIMATED SCOPE: file drops from 430 to ~290 lines. 4 new files
+                 totalling ~250 lines. Net: more files, smaller
+                 per-file cognitive load.
+
+────────────────────────────────────────────────────────────────────────────────
+  S1 — StressTest: extract phase-46/47/52 monkey/concurrent helpers
+       into a ChaosActions utility, add 3 new chaos phases 58-60
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    StressTest.java is 1746 lines (the single largest .java in
+        the project). The file mixes 5 concerns: (1) phase runner
+        framework (lines 106-216), (2) Swing dialog helpers (1700-
+        1865), (3) test data generators (uniqueISBN etc.), (4) the
+        50+ phase test methods, and (5) chaos/extreme actions.
+        Specifically `testExtreme_concurrent` (line 192), the random
+        monkey (line 198), and the fuzz phase (line 199) all hand-roll
+        similar `Robot`-driven random action selection. That logic
+        is the most likely to be extended with new chaos phases and
+        is the natural seed for S1.
+
+GOAL:   (a) Extract the chaos action helpers into a ChaosActions
+        helper class, (b) keep all 50+ existing phases unchanged,
+        (c) add 3 new chaos phases that target observed gaps.
+
+GAP ANALYSIS (which chaos dimensions aren't covered):
+  -   File system fault injection: nothing simulates a read-only
+      `~/.biblioteca/` or a disk-full backup directory. Phase 58.
+  -   Locale switching under load: Config.setLang() is never
+      called during a stress run, but production users will hit
+      "F1 → dreceres" in the wrong language. Phase 59.
+  -   DB connection drop simulation: ControladorPersistencia
+      shutdown/reopen is not exercised; the closest is the multi-
+      instance phase 56 which uses a fresh JVM. Phase 60.
+  -   Long-idle screen lock: leaving the app idle for 60+ seconds
+      has no coverage; reported elsewhere as "autosave didn't fire".
+      Phase 60b (deferred — not in scope for S1).
+
+FILES TO TOUCH:
+  checkBiblio/StressTest.java                -50 LOC (delegate to helper)
+  checkBiblio/ChaosActions.java              NEW — 4-5 random-action
+                                              builders
+  checkBiblio/StressTest.java                +90 LOC (3 new phases)
+  checkBiblio/run2.sh / run2.ps1             add STRESS_FILESYSTEM,
+                                              STRESS_LOCALE env vars
+  checkBiblio/audit_report.json              auto-regenerated, no
+                                              manual edit
+
+APPROACH:
+  1.  Create ChaosActions with 3 static methods:
+        - `randomButtonClick(JFrame, Random r)`: pick a random
+          visible AbstractButton, click it.
+        - `randomTextFieldTyping(Container, Random r, String fuzz)`:
+          find a JTextField, type `fuzz`.
+        - `randomTableRowAction(JTable, Random r)`: random select /
+          scroll / fire obrirDetalls.
+      The current `testExtreme_randomMonkey` (line 198) and
+      `testExtreme_concurrent` (line 192) are rewritten to call
+      these; the new phases use them too. No semantic change to
+      existing phases.
+  2.  Phase 58 — Filesystem fault injection:
+        - For each test file in `checkBiblio/` (or any test fixture
+          path), set the parent dir to read-only mid-run, attempt
+          a backup, expect it to fail gracefully (no exception
+          bubbles to EDT).
+        - Restore the dir mode; verify next backup succeeds.
+  3.  Phase 59 — Locale switch under load:
+        - Start a background SwingWorker that hammers the search
+          bar 100x.
+        - From EDT, cycle `Config.setLang("en" | "es" | "ca")` 10x
+          interleaved with the worker.
+        - Verify the search results don't throw, the table
+          re-renders, no NPE on missing i18n keys.
+  4.  Phase 60 — DB connection drop:
+        - Get the current Connection via ControladorPersistencia
+          reflection (or a new test-only reset method).
+        - Run 5 inserts, close+reopen via `resetForTest()`, verify
+          in-flight insert is either committed or rolled back
+          cleanly, app does not deadlock.
+  5.  Wire `STRESS_FILESYSTEM=1` and `STRESS_LOCALE=1` env vars in
+      run2.sh / run2.ps1; default OFF (these are slow and
+      platform-flaky).
+
+RISKS:
+  -   Phase 58 filesystem fault injection is platform-flaky
+      (Windows handles read-only differently than POSIX; the test
+      skips with a warn if `Files.setPosixFilePermissions` is
+      unsupported). Mitigation: gate on `System.getProperty("os.name")`
+      and skip cleanly.
+  -   Phase 60's connection drop is invasive — it forces a
+      resetForTest() which clears the in-memory DB. Mitigation: use
+      a separate H2 file URL via `biblioteca.h2.url` so the drop
+      affects only the test DB.
+  -   Extracting ChaosActions must not change the existing 50+
+      phase pass/warn/fail counts. Mitigation: the rewrite is
+      byte-equivalent in observable behaviour — same Robot calls,
+      same sleep timings, same assertion logic.
+
+VERIFY:
+  run2.ps1 -Auto   (all existing phases still PASS, 3 new phases
+                    registered, no regressions)
+  /scripts\run.ps1 -Auto  (UI audit gates)
+  scripts\test.bat   (no production code changes; tests stay
+                      green at 780)
+
+ESTIMATED SCOPE: StressTest.java stays roughly the same line
+                 count (-50 + 90 = +40 net). 1 new helper file
+                 ~80 lines. 3 new phases, each ~30 lines. Total
+                 ~+200 LOC.
+
+────────────────────────────────────────────────────────────────────────────────
+  D1 — Delete leftover Maven `target/` directory and update .gitignore
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    `target/` (397 files, 6 sub-dirs: classes/, generated-sources/,
+        generated-test-sources/, maven-status/, surefire-reports/,
+        test-classes/) is a Maven build artifact. The project is a
+        plain `make`-driven build (Makefile + scripts/*.bat); pom.xml
+        is for IDE convenience only. `make clean` and `scripts/clean`
+        don't remove it (Makefile:301-302 only `rm -Rf bin/*`).
+        Confirmed via `git status` it's not tracked, but it bloats
+        `find`/`grep` results, IDE indexing, and the repo backup.
+
+GOAL:   Delete `target/`, add `target/` to .gitignore, document in
+        README that the project doesn't use Maven for builds.
+
+FILES TO TOUCH:
+  target/                                   DELETE
+  .gitignore                                ADD `target/`, `.vscode-java-bin/`
+  README.md                                 add "Build: NOT maven" note
+  AGENTS.md                                 add `target/` to "manual
+                                             classpath doesn't include
+                                             it" cleanup list (or just
+                                             reference .gitignore)
+
+RISKS:
+  -   Loss of a stale build artifact someone might want. Mitigation:
+      this is a build output, not source. `make compile` rebuilds
+      `bin/` from `src/`. There's no equivalent "mvn compile" path.
+  -   IDEA users who run `mvn compile` will recreate it. Mitigation:
+      .gitignore entry keeps it out of the repo.
+
+ESTIMATED SCOPE: 5 minutes. 0 LOC.
+
+────────────────────────────────────────────────────────────────────────────────
+  D2 — Delete leftover `.vscode-java-bin/` (old VSCode Java extension
+       webui artifacts)
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    `.vscode-java-bin/` (25 files) contains:
+        - `fichers/234.csv`, `fichers/credit.html`, `fichers/license.html`
+        - `web/index.html`, `web/css/*.css`, `web/js/*.js` (8 JS files)
+        - `LICENSE`, `version.properties`
+        This is the old VSCode Java Language Server's webview
+        preview cache. It's not used by the project; the only `.vscode*`
+        entry in .gitignore (line 40) is `.vscode/` (the user's own
+        config), not `.vscode-java-bin/`. The webui is gone since
+        the web/API removal (see Makefile:125 still references
+        `lib/javalin-6.3.0.jar` and `lib/kotlin-stdlib-2.0.21.jar` —
+        that's the leftover webremoval symptom).
+
+GOAL:   Delete `.vscode-java-bin/`, add to .gitignore.
+
+FILES TO TOUCH:
+  .vscode-java-bin/                          DELETE
+  .gitignore                                 ADD `.vscode-java-bin/`
+
+RISKS:
+  -   None — confirmed via `git status` it's not tracked. The
+      directory is in CWD but invisible to git.
+
+ESTIMATED SCOPE: 1 minute. 0 LOC.
+
+────────────────────────────────────────────────────────────────────────────────
+  D3 — Fix Makefile `jar` and `fat-jar` targets — they reference
+       `javalin-6.3.0.jar` and `kotlin-stdlib-2.0.21.jar` which
+       don't exist in `lib/`
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    Makefile:125 (slim JAR manifest) hardcodes
+      `Class-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar`
+    and Makefile:129-141 (fat-jar) tries to unzip the same
+    two non-existent jars. Both targets will fail or produce
+    a broken jar if invoked. The web/API removal (sessions
+    ~12-14) deleted `lib/javalin-6.3.0.jar` and
+    `lib/kotlin-stdlib-2.0.21.jar` but the Makefile was not
+    updated. The `make jar` and `make fat-jar` targets have
+    been silently broken since then.
+
+GOAL:   Either (a) remove the `jar` and `fat-jar` targets
+        (they're not on the test gate, not on the README's
+        main run path), or (b) fix them to not reference the
+        deleted jars.
+
+FILES TO TOUCH:
+  Makefile                                   fix/remove `jar:` and
+                                              `fat-jar:` targets;
+                                              also fix `installer-windows:`
+                                              and `installer-linux:`
+                                              which hardcode
+                                              `/home/j/Documents/DeV/
+                                              Biblioteca/` and the
+                                              same deleted jars
+  README.md                                  remove `make jar` /
+                                              `make fat-jar` /
+                                              `make installer-*`
+                                              references if we
+                                              choose deletion; or
+                                              document the fixed
+                                              targets
+
+APPROACH:
+  1.  Option A (delete):  remove lines 123-143 (jar + fat-jar).
+      Also remove lines 162-260 (installer-windows, jpackage-win,
+      installer-win-standalone, installer-linux) since they
+      reference deleted jars AND a hardcoded path. These targets
+      were not part of the test gate and the project's README
+      doesn't mention them.
+  2.  Option B (fix):    keep the targets, drop the webui jar
+      references. Re-test on a real Linux box to verify the
+      resulting jar has all 3 deps bundled. This is out of
+      scope for D3 and depends on D1/D2 cleanup first (free
+      up space in the repo).
+  3.  Recommend Option A (delete) — the project has no CI that
+      builds installers, and the targets have been silently
+      broken for multiple sessions.
+
+RISKS:
+  -   A user with a working `make fat-jar` pipeline loses it.
+      Mitigation: a single one-time git commit message documents
+      the removal and the path forward (re-add when needed).
+  -   If Option B is chosen, the fat-jar build must be smoke-tested
+      by `java -jar biblioteca-fat.jar main.Ejecutable` to confirm
+      no NoClassDefFoundError. Mitigation: skip for D3; defer to
+      a future "release:1.0" candidate.
+
+ESTIMATED SCOPE: 5-15 minutes. ~140 LOC removed from Makefile.
+
+────────────────────────────────────────────────────────────────────────────────
+  D4 — Update tot.txt STATUS section to reflect actual file sizes
+       (the byte-based "Largest src/ files" table is stale; some
+       files have grown or shrunk since C1-C13 sessions)
+────────────────────────────────────────────────────────────────────────────────
+
+WHY:    tot.txt:18-23 says
+          1.  I18n.java                                   610 (i18n data)
+          2.  ConfiguracioDialog.java                     552
+          3.  LlibreDaoCore.java                          308
+          4.  Config.java                                 410
+          5.  DetallesLlibrePanelControl.java             426
+        Reality (post-C6/C7 refactor):
+          I18n.java                       622 lines (AUTO-GEN)
+          ConfiguracioDialog.java          96 lines (was 552 pre-C6)
+          LlibreDaoCore.java              284 lines (was 308)
+          Config.java                     404 lines (was 410)
+          DetallesLlibrePanelControl.java 430 lines (still ≈ 426)
+        The status section is misleading any agent that reads
+        tot.txt to find the next big refactor.
+
+GOAL:   Replace the "Largest src/ files (lines)" list with the
+        current ranking (line-based, not byte-based) and the
+        C6/C7 refactor note.
+
+FILES TO TOUCH:
+  tot.txt                                    this file
+
+RISKS:
+  -   None. The new ranking is computed at planning time and
+      is already in §1 of this tot.txt update.
+
+ESTIMATED SCOPE: 1 minute. The "Largest" list is now in §1
+                 above; this task is the maintenance commit.
 
 ================================================================================
   4.  TEST GATE
@@ -152,3 +593,82 @@ Session 14 (2026-06-10) — Fixed scripts\test.bat auto-discovery bug. The
                           helper for the conversion. Now 46 JUnit 5 classes
                           are discovered and run, each with its own in-memory
                           H2 DB.
+
+================================================================================
+  6.  EXPLORATION NOTES  (planning-time observations; not commitments)
+================================================================================
+
+These were used to write §3. They are kept here so a future reader
+can verify the plan was evidence-based, not guessed.
+
+1.  `I18n.java` is auto-generated by `scripts/gen_strings.py` from
+    `strings/strings.csv`. It contains 574 `T(...)` calls (one per
+    i18n key) plus 36 lines of lookup/lang-index/applySwingOptionPane
+    logic. Editing the file by hand is futile — `make strings`
+    overwrites it. The real "translation surface" is
+    `src/herramienta/strings_{ca,es,en}.properties` + the
+    CSV. The auto-gen comment is on line 1.
+
+2.  `FormFieldRegistry.java` already exists in
+    `src/presentacio/` (4 lines: a skeleton class). It was
+    apparently scaffolded for R1 and never completed. R1 picks
+    up that skeleton rather than starting fresh.
+
+3.  `ConfiguracioDialog.java` post-C6 is 96 lines. The pre-C6
+    monolith (552 lines, tot.txt:20) was already split into 6
+    classes under `presentacio/config/`:
+        ConfiguracioAppearanceSection.java
+        ConfiguracioButtonBar.java
+        ConfiguracioDataSection.java
+        ConfiguracioDbSection.java
+        ConfiguracioDialogListener.java  (interface)
+        ConfiguracioImagesSection.java
+        ConfiguracioLanguageSection.java
+        ConfigSections.java              (lookup helper)
+    tot.txt's stale "Largest files" list is the only place the
+    552-line figure still appears.
+
+4.  `DetallesLlibrePanelControl.java` has 3 private inner
+    classes (DeleteHandler:296, HistoryHandler:315, EditHandler:340)
+    plus a 50-line printing lambda at lines 242-290. The lambda
+    has 3 magic numbers (IMG_W=200, MAX_DESCRIPTION_CHARS=120,
+    MAX_NOTES_CHARS=200) that would be more discoverable as
+    a separate class with named constants.
+
+5.  `target/` and `.vscode-java-bin/` are NOT tracked by git
+    (`git status` confirms). They are build artifacts that
+    should be in .gitignore.
+
+6.  `Makefile:123-260` is 4 targets (`jar`, `fat-jar`,
+    `installer-windows`, `installer-linux` / `installer-win-
+    standalone`, `jpackage-win`) that reference deleted
+    webui jars (`javalin-6.3.0.jar`, `kotlin-stdlib-2.0.21.jar`)
+    and a hardcoded `/home/j/Documents/DeV/Biblioteca/` path.
+    None are on the test gate, none are mentioned in README
+    "Execució" / "Compilació" sections.
+
+7.  StressTest.java has 58 phase(...) calls (lines 131-213).
+    Existing coverage matrix:
+        Validation (1-8): well-covered
+        Chaos inputs (9-13): well-covered
+        Pagination (15): one phase
+        Search (16-19): well-covered
+        Filter (20-22): well-covered
+        UI toggles (23-26): well-covered
+        Details (27-31): well-covered
+        Llistes mgmt (32): one phase
+        Stats/Config (33-34): one phase each
+        Export/Backup (35-36): minimal
+        Keyboard (37-39): minimal
+        Misc (40-41): one each
+        Data integrity (41B): one phase
+        Extreme (43-48): well-covered
+        Bulk insert (49-50): well-covered
+        Memory probe (51): one phase
+        Monkey/Fuzz (52-53): well-covered
+        Concurrent storm (54-55): well-covered
+        Multi-instance (56): optional
+        Long-soak (57): optional
+        Cleanup (42): one phase
+    Gaps: filesystem faults, locale switching, DB connection
+    drop, "long-idle autosave" — phases 58-60b.

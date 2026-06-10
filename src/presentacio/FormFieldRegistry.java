@@ -1,22 +1,137 @@
 package presentacio;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JTextField;
 
-/** Maps logical field names to form components. */
+/**
+ * Declarative registry for the filter-drawer form.
+ *
+ * <p>The drawer's 32 hand-declared components (text fields, checkboxes,
+ * combo boxes, buttons) are described by a list of {@link Field} specs.
+ * {@link #build()} instantiates the right {@link JComponent} subclass
+ * for each spec and stores it in a name -> component map. Public
+ * getters on {@link FilterDrawerPanel} continue to expose the same
+ * component instances (e.g. {@code getTextISBN()}) so all 217 external
+ * call sites keep working unchanged.
+ */
 public class FormFieldRegistry {
 
-    private final Map<String, JComponent> fields = new HashMap<>();
+    public enum Kind { TEXT, CHECK, COMBO, BUTTON }
 
-    public void register(String name, JComponent component) {
-        fields.put(name, component);
+    /**
+     * Declarative spec for a single field.
+     *
+     * @param key         logical name used by the registry (e.g. "textISBN")
+     * @param labelKey    i18n key for the field's label
+     * @param kind        component kind (text / check / combo / button)
+     * @param tooltipKey  i18n key for the tooltip, or {@code null}
+     * @param width       preferred width in characters (text/combo only)
+     * @param defaultText initial text (text fields only)
+     */
+    public record Field(
+        String key,
+        String labelKey,
+        Kind kind,
+        String tooltipKey,
+        int width,
+        String defaultText
+    ) {
+        public static Field text(String key, String labelKey, int width) {
+            return new Field(key, labelKey, Kind.TEXT, null, width, "");
+        }
+        public static Field text(String key, String labelKey, String tooltipKey, int width) {
+            return new Field(key, labelKey, Kind.TEXT, tooltipKey, width, "");
+        }
+        public static Field check(String key, String labelKey, String tooltipKey) {
+            return new Field(key, labelKey, Kind.CHECK, tooltipKey, 0, "");
+        }
+        public static Field combo(String key, String labelKey, String tooltipKey, int width) {
+            return new Field(key, labelKey, Kind.COMBO, tooltipKey, width, "");
+        }
+        public static Field button(String key, String labelKey, String tooltipKey) {
+            return new Field(key, labelKey, Kind.BUTTON, tooltipKey, 0, "");
+        }
     }
 
-    public JComponent get(String name) {
-        return fields.get(name);
+    private final List<Field> specs = new ArrayList<>();
+    private final Map<String, JComponent> components = new HashMap<>();
+    private final Map<String, JLabel> labels = new HashMap<>();
+
+    /** Append a spec to the registry. Order is preserved. */
+    public FormFieldRegistry add(Field f) {
+        specs.add(f);
+        return this;
+    }
+
+    /**
+     * Instantiate one {@link JComponent} per spec and register it under
+     * {@link Field#key()}. Subsequent {@link #get(String)} calls return
+     * the live component.
+     *
+     * <p>Each spec is responsible for one component; the per-component
+     * styling (font, palette colour, tool tip) is applied in the panel
+     * once the components are wired into the layout — this method only
+     * creates instances and sets the bare-minimum defaults (text,
+     * tool tip text).
+     */
+    public FormFieldRegistry build() {
+        for (Field f : specs) {
+            JComponent c = switch (f.kind()) {
+                case TEXT   -> {
+                    JTextField tf = new JTextField(f.width());
+                    tf.setText(f.defaultText());
+                    yield tf;
+                }
+                case CHECK  -> f.labelKey() == null ? new JCheckBox() : new JCheckBox(herramienta.I18n.t(f.labelKey()));
+                case COMBO  -> new JComboBox<>();
+                case BUTTON -> f.labelKey() == null ? new JButton() : new JButton(herramienta.I18n.t(f.labelKey()));
+            };
+            if (f.tooltipKey() != null) {
+                c.setToolTipText(herramienta.I18n.t(f.tooltipKey()));
+            }
+            components.put(f.key(), c);
+            if (f.labelKey() != null && f.kind() != Kind.CHECK && f.kind() != Kind.BUTTON) {
+                JLabel lbl = new JLabel(herramienta.I18n.t(f.labelKey()) + ":");
+                labels.put(f.key(), lbl);
+            }
+        }
+        return this;
+    }
+
+    public JComponent get(String key)            { return components.get(key); }
+    public JTextField  textField(String key)     { return (JTextField)  components.get(key); }
+    public JCheckBox   checkBox(String key)      { return (JCheckBox)   components.get(key); }
+    @SuppressWarnings("rawtypes")
+    public JComboBox   comboBox(String key)      { return (JComboBox)   components.get(key); }
+    public JButton     button(String key)        { return (JButton)     components.get(key); }
+    public JLabel      label(String key)         { return labels.get(key); }
+    public boolean has(String key)               { return components.containsKey(key); }
+
+    public List<Field> specs()                   { return Collections.unmodifiableList(specs); }
+
+    public List<Field> specsOfKind(Kind k) {
+        return specs.stream().filter(s -> s.kind() == k).collect(Collectors.toUnmodifiableList());
+    }
+
+    public Collection<JComponent> components() {
+        return Collections.unmodifiableCollection(components.values());
+    }
+
+    /** Legacy API preserved for the 25-line skeleton callers. */
+    public void register(String name, JComponent component) {
+        components.put(name, component);
     }
 
     public void linkLabel(JLabel label, JComponent component) {

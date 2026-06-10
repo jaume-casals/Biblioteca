@@ -172,5 +172,6 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JButton getBtnToggleFiltres()      { return topBar.getBtnToggleFiltres(); }
 	public JButton getBtnToggleVista()        { return topBar.getBtnToggleVista(); }
 	public JButton getBtnGroupSeries()        { return topBar.getBtnGroupSeries(); }
+	public FormFieldRegistry getFilterRegistry() { return filterDrawer.getRegistry(); }
 	public GaleriaCobertesPanel getGaleria()  { return centerTable.getGaleria(); }
 }
