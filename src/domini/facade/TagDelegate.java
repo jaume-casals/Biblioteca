@@ -7,6 +7,7 @@ import java.util.Set;
 
 import domini.BibliotecaException;
 import domini.Tag;
+import herramienta.I18n;
 
 /**
  * Tag ({@link Tag}) management and book↔tag relation operations.
@@ -32,7 +33,7 @@ public final class TagDelegate {
     }
 
     public Tag addTag(String nom) {
-        if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom de l'etiqueta no pot estar buit");
+        if (nom == null || nom.isBlank()) throw new BibliotecaException.Validation(I18n.t("val_tag_blank"));
         try {
             int id = state.persistence().createTag(nom);
             Tag t = new Tag(id, nom);

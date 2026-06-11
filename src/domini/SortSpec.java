@@ -25,7 +25,10 @@ public final class SortSpec {
     private final boolean ascending;
 
     public SortSpec(String column, boolean ascending) {
-        this.column = (column != null && SQL_COLS.containsKey(column)) ? column : COL_ISBN;
+        if (column == null || !SQL_COLS.containsKey(column))
+            throw new IllegalArgumentException("Unknown sort column: " + column
+                + " (valid: " + SQL_COLS.keySet() + ")");
+        this.column = column;
         this.ascending = ascending;
     }
 

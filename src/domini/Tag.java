@@ -16,7 +16,8 @@ public class Tag {
     public int getId() { return id; }
     public String getNom() { return nom; }
     public void setNom(String nom) {
-        if (nom == null || nom.isBlank()) throw new IllegalArgumentException("El nom del tag no pot estar buit");
+        if (nom == null || nom.isBlank())
+            throw new BibliotecaException.Validation(herramienta.I18n.t("val_tag_blank"));
         this.nom = nom;
     }
 
@@ -33,11 +34,15 @@ public class Tag {
 
     // Cross-db identity concern: equals compares only by database-generated id,
     // so two Tags with the same nom but from different DB instances will never be equal.
+    // Transient (id=0) tags are never equal to each other — they represent in-progress
+    // creates whose DB id is not yet known.
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Tag)) return false;
-        return this.id == ((Tag) o).id;
+        Tag other = (Tag) o;
+        if (this.id == 0 || other.id == 0) return false;
+        return this.id == other.id;
     }
 
     @Override

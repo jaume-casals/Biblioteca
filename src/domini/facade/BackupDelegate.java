@@ -79,7 +79,10 @@ public final class BackupDelegate {
                 state.persistence().executeSQLFile(file);
             } catch (Exception e) {
                 try { state.persistence().executeSQLFile(backup); }
-                catch (Exception ex) { throw new BibliotecaException("Restore failed and rollback also failed: " + e.getMessage() + "; rollback error: " + ex.getMessage(), e); }
+                catch (Exception ex) { throw new BibliotecaException(
+                    herramienta.I18n.t("dlg_restore_rollback_failed", backup.getAbsolutePath())
+                    + "\n\nOriginal error: " + e.getMessage()
+                    + "\nRollback error: " + ex.getMessage(), ex); }
                 throw new BibliotecaException("Restore failed: " + e.getMessage(), e);
             }
         } catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }

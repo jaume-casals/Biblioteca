@@ -15,17 +15,7 @@ final class LlibreMapper {
     private LlibreMapper() {}
 
     static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
-        Llibre l = Llibre.builder()
-            .isbn(rs.getLong("ISBN"))
-            .nom(rs.getString("nom"))
-            .autor(rs.getString("autor"))
-            .any(rs.getObject("any", Integer.class))
-            .descripcio(null)
-            .valoracio(rs.getObject("valoracio", Double.class))
-            .preu(rs.getObject("preu", Double.class))
-            .llegit(rs.getBoolean("llegit"))
-            .imatge(rs.getString("imatge"))
-            .build();
+        Llibre l = buildLlibreCore(rs, null);
         l.setHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, false);
         l.setHeavyFieldsLoaded(false);
@@ -33,25 +23,29 @@ final class LlibreMapper {
     }
 
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
-        Llibre l = Llibre.builder()
+        Llibre l = buildLlibreCore(rs, rs.getString("descripcio"));
+        l.setHasBlob(rs.getBoolean("has_blob"));
+        fillLlibreTail(l, rs, true);
+        return l;
+    }
+
+    private static Llibre buildLlibreCore(ResultSet rs, String descripcio) throws SQLException {
+        return Llibre.builder()
             .isbn(rs.getLong("ISBN"))
             .nom(rs.getString("nom"))
             .autor(rs.getString("autor"))
             .any(rs.getObject("any", Integer.class))
-            .descripcio(rs.getString("descripcio"))
+            .descripcio(descripcio)
             .valoracio(rs.getObject("valoracio", Double.class))
             .preu(rs.getObject("preu", Double.class))
             .llegit(rs.getBoolean("llegit"))
             .imatge(rs.getString("imatge"))
             .build();
-        l.setHasBlob(rs.getBoolean("has_blob"));
-        l.setNotes(rs.getString("notes"));
-        fillLlibreTail(l, rs, true);
-        return l;
     }
 
-    private static void fillLlibreTail(Llibre l, ResultSet rs, boolean withHeavy) throws SQLException {
-        if (withHeavy) {
+    /** @param includeNotes if true, read the {@code notes} column from the result set */
+    private static void fillLlibreTail(Llibre l, ResultSet rs, boolean includeNotes) throws SQLException {
+        if (includeNotes) {
             l.setNotes(rs.getString("notes"));
         }
         l.setPagines(rs.getInt("pagines"));

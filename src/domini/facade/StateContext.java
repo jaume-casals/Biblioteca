@@ -43,6 +43,7 @@ public final class StateContext {
         this.bib = bib;
         this.llistes = llistes;
         this.tags = tags;
+        rebuildIdIndexesLocked();
     }
 
     public Object lock() { return lock; }
@@ -84,7 +85,7 @@ public final class StateContext {
     }
 
     /** Rebuild id-index maps from the current backing lists. Must be called under lock. */
-    public void rebuildIdIndexesLocked() {
+    private void rebuildIdIndexesLocked() {
         llistesById.clear();
         for (Llista l : llistes) llistesById.put(l.getId(), l);
         tagsById.clear();

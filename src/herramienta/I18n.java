@@ -3,13 +3,9 @@ package herramienta;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.UIManager;
 
 public class I18n {
-
-    private static final Logger LOG = Logger.getLogger(I18n.class.getName());
 
     // index: 0=ca  1=es  2=en
     private static final Map<String, String[]> TABLE = new LinkedHashMap<>();
@@ -249,6 +245,8 @@ public class I18n {
         T("dlg_confirm_restore_title", "Confirmar restauració", "Confirmar restauración", "Confirm restore");
         T("dlg_restore_done", "Base de dades restaurada correctament.", "Base de datos restaurada correctamente.", "Database restored successfully.");
         T("dlg_restore_done_title", "Restauració completada", "Restauración completada", "Restore complete");
+        T("dlg_restore_done_cover_note", "ATENCIÓ: Les portades (imatges) NO s''inclouen a la còpia SQL. Després de restaurar, re-descarrega les portades amb el botó Cerca a Internet.", "ATENCIÓN: Las portadas (imágenes) NO se incluyen en la copia SQL. Tras restaurar, re-descarga las portadas con el botón Buscar en Internet.", "WARNING: Cover images are NOT included in the SQL backup. After restore, re-fetch covers with the Search Internet button.");
+        T("dlg_restore_rollback_failed", "ERROR: La restauració ha fallat I la recuperació automàtica també ha fallat. La base de dades pot estar en un estat inconsistent.\\n\\nS''ha guardat una còpia de seguretat d''abans de la restauració a:\\n{0}\\n\\nNO desis dades noves en aquesta base de dades. Re-importa el fitxer de còpia de seguretat anterior des del menú Restaurar per recuperar l''estat.", "ERROR: La restauración ha fallado Y la recuperación automática también ha fallado. La base de datos puede estar en un estado inconsistente.\\n\\nSe ha guardado una copia de seguridad de antes de la restauración en:\\n{0}\\n\\nNO guardes datos nuevos en esta base de datos. Re-importa el fichero de copia de seguridad anterior desde el menú Restaurar para recuperar el estado.", "ERROR: Restore failed AND the automatic rollback also failed. The database may be in an inconsistent state.\\n\\nA pre-restore snapshot is saved at:\\n{0}\\n\\nDO NOT save new data to this database. Re-import the snapshot file above via the Restore menu to recover.");
         T("dlg_book_detail_title", "Expedient del llibre {0}", "Ficha del libro {0}", "Book details: {0}");
         T("dlg_confirm_delete_book_one", "Eliminar \"{0}\"?\\nAquesta acció no es pot desfer.", "¿Eliminar \"{0}\"?\\nEsta acción no se puede deshacer.", "Delete \"{0}\"?\\nThis action cannot be undone.");
         T("btn_save_java", "Guardar", "Guardar", "Save");
@@ -567,6 +565,10 @@ public class I18n {
         T("dlg_connection_ok", "Connexió exitosa", "Conexión exitosa", "Connection successful");
         T("dlg_connection_fail", "Connexió fallida", "Conexión fallida", "Connection failed");
         T("btn_test_connection", "Prova connexió", "Probar conexión", "Test connection");
+        T("theme_light", "Clar", "Claro", "Light");
+        T("theme_dark", "Fosc", "Oscuro", "Dark");
+        T("theme_sepia", "Sèpia", "Sépia", "Sepia");
+        T("theme_ocean", "Oceà", "Océano", "Ocean");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
         T("err_causa", "Causa:", "Causa:", "Cause:");
         T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");
@@ -592,7 +594,7 @@ public class I18n {
         String raw;
         if (vals == null) {
             String msg = "[I18n] Missing key: " + key;
-            LOG.warning(msg);
+            System.err.println(msg);
             if ("true".equals(System.getProperty("biblioteca.test")))
                 throw new IllegalStateException(msg);
             raw = key;
@@ -601,7 +603,7 @@ public class I18n {
             raw = vals[Math.min(idx, vals.length - 1)];
         }
         if (args.length > 0 && !raw.contains("{0}")) {
-            LOG.log(Level.WARNING, "[I18n] Key \u0027{0}\u0027 has no placeholder for args", key);
+            System.err.println("[I18n] Key '" + key + "' has no placeholder for args");
         }
         for (int i = 0; i < args.length; i++)
             raw = raw.replace("{" + i + "}", String.valueOf(args[i]));
@@ -617,6 +619,9 @@ public class I18n {
     }
 
     private static int langIndex() {
-        return Lang.fromCode(Config.getLang()).ordinal();
+        String lang = Config.getLang();
+        if ("es".equals(lang)) return 1;
+        if ("en".equals(lang)) return 2;
+        return 0; // ca default
     }
 }

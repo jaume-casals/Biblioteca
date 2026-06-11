@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class LlibreSearchDao {
     }
 
     public ArrayList<Llibre> search(LlibreFilter f, int offset, int pageSize) {
+        if (pageSize < 0) throw new IllegalArgumentException("pageSize must be >= 0 (0 means no limit); got " + pageSize);
         ArrayList<Llibre> result = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT DISTINCT " + LlibreDaoCore.LLIBRE_COLUMNS_L + " FROM llibre l");
@@ -32,7 +34,11 @@ public class LlibreSearchDao {
         List<Object> params = new ArrayList<>();
         if (f.getLlistaId() != null) params.add(f.getLlistaId());
         if (f.getTagId()    != null) params.add(f.getTagId());
-        if (f.getNom()          != null && !f.getNom().isBlank()) { sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)"); String p = "%" + f.getNom() + "%"; params.add(p); params.add(p); params.add(p); params.add(p); }
+        if (f.getNom()          != null && !f.getNom().isBlank()) {
+            sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)");
+            String p = "%" + f.getNom() + "%";
+            params.add(p); params.add(p); params.add(p); params.add(p);
+        }
         if (f.getAutor()        != null && !f.getAutor().isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.getAutor() + "%"); }
         if (f.getIsbn()         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.getIsbn()); }
         if (f.getAnyMin()       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.getAnyMin()); }
@@ -70,7 +76,7 @@ public class LlibreSearchDao {
             case Integer i -> ps.setInt(index, i);
             case Double  d -> ps.setDouble(index, d);
             case Boolean b -> ps.setBoolean(index, b);
-            case null      -> ps.setObject(index, null);
+            case null      -> ps.setObject(index, null, Types.NULL);
             default        -> throw new IllegalArgumentException("Unsupported filter parameter type: " + p.getClass().getName());
         }
     }

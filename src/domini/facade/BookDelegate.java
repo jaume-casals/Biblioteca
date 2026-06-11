@@ -105,36 +105,38 @@ public final class BookDelegate {
     // â”€â”€ CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public void addLlibre(Llibre l) {
-        state.withLock(() -> {
-            int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
-            if (pos >= 0)
+        int pos = state.withLockReturning(() -> {
+            int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
+            if (p >= 0)
                 throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
-            try { state.persistence().afegirLlibre(l); }
-            catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            pos = -(pos + 1);
-            state.bib().add(pos, l);
+            return -(p + 1);
         });
+        try { state.persistence().afegirLlibre(l); }
+        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        state.withLock(() -> state.bib().add(pos, l));
     }
 
     public void deleteLlibre(Llibre l) {
-        state.withLock(() -> {
-            int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
-            if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
-            try { state.persistence().eliminarLlibre(l); }
-            catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            state.bib().remove(pos);
+        int pos = state.withLockReturning(() -> {
+            int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
+            if (p < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
+            return p;
         });
+        try { state.persistence().eliminarLlibre(l); }
+        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        state.withLock(() -> state.bib().remove(pos));
     }
 
     public void deleteLlibreByIsbn(Long ISBN) {
         if (ISBN == null) throw new BibliotecaException.Validation("ISBN no pot ser null");
-        state.withLock(() -> {
-            int pos = Collections.binarySearch(state.bib(), searchKey(ISBN), ISBN_COMPARATOR);
-            if (pos < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
-            try { state.persistence().eliminarLlibre(ISBN); }
-            catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            state.bib().remove(pos);
+        int pos = state.withLockReturning(() -> {
+            int p = Collections.binarySearch(state.bib(), searchKey(ISBN), ISBN_COMPARATOR);
+            if (p < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
+            return p;
         });
+        try { state.persistence().eliminarLlibre(ISBN); }
+        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        state.withLock(() -> state.bib().remove(pos));
     }
 
     public void updateLlibre(Llibre l) {
@@ -186,8 +188,11 @@ public final class BookDelegate {
         try {
             state.persistence().setLlibreBlob(isbn, blob);
             state.withLock(() -> {
-                for (Llibre l : state.bib()) {
-                    if (java.util.Objects.equals(l.getISBN(), isbn)) { l.setImatgeBlob(blob); l.setHasBlob(true); break; }
+                int pos = Collections.binarySearch(state.bib(), searchKey(isbn), ISBN_COMPARATOR);
+                if (pos >= 0) {
+                    Llibre l = state.bib().get(pos);
+                    l.setImatgeBlob(blob);
+                    l.setHasBlob(true);
                 }
             });
         }

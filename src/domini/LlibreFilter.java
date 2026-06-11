@@ -19,8 +19,10 @@ public class LlibreFilter {
     private Integer llistaId;
     private SortSpec sort = SortSpec.defaultAsc();
 
-    private LlibreFilter() {}
+    public LlibreFilter() {}
 
+    /** @deprecated use {@code new LlibreFilter()} directly. */
+    @Deprecated
     public static LlibreFilter empty() { return new LlibreFilter(); }
 
     public String getAutor() { return autor; }
@@ -57,10 +59,13 @@ public class LlibreFilter {
     public LlibreFilter withFormat(String v) { this.format = v; return this; }
     public LlibreFilter withIdioma(String v) { this.idioma = v; return this; }
     public LlibreFilter withLlistaId(Integer v) { this.llistaId = v; return this; }
-    public LlibreFilter withSort(SortSpec sort) { this.sort = sort; return this; }
+    public LlibreFilter withSort(SortSpec sort) {
+        this.sort = (sort != null) ? sort : SortSpec.defaultAsc();
+        return this;
+    }
 
     public LlibreFilter copy() {
-        LlibreFilter f = empty();
+        LlibreFilter f = new LlibreFilter();
         f.autor = this.autor; f.nom = this.nom; f.isbn = this.isbn;
         f.anyMin = this.anyMin; f.anyMax = this.anyMax;
         f.valoracioMin = this.valoracioMin; f.valoracioMax = this.valoracioMax;

@@ -1832,7 +1832,7 @@ public class BibliotecaTest {
             cd.addLlibre(l);
 
             l.setNom("Updated Title");
-            l.setAutor("Updated Author");
+            l.setAutors(java.util.List.of("Updated Author"));
             l.setValoracio(9.0);
             l.setLlegit(true);
             cd.updateLlibre(l);

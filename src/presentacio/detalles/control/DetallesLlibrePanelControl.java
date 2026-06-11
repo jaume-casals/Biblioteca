@@ -1,6 +1,8 @@
 package presentacio.detalles.control;
 
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import domini.Llibre;
 import interficie.BibliotecaWriter;
@@ -72,7 +74,11 @@ public class DetallesLlibrePanelControl {
 					new javax.swing.SwingWorker<Void, Void>() {
 						@Override protected Void doInBackground() {
 							try { cLlibres.loadHeavyFields(book); }
-							catch (Exception e) { /* heavy-field load is opportunistic; panel renders without it */ }
+							catch (Exception e) {
+								Logger.getLogger(DetallesLlibrePanelControl.class.getName())
+									.log(Level.WARNING, "Heavy-field load failed for ISBN " + book.getISBN()
+										+ "; descripcio/notes will render empty and any save will overwrite the originals", e);
+							}
 							return null;
 						}
 						@Override protected void done() {

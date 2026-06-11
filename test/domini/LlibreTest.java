@@ -37,21 +37,20 @@ class LlibreTest {
     // ── Autor / Autors ───────────────────────────────────────────────────
 
     @Test
-    @DisplayName("setAutor(null) yields empty autors list and getAutor returns ''")
-    void setAutorNullClearsAutors() {
+    @DisplayName("setAutors(null) clears autors list")
+    void setAutorsNullClearsAutors() {
         Llibre l = newBook();
         l.setAutors(java.util.List.of("A", "B"));
-        l.setAutor(null);
+        l.setAutors(null);
         assertThat(l.getAutors()).isEmpty();
-        assertThat(l.getAutor()).isEqualTo("");
     }
 
     @Test
-    @DisplayName("setAutor('') yields empty autors list")
-    void setAutorBlankClearsAutors() {
+    @DisplayName("setAutors(emptyList()) clears autors list")
+    void setAutorsEmptyClearsAutors() {
         Llibre l = newBook();
         l.setAutors(java.util.List.of("A", "B"));
-        l.setAutor("");
+        l.setAutors(java.util.List.of());
         assertThat(l.getAutors()).isEmpty();
     }
 

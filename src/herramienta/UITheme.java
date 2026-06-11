@@ -177,9 +177,9 @@ public class UITheme {
     private static final Color OC_NIMBUS_BG     = new Color(0x0077A8);
 
     // ── Fonts (rebuilt by rebuildFonts) ──────────────────────────────────────
-    public static Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
-    public static Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
-    public static Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+    public static volatile Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
+    public static volatile Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
+    public static volatile Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
 
     /**
      * Base font, rebuilt by {@link #rebuildFonts(String)} when the configured

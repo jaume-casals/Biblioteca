@@ -3,7 +3,6 @@ package persistencia;
 import domini.Tag;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,8 +18,8 @@ public class TagDao {
      * un vector d'SQL injection. Mantenir sincronitzada amb el switch en
      * memòria de {@code ControladorDomini.getDistinctValues}.
      */
-    public static final Set<String> AUTOCOMPLETE_COLUMNS = new HashSet<>(
-        Arrays.asList("editorial", "serie", "idioma", "pais_origen", "format", "llengua_original"));
+    public static final Set<String> AUTOCOMPLETE_COLUMNS = Set.of(
+        "editorial", "serie", "idioma", "pais_origen", "format", "llengua_original");
 
     private volatile java.util.List<LlibreTagRow> llibreTagCache;
 

@@ -67,11 +67,7 @@ public final class StatsDelegate {
         List<Llibre> snapshot = state.withLockReturning(() -> new ArrayList<>(state.bib()));
         for (Llibre l : snapshot) {
             List<String> a = l.getAutors();
-            if (a != null && !a.isEmpty()) {
-                a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);
-            } else if (l.getAutor() != null && !l.getAutor().isEmpty()) {
-                names.add(l.getAutor());
-            }
+            if (a != null) a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);
         }
         return new ArrayList<>(names);
     }

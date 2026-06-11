@@ -66,7 +66,8 @@ public class Config {
         return null;
     }
 
-    /** Domain of a key.  Unknown keys land in the FILTER store. */
+    /** Domain of a key.  Unknown keys land in the FILTER store and are logged
+     *  so a typo (e.g. {@code colWidths_X} instead of {@code colWidth_X}) is visible. */
     private static Domain domainOf(String key) {
         if (UI_KEYS.contains(key))         return Domain.UI;
         if (DB_KEYS.contains(key))         return Domain.DB;
@@ -74,6 +75,7 @@ public class Config {
         if (FILTER_KEYS.contains(key))     return Domain.FILTER;
         if (key.startsWith("colWidth_") || key.startsWith("colVisible_")) return Domain.WINDOW;
         if (key.startsWith("preset."))     return Domain.UI;
+        LOG.log(java.util.logging.Level.WARNING, "Config key \"{0}\" has no matching domain; routing to FILTER (possible typo?)", key);
         return Domain.FILTER;
     }
 
@@ -140,28 +142,20 @@ public class Config {
 
     public static void reload() {
         props.clear();
-        File cfgFile = currentFile();
-        if (cfgFile.exists()) {
-            try (FileInputStream in = new FileInputStream(cfgFile)) {
-                java.util.Properties tmp = new java.util.Properties();
-                tmp.load(in);
-                tmp.forEach((k, v) -> props.put((String) k, (String) v));
-            } catch (IOException e) {
-                LOG.log(java.util.logging.Level.WARNING, "Config reload failed", e);
-            }
-        }
+        loadFromDisk();
     }
 
-    static {
+    static { loadFromDisk(); }
+
+    private static void loadFromDisk() {
         File f = currentFile();
-        if (f.exists()) {
-            try (FileInputStream in = new FileInputStream(f)) {
-                java.util.Properties tmp = new java.util.Properties();
-                tmp.load(in);
-                tmp.forEach((k, v) -> props.put((String) k, (String) v));
-            } catch (IOException e) {
-                LOG.log(java.util.logging.Level.WARNING, "Config load failed", e);
-            }
+        if (!f.exists()) return;
+        try (FileInputStream in = new FileInputStream(f)) {
+            java.util.Properties tmp = new java.util.Properties();
+            tmp.load(in);
+            tmp.forEach((k, v) -> props.put((String) k, (String) v));
+        } catch (IOException e) {
+            LOG.log(java.util.logging.Level.WARNING, "Config load failed", e);
         }
     }
 
@@ -406,14 +400,11 @@ public class Config {
             t.setDaemon(true);
             return t;
         });
-    private static volatile boolean batchActive = false;
 
     public static void withBatch(Runnable action) {
-        batchActive = true;
         try {
             action.run();
         } finally {
-            batchActive = false;
             save();
         }
     }

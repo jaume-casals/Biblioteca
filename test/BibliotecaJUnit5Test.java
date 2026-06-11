@@ -2141,10 +2141,10 @@ class BibliotecaJUnit5Test {
     // ── Llibre autor / autors invariant ──────────────────────────────────────
 
     @Test
-    @DisplayName("Llibre.setAutor keeps autors list in sync")
-    void llibreSetAutorKeepsAutorsInSync() {
+    @DisplayName("Llibre.setAutors(['Alice']) makes getAutor return 'Alice'")
+    void llibreSetAutorsSingle() {
         domini.Llibre l = new domini.Llibre(9780306406157L, "T", null, null, null, null, null, null, null);
-        l.setAutor("Alice");
+        l.setAutors(java.util.List.of("Alice"));
         assertThat(l.getAutor()).isEqualTo("Alice");
         assertThat(l.getAutors()).containsExactly("Alice");
     }
@@ -2158,13 +2158,12 @@ class BibliotecaJUnit5Test {
     }
 
     @Test
-    @DisplayName("Llibre.setAutor(null) clears autors list")
-    void llibreSetAutorNullClearsAutors() {
+    @DisplayName("Llibre.setAutors(null) clears autors list")
+    void llibreSetAutorsNullClearsAutors() {
         domini.Llibre l = new domini.Llibre(9780306406157L, "T", null, null, null, null, null, null, null);
         l.setAutors(java.util.List.of("Alice"));
-        l.setAutor(null);
+        l.setAutors(null);
         assertThat(l.getAutors()).isEmpty();
-        assertThat(l.getAutor()).isEmpty();
     }
 
     // ── getDistinctValues: dual-path behavior ────────────────────────────────

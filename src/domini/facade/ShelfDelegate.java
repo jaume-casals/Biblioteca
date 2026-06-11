@@ -94,12 +94,12 @@ public final class ShelfDelegate {
 
     public void moveLlistaUp(int id) {
         int idx = indexOfLlista(id);
-        if (idx > 0) swapLlistesOrdre(idx, idx - 1);
+        if (idx > 0) swapLlistesOrdre(idx, idx - 1, id);
     }
 
     public void moveLlistaDown(int id) {
         int idx = indexOfLlista(id);
-        if (idx >= 0 && idx < state.llistes().size() - 1) swapLlistesOrdre(idx, idx + 1);
+        if (idx >= 0 && idx < state.llistes().size() - 1) swapLlistesOrdre(idx, idx + 1, id);
     }
 
     public void setLlistaColor(int id, String color) {
@@ -108,9 +108,8 @@ public final class ShelfDelegate {
         try { state.persistence().updateLlistaColor(id, color); }
         catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
-            for (Llista l : state.llistes()) {
-                if (l.getId() == id) { l.setColor(color); break; }
-            }
+            Llista l = state.llistesById().get(id);
+            if (l != null) l.setColor(color);
         });
     }
 
@@ -123,11 +122,14 @@ public final class ShelfDelegate {
         return found;
     }
 
-    private void swapLlistesOrdre(int i, int j) {
+    private void swapLlistesOrdre(int i, int j, int id) {
         ControladorPersistencia cp = state.persistence();
         state.withLock(() -> {
+            int size = state.llistes().size();
+            if (i < 0 || j < 0 || i >= size || j >= size) return;
             Llista a = state.llistes().get(i);
             Llista b = state.llistes().get(j);
+            if (a.getId() != id && b.getId() != id) return;
             int ordreA = a.getOrdre();
             int ordreB = b.getOrdre();
             try {

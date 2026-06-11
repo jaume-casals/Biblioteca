@@ -11,6 +11,7 @@ import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import domini.LlibreFilter;
@@ -44,7 +45,7 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 	 * ControladorDomini (constructor injectable) no sigui fàcilment
 	 * aplicable aquí.
 	 */
-	private static MainFrameControl instance;
+	private static volatile MainFrameControl instance;
 
 	private MainFrameControl(MainFramePanel panel, BibliotecaWriter cd) {
 		this.panel = panel;
@@ -158,7 +159,18 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 		});
 
 		mostrarControl = new MostrarBibliotecaControl(
-				libraryPanel, new ArrayList<>(cLlibres.getAllLlibres()), this, cLlibres);
+				libraryPanel, new ArrayList<>(), this, cLlibres);
+
+		new SwingWorker<ArrayList<domini.Llibre>, Void>() {
+			@Override protected ArrayList<domini.Llibre> doInBackground() {
+				return new ArrayList<>(cLlibres.getAllLlibres());
+			}
+			@Override protected void done() {
+				try { mostrarControl.setTable(get()); }
+				catch (Exception e) { java.util.logging.Logger.getLogger(MainFrameControl.class.getName())
+					.log(java.util.logging.Level.WARNING, "Failed to load initial library", e); }
+			}
+		}.execute();
 
 		final java.awt.Rectangle[] normalBounds = {
 			new java.awt.Rectangle(Config.getWindowX(), Config.getWindowY(),

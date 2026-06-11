@@ -33,7 +33,15 @@ public final class Rfc4180Reader implements AutoCloseable {
         while ((line = in.readLine()) != null) {
             if (accum.length() > 0) accum.append('\n');
             accum.append(line);
-            for (int i = 0; i < line.length(); i++) if (line.charAt(i) == '"') inQuote = !inQuote;
+            for (int i = 0; i < line.length(); i++) {
+                char c = line.charAt(i);
+                if (c != '"') continue;
+                if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    i++;
+                } else {
+                    inQuote = !inQuote;
+                }
+            }
             if (!inQuote) return CsvUtils.parseLine(accum.toString());
         }
         eof = true;

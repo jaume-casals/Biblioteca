@@ -25,9 +25,23 @@ class FilterController {
     private final LibraryViewState state;
     private final LibraryScreenHost host;
 
+    /** Cached ISBN→Llibre index; rebuilt only when {@code state.biblio} reference changes.
+     *  Avoids re-indexing 5000 books on every keystroke of the search bar. */
+    private java.util.List<Llibre> cachedIsbnMapBiblioRef;
+    private Map<Long, Llibre> cachedIsbnMap;
+
     FilterController(LibraryViewState state, LibraryScreenHost host) {
         this.state = state;
         this.host = host;
+    }
+
+    private Map<Long, Llibre> getIsbnMap() {
+        if (cachedIsbnMap == null || cachedIsbnMapBiblioRef != state.biblio) {
+            cachedIsbnMapBiblioRef = state.biblio;
+            cachedIsbnMap = new HashMap<>();
+            if (state.biblio != null) for (Llibre l : state.biblio) cachedIsbnMap.put(l.getISBN(), l);
+        }
+        return cachedIsbnMap;
     }
 
     void wireListeners() {
@@ -157,8 +171,7 @@ class FilterController {
             return;
         }
 
-        Map<Long, Llibre> isbnMap = new HashMap<>();
-        if (base != null) for (Llibre l : base) isbnMap.put(l.getISBN(), l);
+        Map<Long, Llibre> isbnMap = getIsbnMap();
         java.util.Set<Long> tagISBNs = f.getTagId() != null ? state.cd.getLlibresWithTag(f.getTagId()) : null;
         java.util.Set<Long> llistaISBNs = f.getLlistaId() != null
             ? state.cd.getLlibresInLlista(f.getLlistaId()).stream().map(Llibre::getISBN).collect(Collectors.toSet())
@@ -211,8 +224,7 @@ class FilterController {
             drs.setRowFilter(null);
         } else {
             String q = query.toLowerCase(java.util.Locale.ROOT);
-            Map<Long, Llibre> isbnMap = new HashMap<>();
-            if (state.biblio != null) for (Llibre l : state.biblio) isbnMap.put(l.getISBN(), l);
+            Map<Long, Llibre> isbnMap = getIsbnMap();
             drs.setRowFilter(new javax.swing.RowFilter<javax.swing.table.TableModel, Integer>() {
                 @Override
                 public boolean include(javax.swing.RowFilter.Entry<? extends javax.swing.table.TableModel, ? extends Integer> entry) {

@@ -81,7 +81,6 @@ public class ControladorDomini implements BibliotecaWriter {
 			new java.util.ArrayList<>(cp.getAllLlistes()),
 			new java.util.ArrayList<>(cp.getAllTags()));
 		Collections.sort(this.state.bib(), BookDelegate.ISBN_COMPARATOR);
-		this.state.rebuildIdIndexesLocked();
 		this.backupService = new BackupService(cp);
 		this.shelves = new ShelfDelegate(this.state);
 		this.tags    = new TagDelegate(this.state);

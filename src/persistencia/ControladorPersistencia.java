@@ -32,7 +32,7 @@ public class ControladorPersistencia {
 
 	private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(ControladorPersistencia.class.getName());
 
-	private static ControladorPersistencia inst;
+	private static volatile ControladorPersistencia inst;
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
 	private final ServerConect sc;
@@ -94,7 +94,9 @@ public class ControladorPersistencia {
 	private void registerShutdownHook() {
 		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
 			main.ShutdownHooks.register(() -> {
-				try { sc.closeConnection(); } catch (Exception ignored) {}
+				try { sc.closeConnection(); } catch (Exception e) {
+					LOG.log(java.util.logging.Level.FINE, "Error closing DB on shutdown", e);
+				}
 			});
 		}
 	}
@@ -102,10 +104,9 @@ public class ControladorPersistencia {
 	public synchronized ArrayList<Llibre> getAllLlibres() { return libreDaoCore.getAll(); }
 
 	/**
-	 * Lean variant of {@link #getAllLlibres()}: returns books with only the
-	 * light columns populated (no {@code descripcio}, no {@code notes},
-	 * no cover blob).  Callers that need the heavy text/blob columns must
-	 * invoke {@link #loadHeavyFields} per book.
+	 * Alias for {@link #getAllLlibres()} retained for caller compatibility.
+	 * The DAO already returns the light view (no descripcio/notes); heavy
+	 * fields must be loaded per-book via {@link #loadHeavyFields}.
 	 */
 	public synchronized ArrayList<Llibre> getAllLlibresSummary() { return libreDaoCore.getAll(); }
 

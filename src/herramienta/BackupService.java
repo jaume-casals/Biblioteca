@@ -14,7 +14,13 @@ import java.util.logging.Logger;
 /** BackupService reads all data from ControladorPersistencia to produce SQL dumps.
  *  Constructed with cp (not cd) because cp is the single source of truth for backup data —
  *  all rows come from DAO queries, not the in-memory cache. This avoids a desync where
- *  cd.allLlibres() might lag behind cp.getAllLlibres() after recent mutations. */
+ *  cd.allLlibres() might lag behind cp.getAllLlibres() after recent mutations.
+ *
+ *  <p><b>Cover images are NOT included in the SQL backup.</b> The {@code llibre.imatge_blob}
+ *  column is intentionally excluded (covers can be tens to hundreds of KB each, and the
+ *  SQL format would balloon 10-100x). After a restore, the user must re-fetch covers via
+ *  the {@code btnFetchCovers} ("Cerca a Internet") action. This is documented to the user
+ *  in the restore-done dialog via the {@code dlg_restore_done_cover_note} i18n key. */
 public class BackupService {
 
     private static final Logger LOG = Logger.getLogger(BackupService.class.getName());

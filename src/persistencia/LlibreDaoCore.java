@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import domini.Llibre;
@@ -53,24 +52,17 @@ public class LlibreDaoCore {
 
     public synchronized ArrayList<Llibre> getAll() {
         ArrayList<Llibre> biblio = new ArrayList<>();
-        LinkedHashMap<Long, Llibre> byISBN = new LinkedHashMap<>();
         try {
             try (Statement stmt = con.createStatement();
                  ResultSet rs = stmt.executeQuery(
-                    "SELECT " + LLIBRE_COLUMNS_L_LIGHT + ", a.nom AS autor_nom FROM llibre l" +
-                    " LEFT JOIN llibre_autor la ON l.ISBN = la.isbn" +
-                    " LEFT JOIN autor a ON la.autor_id = a.id" +
-                    " ORDER BY l.ISBN, a.nom")) {
+                    "SELECT " + LLIBRE_COLUMNS_L_LIGHT + " FROM llibre l ORDER BY l.ISBN")) {
                 while (rs.next()) {
-                    long isbn = rs.getLong("ISBN");
-                    Llibre l = byISBN.get(isbn);
-                    if (l == null) {
-                        l = LlibreMapper.buildLlibreLight(rs);
-                        byISBN.put(isbn, l);
-                        biblio.add(l);
+                    Llibre l = LlibreMapper.buildLlibreLight(rs);
+                    String autor = l.getAutor();
+                    if (autor != null && !autor.isBlank()) {
+                        l.setAutors(java.util.Arrays.asList(autor.split(", ", -1)));
                     }
-                    String autorNom = rs.getString("autor_nom");
-                    if (autorNom != null) l.addAutorNom(autorNom);
+                    biblio.add(l);
                 }
             }
         } catch (SQLException e) {
@@ -275,17 +267,11 @@ public class LlibreDaoCore {
     }
 
     private void syncAutors(long isbn, List<String> autors) throws SQLException {
-        if (autors == null || autors.isEmpty()) {
-            try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
-                del.setLong(1, isbn);
-                del.execute();
-            }
-            return;
-        }
         try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
             del.setLong(1, isbn);
             del.execute();
         }
+        if (autors == null || autors.isEmpty()) return;
         try (PreparedStatement insAutor = con.prepareStatement("INSERT IGNORE INTO autor (nom) VALUES (?)")) {
             for (String nom : autors) {
                 if (nom == null || nom.isBlank()) continue;

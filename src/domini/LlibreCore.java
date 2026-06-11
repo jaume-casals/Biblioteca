@@ -1,11 +1,14 @@
 package domini;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Immutable value-object view of a book's identifying/business data.
- * Excludes cache state (hasBlob, imatgeBlob) and free-text fields (notes) — those live on the
- * mutable {@link Llibre}. Future refactor: Llibre composes a LlibreCore + extension state.
+ * Carries a 16-field subset of {@link Llibre} (identity, metadata, reading
+ * progress, format, origin) — the rest of the Llibre state is consumed in
+ * place (free-text descripcio/notes, cover blob, mutable Llibre) rather than
+ * copied. Future refactor: Llibre composes a LlibreCore + extension state.
  */
 public record LlibreCore(
     long isbn,
@@ -33,5 +36,13 @@ public record LlibreCore(
             l.getPagines(), l.getEditorial(), l.getSerie(), l.getVolum(),
             l.getIdioma(), l.getFormat(), l.getPaisOrigen()
         );
+    }
+
+    /** Bulk projection — equivalent to {@code source.stream().map(LlibreCore::from).toList()}
+     *  but avoids the stream lambda allocation. */
+    public static List<LlibreCore> extractCores(List<Llibre> source) {
+        List<LlibreCore> out = new ArrayList<>(source.size());
+        for (Llibre l : source) out.add(from(l));
+        return out;
     }
 }

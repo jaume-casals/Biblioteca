@@ -76,7 +76,8 @@ public class BackupController {
                 try {
                     get();
                     SwingUtilities.invokeLater(onSuccess);
-                    JOptionPane.showMessageDialog(parent, I18n.t("dlg_restore_done"),
+                    JOptionPane.showMessageDialog(parent,
+                        I18n.t("dlg_restore_done") + "\n\n" + I18n.t("dlg_restore_done_cover_note"),
                         I18n.t("dlg_restore_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialogoError(e).showErrorMessage(); }
             }

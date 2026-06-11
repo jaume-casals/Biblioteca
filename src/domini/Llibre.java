@@ -113,11 +113,16 @@ public class Llibre {
 	}
 
 	public String getNomCa() { return nomCa; }
-	public void setNomCa(String v) { this.nomCa = (v != null && !v.isBlank()) ? v.trim() : null; }
+	public void setNomCa(String v) { this.nomCa = nullIfBlankTrim(v); }
 	public String getNomEs() { return nomEs; }
-	public void setNomEs(String v) { this.nomEs = (v != null && !v.isBlank()) ? v.trim() : null; }
+	public void setNomEs(String v) { this.nomEs = nullIfBlankTrim(v); }
 	public String getNomEn() { return nomEn; }
-	public void setNomEn(String v) { this.nomEn = (v != null && !v.isBlank()) ? v.trim() : null; }
+	public void setNomEn(String v) { this.nomEn = nullIfBlankTrim(v); }
+
+	/** Returns {@code s.trim()} if {@code s} is non-null and not blank, else {@code null}. */
+	private static String nullIfBlankTrim(String s) {
+		return (s != null && !s.isBlank()) ? s.trim() : null;
+	}
 
 	/** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
 	public String getDisplayNom(String lang) {
@@ -131,13 +136,6 @@ public class Llibre {
 	public String getAutor() {
 		if (!autors.isEmpty()) return String.join(", ", autors);
 		return autor != null ? autor : "";
-	}
-
-	public void setAutor(String autor) {
-		this.autor = autor;
-		this.autors = (autor != null && !autor.isBlank())
-			? new java.util.ArrayList<>(java.util.List.of(autor))
-			: new java.util.ArrayList<>();
 	}
 
 	public java.util.List<String> getAutors() { return new java.util.ArrayList<>(autors); }
@@ -263,7 +261,7 @@ public class Llibre {
 	@Override
 	public String toString() {
 		return "Llibre{isbn=" + isbn + ", nom=" + nom + ", autor=" + getAutor()
-			+ ", autors=" + autors + ", any=" + any
+			+ ", any=" + any
 			+ ", valoracio=" + valoracio + ", preu=" + preu + ", llegit=" + llegit
 			+ ", pagines=" + pagines + ", paginesLlegides=" + paginesLlegides
 			+ ", editorial=" + editorial + ", serie=" + serie + ", volum=" + volum
