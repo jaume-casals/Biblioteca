@@ -20,11 +20,23 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     public final List<Llista> llistes = new ArrayList<>();
     public final List<Tag> tags = new ArrayList<>();
     public final List<PrestecRow> loans = new ArrayList<>();
+    private final Map<Long, Llibre> byIsbn = new HashMap<>();
+    private boolean byIsbnDirty = true;
 
     @Override public List<Llibre> getAllLlibres() { return new ArrayList<>(books); }
     @Override public Llibre getLlibre(long isbn) throws Exception {
-        for (Llibre l : books) if (java.util.Objects.equals(l.getISBN(), isbn)) return l;
-        throw new Exception("Not found: " + isbn);
+        if (byIsbnDirty) rebuildIndex();
+        Llibre l = byIsbn.get(isbn);
+        if (l == null) throw new domini.BibliotecaException.NotFound("Not found: " + isbn);
+        return l;
+    }
+
+    /** Rebuilds the ISBN→Llibre index. Callers that mutate {@link #books} should
+     *  treat the index as dirty (handled by the dirty flag). */
+    private void rebuildIndex() {
+        byIsbn.clear();
+        for (Llibre l : books) if (l.getISBN() != null) byIsbn.put(l.getISBN(), l);
+        byIsbnDirty = false;
     }
     @Override public int getSize() { return books.size(); }
     @Override public boolean existsLlibre(long isbn) { return books.stream().anyMatch(l -> java.util.Objects.equals(l.getISBN(), isbn)); }

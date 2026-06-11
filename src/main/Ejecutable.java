@@ -39,8 +39,7 @@ public class Ejecutable {
             err.showErrorMessage();
         });
 
-        Runtime.getRuntime().addShutdownHook(new Thread(
-            persistencia.ControladorPersistencia::resetForProfileSwitch));
+        main.ShutdownHooks.register(persistencia.ControladorPersistencia::resetForProfileSwitch);
 
         startSwingWithSplash();
     }

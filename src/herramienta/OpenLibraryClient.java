@@ -91,7 +91,10 @@ public class OpenLibraryClient {
 			r.put("error", e.getMessage());
 		}
 		if (!r.containsKey("title") && !r.containsKey("error")) {
-			try { mergeGoogleBooks(isbn, r); } catch (Exception ignored) {}
+			try { mergeGoogleBooks(isbn, r); } catch (Exception e) {
+				java.util.logging.Logger.getLogger(OpenLibraryClient.class.getName())
+					.log(java.util.logging.Level.FINE, "Google Books merge failed for ISBN " + isbn, e);
+			}
 		}
 		return r;
 	}

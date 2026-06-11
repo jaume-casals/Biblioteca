@@ -72,15 +72,21 @@ class ContextMenuController {
                 if (selectedRows.length > 1) {
                     JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selectedRows.length));
                     List<Long> batchIsbns = new ArrayList<>();
-                    for (int r : selectedRows)
-                        batchIsbns.add(Long.parseLong((String) table.getValueAt(r, BibliotecaTableModel.COL_ISBN)));
+                    for (int r : selectedRows) {
+                        Object v = table.getValueAt(r, BibliotecaTableModel.COL_ISBN);
+                        if (v instanceof String s) {
+                            try { batchIsbns.add(Long.parseLong(s)); } catch (NumberFormatException nfe) { /* skip malformed row */ }
+                        }
+                    }
                     itemBatchEdit.addActionListener(ev -> batchEdit(batchIsbns));
                     menu.add(itemBatchEdit);
                 }
 
                 menu.addSeparator();
 
-                long isbnLong = Long.parseLong(isbnStr);
+                long isbnLong;
+                try { isbnLong = Long.parseLong(isbnStr); }
+                catch (NumberFormatException nfe) { return; }
                 boolean loaned = state.loanedISBNs.contains(isbnLong);
                 if (selectedRows.length == 1 && loaned) {
                     JMenuItem itemRetornar = new JMenuItem(I18n.t("menu_return_book"));

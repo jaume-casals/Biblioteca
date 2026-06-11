@@ -164,8 +164,8 @@ public class DetallesLlibrePanelControl {
 
 		this.vista.getTextPaginesLlegides().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
 		});
 	}
 

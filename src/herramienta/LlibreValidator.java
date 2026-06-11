@@ -29,6 +29,7 @@ public class LlibreValidator {
 	}
 
 	private static String normalizeIsbn13(String isbn) {
+		if (isbn == null) return null;
 		// ISBN-10 with X check digit (e.g. "019853110X") — convert to ISBN-13
 		if (isbn.length() > 0 && Character.toUpperCase(isbn.charAt(isbn.length() - 1)) == 'X') {
 			String core = isbn.substring(0, isbn.length() - 1).replaceAll("[^0-9]", "");
@@ -60,7 +61,7 @@ public class LlibreValidator {
 
 		if (isbn != null) {
 			String normalized = normalizeIsbn13(String.valueOf(isbn));
-			if (normalized.length() == 13) {
+			if (normalized != null && normalized.length() == 13) {
 				try { isbn = Long.parseLong(normalized); } catch (NumberFormatException ignored) {}
 			}
 		}

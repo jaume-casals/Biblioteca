@@ -378,7 +378,7 @@ public class FilterDrawerPanel extends JPanel {
 	public JCheckBox getchckbxLlegit()              { return registry.checkBox("chckbxLlegit"); }
 	public JCheckBox getchckbxNoLlegit()            { return registry.checkBox("chckbxNoLlegit"); }
 	public JButton getbtnFiltrar()                  { return registry.button("bttnFiltrar"); }
-	public JButton getbttnQuitarFiltros()           { return registry.button("bttnQuitarFiltros"); }
+	public JButton getBtnQuitarFiltros()           { return registry.button("bttnQuitarFiltros"); }
 	public JComboBox<Object> getComboTagFilter()    { return registry.comboBox("comboTagFilter"); }
 	public JTextField getFilterEditorial()          { return registry.textField("filterEditorial"); }
 	public JTextField getFilterSerie()              { return registry.textField("filterSerie"); }

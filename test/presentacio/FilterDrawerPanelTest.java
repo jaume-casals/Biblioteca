@@ -48,7 +48,7 @@ class FilterDrawerPanelTest {
         assertThat(p.getchckbxNoLlegit()).isNotNull();
 
         assertThat(p.getbtnFiltrar()).isNotNull();
-        assertThat(p.getbttnQuitarFiltros()).isNotNull();
+        assertThat(p.getBtnQuitarFiltros()).isNotNull();
 
         assertThat(p.getComboTagFilter()).isNotNull();
 

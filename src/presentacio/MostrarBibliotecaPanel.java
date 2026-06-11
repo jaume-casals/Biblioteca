@@ -78,6 +78,12 @@ public class MostrarBibliotecaPanel extends JPanel {
 
 	public void showTaula() { centerTable.showTaula(); }
 
+	/**
+	 * Order matters: (1) update palette-derived fields first, (2) sub-panel
+	 * pre-LaF overrides, (3) install L&F (resets all defaults), (4) re-apply
+	 * UIManager overrides on top of L&F, (5) updateComponentTreeUI, (6)
+	 * sub-panel post-LaF overrides for things the L&F reset.
+	 */
 	public void applyTheme() {
 		UITheme.rebuildFonts(herramienta.FontSize.fromKey(herramienta.Config.getFontSize()));
         UiConfig.setTheme(UITheme.getTheme());
@@ -153,7 +159,7 @@ public class MostrarBibliotecaPanel extends JPanel {
 	public JCheckBox getchckbxLlegit()        { return filterDrawer.getchckbxLlegit(); }
 	public JCheckBox getchckbxNoLlegit()      { return filterDrawer.getchckbxNoLlegit(); }
 	public JButton getbtnFiltrar()            { return filterDrawer.getbtnFiltrar(); }
-	public JButton getbttnQuitarFiltros()     { return filterDrawer.getbttnQuitarFiltros(); }
+	public JButton getBtnQuitarFiltros()     { return filterDrawer.getBtnQuitarFiltros(); }
 	public JComboBox<Object> getComboLlistes(){ return comboLlistes; }
 	public JButton getBtnGestioLlistes()      { return leftSidebar.getBtnGestioLlistes(); }
 	public JComboBox<Object> getComboTagFilter() { return filterDrawer.getComboTagFilter(); }

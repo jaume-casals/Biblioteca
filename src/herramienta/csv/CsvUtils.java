@@ -13,8 +13,7 @@ public final class CsvUtils {
     public static String[] parseLine(String line) {
         if (line == null) return new String[0];
         if (line.indexOf('\r') >= 0) line = line.replace("\r", "");
-        String[] fields = new String[16];
-        int count = 0;
+        List<String> fields = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean inQuote = false;
         for (int i = 0; i < line.length(); i++) {
@@ -30,18 +29,13 @@ public final class CsvUtils {
             } else if (ch == '"') {
                 inQuote = true;
             } else if (ch == ',') {
-                if (count == fields.length) fields = java.util.Arrays.copyOf(fields, fields.length * 2);
-                fields[count++] = sb.toString(); sb.setLength(0);
+                fields.add(sb.toString().trim()); sb.setLength(0);
             } else {
                 sb.append(ch);
             }
         }
-        if (count == fields.length) fields = java.util.Arrays.copyOf(fields, fields.length + 1);
-        fields[count] = sb.toString();
-        for (int j = 0; j <= count; j++) {
-            if (fields[j] != null) fields[j] = fields[j].trim();
-        }
-        return count + 1 == fields.length ? fields : java.util.Arrays.copyOf(fields, count + 1);
+        fields.add(sb.toString().trim());
+        return fields.toArray(new String[0]);
     }
 
     /** Returns the trimmed value for the given column name, or "" if the column is absent

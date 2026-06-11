@@ -125,7 +125,7 @@ class BookActionsController {
 
     void eliminarFila(Llibre l) {
         host.removeRow(l);
-        if (state.biblio != null) state.biblio.removeIf(b -> b.getISBN().equals(l.getISBN()));
+        if (state.biblio != null) state.biblio.removeIf(b -> java.util.Objects.equals(b.getISBN(), l.getISBN()));
         host.updateTitleBar();
     }
 

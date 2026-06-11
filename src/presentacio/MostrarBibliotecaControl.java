@@ -30,18 +30,13 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
     private final ViewModeController viewModeCtrl;
 
     public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, java.util.List<Llibre> biblio,
-            EnActualizarBBDD enActualizarBBDD) {
-        this(vista, biblio, enActualizarBBDD, null);
-    }
-
-    public MostrarBibliotecaControl(MostrarBibliotecaPanel vista, java.util.List<Llibre> biblio,
             EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
-        BibliotecaWriter writer = cd != null ? cd : domini.ControladorDomini.getInstance();
-        this.state = new LibraryViewState(vista, biblio, enActualizarBBDD, writer);
+        if (cd == null) throw new IllegalArgumentException("cd (BibliotecaWriter) is required");
+        this.state = new LibraryViewState(vista, biblio, enActualizarBBDD, cd);
         this.botonDetalles = new JButton();
         UIComponents.styleAccentButton(this.botonDetalles);
         this.tableCtrl = new TableController(vista);
-        this.pageCtrl = new TablePageController(vista, writer, this::setTable);
+        this.pageCtrl = new TablePageController(vista, cd, this::setTable);
 
         this.filterCtrl = new FilterController(state, this);
         this.shelfCtrl = new ShelfController(state, this, this);
@@ -57,7 +52,7 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
         viewModeCtrl.wireListeners();
         viewModeCtrl.initGaleria();
 
-        state.loanedISBNs = writer.getLoanedISBNs();
+        state.loanedISBNs = cd.getLoanedISBNs();
         shelfCtrl.refreshComboLlistes();
         shelfCtrl.refreshComboTags();
 

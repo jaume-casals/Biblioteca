@@ -82,7 +82,7 @@ class FilterController {
         });
 
         vista.getbtnFiltrar().addActionListener(e -> filtrar());
-        vista.getbttnQuitarFiltros().addActionListener(e -> quitarFiltros());
+        vista.getBtnQuitarFiltros().addActionListener(e -> quitarFiltros());
     }
 
     void enNoLlegitSeleccionado(ItemEvent e) {
