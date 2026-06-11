@@ -32,6 +32,8 @@ public final class CoverService {
 
     private CoverService() {}
 
+    static { main.ShutdownHooks.register(CoverService::shutdown); }
+
     public static byte[] getCachedBytes(String isbn) {
         synchronized (L1_LOCK) {
             byte[] mem = L1.get(isbn);
@@ -64,7 +66,7 @@ public final class CoverService {
         if (cached != null) {
             try {
                 long lIsbn = Long.parseLong(isbn);
-                synchronized (cd) { cd.setLlibreBlob(lIsbn, cached); }
+                cd.setLlibreBlob(lIsbn, cached);
             } catch (Exception ignored) {}
             if (onDone != null) onDone.run();
             return;
@@ -75,11 +77,16 @@ public final class CoverService {
                 if (data != null && data.length > 0) {
                     cacheBytes(isbn, data);
                     long lIsbn = Long.parseLong(isbn);
-                    synchronized (cd) { cd.setLlibreBlob(lIsbn, data); }
+                    cd.setLlibreBlob(lIsbn, data);
                 }
                 if (onDone != null) onDone.run();
             } catch (Exception ignored) {}
         });
+    }
+
+    /** Shutdown the cover-fetch pool. Called from a shutdown hook. */
+    public static void shutdown() {
+        POOL.shutdownNow();
     }
 
     public static void cacheBytes(String isbn, byte[] data) {

@@ -437,9 +437,14 @@ public class Config {
             try (FileOutputStream out = new FileOutputStream(tmpFile)) {
                 tmp.store(out, "Biblioteca configuration");
             }
-            java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-                java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            try {
+                java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             LOG.log(java.util.logging.Level.WARNING, errPrefix, e);
         }

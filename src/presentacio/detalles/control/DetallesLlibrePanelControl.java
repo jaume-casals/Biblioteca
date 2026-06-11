@@ -216,7 +216,8 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void carregarImatgeBlob(byte[] data) {
-		this.vista.getLabelIcono().setIcon(herramienta.UITheme.scaledIcon(data, IMG_W));
+		javax.swing.ImageIcon icon = herramienta.UITheme.scaledIcon(data, IMG_W);
+		this.vista.getLabelIcono().setIcon(icon != null ? icon : presentacio.CoverImageCache.NO_COVER);
 	}
 
 	public static void shutdownImageExecutor() {

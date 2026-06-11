@@ -119,62 +119,38 @@ public class BackupService {
     }
 
     private void writeLlibreINSERT(java.io.PrintWriter pw, Llibre l) {
-        pw.print("INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`," +
-                "`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`," +
-                "`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) " +
-                "VALUES (");
-        pw.print(l.getISBN());
-        pw.print(',');
-        pw.print(sqlNullable(l.getNom()));
-        pw.print(',');
-        pw.print(l.getAny() != null ? l.getAny() : 0);
-        pw.print(',');
-        pw.print(sqlNullable(l.getDescripcio()));
-        pw.print(',');
-        pw.print(String.format(java.util.Locale.ROOT, "%.4f", l.getValoracio() != null ? l.getValoracio() : 0.0));
-        pw.print(',');
-        pw.print(String.format(java.util.Locale.ROOT, "%.4f", l.getPreu() != null ? l.getPreu() : 0.0));
-        pw.print(',');
-        pw.print(Boolean.TRUE.equals(l.getLlegit()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getImatge()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getNotes()));
-        pw.print(',');
-        pw.print(l.getPagines());
-        pw.print(',');
-        pw.print(l.getPaginesLlegides());
-        pw.print(',');
-        pw.print(sqlNullable(l.getEditorial()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getSerie()));
-        pw.print(',');
-        pw.print(l.getVolum());
-        pw.print(',');
-        pw.print(sqlNullable(l.getDataCompra()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getDataLectura()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getIdioma()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getFormat()));
-        pw.print(',');
-        pw.print(l.isDesitjat());
-        pw.print(',');
-        pw.print(sqlNullable(l.getPaisOrigen()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getEstat()));
-        pw.print(',');
-        pw.print(l.getExemplars());
-        pw.print(',');
-        pw.print(sqlNullable(l.getLlenguaOriginal()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getNomCa()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getNomEs()));
-        pw.print(',');
-        pw.print(sqlNullable(l.getNomEn()));
-        pw.println(");");
+        StringBuilder sb = new StringBuilder(512);
+        sb.append("INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`,")
+          .append("`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`,")
+          .append("`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) VALUES (")
+          .append(l.getISBN()).append(',')
+          .append(sqlNullable(l.getNom())).append(',')
+          .append(l.getAny() != null ? l.getAny() : 0).append(',')
+          .append(sqlNullable(l.getDescripcio())).append(',')
+          .append(String.format(java.util.Locale.ROOT, "%.4f", l.getValoracio() != null ? l.getValoracio() : 0.0)).append(',')
+          .append(String.format(java.util.Locale.ROOT, "%.4f", l.getPreu() != null ? l.getPreu() : 0.0)).append(',')
+          .append(Boolean.TRUE.equals(l.getLlegit())).append(',')
+          .append(sqlNullable(l.getImatge())).append(',')
+          .append(sqlNullable(l.getNotes())).append(',')
+          .append(l.getPagines()).append(',')
+          .append(l.getPaginesLlegides()).append(',')
+          .append(sqlNullable(l.getEditorial())).append(',')
+          .append(sqlNullable(l.getSerie())).append(',')
+          .append(l.getVolum()).append(',')
+          .append(sqlNullable(l.getDataCompra())).append(',')
+          .append(sqlNullable(l.getDataLectura())).append(',')
+          .append(sqlNullable(l.getIdioma())).append(',')
+          .append(sqlNullable(l.getFormat())).append(',')
+          .append(l.isDesitjat()).append(',')
+          .append(sqlNullable(l.getPaisOrigen())).append(',')
+          .append(sqlNullable(l.getEstat())).append(',')
+          .append(l.getExemplars()).append(',')
+          .append(sqlNullable(l.getLlenguaOriginal())).append(',')
+          .append(sqlNullable(l.getNomCa())).append(',')
+          .append(sqlNullable(l.getNomEs())).append(',')
+          .append(sqlNullable(l.getNomEn()))
+          .append(");\n");
+        pw.print(sb);
     }
 
     private void writeAutorINSERT(java.io.PrintWriter pw, int id, String nom) {
