@@ -45,7 +45,7 @@ public final class BackupDelegate {
     public void backupToSQL(File file) {
         for (Llibre l : state.bib()) {
             if (!l.isHeavyFieldsLoaded()) {
-                state.persistence().loadHeavyFields(l.getISBN(), l);
+                state.withLock(() -> state.persistence().loadHeavyFields(l.getISBN(), l));
             }
         }
         ArrayList<Llibre> bibSnapshot;

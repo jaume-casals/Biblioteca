@@ -220,23 +220,23 @@ public class Llibre {
 	public int getVolum() { return volum; }
 	public void setVolum(int volum) { this.volum = Math.max(0, volum); }
 	public String getDataCompra() { return dataCompra; }
-	public void setDataCompra(String dataCompra) { this.dataCompra = (dataCompra != null && !dataCompra.trim().isEmpty()) ? dataCompra.trim() : null; }
+	public void setDataCompra(String dataCompra) { this.dataCompra = nullIfBlankTrim(dataCompra); }
 	public String getDataLectura() { return dataLectura; }
-	public void setDataLectura(String dataLectura) { this.dataLectura = (dataLectura != null && !dataLectura.trim().isEmpty()) ? dataLectura.trim() : null; }
+	public void setDataLectura(String dataLectura) { this.dataLectura = nullIfBlankTrim(dataLectura); }
 	public String getIdioma() { return idioma; }
-	public void setIdioma(String idioma) { this.idioma = (idioma != null && !idioma.trim().isEmpty()) ? idioma.trim() : null; }
+	public void setIdioma(String idioma) { this.idioma = nullIfBlankTrim(idioma); }
 	public String getFormat() { return format; }
-	public void setFormat(String format) { this.format = (format != null && !format.trim().isEmpty()) ? format.trim() : null; }
+	public void setFormat(String format) { this.format = nullIfBlankTrim(format); }
 	public String getPaisOrigen() { return paisOrigen; }
-	public void setPaisOrigen(String paisOrigen) { this.paisOrigen = (paisOrigen != null && !paisOrigen.trim().isEmpty()) ? paisOrigen.trim() : null; }
+	public void setPaisOrigen(String paisOrigen) { this.paisOrigen = nullIfBlankTrim(paisOrigen); }
 	public boolean isDesitjat() { return desitjat; }
 	public void setDesitjat(boolean desitjat) { this.desitjat = desitjat; }
 	public String getEstat() { return estat; }
-	public void setEstat(String estat) { this.estat = (estat != null && !estat.trim().isEmpty()) ? estat.trim() : null; }
+	public void setEstat(String estat) { this.estat = nullIfBlankTrim(estat); }
 	public int getExemplars() { return exemplars; }
 	public void setExemplars(int exemplars) { this.exemplars = Math.max(1, exemplars); }
 	public String getLlenguaOriginal() { return llenguaOriginal; }
-	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = (llengua != null && !llengua.trim().isEmpty()) ? llengua.trim() : null; }
+	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = nullIfBlankTrim(llengua); }
 
 	public static Llibre copyOf(Llibre src) {
 		Llibre c = Llibre.bindUpdateableFields(new Llibre(), src.isbn, src.nom, src.autor, src.any, src.descripcio,

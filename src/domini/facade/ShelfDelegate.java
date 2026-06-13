@@ -93,13 +93,17 @@ public final class ShelfDelegate {
     }
 
     public void moveLlistaUp(int id) {
-        int idx = indexOfLlista(id);
-        if (idx > 0) swapLlistesOrdre(idx, idx - 1, id);
+        state.withLock(() -> {
+            int idx = indexOfLlistaLocked(id);
+            if (idx > 0) swapLlistesOrdreLocked(idx, idx - 1, id);
+        });
     }
 
     public void moveLlistaDown(int id) {
-        int idx = indexOfLlista(id);
-        if (idx >= 0 && idx < state.llistes().size() - 1) swapLlistesOrdre(idx, idx + 1, id);
+        state.withLock(() -> {
+            int idx = indexOfLlistaLocked(id);
+            if (idx >= 0 && idx < state.llistes().size() - 1) swapLlistesOrdreLocked(idx, idx + 1, id);
+        });
     }
 
     public void setLlistaColor(int id, String color) {
@@ -113,37 +117,34 @@ public final class ShelfDelegate {
         });
     }
 
-    private int indexOfLlista(int id) {
-        Integer found = state.withLockReturning(() -> {
-            for (int i = 0; i < state.llistes().size(); i++)
-                if (state.llistes().get(i).getId() == id) return i;
-            return -1;
-        });
-        return found;
+    /** Caller MUST hold the state lock. */
+    private int indexOfLlistaLocked(int id) {
+        for (int i = 0; i < state.llistes().size(); i++)
+            if (state.llistes().get(i).getId() == id) return i;
+        return -1;
     }
 
-    private void swapLlistesOrdre(int i, int j, int id) {
+    /** Caller MUST hold the state lock. */
+    private void swapLlistesOrdreLocked(int i, int j, int id) {
         ControladorPersistencia cp = state.persistence();
-        state.withLock(() -> {
-            int size = state.llistes().size();
-            if (i < 0 || j < 0 || i >= size || j >= size) return;
-            Llista a = state.llistes().get(i);
-            Llista b = state.llistes().get(j);
-            if (a.getId() != id && b.getId() != id) return;
-            int ordreA = a.getOrdre();
-            int ordreB = b.getOrdre();
-            try {
-                a.setOrdre(ordreB);
-                b.setOrdre(ordreA);
-                Collections.swap(state.llistes(), i, j);
-                cp.updateLlistaOrdre(a.getId(), ordreB);
-                cp.updateLlistaOrdre(b.getId(), ordreA);
-            } catch (SQLException e) {
-                a.setOrdre(ordreA);
-                b.setOrdre(ordreB);
-                Collections.swap(state.llistes(), i, j);
-                throw new BibliotecaException(e.getMessage(), e);
-            }
-        });
+        int size = state.llistes().size();
+        if (i < 0 || j < 0 || i >= size || j >= size) return;
+        Llista a = state.llistes().get(i);
+        Llista b = state.llistes().get(j);
+        if (a.getId() != id && b.getId() != id) return;
+        int ordreA = a.getOrdre();
+        int ordreB = b.getOrdre();
+        try {
+            a.setOrdre(ordreB);
+            b.setOrdre(ordreA);
+            Collections.swap(state.llistes(), i, j);
+            cp.updateLlistaOrdre(a.getId(), ordreB);
+            cp.updateLlistaOrdre(b.getId(), ordreA);
+        } catch (SQLException e) {
+            a.setOrdre(ordreA);
+            b.setOrdre(ordreB);
+            Collections.swap(state.llistes(), i, j);
+            throw new BibliotecaException(e.getMessage(), e);
+        }
     }
 }

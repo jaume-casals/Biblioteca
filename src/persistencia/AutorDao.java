@@ -1,27 +1,17 @@
 package persistencia;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class AutorDao {
-
-    @FunctionalInterface
-    interface RowMapper<T> { T map(ResultSet rs) throws SQLException; }
 
     private final Connection con;
 
     AutorDao(Connection con) { this.con = con; }
 
-    private <T> List<T> queryAll(String sql, RowMapper<T> mapper) {
-        List<T> rows = new ArrayList<>();
-        try (Statement s = con.createStatement();
-             ResultSet rs = s.executeQuery(sql)) {
-            while (rs.next()) rows.add(mapper.map(rs));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error executant consulta: " + e.getMessage(), e);
-        }
-        return rows;
+    private <T> List<T> queryAll(String sql, RowMappers.RowMapper<T> mapper) {
+        try { return RowMappers.queryAll(con, sql, mapper); }
+        catch (SQLException e) { throw new domini.BibliotecaException("Error executant consulta: " + e.getMessage(), e); }
     }
 
     // Double-locking note: callers go through ControladorPersistencia which is

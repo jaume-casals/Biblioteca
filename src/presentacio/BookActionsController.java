@@ -111,12 +111,12 @@ class BookActionsController {
         }
         for (long isbn : isbns) {
             try {
-                Llibre l = state.cd.findLlibre(isbn).orElse(null);
-                if (l == null) continue;
-                state.undoBuffer.push(l);
-                if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
-                state.cd.deleteLlibre(l);
-                eliminarFila(l);
+                state.cd.findLlibre(isbn).ifPresent(l -> {
+                    state.undoBuffer.push(l);
+                    if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
+                    state.cd.deleteLlibre(l);
+                    eliminarFila(l);
+                });
             } catch (Exception e) {
                 new DialogoError(e).showErrorMessage();
             }

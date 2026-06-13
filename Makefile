@@ -59,14 +59,14 @@ test: compile test-deps
 	@java -cp bin:$(TEST_CP) BibliotecaTest
 	@DB_COUNTER=0; for cls in $$(find ./test/ -name '*Test.java' \
 	    | grep -v '/BibliotecaTest\.java$$' \
-	    | sed -e 's|^test/||' -e 's|\.java$$||' -e 's|/|.|g'); do \
+	    | sed -e 's|^\./test/||' -e 's|\.java$$||' -e 's|/|.|g'); do \
 	    DB_COUNTER=$$((DB_COUNTER+1)); \
 	    echo "=== Running $$cls (JUnit 5) ==="; \
 	    java -Dbiblioteca.test=true \
 	        -Dbiblioteca.h2.url="jdbc:h2:mem:dyn_$$DB_COUNTER;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
 	        -jar $(JUNIT5_STANDALONE) execute \
 	        --select-class=$$cls --details=summary \
-	        --classpath bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/assertj-core-3.26.3.jar; \
+	        --classpath bin:$(TEST_CP); \
 	done
 
 # Optional UI audit (requires display; skipped in headless CI unless DISPLAY set)

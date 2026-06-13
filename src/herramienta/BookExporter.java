@@ -197,8 +197,10 @@ public class BookExporter {
         pw.println("<div class=\"grid\">");
         for (Llibre l : books) {
             pw.println("<div class=\"card\">");
-            byte[] blob = null;
-            try { blob = cd.getLlibreBlob(l.getISBN()); } catch (Exception ignored) {}
+            byte[] blob = CoverService.getCachedBytes(Long.toString(l.getISBN()));
+            if (blob == null) {
+                try { blob = cd.getLlibreBlob(l.getISBN()); } catch (Exception ignored) {}
+            }
             if (blob == null && l.getImatge() != null && !l.getImatge().isEmpty()) {
                 try { blob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(l.getImatge())); } catch (Exception ignored) {}
             }

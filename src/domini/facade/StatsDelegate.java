@@ -2,6 +2,7 @@ package domini.facade;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -22,6 +23,21 @@ import persistencia.LecturaRow;
  */
 public final class StatsDelegate {
 
+    /**
+     * In-memory column → Llibre getter, for the in-memory distinct-values
+     * fast path. Each entry MUST be present in
+     * {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS} so the SQL fallback
+     * whitelist stays in sync.
+     */
+    private static final Map<String, Function<Llibre, String>> IN_MEMORY_EXTRACTORS = Map.of(
+        "editorial",        Llibre::getEditorial,
+        "serie",            Llibre::getSerie,
+        "idioma",           Llibre::getIdioma,
+        "format",           Llibre::getFormat,
+        "pais_origen",      Llibre::getPaisOrigen,
+        "llengua_original", Llibre::getLlenguaOriginal
+    );
+
     private final StateContext state;
 
     public StatsDelegate(StateContext state) {
@@ -36,20 +52,11 @@ public final class StatsDelegate {
      * through to {@code cp.getDistinctValues(column)} which queries the
      * whitelist in {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS}.
      *
-     * <p>Empty list if the column is neither in the in-memory switch nor
-     * the SQL whitelist. The two sets must stay in sync; the in-memory
-     * switch is a subset of the whitelist.
+     * <p>Empty list if the column is neither in the in-memory extractors
+     * nor the SQL whitelist.
      */
     public List<String> getDistinctValues(String column) {
-        Function<Llibre, String> extractor = switch (column) {
-            case "editorial"        -> Llibre::getEditorial;
-            case "serie"            -> Llibre::getSerie;
-            case "idioma"           -> Llibre::getIdioma;
-            case "format"           -> Llibre::getFormat;
-            case "pais_origen"      -> Llibre::getPaisOrigen;
-            case "llengua_original" -> Llibre::getLlenguaOriginal;
-            default                 -> null;
-        };
+        Function<Llibre, String> extractor = IN_MEMORY_EXTRACTORS.get(column);
         if (extractor != null) {
             List<Llibre> snapshot = state.withLockReturning(() -> new ArrayList<>(state.bib()));
             return snapshot.stream()

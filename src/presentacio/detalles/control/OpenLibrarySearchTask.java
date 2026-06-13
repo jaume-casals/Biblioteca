@@ -106,7 +106,8 @@ public class OpenLibrarySearchTask extends SwingWorker<OpenLibrarySearchTask.Sea
 
             if (result.coverBlob != null && existingBlob == null) {
                 onCoverFound.accept(result.coverBlob);
-                vista.getLabelPreview().setIcon(UITheme.scaledIcon(result.coverBlob, 120));
+                javax.swing.ImageIcon icon = UITheme.scaledIcon(result.coverBlob, 120);
+                vista.getLabelPreview().setIcon(icon != null ? icon : presentacio.CoverImageCache.NO_COVER);
             }
         } catch (Exception e) {
             new DialogoError(e).showErrorMessage();

@@ -59,6 +59,9 @@ public class LlibreValidator {
 	public static Llibre checkLlibre(Long isbn, String nom, String autor, Integer any, String descripcio,
 			Double valoracio, Double preu, Boolean llegit, String portada) {
 
+		if (isbn == null)
+			throw new IllegalArgumentException(I18n.t("toast_isbn_required"));
+
 		if (isbn != null) {
 			String normalized = normalizeIsbn13(String.valueOf(isbn));
 			if (normalized != null && normalized.length() == 13) {
@@ -68,6 +71,17 @@ public class LlibreValidator {
 		int digits = isbn == null ? 0 : countDig(isbn);
 		if (digits != 13 && digits != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
+
+		// ISBN-10 check digit validation: weighted sum * (10 - position), mod 11.
+		if (digits == 10) {
+			String s = Long.toString(isbn);
+			int sum = 0;
+			for (int i = 0; i < 9; i++) sum += (s.charAt(i) - '0') * (10 - i);
+			int check = (11 - sum % 11) % 11;
+			int last = s.charAt(9) - '0';
+			if (check != last)
+				throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
+		}
 
 		if (nom == null || nom.isBlank())
 			throw new IllegalArgumentException(I18n.t("val_nom_buit"));

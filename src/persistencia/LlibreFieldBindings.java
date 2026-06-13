@@ -35,8 +35,8 @@ public final class LlibreFieldBindings {
         public Null(int sqlType) { this.sqlType = sqlType; }
     }
 
-    private static Integer intOrZero(Integer n) { return n == null ? Integer.valueOf(0) : n; }
-    private static Double doubleOrZero(Double n) { return n == null ? Double.valueOf(0.0) : n; }
+    private static Integer intOrZero(Integer n) { return n == null ? 0 : n; }
+    private static Double doubleOrZero(Double n) { return n == null ? 0.0 : n; }
     private static String sOrNull(String v) { return (v == null || v.isBlank()) ? null : v; }
     private static String sOrEmpty(String v) { return v == null ? "" : v; }
 

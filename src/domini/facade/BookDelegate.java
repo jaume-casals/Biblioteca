@@ -40,21 +40,10 @@ public final class BookDelegate {
     private static final int SQL_FILTER_THRESHOLD = 2000;
 
     /** ISBN-ascending comparator; public so the facade can use it for initial sort. */
-    public static final Comparator<Llibre> ISBN_COMPARATOR = (a, b) -> {
-        Long ia = a.getISBN(), ib = b.getISBN();
-        if (ia == null && ib == null) return 0;
-        if (ia == null) return -1;
-        if (ib == null) return 1;
-        return ia.compareTo(ib);
-    };
+    public static final Comparator<Llibre> ISBN_COMPARATOR = SortSpec.ISBN_COMPARATOR;
 
-    private static final Map<String, Comparator<Llibre>> SORT_BY = Map.of(
-        SortSpec.COL_ISBN,      ISBN_COMPARATOR,
-        SortSpec.COL_NOM,       Comparator.comparing(l -> l.getNom() != null ? l.getNom() : "", String.CASE_INSENSITIVE_ORDER),
-        SortSpec.COL_ANY,       Comparator.comparing(l -> l.getAny() != null ? l.getAny() : 0),
-        SortSpec.COL_VALORACIO, Comparator.comparing(l -> l.getValoracio() != null ? l.getValoracio() : 0.0),
-        SortSpec.COL_PREU,      Comparator.comparing(l -> l.getPreu() != null ? l.getPreu() : 0.0)
-    );
+    /** In-memory sort comparators keyed by SortSpec column name; sourced from {@link SortSpec}. */
+    private static final Map<String, Comparator<Llibre>> SORT_BY = SortSpec.comparators();
 
     private final StateContext state;
 

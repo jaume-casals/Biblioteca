@@ -175,11 +175,18 @@ public class ControladorPersistencia {
 	public synchronized java.util.Set<Long> getLoanedISBNs() { return prestecDao.getLoanedISBNs(); }
 	public synchronized int countLoans(long isbn) { return prestecDao.count(isbn); }
 
+	public synchronized java.util.List<persistencia.AutorRow> getAllAutorRows() {
+		return autorDao.getAll();
+	}
+	/** @deprecated use {@link #getAllAutorRows()} — kept for callers that need the Object[] shape. */
+	@Deprecated
 	public synchronized java.util.List<Object[]> getAllAutors() {
 		return autorDao.getAll().stream()
 				.map(r -> new Object[]{r.id(), r.nom()})
 				.collect(java.util.stream.Collectors.toList());
 	}
+	/** @deprecated use {@link #getAllLlibreAutorRows()} — kept for callers that need the Object[] shape. */
+	@Deprecated
 	public synchronized java.util.List<Object[]> getAllLlibreAutor() {
 		return autorDao.getAllLlibreAutor().stream()
 				.map(r -> new Object[]{r.isbn(), r.autorId()})

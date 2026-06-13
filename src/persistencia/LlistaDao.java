@@ -166,24 +166,13 @@ public class LlistaDao {
 
     public ArrayList<Llista> getLlistesForLlibre(long isbn) {
         ArrayList<Llista> llistes = new ArrayList<>();
-        try {
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
-                    "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.ordre, l.nom")) {
-                ps.setLong(1, isbn);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        Llista llista = new Llista(rs.getInt(1), rs.getString(2));
-                        llista.setValoracioLlibre(rs.getDouble(3));
-                        llista.setLlegitLlibre(rs.getBoolean(4));
-                        llista.setOrdre(rs.getInt(5));
-                        llista.setColor(rs.getString(6));
-                        llistes.add(llista);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les llistes del llibre: " + e.getMessage(), e);
+        for (Object[] row : queryLlistesForLlibreRaw(isbn)) {
+            Llista llista = new Llista((Integer) row[0], (String) row[1]);
+            llista.setValoracioLlibre((Double) row[2]);
+            llista.setLlegitLlibre((Boolean) row[3]);
+            llista.setOrdre((Integer) row[4]);
+            llista.setColor((String) row[5]);
+            llistes.add(llista);
         }
         return llistes;
     }
@@ -197,6 +186,27 @@ public class LlistaDao {
      */
     public java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) {
         java.util.List<domini.LlibreLlistaContext> out = new java.util.ArrayList<>();
+        for (Object[] row : queryLlistesForLlibreRaw(isbn)) {
+            out.add(domini.LlibreLlistaContext.of(
+                isbn,
+                (Integer) row[0],
+                (String) row[1],
+                (Integer) row[4],
+                (String) row[5],
+                (Double) row[2],
+                (Boolean) row[3]
+            ));
+        }
+        return out;
+    }
+
+    /**
+     * Single SQL query shared by {@link #getLlistesForLlibre} and
+     * {@link #getLlistesForLlibreContext}. Columns in the result row:
+     * 0=id, 1=nom, 2=valoracio, 3=llegit, 4=ordre, 5=color.
+     */
+    private java.util.List<Object[]> queryLlistesForLlibreRaw(long isbn) {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
@@ -204,22 +214,18 @@ public class LlistaDao {
                 ps.setLong(1, isbn);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        out.add(domini.LlibreLlistaContext.of(
-                            isbn,
-                            rs.getInt(1),
-                            rs.getString(2),
-                            rs.getInt(5),
-                            rs.getString(6),
-                            rs.getObject(3, Double.class),
-                            rs.getBoolean(4)
-                        ));
+                        rows.add(new Object[] {
+                            rs.getInt(1), rs.getString(2),
+                            rs.getObject(3, Double.class), rs.getBoolean(4),
+                            rs.getInt(5), rs.getString(6)
+                        });
                     }
                 }
             }
         } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant els contextos de llista del llibre: " + e.getMessage(), e);
+            throw new domini.BibliotecaException("Error carregant les llistes del llibre: " + e.getMessage(), e);
         }
-        return out;
+        return rows;
     }
 
     public void updateOrdre(int id, int ordre) throws SQLException {

@@ -5,10 +5,13 @@ import java.util.List;
 
 /**
  * Immutable value-object view of a book's identifying/business data.
- * Carries a 16-field subset of {@link Llibre} (identity, metadata, reading
- * progress, format, origin) — the rest of the Llibre state is consumed in
- * place (free-text descripcio/notes, cover blob, mutable Llibre) rather than
- * copied. Future refactor: Llibre composes a LlibreCore + extension state.
+ * Carries a 16-field subset of {@link Llibre} (identity, authors, title,
+ * year, descripcio, valoracio, preu, llegit, imatge, pagines, editorial,
+ * serie, volum, idioma, format, paisOrigen). The remaining Llibre state
+ * (notes, paginesLlegides, dataCompra, dataLectura, estat, desitjat,
+ * nomCa/Es/En, exemplars, llenguaOriginal, cover blob) is consumed in
+ * place from the mutable Llibre. Future refactor: Llibre composes a
+ * LlibreCore + extension state.
  */
 public record LlibreCore(
     long isbn,

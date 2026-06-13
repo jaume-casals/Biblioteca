@@ -44,7 +44,9 @@ class ContextMenuController {
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0) return;
                 if (!table.isRowSelected(row)) table.setRowSelectionInterval(row, row);
-                String isbnStr = (String) table.getValueAt(row, BibliotecaTableModel.COL_ISBN);
+                Object isbnVal = table.getValueAt(row, BibliotecaTableModel.COL_ISBN);
+                if (!(isbnVal instanceof String)) return;
+                String isbnStr = (String) isbnVal;
 
                 JPopupMenu menu = new JPopupMenu();
                 int[] selectedRows = table.getSelectedRows();

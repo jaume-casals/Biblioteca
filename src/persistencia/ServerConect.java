@@ -159,7 +159,7 @@ public class ServerConect {
 			} else if ("h2".equals(cfg.dbType())) {
 				String dir = System.getProperty("user.home") + "/.biblioteca";
 				new File(dir).mkdirs();
-				String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "")
+				String url = "jdbc:h2:" + dir.strip().replaceAll("/+$", "")
 					+ "/" + sanitizeH2Profile(cfg.profile()) + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
 			} else {

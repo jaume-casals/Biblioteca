@@ -91,11 +91,11 @@ public class BackupService {
             for (Llibre l : bib) {
                 writeLlibreINSERT(pw, l);
             }
-            for (Object[] row : cp.getAllAutors()) {
-                writeAutorINSERT(pw, (int) row[0], (String) row[1]);
+            for (persistencia.AutorRow row : cp.getAllAutorRows()) {
+                writeAutorINSERT(pw, row.id(), row.nom());
             }
-            for (Object[] row : cp.getAllLlibreAutor()) {
-                writeLlibreAutorINSERT(pw, ((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+            for (persistencia.LlibreAutorRow row : cp.getAllLlibreAutorRows()) {
+                writeLlibreAutorINSERT(pw, row.isbn(), row.autorId());
             }
             for (Llista ll : llistes) {
                 writeLlistaINSERT(pw, ll);

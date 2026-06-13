@@ -13,6 +13,10 @@ import java.util.*;
 /**
  * Pure-in-memory {@link BibliotecaReader} for fast UI / pure-logic tests that don't need JDBC.
  * Read-only; mutate the supplied lists between operations.
+ *
+ * <p>Note: {@link #aplicarFiltres} returns the full list unchanged — this
+ * class does NOT honour filter criteria. Tests of filter logic must use a
+ * real {@link BibliotecaReader} (e.g. via {@code ControladorDomini}).
  */
 public class InMemoryBibliotecaReader implements BibliotecaReader {
 

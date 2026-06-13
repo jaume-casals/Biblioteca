@@ -546,6 +546,7 @@ public class I18n {
         T("val_pais_llarg", "El país d'origen no pot superar 100 caràcters", "El país de origen no puede superar 100 caracteres", "Country cannot exceed 100 characters");
         T("val_preu_negatiu", "El preu no pot ser negatiu", "El precio no puede ser negativo", "Price cannot be negative");
         T("val_serie_llarg", "La sèrie no pot superar 255 caràcters", "La serie no puede superar 255 caracteres", "Series cannot exceed 255 characters");
+        T("val_tag_blank", "El nom de l'etiqueta no pot estar buit", "El nombre de la etiqueta no puede estar vacío", "Tag name cannot be empty");
         T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10", "La valoración debe estar entre 0 y 10", "Rating must be between 0 and 10");
         T("app_title", "Biblioteca", "Biblioteca", "Biblioteca");
         T("lbl_llistes", "Llistes", "Listas", "Lists");
