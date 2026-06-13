@@ -28,7 +28,7 @@ You MUST NOT write to `scripts/loop-review-prompt.txt` yourself. You may only em
 2. `tot.txt` — the most recent code review output produced by that prompt. Read it in full. It contains the findings, the `## Calibration` self-critique section, and the prior reviews' themes.
 3. `loop-prompt-tune.log` — the log of this meta-loop. It contains snapshots of `loop-review-prompt.txt` from prior iterations and any prior proposed diffs from you. Read it to see what you have already proposed, so you do not churn on the same change.
 4. `AGENTS.md` — read it. The prompt you are improving must remain consistent with the project rules in there (e.g. "Never alter the `CREATE_TABLE` string — add new migrations as new entries in the array instead" is a rule the code-review prompt must surface to the reviewer).
-5. `scripts/loop-review.sh` and `scripts/loop-review.ps1` — read them briefly. They tell you how the prompt is invoked (no extra flags, `-f` only). Do not propose prompt changes that depend on flags the invokers do not pass.
+5. `scripts/loop-review.sh` — read them briefly. They tell you how the prompt is invoked (no extra flags, `-f` only). Do not propose prompt changes that depend on flags the invokers do not pass.
 
 ## Goal
 
