@@ -34,30 +34,32 @@ public final class TagDelegate {
 
     public Tag addTag(String nom) {
         if (nom == null || nom.isBlank()) throw new BibliotecaException.Validation(I18n.t("val_tag_blank"));
-        try {
-            int id = state.persistence().createTag(nom);
-            Tag t = new Tag(id, nom);
-            state.withLock(() -> {
+        return state.withLockReturning(() -> {
+            try {
+                int id = state.persistence().createTag(nom);
+                Tag t = new Tag(id, nom);
                 state.tags().add(t);
                 state.tagsById().put(id, t);
-            });
-            return t;
-        } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+                return t;
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        });
     }
 
     public void deleteTag(Tag tag) {
-        try { state.persistence().deleteTag(tag.getId()); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().deleteTag(tag.getId());
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             state.tags().remove(tag);
             state.tagsById().remove(tag.getId());
         });
     }
 
     public void renameTag(int id, String newNom) {
-        try { state.persistence().renameTag(id, newNom); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().renameTag(id, newNom);
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             Tag t = state.tagsById().get(id);
             if (t != null) t.setNom(newNom);
         });

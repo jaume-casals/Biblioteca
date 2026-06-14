@@ -46,7 +46,15 @@ public final class StateContext {
         rebuildIdIndexesLocked();
     }
 
-    public Object lock() { return lock; }
+    /** The monitor used by {@link #withLock} / {@link #withLockReturning}.
+     *  Package-private (no public accessor): every delegate in
+     *  {@code domini.facade} goes through {@code withLock(...)} so
+     *  there is no reason for a caller to acquire the lock directly.
+     *  The package-private access is preserved for the facade
+     *  package (e.g. tests that need a raw {@code synchronized
+     *  (state.lock) { ... }}) but the public surface stays
+     *  clean. */
+    Object lock() { return lock; }
     public ControladorPersistencia persistence() { return cp; }
     /** Returns the live backing list. Callers MUST hold {@link #lock()} before
      *  reading or mutating; iterating without the lock risks

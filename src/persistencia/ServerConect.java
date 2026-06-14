@@ -384,6 +384,10 @@ public class ServerConect {
 	private java.sql.Driver loadDriverFromLib(String driverClass, String jarNameHint) throws Exception {
 		StringBuilder diag = new StringBuilder();
 		File libDir = findLibDir(diag);
+		if (libDir == null) {
+			diag.insert(0, "lib/ directory not found. Search log:\n");
+			throw new ClassNotFoundException(diag.toString());
+		}
 		File[] jars = libDir.listFiles(
 			f -> f.getName().contains(jarNameHint) && f.getName().endsWith(".jar"));
 		if (jars == null || jars.length == 0) {

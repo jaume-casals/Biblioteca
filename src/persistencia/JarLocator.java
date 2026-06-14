@@ -40,7 +40,12 @@ public final class JarLocator {
 
     /**
      * Tria la primera estratègia que troba un directori amb JARs.
-     * Retorna un path per defecte ({@code user.dir/lib}) si cap funciona.
+     * Retorna {@code null} si cap funciona — el caller ({@code
+     * ServerConect.loadDriverFromLib}) llança un
+     * {@code ClassNotFoundException} amb el diag log. L'antic
+     * fallback ({@code new File(user.dir, "lib")}) emmascarava
+     * el problema retornant un directori existent però sense el
+     * JAR que es volia carregar.
      */
     public static File locate(StringBuilder diag, Predicate<File> hasJars) {
         for (int i = 0; i < STRATEGIES.size(); i++) {
@@ -48,7 +53,7 @@ public final class JarLocator {
             File found = STRATEGIES.get(i).tryLocate(diag, hasJars);
             if (found != null) return found;
         }
-        return new File(System.getProperty("user.dir"), "lib");
+        return null;
     }
 
     private static File fromBibliotecaRoot(StringBuilder diag, Predicate<File> hasJars) {

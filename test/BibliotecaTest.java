@@ -1599,8 +1599,8 @@ public class BibliotecaTest {
             assertEqual("Sci-Fi", shelvesFor61.get(0).getNom());
         });
 
-        // ── Config H2 doesn't store stale host/user ───────────────────────────
-        test("Config: switching to H2 clears stale host/user values", () -> {
+        // ── Config H2 preserves previously-set host/user (non-destructive) ─
+        test("Config: switching to H2 preserves previously-set host/user", () -> {
             java.nio.file.Path tmpDir = java.nio.file.Files.createTempDirectory("biblioteca_cfg_h2_");
             java.nio.file.Path cfgDir = tmpDir.resolve(".biblioteca");
             java.nio.file.Files.createDirectories(cfgDir);
@@ -1618,8 +1618,10 @@ public class BibliotecaTest {
                 herramienta.DbConfig.setType("h2");
                 Thread.sleep(400);
                 assertEqual("h2", herramienta.Config.getDbType());
-                assertEqual("localhost", herramienta.Config.getDbHost());
-                assertEqual("user", herramienta.Config.getDbUser());
+                // putIfAbsent semantics: the previous MariaDB host/user
+                // are preserved so a future re-connection still works.
+                assertEqual("db.example.com", herramienta.Config.getDbHost());
+                assertEqual("admin", herramienta.Config.getDbUser());
             } finally {
                 System.setProperty("user.home", origHome);
                 herramienta.Config.reload();

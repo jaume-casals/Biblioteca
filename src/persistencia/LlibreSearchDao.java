@@ -105,7 +105,16 @@ public class LlibreSearchDao {
             case Integer i -> ps.setInt(index, i);
             case Double  d -> ps.setDouble(index, d);
             case Boolean b -> ps.setBoolean(index, b);
-            case null      -> ps.setObject(index, null, Types.NULL);
+            case null      -> {
+                // Today the SQL builder never inserts a literal null
+                // (every condition is guarded by != null or by a blank
+                // check), so this branch is dead. Log at FINE so a
+                // future call site that does add a null literal becomes
+                // visible in the logs without throwing.
+                java.util.logging.Logger.getLogger(LlibreSearchDao.class.getName())
+                    .fine("bindParam: null literal at index " + index + " — should be guarded upstream");
+                ps.setObject(index, null, Types.NULL);
+            }
             default        -> throw new IllegalArgumentException("Unsupported filter parameter type: " + p.getClass().getName());
         }
     }

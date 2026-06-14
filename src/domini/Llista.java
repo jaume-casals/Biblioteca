@@ -63,5 +63,12 @@ public class Llista {
     }
 
     @Override
-    public int hashCode() { return Integer.hashCode(id); }
+    public int hashCode() {
+        // Transient (id=0) instances must NOT all hash to 0 — otherwise a
+        // HashMap of in-progress shelves collapses every "new Llista(nom)"
+        // into the same bucket. Mix the nom in for id=0 so each
+        // transient shelf is distinct. Persisted shelves hash by id, as
+        // before.
+        return id == 0 ? nom.hashCode() : Integer.hashCode(id);
+    }
 }

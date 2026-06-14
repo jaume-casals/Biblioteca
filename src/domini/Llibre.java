@@ -49,6 +49,18 @@ public class Llibre {
 		this.imatge = imatge;
 	}
 
+	/**
+	 * Copy the canonical "updateable" fields (everything except the
+	 * per-language title, cover blob, autors list, notes, pages, etc.)
+	 * into {@code target}. The {@code autor} parameter is the joined
+	 * string from the validator / form; callers that have the parsed
+	 * list should call {@link #setAutors(java.util.List)} afterwards,
+	 * which OVERWRITES the joined string. The two-step order
+	 * (bind → setAutors) is intentional: bindUpdateableFields first
+	 * seeds the joined string so {@link #getAutors()} is consistent
+	 * immediately, then the list override lets the caller replace it
+	 * with the parsed result without the field-level split logic.
+	 */
 	public static Llibre bindUpdateableFields(Llibre target, Long isbn, String nom, String autor,
 			Integer any, String descripcio, Double valoracio, Double preu, Boolean llegit, String imatge) {
 		target.isbn = isbn;

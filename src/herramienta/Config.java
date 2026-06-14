@@ -294,8 +294,12 @@ public class Config {
     public static void setDbType(String type) {
         props.put("dbType", type);
         if ("h2".equals(type)) {
-            props.put("dbHost", "localhost");
-            props.put("dbUser", "user");
+            // Only seed the localhost/user defaults if no value is set —
+            // otherwise switching from MariaDB back to H2 would clobber
+            // a non-default MariaDB host/user that the user may want to
+            // keep for a later reconnection.
+            props.putIfAbsent("dbHost", "localhost");
+            props.putIfAbsent("dbUser", "user");
         }
         save();
     }

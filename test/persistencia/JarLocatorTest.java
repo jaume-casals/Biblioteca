@@ -43,12 +43,12 @@ class JarLocatorTest {
     }
 
     @Test
-    @DisplayName("locate: returns user.dir/lib fallback when no strategy matches")
+    @DisplayName("locate: returns null when no strategy matches (caller must surface the diag log)")
     void locateFallsBack(@TempDir File tmp) {
         setRoot(null);
         System.setProperty("user.dir", tmp.getAbsolutePath());
         File result = JarLocator.locate(new StringBuilder(), alwaysNo());
-        assertThat(result).isEqualTo(new File(tmp, "lib"));
+        assertThat(result).isNull();
     }
 
     @Test

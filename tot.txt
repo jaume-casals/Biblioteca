@@ -16,77 +16,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   by `MainFrameControl.mostrarAlertes` (line 249) with no compile-time
   schema protection.
 
-**[src/domini/facade/StateContext.java]** — [severity: MEDIUM]
-- `bib()`, `llistes()`, `tags()` return the live `ArrayList`. The
-  Javadoc (lines 53-61) is correct that callers MUST hold the lock,
-  but the contract is unenforced. Consider making the backing
-  collections immutable and re-publishing on every mutation, or
-  returning a defensive `Collections.unmodifiableList` view that
-  fails fast on mutation attempts. The current pattern means a
-  `NullPointerException` (no NPE — but a `ConcurrentModificationException`
-  on iteration) is the only signal of a contract violation.
-- `clearAll()` (lines 77-85) clears the three lists AND the two
-  id-index maps. It does NOT call `rebuildIdIndexesLocked()` but
-  because both `clear()` calls are explicit and the maps are
-  already empty, the post-condition is identical. The pattern is
-  inconsistent with `replaceAll` (which calls `rebuildIdIndexesLocked`
-  after assigning the new lists). Make `clearAll` mirror
-  `replaceAll` for clarity, or document the divergence.
-- The `lock` field is private but exposed via `lock()` (line 49).
-  A test that does `synchronized (state.lock())` (the documented
-  way) still works, but every delegate uses `state.withLock(...)`
-  and `state.withLockReturning(...)` which serialize correctly. The
-  raw `lock()` accessor lets callers bypass the helper and acquire
-  directly, which is fine for tests but is the exact pattern the
-  Javadoc warns against. Make it package-private and reserve for
-  the facade package.
-
-**[src/domini/facade/TagDelegate.java]** — [severity: MEDIUM]
-- `getLlibresWithTag` / `getTagsForLlibre` / `removeLlibreFromTag` /
-  `addLlibreToTag` (lines 66-77) are pure pass-throughs. This is
-  fine for now, but the Javadoc claims delegates "follow the same
-  contract" — there is no contract, just a delegated call. The
-  methods are package-private; the facade exposes them via
-  `ControladorDomini`. Document the intent (centralization point
-  for future tag-side caching) or inline the pass-throughs at the
-  facade.
-- `addTag` (lines 35-46) and `deleteTag` (lines 48-55) also
-  race between DB and in-memory state like `ShelfDelegate`. Two
-  threads creating the same tag name: first passes the DB
-  UNIQUE constraint, second throws — but the in-memory list ends
-  up with one entry. Today the second thread never reaches the
-  in-memory mutate, so it's correct, but if the DB ever drops
-  the unique constraint (or the tagDao starts using `INSERT
-  IGNORE`) the in-memory list will duplicate the entry.
-
-**[src/domini/Llibre.java]** — [severity: MEDIUM]
-- The class is a mutable 30+-field POJO with both setters and a
-  Builder. The class Javadoc (lines 6-15) admits this and proposes
-  composing `LlibreCore + extension state` as a future refactor.
-  Today: the Builder is used only by `LlibreMapper` (DAO read path)
-  and one test helper. Every controller in presentacio uses
-  individual setters. The duplication is a maintenance trap:
-  adding a 28th field requires touching 5 files. The Builder's
-  `forInsert` / `forUpdate` separation in `LlibreFieldBindings`
-  proves the value of declarative batching.
-- Lines 32-34: `nomCa`, `nomEs`, `nomEn` are nullable. The setters
-  at lines 116-120 call `nullIfBlankTrim` which is correct, but
-  `getDisplayNom` (lines 128-134) only treats them as nullable
-  when null; it does NOT distinguish empty string from null. With
-  `nullIfBlankTrim` the empty-string case cannot occur, so the
-  code is safe — but the API would be cleaner with `String getNomCaOrNull()`
-  and `boolean hasNomCa()`.
-- `bindUpdateableFields` (lines 52-64) sets every field including
-  `autor` from the parameter. In the test path
-  (`Presentacio.detalles.DetallesLlibrePanelControl.EditHandler`,
-  presentacio/detalles/control/DetallesLlibrePanelControl.java:381),
-  the caller parses `textAutor` into a `List<String> autors` and
-  then calls `a.setAutors(autors)` which OVERWRITES the `autor`
-  string. So `bindUpdateableFields(target, isbn, nom, autor, ...)`
-  is called with the joined `autor` and then `setAutors(list)`
-  overwrites it. The two-step order is correct today, but the
-  implicit "setter overrides Builder" precedence is undocumented.
-
 **[src/domini/LlibreFilter.java]** — [severity: LOW]
 - `copy()` (lines 67-79) returns a new instance via the no-arg
   constructor + field-by-field copy, but does not copy the
@@ -102,21 +31,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   The Javadoc on `matches` says "When adding a new field to
   `LlibreFilter`, also extend the SQL builder there" — this is
   a known maintenance trap.
-
-**[src/domini/Llista.java]** — [severity: MEDIUM]
-- `equals` / `hashCode` (lines 58-65) compare by id. Two `Llista`
-  with id=0 (in-memory, not yet persisted) are never equal — the
-  Javadoc (lines 35-38) explains this for `Tag` but the same
-  pattern is here. A transient `Llista` (id=0) used as a
-  `HashMap` key will collide with every other transient `Llista`.
-  Consider using a stable hash for transient (id=0) instances, or
-  forbid transient `Llista` as a `HashMap` key.
-- `setNom` (lines 35-38) throws `IllegalArgumentException` on
-  blank, but the same check is duplicated in
-  `domini.facade.ShelfDelegate.addLlista` (line 40) and
-  `renameLlista` (line 62), and the message is hard-coded in
-  English. Route through `BibliotecaException.Validation(I18n.t(...))`
-  for i18n.
 
 **[src/domini/NamedEntity.java]** — [severity: LOW]
 - The interface is a 2-method read-only view. The two implementers
@@ -138,58 +52,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   null. The call site in `BookDelegate.applySort` (line 232) maps
   null to `ISBN_COMPARATOR`. The fallback should live in
   `SortSpec` to keep the policy in one place.
-
-**[src/persistencia/ControladorPersistencia.java]** — [severity: MEDIUM]
-- `synchronized` on every public method (lines 104-208). The
-  class Javadoc (lines 27-29) explicitly proposes a
-  `ReadWriteLock`. With 200+ entries the UI is mostly read-bound
-  (table render, filter, search); under sustained write (e.g.
-  bulk import + UI scrolling) every paint thread queues on the
-  monitor. Convert reads to `ReentrantReadWriteLock.readLock()`
-  and writes to `writeLock()`. The TODO is older than the
-  facade split; now is the time.
-- `getAllLlibres()` and `getAllLlibresSummary()` (lines 104, 111)
-  are the same implementation. The Javadoc on
-  `interficie.BookReader.getAllLlibresSummary` (interficie/BookReader.java:34)
-  documents the contract, but the body is identical. The summary
-  contract lets the in-memory test stub skip work; the production
-  path always returns the full row. Either implement the summary
-  contract here (omit `descripcio`/`notes` from the SELECT) or
-  delete the alias.
-- `setDbProfile` (via `setDbType` line 296) writes
-  `dbHost = "localhost"` and `dbUser = "user"` whenever type is
-  H2. After a MariaDB session, switching back to H2 overwrites
-  the previous host/user with defaults — losing any non-default
-  MariaDB values that the user may want to keep for later
-  reconnection. Document this destructive fallback or preserve
-  the previous values.
-
-**[src/persistencia/LlibreSearchDao.java]** — [severity: MEDIUM]
-- `search` (lines 26-70) builds the SQL via StringBuilder with
-  20+ `if (f.getXxx() != null) sql.append(...)` branches. The
-  pattern is identical for every condition. Extract a helper
-  `addCondition(StringBuilder sql, List<Object> params, String
-  clause, Object value)` that no-ops when value is null. The
-  method shrinks from 45 lines to 20 and the place-counting
-  bugs (`?` placement) become one-line.
-- `bindParam` (lines 72-82) uses pattern-matching `switch` for
-  the boxed primitives but `case null` sets `Types.NULL`. Today
-  the SQL builder never inserts a literal `null` (every
-  condition is guarded by `!= null`), so the `case null` is
-  dead. Keep the defensive fallback but log at FINE level when
-  it fires so dead code becomes visible if a future call site
-  changes.
-- `LlibreFilter.getLlistaId()` (line 31) is documented to take
-  precedence, but the SQL has `JOIN llibre_llista ll ON
-  l.ISBN = ll.isbn AND ll.llista_id = ?` and `JOIN llibre_tag
-  lt ON l.ISBN = lt.isbn AND lt.tag_id = ?` as two separate
-  branches. When both `llistaId` and `tagId` are set, the
-  result is the intersection (rows that are in BOTH), but
-  applying them independently as separate `AND` clauses in
-  the WHERE would also be the intersection. The current
-  approach is correct, but the join is on the same alias `l`
-  — there's a subtle bug if MariaDB complains about a duplicate
-  join alias in the rendered SQL. Test with both filters set.
 
 **[src/persistencia/PrestecDao.java]** — [severity: LOW]
 - `add` (lines 15-31) pre-checks book existence with a
@@ -259,23 +121,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   PreparedStatement ps, RowMapper<T> mapper)` that takes an
   already-bound PreparedStatement. Saves 5 lines and one
   duplicate exception path.
-
-**[src/persistencia/JarLocator.java]** — [severity: MEDIUM]
-- `locate` (lines 45-52) tries five strategies in order and
-  returns `new File(user.dir, "lib")` on total failure. The
-  caller is `ServerConect.findLibDir` (ServerConect.java:353)
-  which throws `ClassNotFoundException` when no JAR is found.
-  The fallback path always returns a non-null File pointing
-  at `<user.dir>/lib` which may exist (containing other
-  files) but no JDBC JAR — and the failure message points to
-  the user's directory, which is not the install location.
-  If the fallback is intended, return null and let the
-  caller throw with a more specific message.
-- `walkUpFromClassSource` (line 90) catches `Exception` (line
-  101) and appends to `diag`. Catching `Exception` is too
-  broad; `URISyntaxException` and the
-  `MalformedURLException` chained from `toURL()` are the
-  expected failures. Use specific catches.
 
 **[src/persistencia/Schema.java]** — [severity: LOW]
 - `CLEAR_ORDER` (lines 16-19) is a 9-element array. The

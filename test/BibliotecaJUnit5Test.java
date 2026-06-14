@@ -736,8 +736,8 @@ class BibliotecaJUnit5Test {
     @DisplayName("Tag.setNom rejects null and blank")
     void tagSetNomBlank() {
         Tag t = new Tag(1, "ok");
-        assertThatThrownBy(() -> t.setNom(null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> t.setNom("  ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> t.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> t.setNom("  ")).isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     // ── LibraryEvents/listener tests ─────────────────────────────────────────
@@ -972,18 +972,18 @@ class BibliotecaJUnit5Test {
     @DisplayName("Llista.setNom rejects null and blank")
     void llistaSetNomRejectsBlank() {
         Llista l = new Llista(1, "ok");
-        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> l.setNom("  ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> l.setNom("  ")).isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     // ── Llista: setNom blank throws ──────────────────────────────────────────
 
     @Test
-    @DisplayName("Llista.setNom blank throws IllegalArgumentException")
+    @DisplayName("Llista.setNom blank throws BibliotecaException.Validation")
     void setNomBlankThrows() {
         Llista l = new Llista(1, "valid");
-        assertThatThrownBy(() -> l.setNom("")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> l.setNom("")).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     // ── Llista: setColor hex validation ─────────────────────────────────────
@@ -1550,7 +1550,7 @@ class BibliotecaJUnit5Test {
     // ── Config: switching to H2 clears stale host/user ───────────────────
 
     @Test
-    @DisplayName("Config: switching to H2 returns default host/user instead of stale values")
+    @DisplayName("Config: switching to H2 preserves previously-set host/user (non-destructive)")
     void configH2ClearsStaleHostUser() throws Exception {
         java.nio.file.Path tmpDir = Files.createTempDirectory("biblioteca_cfg_h2_");
         java.nio.file.Path cfgDir = tmpDir.resolve(".biblioteca");
@@ -1568,12 +1568,14 @@ class BibliotecaJUnit5Test {
             assertThat(herramienta.Config.getDbHost()).isEqualTo("db.example.com");
             assertThat(herramienta.Config.getDbUser()).isEqualTo("admin");
 
-            // Switch back to H2 — host/user should return defaults
+            // Switch back to H2 — host/user should be preserved (putIfAbsent
+            // semantics; a future re-connection to MariaDB can still reuse
+            // the saved values).
             herramienta.DbConfig.setType("h2");
             Thread.sleep(500);
             assertThat(herramienta.Config.getDbType()).isEqualTo("h2");
-            assertThat(herramienta.Config.getDbHost()).isEqualTo("localhost");
-            assertThat(herramienta.Config.getDbUser()).isEqualTo("user");
+            assertThat(herramienta.Config.getDbHost()).isEqualTo("db.example.com");
+            assertThat(herramienta.Config.getDbUser()).isEqualTo("admin");
         } finally {
             System.setProperty("user.home", origHome);
             herramienta.Config.reload();
