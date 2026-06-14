@@ -26,16 +26,28 @@ public class Ejecutable {
             System.err.println("Web mode was removed. Run the Swing desktop app instead.");
             System.exit(1);
         }
-        // --swing accepted as no-op for backward-compatible launch scripts
+        // Any other --flag is silently ignored: the absence of --web is
+        // the implicit "run the Swing app" branch (startSwingWithSplash
+        // below). This is the contract documented in scripts/README and
+        // in install.sh.
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            // Message first, then the throwable — the logger stamps
+            // the throwable as the cause (its stack trace follows the
+            // message) and the result reads as "Uncaught … <cause>".
             LOG.log(Level.SEVERE, "Uncaught exception in thread " + t.getName(), e);
             if (splashRef != null) splashRef.forceHide();
             if (java.awt.GraphicsEnvironment.isHeadless()) {
                 System.err.println("Fatal error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 System.exit(1);
             }
-            DialogoError err = e instanceof Exception ? new DialogoError((Exception) e) : new DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
+            // The uncaught handler signature receives Throwable, not
+            // Exception; some callers throw Error (StackOverflowError,
+            // OutOfMemoryError) which DialogoError accepts via the
+            // (Throwable) overload.
+            DialogoError err = e instanceof Exception
+                ? new DialogoError((Exception) e)
+                : new DialogoError(new RuntimeException("Fatal error: " + e.getClass().getSimpleName(), e));
             err.showErrorMessage();
         });
 

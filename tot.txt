@@ -271,23 +271,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `next()` was required to return non-null when
   `hasNext()` is true.
 
-**[src/herramienta/export/GoodreadsExportService.java]** — [severity: MEDIUM]
-- `exportToCsv` (line 20) returns a `String` (not
-  writes to a file). The caller (BookExporter.exportCSV
-  via `domini.ShelfParser.exportToCsv`) writes to a
-  file via PrintWriter. Returning a String forces
-  the entire export into memory before the file
-  write; for a 10k-book library with 27 columns
-  per row, the String is ~10 MB. Stream the rows
-  directly to the PrintWriter.
-- The `My Rating` column (line 48) computes
-  `l.getValoracio() > 0 ? (int) Math.round(l.getValoracio() / 2.0) : 0`
-  — but `(int) Math.round(...)` rounds 4.5 to 4 (banker's
-  rounding under Java's Math.round). Goodreads
-  uses rounding to nearest half-up. 4.5 → 5 vs 4.
-  This is a minor data fidelity issue for a niche
-  export format.
-
 **[src/herramienta/imports/CalibreImporter.java]** — [severity: LOW]
 - The class is a 14-line pass-through to
   `BookImporter.importCalibre`. The package
@@ -359,40 +342,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   caveat loud, or return `null` and let the caller
   branch.
 
-**[src/main/Ejecutable.java]** — [severity: MEDIUM]
-- The `--web` branch (line 25) prints a message and
-  exits 1. The launch scripts in `Makefile` and
-  `scripts/` may still pass `--web`; the message is
-  the only signal. The comment (line 29) says
-  `--swing` is a "no-op for backward-compatible launch
-  scripts" but the switch statement only catches
-  `--web`. A user passing `--swing` runs the Swing
-  app (correct) but the comment is misleading —
-  there's no code for `--swing` because the absence
-  of `--web` falls through to `startSwingWithSplash`.
-  Clarify: just remove the `--swing` comment.
-- Line 33: `if (splashRef != null) splashRef.forceHide();`
-  on the uncaught exception handler — the splash
-  is shown in `startSwingWithSplash` (line 63).
-  But the handler runs on the EDT, and the
-  exception may be from the loader thread (line 67).
-  The static `splashRef` is set after splash.show()
-  returns; a null check is correct, but the
-  `LOG.log` call (line 32) does not include the
-  exception's stack — `LOG.log(Level.SEVERE, "...", e)`
-  is correct, but the message is on a separate
-  param. Reorder to put the message first.
-- Line 38: `new DialogoError(new RuntimeException(
-  "Fatal error: " + e.getClass().getSimpleName(), e))`
-  — wraps the non-Exception `e` (which can be
-  `Throwable` not just `Exception`) into a
-  RuntimeException. The `instanceof Exception`
-  check (line 38) is followed by an else branch
-  that wraps — but `Throwable` is the parameter
-  type. The wrapping loses fidelity; pass `e`
-  through to a `DialogoError(Throwable)` overload
-  or just log and exit without showing a dialog.
-
 **[src/presentacio/BackupController.java]** — [severity: MEDIUM]
 - `backupBD` (line 34) and `restaurarBD` (line 58)
   use `SwingWorker` to call `cd.backupToSQL` /
@@ -417,27 +366,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   "dlg_restore_done_cover_note" without a localized
   separator. Add an i18n key for the combined
   message or a `\n\n` constant.
-
-**[src/presentacio/BookActionsController.java]** — [severity: MEDIUM]
-- `eliminarFilaSeleccionada` (lines 96-124) iterates
-  selected rows, pushes each onto `undoBuffer` (line
-  115), then deletes. The undo buffer cap is
-  `LibraryViewState.UNDO_MAX = 20` (line 116).
-  A user selecting and deleting 50 books sees 30
-  lost undo entries. Document the cap or grow it
-  to 100.
-- `mostrarLlibreAleatori` (line 175), `mostrarLlegitsRecentment`
-  (line 217), `mostrarDesitjats` (line 233),
-  `mostrarEnCurs` (line 243) all rebuild
-  `state.biblio` from a fresh `state.cd.getAllLlibres()`
-  filter. For a 10k-book library each "show filter"
-  click does a full SQL scan plus a full Java
-  filter. Cache the recent/read/wishlist/in-progress
-  results in `LibraryViewState` and invalidate on
-  write. Or, since the filter logic is pure, accept
-  the cost and document.
-- The `Llibre` import on line 5 is unused (no
-  direct reference). Remove it.
 
 **[src/presentacio/CenterTablePanel.java]** — [severity: MEDIUM]
 - `buildTable` (line 63) creates the JTable

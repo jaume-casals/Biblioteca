@@ -113,6 +113,11 @@ class BookActionsController {
             try {
                 state.cd.findLlibre(isbn).ifPresent(l -> {
                     state.undoBuffer.push(l);
+                    // Cap the undo buffer at UNDO_MAX (20). When the user
+                    // deletes more than UNDO_MAX books in one batch, the
+                    // oldest entries are silently dropped — the cap is
+                    // a memory bound, not a "first 20 only" contract.
+                    // The undo() stack is the only consumer.
                     if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
                     state.cd.deleteLlibre(l);
                     eliminarFila(l);
