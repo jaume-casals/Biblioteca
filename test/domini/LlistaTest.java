@@ -41,21 +41,21 @@ class LlistaTest {
     // ── setNom validation ───────────────────────────────────────────────
 
     @Test
-    @DisplayName("setNom(null) throws IllegalArgumentException")
+    @DisplayName("setNom(null) throws BibliotecaException.Validation")
     void setNomNullThrows() {
         Llista l = new Llista(1, "ok");
         assertThatThrownBy(() -> l.setNom(null))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     @Test
-    @DisplayName("setNom(blank) throws IllegalArgumentException")
+    @DisplayName("setNom(blank) throws BibliotecaException.Validation")
     void setNomBlankThrows() {
         Llista l = new Llista(1, "ok");
         assertThatThrownBy(() -> l.setNom(""))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
         assertThatThrownBy(() -> l.setNom("   "))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     @Test

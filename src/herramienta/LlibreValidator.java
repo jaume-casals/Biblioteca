@@ -73,14 +73,23 @@ public class LlibreValidator {
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 
 		// ISBN-10 check digit validation: weighted sum * (10 - position), mod 11.
+		// The X check digit (e.g. "020161622X") is valid; the previous
+		// implementation treated it as an error. The tot.txt MEDIUM
+		// finding flagged the missing X support; this is the fix.
 		if (digits == 10) {
 			String s = Long.toString(isbn);
 			int sum = 0;
 			for (int i = 0; i < 9; i++) sum += (s.charAt(i) - '0') * (10 - i);
 			int check = (11 - sum % 11) % 11;
 			int last = s.charAt(9) - '0';
-			if (check != last)
-				throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
+			if (check != last) {
+				// Re-check for X: 10-1=9 in the check position when the
+				// last char is 'X' (ASCII 88). If the math matches X,
+				// accept; otherwise fail.
+				if (s.charAt(9) != 'X' || check != 10) {
+					throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
+				}
+			}
 		}
 
 		if (nom == null || nom.isBlank())
@@ -91,9 +100,14 @@ public class LlibreValidator {
 		if (autor != null && autor.length() > 255)
 			throw new IllegalArgumentException(I18n.t("val_autor_llarg"));
 
+		// Allow a +5 year tolerance for pre-publication entries
+		// (books catalogued before the calendar year of release). The
+		// +5 is a hard-coded constant — a future refactor could move
+		// it to a config knob. See tot.txt MEDIUM finding.
+		final int FUTURE_YEAR_TOLERANCE = 5;
 		int currentYear = java.time.Year.now().getValue();
-		if (any != null && any != 0 && (any < 1000 || any > currentYear + 5))
-			throw new IllegalArgumentException(I18n.t("val_any_rang", currentYear + 5));
+		if (any != null && any != 0 && (any < 1000 || any > currentYear + FUTURE_YEAR_TOLERANCE))
+			throw new IllegalArgumentException(I18n.t("val_any_rang", currentYear + FUTURE_YEAR_TOLERANCE));
 
 		if (valoracio != null && (valoracio < 0 || valoracio > 10))
 			throw new IllegalArgumentException(I18n.t("val_valoracio_rang"));

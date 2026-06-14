@@ -73,8 +73,18 @@ public final class StatsDelegate {
         TreeSet<String> names = new TreeSet<>();
         List<Llibre> snapshot = state.withLockReturning(() -> new ArrayList<>(state.bib()));
         for (Llibre l : snapshot) {
+            // Prefer the canonical autors list; fall back to the legacy
+            // joined `autor` field for books that came in via the validator
+            // path (which only sets the joined string, not the list).
             List<String> a = l.getAutors();
-            if (a != null) a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);
+            if (a != null && !a.isEmpty()) {
+                a.stream().filter(s -> s != null && !s.isEmpty()).forEach(names::add);
+            } else if (l.getAutor() != null && !l.getAutor().isBlank()) {
+                for (String part : l.getAutor().split(",")) {
+                    String t = part.trim();
+                    if (!t.isEmpty()) names.add(t);
+                }
+            }
         }
         return new ArrayList<>(names);
     }

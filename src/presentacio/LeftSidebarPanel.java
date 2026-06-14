@@ -38,7 +38,11 @@ public class LeftSidebarPanel extends JPanel {
 
 	private JScrollPane shelvesScroll;
 	private JPanel sidebarShelvesPanel;
-	private final Map<Integer, JButton> sidebarShelfBtnMap = new HashMap<>();
+	// Capacity 64 — covers 20+-shelf libraries without resize. The
+	// default 16 triggers a rehash at ~13 entries; tot.txt MEDIUM
+	// finding flagged this as an unnecessary spike during initial
+	// sidebar build for medium libraries.
+	private final Map<Integer, JButton> sidebarShelfBtnMap = new HashMap<>(64);
 	private JButton btnTotsElsLlibres;
 	private final List<JButton> sidebarBtns = new ArrayList<>();
 

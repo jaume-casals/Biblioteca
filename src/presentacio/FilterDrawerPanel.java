@@ -266,23 +266,23 @@ public class FilterDrawerPanel extends JPanel {
 	}
 
 	public void applyTheme() {
-		styleFilterComponents();
-		UIComponents.styleAccentButton(registry.button("bttnFiltrar"));
-		UIComponents.styleSecondaryButton(registry.button("bttnQuitarFiltros"));
-		UIComponents.styleSecondaryButton(registry.button("btnExportDropdown"));
-		UIComponents.styleSecondaryButton(registry.button("btnImportDropdown"));
-		UIComponents.styleSecondaryButton(registry.button("btnFetchCovers"));
-		UIComponents.styleSecondaryButton(registry.button("btnEscanejarISBN"));
-		UIComponents.styleSecondaryButton(registry.button("btnBackupBD"));
-		UIComponents.styleSecondaryButton(registry.button("btnRestaurarBD"));
-		UIComponents.styleAccentButton(registry.button("btnCarregaPreset"));
-		UIComponents.styleSecondaryButton(registry.button("btnDesaPreset"));
-		UIComponents.styleSecondaryButton(registry.button("btnEsborraPreset"));
+		styleAllButtons();
 		registry.comboBox("comboPresets").setFont(UITheme.fontBase());
 		setBackground(UITheme.palette().bgMain());
 	}
 
 	public void applyThemePostLaf() {
+		styleAllButtons();
+	}
+
+	/**
+	 * Single source of truth for the 11 button styles shared by
+	 * {@link #applyTheme()} and {@link #applyThemePostLaf()}. The
+	 * tot.txt MEDIUM finding flagged the duplicated block; the
+	 * helper keeps the two entry points in lockstep when a new
+	 * button is added to the registry.
+	 */
+	private void styleAllButtons() {
 		styleFilterComponents();
 		UIComponents.styleAccentButton(registry.button("bttnFiltrar"));
 		UIComponents.styleSecondaryButton(registry.button("bttnQuitarFiltros"));

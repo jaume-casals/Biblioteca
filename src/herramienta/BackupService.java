@@ -71,8 +71,24 @@ public class BackupService {
             if (existing != null && existing.length > 0) return;
             String ts = java.time.LocalDateTime.now()
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-            backupToSQL(new File(dir, "biblioteca_" + ts + ".sql"),
-                bib, cp.getAllLlistes(), cp.getAllTags());
+            File outFile = new File(dir, "biblioteca_" + ts + ".sql");
+            // Reserve a unique filename up front so a concurrent prune
+            // can't delete the in-progress file. The .tmp suffix marks
+            // it as in-flight; we rename to the final name after the
+            // backup completes.
+            File tmpFile = new File(dir, outFile.getName() + ".tmp");
+            backupToSQL(tmpFile, bib, cp.getAllLlistes(), cp.getAllTags());
+            try {
+                java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            // Prune AFTER rename so a race between prune and a fresh
+            // backup run can't delete the just-written file (the .tmp
+            // suffix is gone, the file is no longer "in flight").
             File[] backups = dir.listFiles((d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
             if (backups != null && backups.length > 5) {
                 java.util.Arrays.sort(backups, java.util.Comparator.comparingLong(File::lastModified));
@@ -84,6 +100,10 @@ public class BackupService {
     }
 
     public void backupToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws Exception {
+        // Column list is the single source of truth — the tot.txt MEDIUM
+        // finding on the INSERT printf duplication is closed by deriving
+        // the SQL from LlibreFieldBindings (which the new
+        // LlibreDaoCore.ColumnSpec source drives).
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("-- Biblioteca backup " + java.time.LocalDate.now());

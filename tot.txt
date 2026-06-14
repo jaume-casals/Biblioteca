@@ -6,68 +6,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 
 ---
 
-**[src/domini/facade/BookDelegate.java]** — [severity: HIGH]
-- `addLlibre` / `deleteLlibre` / `deleteLlibreByIsbn` / `updateLlibre` /
-  `setLlibreBlob` (lines 96-189) follow a "binarySearch → DB → in-memory
-  mutate" pattern that is not atomic with respect to the lock. Two threads
-  inserting the same ISBN can both pass the binarySearch before either
-  commits; on the second insert the DB throws, but the surviving add can
-  then insert at a `pos` that was computed before the other thread's
-  in-memory mutation. The class Javadoc (lines 32-36) acknowledges the
-  window. Fix: re-acquire the lock between the DB call and the list
-  mutation, and re-validate presence/absence inside that critical section;
-  or wrap each call in a single `synchronized` and re-do the binary search
-  on the second pass. The known-window Javadoc is fine for a personal
-  single-JVM app, but the consequence in `setLlibreBlob` is worse: a
-  null/negative search result is silently treated as "book not in list,
-  skip" so two writers each only persist their own blob.
-- `getLlibre(long)` (lines 145-157) loads heavy fields OUTSIDE the
-  state lock via `loadHeavyFields(l)`. While the read is by ISBN, a
-  concurrent `updateLlibre` can mutate `l` between the lock release and
-  the heavy-load, so the caller's `l` may be partially overwritten
-  mid-loadHeavyFields (descripcio/notes set after the first update but
-  before the second). The fix is either (a) keep the in-memory reference
-  pinned in `bib()` (look up by ISBN after load to swap the slot), or
-  (b) make `loadHeavyFields` take a defensive copy and only assign back
-  if the book is still at the same row.
-- The pre-`SQL_FILTER_THRESHOLD` short-circuit at line 195
-  (`if (state.bib().size() >= SQL_FILTER_THRESHOLD) return
-  searchLlibresSQL(f);`) is read twice: once via `aplicarFiltres(f)` and
-  again by every DB-backed caller. The 2000 magic number is hard-coded
-  in two places (`BookDelegate.SQL_FILTER_THRESHOLD` and the comment
-  in `TablePageController`). Extract to a single named constant on
-  `ControladorDomini` so the threshold can be tuned or tested without
-  a global search.
-
-**[src/domini/facade/BackupDelegate.java]** — [severity: HIGH]
-- Lines 46-50: heavy-field preloading is performed on the caller's
-  thread (the Swing EDT, since `BackupController.backupBD` invokes
-  `cd.backupToSQL(f)` from `SwingWorker.doInBackground` — but the
-  constructor wiring and any other call sites run on the EDT directly).
-  For a 5,000-book library each missing heavy fields, this is 5,000
-  sequential `SELECT descripcio, notes FROM llibre WHERE ISBN = ?`
-  round-trips on the EDT. Fix: keep the pre-load step on the calling
-  thread but batch the lookups via a single `SELECT ... WHERE ISBN IN
-  (...)`, or only call `loadHeavyFields` lazily for books that
-  serialize descripcio/notes.
-- `restoreFromSQL` (lines 63-100) builds `newBib` INSIDE the lock
-  (lines 92-98) by calling `state.persistence().getAllLlibres()` etc.
-  on the thread that holds `state.lock()`. JDBC `getAll*` queries
-  executed under the application state lock serialize all other
-  delegate operations; if the DB is slow, every other read/write
-  (including table filter, search, shelf add) blocks. Acquire
-  snapshots via a dedicated persistence method that does NOT touch
-  the state lock, then publish atomically.
-- `backupToSQL` lines 56-58 wrap the snapshot creation in
-  `synchronized (state.lock())`. A pre-existing exception path leaves
-  `state.llistes` partially populated only if the same exception path
-  is exercised. Today the try-block has no inner try, so the lists
-  are fully populated before being handed off. Fine in practice, but
-  the Javadoc does not mention that the snapshot is per-collection
-  rather than transactional — a slow DB on the first
-  `getAllLlibres()` is fine, but a slow DB on the last one
-  (`getAllLlistes`) keeps the lock for the full duration.
-
 **[src/domini/facade/LoanDelegate.java]** — [severity: LOW]
 - `getAllOverdueLoans` (delegated to `state.persistence()`) returns
   `List<Object[]>` (raw `Object[]` per row). The upstream
@@ -102,31 +40,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   directly, which is fine for tests but is the exact pattern the
   Javadoc warns against. Make it package-private and reserve for
   the facade package.
-
-**[src/domini/facade/ShelfDelegate.java]** — [severity: HIGH]
-- `addLlista` / `deleteLlista` / `renameLlista` / `setLlistaColor`:
-  persistence write first, then in-memory mutate. Unlike the book
-  delegate, the in-memory mutate uses `llista.equals` (id-based) to
-  remove the entry, so concurrent renames or deletes can be lost —
-  e.g. two threads renaming the same shelf to different names will
-  both succeed in DB (last writer wins) but the in-memory map
-  will hold whichever entry the second mutator removed, leaving
-  the DB out of sync with the in-memory state. Either serialize
-  the in-memory mutate under the same lock that took the
-  pre-decision (re-look-up the Llista by id after the DB write),
-  or hold the lock across the DB call.
-- `swapLlistesOrdreLocked` (lines 128-149) is documented to require
-  the caller to hold the lock — true, but it then calls
-  `cp.updateLlistaOrdre(...)` (DB) while still holding the lock.
-  Same serialization concern as `addLlista` above; a slow DB
-  freezes all other state operations. Use a copy-then-commit
-  pattern: capture both `ordre` values, release the lock, run
-  the two DB updates, reacquire and re-check.
-- `moveLlistaUp` (line 96) and `moveLlistaDown` (line 102) do not
-  validate that the second list (`i-1` / `i+1`) has a different
-  id; if two consecutive shelves share an id (corrupted state),
-  the swap becomes a no-op but the `updateLlistaOrdre` calls
-  still fire. Add an `id != otherId` guard.
 
 **[src/domini/facade/TagDelegate.java]** — [severity: MEDIUM]
 - `getLlibresWithTag` / `getTagsForLlibre` / `removeLlibreFromTag` /
@@ -250,91 +163,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   MariaDB values that the user may want to keep for later
   reconnection. Document this destructive fallback or preserve
   the previous values.
-
-**[src/persistencia/ServerConect.java]** — [severity: HIGH]
-- `createDatabase(ConnectionConfig)` (lines 155-181) catches
-  `Exception` and re-throws as `RuntimeException` with the
-  i18n-flavoured message `I18n.t("err_db_init_" + cfg.dbType())`.
-  If `dbType` is neither `h2` nor `mariadb` (e.g. a typo or a new
-  type) the key lookup falls through to `err_db_init_h2` (because
-  `I18n.t` returns the key when missing) — so the user sees
-  the wrong error message. Use a switch on `dbType()` with an
-  explicit else that throws `IllegalArgumentException("Unknown
-  dbType: " + cfg.dbType())`.
-- `MIGRATIONS` (lines 37-111) is a 75-entry array. The MIGRATION
-  32-34 sequence (lines 95-105) is fragile: 32 inserts into
-  `autor`, 33 inserts into `llibre_autor`, 34 drops the `autor`
-  column. If 33 fails, 34 still runs and the legacy column is
-  gone — but 33 left rows partially migrated. The "skip on
-  unmigrated rows" guard in `runMigration34DropAutor` is correct
-  for the all-or-nothing 33 path, but 32 and 33 are NOT
-  wrapped — if 32 fails (e.g. H2 schema conflict), 33 will still
-  attempt, with no transaction. Wrap the 32+33+34 sequence in a
-  single H2 transaction for the H2 branch; for MariaDB, document
-  the operator-recovery steps.
-- `columnExists` (lines 310-320) does two `meta.getColumns` lookups
-  (original-case and upper-case) but ignores the result of the
-  first one if the second is run regardless. Re-read the Javadoc
-  to confirm: line 314 says "if (rs.next()) return true;" — so the
-  second lookup only runs if the first returns false. OK, this
-  is correct; but the second lookup always returns at the
-  post-uppercase table/column names, which on a case-sensitive
-  DB might miss a column whose only the lowercase form exists.
-  `DatabaseMetaData.storesLowerCaseIdentifiers` would be the
-  correct way to choose.
-- `loadDriverFromLib` (lines 338-351) builds a `URLClassLoader`
-  per call. Each instance pins the JAR in memory; the GC root
-  is the static `Driver` field returned, but the
-  `URLClassLoader` itself becomes unreachable. The H2 and MariaDB
-  drivers cache static state, so this is fine in practice, but
-  on driver upgrade (loading a new jar) the old
-  `URLClassLoader` is never closed. Not a leak for a desktop app
-  but worth documenting.
-- `runMigrationH2` (lines 246-270) saves and restores
-  `prevAutoCommit` for each migration. The outer `runMigrations`
-  caller (lines 218-239) also saves and restores in a
-  `try/finally` (line 237). The two saves race if the outer
-  `prevAutoCommit` was already `false` (e.g. another caller
-  changed it) — the inner save captures `false`, the inner
-  restore sets it to `false`, the outer `finally` restores to
-  the original `true` — net effect is correct, but the
-  bookkeeping is fragile. Document the contract or remove the
-  inner save/restore.
-
-**[src/persistencia/LlibreDaoCore.java]** — [severity: HIGH]
-- `executeSQLFile` (lines 173-192) reads the file via
-  `Files.readAllBytes` (line 177) and parses the bytes back into
-  a String. For a 50 MB backup file this allocates a 50 MB
-  `byte[]` and a 50 MB `String` (with the UTF-8 decoder holding
-  a CharBuffer of similar size). For multi-MB backups the peak
-  memory is 4× the file size. Stream the file instead: read
-  line by line with a `BufferedReader`, accumulate the
-  multi-line statement, dispatch to the DB. Also avoid the
-  `withTransaction` wrapper for the file-level
-  BEGIN/COMMIT/INSERT statements, since each statement is its
-  own auto-commit operation on MariaDB (the wrapper is a no-op
-  there).
-- `insert` and `update` (lines 90-127) wrap the column-by-column
-  bind in `LlibreFieldBindings.forInsert` /
-  `LlibreFieldBindings.forUpdate`. The wrapper class
-  `LlibreFieldBindings` is 142 lines; the centralization is
-  good, but `forInsert` and `forUpdate` are two near-identical
-  Object[] builders. The difference is `imatge_blob` is in
-  INSERT but not UPDATE, and the field order is shifted. A
-  single helper that takes a `boolean includeBlob` parameter
-  would halve the maintenance surface.
-- The `LLIBRE_COLUMNS`, `LLIBRE_COLUMNS_L`, and
-  `LLIBRE_COLUMNS_L_LIGHT` constants (lines 25-49) are three
-  near-duplicate strings. Each is a different hand-written
-  projection of the same 28 columns. Adding a new column
-  requires editing all three (plus `LlibreFieldBindings`,
-  `LlibreMapper.fillLlibreTail`, the schema migration list,
-  the backup `writeLlibreINSERT` printf, and the
-  `GoodreadsExportService` row builder). Consider a single
-  `static String buildColumnList(String prefix, boolean
-  light)` that emits the column list from a shared
-  `List<ColumnSpec>` record array. The 3 lists would
-  collapse to one source of truth.
 
 **[src/persistencia/LlibreSearchDao.java]** — [severity: MEDIUM]
 - `search` (lines 26-70) builds the SQL via StringBuilder with
@@ -471,40 +299,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   documents plaintext storage; the password is never
   cleared from memory.
 
-**[src/herramienta/Config.java]** — [severity: HIGH]
-- The plaintext password storage documented in
-  `getDbPassword` Javadoc (lines 192-213) is a real security
-  concern. The Javadoc proposes three migration paths but
-  none is implemented. Today a user typing a MariaDB
-  password stores it in cleartext in
-  `~/.biblioteca/config.properties`, with file permissions
-  inherited from the user. On a shared host (school lab,
-  library), any user can read it. Even on a personal Mac
-  with default `chmod 644` the password is exposed. The
-  Javadoc is honest about the risk; the implementation
-  ignores it. Fix by either (a) implementing the
-  Keychain/Credential Manager path (jpackage's
-  `dk.danskcodes.jpass`), or (b) at minimum marking
-  `config.properties` with `0600` on save (line 433 does
-  not do this).
-- `withBatch` (lines 404-410) wraps an action and flushes
-  at the end. The `try/finally` is correct, but the
-  `save()` call still goes through the 300ms debounce —
-  the batch caller must wait up to 300ms for the flush.
-  Add a `flushNow()` call inside the `finally`.
-- `props` (lines 95-117) is a `Map<String,String>` view
-  over the four sub-stores. The implementation of
-  `entrySet()` allocates a new `HashSet` on every call
-  (line 107), walking all four sub-stores. If anything
-  iterates the entries (a save, an export), the cost is
-  O(4n). Cache the snapshot or iterate lazily.
-- `deletePreset` (lines 261-283) deletes by reading all
-  presets into two `ArrayList`s, then re-saving the
-  remainder. For a 20-preset library the work is trivial,
-  but the method does a `getOrDefault` on each entry, then
-  removes. A direct `presets.stream().filter(j != i).forEach(...)`
-  would be 8 lines instead of 22.
-
 **[src/herramienta/BackupService.java]** — [severity: MEDIUM]
 - `autoBackup` (lines 59-84) is scheduled on a daemon
   single-thread `ScheduledExecutorService` (line 41). If
@@ -547,91 +341,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   scheduler because `shutdownNow` is interrupt-driven
   and may take time to settle.
 
-**[src/herramienta/BookExporter.java]** — [severity: HIGH]
-- `exportHTML` (lines 86-227) base64-encodes each cover
-  byte array inline into the HTML (line 210). For a 1000-
-  book library with 50 KB cover each, the output HTML
-  is ~50 MB. Browsers and text editors struggle with
-  multi-MB HTML. Either (a) switch to a layout that
-  references cover images via relative file paths
-  (saves the export in a folder next to the HTML),
-  or (b) document the size limit and add a toggle
-  "include covers" (off by default for > 100 books).
-- `printHtmlGrid` (line 196) uses `CoverService.getCachedBytes`
-  (line 200) which loads from disk on first access — on
-  the EDT during a 1000-book export this is a synchronous
-  disk read per book. Move the cache population off the
-  EDT (use a `SwingWorker` like the rest of the
-  import/export paths) or pre-warm the cache in a
-  background thread before the loop.
-- `exportJSON` (line 21) builds the JSON by hand via
-  `GSON.toJson(LinkedHashMap)`. The `llibres` list
-  (lines 36-42) calls `jsonLlibre` per book, which
-  inlines 27 keys plus the shelves and tags lists. The
-  result is a valid JSON object, but the surrounding
-  `println("{")` and `println("}")` are hand-written.
-  Use `GSON.toJson(books, writer)` for the whole
-  document and let the library handle escaping,
-  indentation, and stream-writing. The current
-  approach loses 500x performance on a 5000-book
-  library and is a source of escaping bugs (the
-  `jsonStr` helper on line 289 is a fallback for the
-  shelves/tags inline; the books themselves use
-  `GSON.toJson(LinkedHashMap)`).
-- `printHtmlTable` (line 228) emits
-  `String.format("%.1f%%", ...)` and
-  `String.format("%.2f", ...)` via `Locale.ROOT` would
-  be more portable (today the default locale is used).
-  French/Brazilian Portuguese locales would emit `,`
-  as the decimal separator, which is not valid HTML
-  in a `<td>` (browsers render it as text). Use
-  `Locale.ROOT` or a CSS class.
-- `printHtmlTable` uses `Escapers.html(l.getAny() > 0 ?
-  l.getAny() : "")` (line 239). `l.getAny()` returns an
-  `Integer` (autoboxed); a null check is missing. For a
-  book without `any`, `l.getAny()` returns null, NPE
-  inside the ternary, no ISBN displayed for that row.
-  Reproducible on `setAny(0)` then `setAny(null)`.
-
-**[src/herramienta/BookImporter.java]** — [severity: HIGH]
-- `importCalibre` (lines 55-103) shells out to `sqlite3` via
-  `Runtime.exec` (line 57) and reads stdout. The
-  `stderrDrain` thread (lines 58-63) does not interrupt
-  the child on `waitFor` timeout (line 99). The
-  `destroyForcibly` (line 100) sends SIGKILL to the
-  process, which works on Unix; on Windows,
-  `destroyForcibly` is `Process.destroyForcibly` which
-  is also SIGKILL. The library won't leak, but the
-  child process can leave a temp file or hold a lock on
-  the Calibre DB. Test on the documented platforms
-  (Linux + macOS per `findSqlite3` candidates, lines
-  107-113) and document the limitation.
-- `importCSV` (lines 14-49) catches all exceptions
-  (line 40), increments `err`, and truncates the
-  error message to 400 chars (line 42). Truncating the
-  error message hides the root cause for users with
-  large CSVs (>10 errors). Collect the first N error
-  messages in full, then return as a list, and let the
-  UI display them in a scrollable text area.
-- `importCSV` line 32: `String headerCols =
-  CsvUtils.parseLine(headerLine);` — `headerLine` is
-  the comma-joined header (line 25). `parseLine` parses
-  it again. The `String[] headerRow` already exists
-  (line 24); the second parse is wasted work. Use
-  `headerRow` directly.
-- `importCalibre` line 87: `l = LlibreValidator.checkLlibre(
-  isbn, nom, autor, any, "", valoracio, 0.0, false, "");`
-  — passes an empty description, but the validator
-  accepts "" (length 0 < 255). OK. However, the
-  description is also passed as `notes` (line 89) if
-  non-empty. Two validations: notes (VARCHAR 2048 per
-  migration 24) and descripcio (VARCHAR 512 per
-  `CREATE_TABLE`). For a 2 KB notes string the DB
-  accepts it; for a 10 KB notes string, MariaDB would
-  reject it after the column type change. Calibre
-  comments are sometimes > 10 KB. Add a length cap
-  with a clear user message.
-
 **[src/herramienta/CoverService.java]** — [severity: MEDIUM]
 - The `POOL` (line 21) is `Executors.newFixedThreadPool(6)`
   with no `shutdown` hook other than the explicit
@@ -656,60 +365,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   via the singleton's `synchronized` — a slow DB
   blocks the cover pool. Acceptable but document.
 
-**[src/herramienta/OpenLibraryClient.java]** — [severity: HIGH]
-- `fetchCoverByISBN` (lines 165-210) falls back to a
-  regex parse of Google Books' JSON (line 197) instead
-  of using `JsonParser.parseString(meta)` like the rest
-  of the file. The regex `"thumbnail"\s*:\s*"([^"]+)"`
-  fails on JSON with escaped quotes inside the
-  thumbnail URL (some Google Books entries do) or on
-  `image/jpeg;base64,` thumbnails. Use
-  `JsonParser.parseString(meta).getAsJsonObject().get(...).getAsJsonObject("volumeInfo").get("imageLinks")`
-  to keep the parsing consistent with the rest of
-  the file. The regex was likely added because the
-  Google Books response was being parsed twice in
-  `mergeGoogleBooks` — refactor to parse once and
-  share the JsonObject.
-- `lookupByISBN` (line 90) catches `IOException` and
-  returns the map with an `"error"` key. The
-  `mergeGoogleBooks` fallback (line 94) is wrapped in
-  a separate try/catch that catches `Exception` (broad).
-  If the OL response was a 503 (transient), the merge
-  is attempted even though the OL is the authoritative
-  source; if the merge is a 200 but with a different
-  book (rare), the title field is overwritten silently
-  because `put(r, "title", ...)` replaces. Track the
-  source ("ol" vs "gb") in the map and warn the user
-  when the merge actually changed a field.
-- `lastRequestMs` (line 24) is a static field
-  protected only by `synchronized (OpenLibraryClient.class)`
-  in `rateLimit()` (line 31). Two threads calling
-  `rateLimit` at the same time serialize; but
-  `rateLimit` is called inside `fetchWithRetry` (line 213)
-  and `fetchCoverByISBN` (line 166), and the
-  `lastRequestMs = System.currentTimeMillis()` write
-  happens inside the synchronized block. Correct.
-  However, `testBaseUrl` / `testMaxRetries` /
-  `testRetryBaseMs` (lines 42-44) are NOT synchronized
-  with `fetch` / `fetchWithRetry`. A test that sets
-  `testBaseUrl` then unsets it from another thread can
-  observe a half-set state. The Javadoc (lines 38-41)
-  documents "tests must not run in parallel" — make
-  the fields `volatile` to make the contract enforceable.
-- The retry loop in `fetchWithRetry` (lines 218-231)
-  uses `Thread.sleep(baseMs * (1L << i))` for backoff
-  (line 224). `1L << i` with `i=0` is 1, with `i=1` is
-  2, with `i=2` is 4 — so total backoff is 500+1000+2000
-  = 3500ms. Fine. But the loop catches
-  `IOException` only; a 200 response with bad JSON
-  reaches `JsonParser.parseString` which throws
-  `JsonSyntaxException` (a `RuntimeException`). That
-  exception escapes `fetch` (line 254) — actually
-  `fetchWithRetry` re-throws via `throw last` on line
-  232. The caller `lookupByISBN` catches it in its own
-  try/catch (line 90) and adds `"error"`. Correct, but
-  the retry budget is wasted — 4 attempts of bad JSON
-  instead of 1.
 
 **[src/herramienta/OpenLibraryParser.java]** — [severity: LOW]
 - `parseIsbnResponse` (line 21) duplicates the inner
@@ -1085,43 +740,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   message: "X covers downloaded, Y had no
   cover available".
 
-**[src/presentacio/FilterController.java]** — [severity: HIGH]
-- `getIsbnMap` (line 38) caches the ISBN → Llibre
-  index. The cache is invalidated when
-  `state.biblio` reference changes (line 39
-  identity check). But `state.biblio` is replaced
-  by `new ArrayList<>(...)` in many places (e.g.
-  `BookActionsController.mostrarDesitjats` line 235),
-  so the cache rebuilds on every "show filter" click.
-  Fine in practice, but the Javadoc (lines 28-30)
-  claims the cache is "rebuilt only when state.biblio
-  reference changes" — and it is. The problem is
-  the API surface that calls `aplicarFiltres`
-  followed by `state.biblio = new ArrayList<>(...)`
-  is inconsistent: `aplicarFiltres` is on `cd` (the
-  facade), `state.biblio` is on the local view
-  state. The cache invalidation does not know which
-  list the user is filtering over. Document or fix.
-- `filtrar` (line 98) on the `dbPath` branch (line
-  137) launches a `SwingWorker` (line 140) that
-  calls `MainFrameControl.getInstance().aplicarFiltres(filter)`.
-  The `getInstance` is on a singleton (MainFrameControl.java:201).
-  The filter result is set via `host.setTable(get())`
-  (line 147). If the user clicks "Filter" twice in
-  quick succession, two workers run, and the
-  second's result overwrites the first. Cancel
-  the previous worker before starting a new one.
-- `applyFilterState` (line 278) sets the filter
-  fields from a preset. The `format` field is set
-  to the empty string if missing (line 294), but
-  the combo's first item is also "" — so the
-  "Format" filter becomes "no format filter" which
-  is the default. Correct. But `editorial` and
-  `idioma` (line 291-293) are set as text — and the
-  filter matches on `contains(needle)` (sub-string).
-  The preset restores the typed text, not the
-  filtered list. Correct behavior; just confirm.
-
 **[src/presentacio/FilterDrawerPanel.java]** — [severity: MEDIUM]
 - The class Javadoc (lines 30-37) claims 32 hand-
   declared component fields were replaced by a
@@ -1370,56 +988,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   silently broken by this method. Document or
   sort a copy.
 
-**[src/presentacio/detalles/control/DetallesLlibrePanelControl.java]** — [severity: HIGH]
-- `EditHandler.editar` (line 348) catches
-  `NumberFormatException` for `volum`,
-  `exemplars`, `pagines`, `paginesLlegides` and
-  silently leaves the default. The user clicks
-  "Save", no error dialog appears, the book is
-  saved with the old value, and the user wonders
-  why. Add a validation step that shows the
-  invalid field highlight + an error toast before
-  the save.
-- The ISBN field is permanently disabled (line
-  413 `textISBN.setEnabled(false)`). The edit
-  logic at line 391-398 handles a changed ISBN by
-  delete+add, but the user can never type a new
-  ISBN — the field is `setEnabled(false)`. Either
-  enable it in edit mode and re-validate, or
-  remove the ISBN-change branch.
-- `clampPaginesLlegides` (line 172) reads
-  `getTextPaginesLlegides` and `getTextPagines`
-  and re-sets the field via
-  `SwingUtilities.invokeLater`. The clamp fires
-  on every keystroke (DocumentListener on line
-  165). The `invokeLater` defers the re-set to the
-  next EDT cycle, which can cause the cursor
-  position to jump. The `DocumentListener` should
-  use a `DocumentFilter` instead, which can
-  reject the change in-place without a re-set.
-- The `IMAGE_EXECUTOR` (line 25) is a static
-  single-thread executor. `shutdownImageExecutor`
-  (line 223) is public static and registered as a
-  shutdown hook (line 229). But every
-  `DetallesLlibrePanelControl` instance creates a
-  fresh `imageWorker` (line 24, per-instance),
-  while the executor is shared. Correct. But the
-  `pendingBlob` field (line 23) is non-volatile
-  and accessed from both EDT and worker threads
-  (line 206 in `done()`). The EDT is the
-  `done()` caller, so the read is safe, but
-  `seleccionarImatge` (line 233) writes from the
-  EDT. The `pendingBlob` is set in
-  `startImatgeWorker` `done()` (line 206) from
-  the EDT. OK.
-- `imprimirFitxa` (line 249) is 50 lines of
-  `Graphics2D.drawString` with hardcoded x/y
-  coordinates and i18n field names. Move to a
-  separate `BookPrintRenderer` class with a
-  `printBook(Graphics2D, Llibre, PageFormat)`
-  method. The class is otherwise a 50-method
-  god class.
-
 **[src/presentacio/detalles/control/GuardarLlibresDialogoControl.java]** — [severity: MEDIUM]
 - `crearLlibre` (line 156) parses `anyTxt`,
   `valTxt`, `preuTxt` via `Integer.parseInt` /
@@ -1629,27 +1197,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   The double-walk is wasteful. Use the parent's
   width directly and fall back to MAX_VALUE on
   the first try.
-
-**[src/presentacio/renderers/CoverCellRenderer.java]** — [severity: HIGH]
-- The `LOADER` (line 18) is a 4-thread pool with
-  no shutdown hook. The renderer is recreated
-  on every `setBooks` call (TableController.java:67
-  passes a fresh `CoverCellRenderer` if
-  `columnsInstalled` is false). For an app
-  that refreshes the table frequently, the
-  pool is created many times — the daemon
-  threads accumulate. Use a shared static
-  `LOADER` (which it is) but ensure all created
-  renderers reference the same instance. The
-  class is OK on that front (static field).
-  The shutdown hook is the only gap.
-- The `repaintCoverCell` (line 73) iterates
-  every visible row to find the ISBN (line 83).
-  For a 1000-row table, this is 1000 table
-  lookups. The `isbnToRow` map in
-  `TableController` (line 46) already indexes
-  ISBN → row. Use it via a callback, or pass
-  the TableController to the renderer.
 
 **[src/presentacio/renderers/LlegitCheckBoxEditor.java]** — [severity: MEDIUM]
 - Line 38: `new Thread(() -> { ... }).start();` —

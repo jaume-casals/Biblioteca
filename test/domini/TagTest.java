@@ -16,21 +16,21 @@ class TagTest {
     }
 
     @Test
-    @DisplayName("setNom(null) throws IllegalArgumentException")
+    @DisplayName("setNom(null) throws BibliotecaException.Validation")
     void setNomNullThrows() {
         Tag t = new Tag(1, "ok");
         assertThatThrownBy(() -> t.setNom(null))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     @Test
-    @DisplayName("setNom(blank) throws IllegalArgumentException")
+    @DisplayName("setNom(blank) throws BibliotecaException.Validation")
     void setNomBlankThrows() {
         Tag t = new Tag(1, "ok");
         assertThatThrownBy(() -> t.setNom(""))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
         assertThatThrownBy(() -> t.setNom("  "))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
     @Test
