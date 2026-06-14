@@ -69,34 +69,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   on the record would let the alerts builder iterate without
   the cast chain.
 
-**[src/persistencia/TagDao.java]** — [severity: MEDIUM]
-- `AUTOCOMPLETE_COLUMNS` (lines 21-22) is the SQL whitelist for
-  `getDistinctValues`. The matching in-memory extractors live
-  in `domini.facade.StatsDelegate.IN_MEMORY_EXTRACTORS` (line 32
-  of that file). The two lists must be kept in sync manually;
-  nothing in the code enforces it. Add a startup assertion or
-  build the in-memory list by reflecting on the SQL whitelist.
-- `llibreTagCache` (line 24) is `volatile` and the read path
-  (line 124) is `if (llibreTagCache != null) return
-  llibreTagCache;`. The `getAllLlibreTag` method holds the
-  instance monitor (line 123 `synchronized`); the read
-  path does not. A `setRow` operation on the volatile is
-  atomic, but the read can see a partially-published
-  `List.copyOf` reference. Actually `List.copyOf` is
-  published via a single store — the volatile semantics
-  guarantee the read sees either null or a fully-constructed
-  list. OK; but the `getAllLlibreTag()` method returns the
-  live cache reference; downstream callers can mutate it
-  (since `List.copyOf` is immutable, this is safe). Fine.
-- `invalidateLlibreTagCache` (line 28) is called from
-  `ControladorPersistencia.eliminarLlibre`,
-  `eliminarLlibre(long)`, `clearAllData`, `addToLlibre`,
-  `removeFromLlibre` (via DAOs). It is NOT called from
-  `getAllLlibreTag` on the next read. The race is small
-  (cache invalidated, then re-populated on next call) but
-  with a 10k tag-book table the rebuild is non-trivial. This
-  is fine for correctness; the inefficiency is the cost.
-
 **[src/persistencia/AutorDao.java]** — [severity: LOW]
 - `createAutor` (lines 34-46) returns the generated id or
   throws if the driver returns no keys. Throwing a
@@ -186,30 +158,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   scheduler because `shutdownNow` is interrupt-driven
   and may take time to settle.
 
-**[src/herramienta/CoverService.java]** — [severity: MEDIUM]
-- The `POOL` (line 21) is `Executors.newFixedThreadPool(6)`
-  with no `shutdown` hook other than the explicit
-  `shutdown` method (line 88). The shutdown hook
-  (line 35) is registered on the first `getCachedBytes`
-  call — before the shutdown hook, `POOL` is alive
-  with 6 daemon threads. If the JVM exits before
-  `getCachedBytes` is ever called, the pool is not
-  registered. The fix: register the shutdown hook in
-  a `static {}` initializer at class load, not in
-  `getCachedBytes`.
-- `cacheBytes` (line 92) writes to disk on every call
-  (line 96). If a user fetches the same cover twice
-  (e.g. re-import), the second write is a no-op but
-  still hits the disk. `Files.write` is idempotent
-  (atomic-ish for small files), but a `Files.exists`
-  check first would skip the write entirely.
-- `fetchAsync` (line 64) calls `cd.setLlibreBlob` on
-  the pool thread. `cd` is a `BibliotecaWriter` (the
-  facade), which delegates to `LlibreBlobDao` which
-  is `synchronized`. The pool's I/O mixes with the EDT
-  via the singleton's `synchronized` — a slow DB
-  blocks the cover pool. Acceptable but document.
-
 
 **[src/herramienta/OpenLibraryParser.java]** — [severity: LOW]
 - `parseIsbnResponse` (line 21) duplicates the inner
@@ -242,30 +190,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   Anything else returns 0 (ca). Adding a new language
   (e.g. "fr") silently falls back to ca. Throw or
   log a warning for unknown codes.
-
-**[src/herramienta/LlibreValidator.java]** — [severity: MEDIUM]
-- `checkLlibre` (line 59) validates a year against
-  `currentYear + 5` (line 95). A book published in
-  year 2031 cannot be saved today (2026). For a
-  long-running app, this is fine, but the magic number
-  `+ 5` is undocumented.
-- The book normalization `normalizeIsbn13` (line 31)
-  duplicates `Isbn13Normalizer.toIsbn13` (herramienta/
-  Isbn13Normalizer.java). The class-local version
-  does the X-check handling and the leading-zero
-  handling; the utility class does only the
-  ISBN-10→13 conversion. The class-local version
-  returns either the 13-digit string or the original
-  (10-digit ISBN-10). The two implementations should
-  merge.
-- `checkLlibre` line 76-83: ISBN-10 check digit
-  validation. The check uses `s.charAt(9) - '0'`
-  without handling the 'X' check digit. An ISBN-10
-  with the X check digit is a valid ISBN-10 (e.g.
-  "0306406152" — no, that one ends in 2; try
-  "020161622X"). The validator rejects the X-form.
-  Acceptable for "user input" but the Javadoc doesn't
-  say so.
 
 **[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
 - `toIsbn13` (line 8) returns the original `digits`

@@ -92,8 +92,15 @@ public final class CoverService {
     public static void cacheBytes(String isbn, byte[] data) {
         putL1(isbn, data);
         try {
+            Path target = DISK_DIR.resolve(isbn + ".jpg");
+            // Skip the disk write if a previous cover is already cached
+            // at the same path. The byte-content is hashed by the
+            // OpenLibrary response so a re-fetch typically yields the
+            // same bytes; re-writing would be wasted I/O + filesystem
+            // metadata churn.
+            if (Files.exists(target) && Files.size(target) == data.length) return;
             Files.createDirectories(DISK_DIR);
-            Files.write(DISK_DIR.resolve(isbn + ".jpg"), data);
+            Files.write(target, data);
         } catch (Exception ignored) {}
     }
 
