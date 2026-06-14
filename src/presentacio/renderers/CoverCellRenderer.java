@@ -20,17 +20,41 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
         t.setDaemon(true);
         return t;
     });
+    private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    static {
+        if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
+            main.ShutdownHooks.register(() -> {
+                try { LOADER.shutdownNow(); } catch (Exception ignored) {}
+            });
+        }
+    }
     private final Map<Long, ImageIcon> coverCache;
     private final Set<Long> coverLoading;
     private final BibliotecaWriter cd;
     private final JTable table;
+    /**
+     * ISBN → model row index. Caller-provided so the renderer can repaint
+     * the right cell after a background load completes without walking
+     * the whole table (O(n) per repaint was a hotspot on 1k+ row libraries).
+     * May be {@code null} for backward compatibility — the renderer falls
+     * back to a full-table walk in that case.
+     */
+    private final java.util.function.LongFunction<Integer> isbnToRow;
 
     public CoverCellRenderer(JTable table, Map<Long, ImageIcon> coverCache,
             Set<Long> coverLoading, BibliotecaWriter cd) {
+        this(table, coverCache, coverLoading, cd, null);
+    }
+
+    public CoverCellRenderer(JTable table, Map<Long, ImageIcon> coverCache,
+            Set<Long> coverLoading, BibliotecaWriter cd,
+            java.util.function.LongFunction<Integer> isbnToRow) {
         this.table = table;
         this.coverCache = coverCache;
         this.coverLoading = coverLoading;
         this.cd = cd;
+        this.isbnToRow = isbnToRow;
         setHorizontalAlignment(JLabel.CENTER);
         setVerticalAlignment(JLabel.CENTER);
         setOpaque(true);
@@ -80,6 +104,20 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
             table.repaint();
             return;
         }
+        // Fast path: caller gave us a direct ISBN → model-row map.
+        if (isbnToRow != null) {
+            Integer modelRow = isbnToRow.apply(isbn);
+            if (modelRow != null) {
+                int viewRow = table.convertRowIndexToView(modelRow);
+                if (viewRow >= 0) {
+                    table.repaint(table.getCellRect(viewRow, viewCol, false));
+                    return;
+                }
+            }
+        }
+        // Fallback: walk the table (caller did not supply isbnToRow, or
+        // the row was filtered out between the background submit and the
+        // repaint — harmless to repaint the whole table in that case).
         for (int viewRow = 0; viewRow < table.getRowCount(); viewRow++) {
             Llibre rowBook = model.getBookAt(table.convertRowIndexToModel(viewRow));
             if (rowBook != null && rowBook.getISBN() == isbn) {

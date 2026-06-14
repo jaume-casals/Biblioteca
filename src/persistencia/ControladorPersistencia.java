@@ -127,6 +127,23 @@ public class ControladorPersistencia {
 	public synchronized void loadHeavyFields(long isbn, domini.Llibre target) {
 		libreBlobDao.loadHeavyFields(isbn, target);
 	}
+	/**
+	 * Batched counterpart to {@link #loadHeavyFields(long, Llibre)}: one
+	 * round-trip for N books instead of N. The caller supplies an ISBN
+	 * list AND a lookup function that maps each ISBN to the in-memory
+	 * {@link Llibre} to mutate. The DAO does not depend on the
+	 * in-memory state; this is the only path that closes the N+1
+	 * pre-load in {@link domini.facade.BackupDelegate}.
+	 */
+	public synchronized void loadHeavyFieldsBatched(java.util.List<Long> isbns,
+	                                                java.util.function.LongFunction<domini.Llibre> targetLookup) {
+		java.util.Map<Long, domini.Llibre> targets = new java.util.HashMap<>();
+		for (Long isbn : isbns) {
+			domini.Llibre l = targetLookup.apply(isbn);
+			if (l != null) targets.put(isbn, l);
+		}
+		libreBlobDao.loadHeavyFieldsBatched(isbns, targets);
+	}
 	public synchronized void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreBlobDao.setBlob(isbn, blob); }
 	public synchronized void clearAllData() throws java.sql.SQLException {
 		libreDaoCore.clearAllData();

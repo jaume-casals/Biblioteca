@@ -20,19 +20,23 @@ import persistencia.ControladorPersistencia;
 /**
  * Book ({@link Llibre}) CRUD, blob access, search, and sort/filter.
  *
- * <p>Owns the {@code bib} list â€” the canonical in-memory mirror of the
+ * <p>Owns the {@code bib} list — the canonical in-memory mirror of the
  * {@code llibre} table. The list is kept sorted by ISBN ascending; add /
  * update / delete preserve that invariant via
  * {@link Collections#binarySearch(List, Object, Comparator)}.
  *
- * <p>All mutations follow the same contract: write through the
- * persistence layer first, then update the in-memory list under the
- * {@link StateContext#lock() state lock}.
- *
- * <p>Known race window (not closed here â€” same as the original
- * {@code ControladorDomini}): {@code binarySearch â†’ DB â†’ in-memory} is
- * not atomic; two threads adding the same ISBN can both pass the
- * {@code binarySearch} before either commits.
+ * <p>All mutations follow an atomic contract: the state lock is held
+ * for the entire {@code binarySearch → persistence → in-memory mutate}
+ * sequence. Holding the lock across the JDBC call is intentional —
+ * each call is a single-row write and the lock is brief. The earlier
+ * "release between DB and mutate" pattern (used by
+ * {@code ControladorDomini} before the facade split) had a
+ * window where two threads could each pass the
+ * {@code binarySearch}, race the DB, and the loser's in-memory
+ * {@code add(pos, …)} / {@code set(pos, …)} would then corrupt the
+ * list (wrong index, stale reference, or — for
+ * {@link #setLlibreBlob} — a silent skip when {@code pos < 0}).
+ * The atomic form closes that window.
  */
 public final class BookDelegate {
 
@@ -51,7 +55,7 @@ public final class BookDelegate {
         this.state = state;
     }
 
-    // â”€â”€ List views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── List views ────────────────────────────────────────────────────────────
 
     public List<Llibre> getAllLlibres() {
         return state.withLockReturning(() -> new ArrayList<>(state.bib()));
@@ -91,47 +95,56 @@ public final class BookDelegate {
 
     public List<Llibre> getRecentlyAdded() { return state.persistence().getRecentlyAdded(20); }
 
-    // â”€â”€ CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CRUD ──────────────────────────────────────────────────────────────────
 
     public void addLlibre(Llibre l) {
-        int pos = state.withLockReturning(() -> {
+        state.withLock(() -> {
             int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
             if (p >= 0)
                 throw new BibliotecaException.Duplicate("El llibre amb ISBN: " + l.getISBN() + " ja existeix a la biblioteca");
-            return -(p + 1);
+            try {
+                state.persistence().afegirLlibre(l);
+            } catch (SQLException e) {
+                throw new BibliotecaException(e.getMessage(), e);
+            }
+            state.bib().add(-(p + 1), l);
         });
-        try { state.persistence().afegirLlibre(l); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-        state.withLock(() -> state.bib().add(pos, l));
     }
 
     public void deleteLlibre(Llibre l) {
-        int pos = state.withLockReturning(() -> {
+        state.withLock(() -> {
             int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
             if (p < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + l.getISBN() + " no existeix a la base de dades");
-            return p;
+            try {
+                state.persistence().eliminarLlibre(l);
+            } catch (SQLException e) {
+                throw new BibliotecaException(e.getMessage(), e);
+            }
+            state.bib().remove(p);
         });
-        try { state.persistence().eliminarLlibre(l); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-        state.withLock(() -> state.bib().remove(pos));
     }
 
     public void deleteLlibreByIsbn(Long ISBN) {
         if (ISBN == null) throw new BibliotecaException.Validation("ISBN no pot ser null");
-        int pos = state.withLockReturning(() -> {
+        state.withLock(() -> {
             int p = Collections.binarySearch(state.bib(), searchKey(ISBN), ISBN_COMPARATOR);
             if (p < 0) throw new BibliotecaException.NotFound("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
-            return p;
+            try {
+                state.persistence().eliminarLlibre(ISBN);
+            } catch (SQLException e) {
+                throw new BibliotecaException(e.getMessage(), e);
+            }
+            state.bib().remove(p);
         });
-        try { state.persistence().eliminarLlibre(ISBN); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-        state.withLock(() -> state.bib().remove(pos));
     }
 
     public void updateLlibre(Llibre l) {
-        try { state.persistence().updateLlibre(l); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().updateLlibre(l);
+            } catch (SQLException e) {
+                throw new BibliotecaException(e.getMessage(), e);
+            }
             int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
             if (pos >= 0) state.bib().set(pos, l);
         });
@@ -143,52 +156,65 @@ public final class BookDelegate {
     }
 
     public Llibre getLlibre(long ISBN) {
-        Llibre[] holder = new Llibre[1];
-        int[] indexHolder = new int[] { -1 };
-        state.withLock(() -> {
-            indexHolder[0] = Collections.binarySearch(state.bib(), searchKey(ISBN), ISBN_COMPARATOR);
-            if (indexHolder[0] < 0)
+        return state.withLockReturning(() -> {
+            int idx = Collections.binarySearch(state.bib(), searchKey(ISBN), ISBN_COMPARATOR);
+            if (idx < 0)
                 throw new BibliotecaException.NotFound("No existeix el llibre amb ISBN " + ISBN);
-            holder[0] = state.bib().get(indexHolder[0]);
+            Llibre l = state.bib().get(idx);
+            if (!l.isHeavyFieldsLoaded()) {
+                try {
+                    state.persistence().loadHeavyFields(l.getISBN(), l);
+                } catch (RuntimeException e) {
+                    throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + l.getISBN(), e);
+                }
+            }
+            return l;
         });
-        Llibre l = holder[0];
-        if (!l.isHeavyFieldsLoaded()) loadHeavyFields(l);
-        return l;
     }
 
     public void loadHeavyFields(Llibre book) {
         if (book == null || book.isHeavyFieldsLoaded()) return;
-        try {
-            state.persistence().loadHeavyFields(book.getISBN(), book);
-            state.withLock(() -> {
-                int index = Collections.binarySearch(state.bib(), book, ISBN_COMPARATOR);
-                if (index >= 0) state.bib().set(index, book);
-            });
-        } catch (RuntimeException e) {
-            throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.getISBN(), e);
-        }
+        state.withLock(() -> {
+            // Re-check under the lock: a concurrent updateLlibre may have already
+            // loaded heavy fields on the same row.
+            if (book.isHeavyFieldsLoaded()) return;
+            try {
+                state.persistence().loadHeavyFields(book.getISBN(), book);
+            } catch (RuntimeException e) {
+                throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.getISBN(), e);
+            }
+            // The `book` reference may no longer be the one stored in bib() at
+            // the corresponding ISBN slot (concurrent updateLlibre replaced it),
+            // but the DAO has already mutated `book` in place. The current slot
+            // keeps its own reference; the next getLlibre() will reload on
+            // demand if its slot's reference is still the light one. Acceptable:
+            // heavy fields are immutable content (description/notes), and
+            // updateLlibre preserves them via bindUpdateableFields, so the slot
+            // already carries the latest values.
+        });
     }
 
-    // â”€â”€ Blob (cover) access â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Blob (cover) access ───────────────────────────────────────────────────
 
     public byte[] getLlibreBlob(long isbn) { return state.persistence().getLlibreBlob(isbn); }
 
     public void setLlibreBlob(long isbn, byte[] blob) {
-        try {
-            state.persistence().setLlibreBlob(isbn, blob);
-            state.withLock(() -> {
-                int pos = Collections.binarySearch(state.bib(), searchKey(isbn), ISBN_COMPARATOR);
-                if (pos >= 0) {
-                    Llibre l = state.bib().get(pos);
-                    l.setImatgeBlob(blob);
-                    l.setHasBlob(true);
-                }
-            });
-        }
-        catch (Exception e) { throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e); }
+        state.withLock(() -> {
+            int pos = Collections.binarySearch(state.bib(), searchKey(isbn), ISBN_COMPARATOR);
+            if (pos < 0)
+                throw new BibliotecaException.NotFound("El llibre amb ISBN " + isbn + " no existeix a la biblioteca");
+            try {
+                state.persistence().setLlibreBlob(isbn, blob);
+            } catch (Exception e) {
+                throw new BibliotecaException("Failed to set cover blob: " + e.getMessage(), e);
+            }
+            Llibre l = state.bib().get(pos);
+            l.setImatgeBlob(blob);
+            l.setHasBlob(true);
+        });
     }
 
-    // â”€â”€ Search / filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Search / filter ──────────────────────────────────────────────────────
 
     public List<Llibre> aplicarFiltres(LlibreFilter f) {
         return state.withLockReturning(() -> {
@@ -210,7 +236,7 @@ public final class BookDelegate {
 
     public int countLlibresDB() { return state.persistence().countLlibres(); }
 
-    // â”€â”€ Internals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Internals ─────────────────────────────────────────────────────────────
 
     private ArrayList<Llibre> filterInMemory(List<Llibre> font, LlibreFilter f) {
         ControladorPersistencia cp = state.persistence();

@@ -85,6 +85,12 @@ class FilterController {
         vista.getBtnQuitarFiltros().addActionListener(e -> quitarFiltros());
     }
 
+    /** Holds the in-flight DB-path filter worker so a second click can
+     *  cancel the first instead of stacking two background queries whose
+     *  results would race the EDT. The worker's {@code done()} checks
+     *  {@code isCancelled()} before touching the table. */
+    private SwingWorker<ArrayList<Llibre>, Void> pendingFilterWorker;
+
     void enNoLlegitSeleccionado(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED && state.vista.getchckbxLlegit().isSelected())
             state.vista.getchckbxLlegit().setSelected(false);
@@ -136,20 +142,27 @@ class FilterController {
         boolean dbPath = state.currentLlistaId == null && state.cd.isLargeLibrary();
         if (dbPath) {
             final LlibreFilter filter = f;
+            if (pendingFilterWorker != null && !pendingFilterWorker.isDone()) {
+                pendingFilterWorker.cancel(true);
+            }
             state.vista.getbtnFiltrar().setEnabled(false);
-            new SwingWorker<ArrayList<Llibre>, Void>() {
+            pendingFilterWorker = new SwingWorker<ArrayList<Llibre>, Void>() {
                 @Override protected ArrayList<Llibre> doInBackground() {
                     return new ArrayList<>(MainFrameControl.getInstance().aplicarFiltres(filter));
                 }
                 @Override protected void done() {
+                    if (isCancelled()) return;
                     state.vista.getbtnFiltrar().setEnabled(true);
                     try {
                         host.setTable(get());
+                    } catch (java.util.concurrent.CancellationException ignored) {
+                        // Replaced by a newer worker; the newer one owns the result.
                     } catch (Exception ex) {
                         new herramienta.DialogoError(ex).showErrorMessage();
                     }
                 }
-            }.execute();
+            };
+            pendingFilterWorker.execute();
             return;
         }
 

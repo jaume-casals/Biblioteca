@@ -261,23 +261,22 @@ public class Config {
     public static void deletePreset(int i) {
         int n = getPresetCount();
         if (i < 0 || i >= n) return;
-        java.util.List<String> names = new java.util.ArrayList<>();
-        java.util.List<Map<String, String>> values = new java.util.ArrayList<>();
-        for (int j = 0; j < n; j++) {
-            names.add(getPresetName(j));
-            values.add(loadPreset(j));
-        }
-        names.remove(i);
-        values.remove(i);
-        for (int j = 0; j < n; j++) {
-            props.remove("preset." + j + ".name");
-            for (String k : PRESET_KEYS) props.remove("preset." + j + "." + k);
-        }
-        for (int j = 0; j < names.size(); j++) {
-            props.put("preset." + j + ".name", names.get(j));
-            for (Map.Entry<String,String> e : values.get(j).entrySet())
-                props.put("preset." + j + "." + e.getKey(), e.getValue());
-        }
+        // Snapshot the remaining presets' name + values up front, then wipe
+        // every preset.* key (including the deleted slot) and re-write the
+        // snapshot at the new compacted indices. The stream-based read
+        // avoids the "remove from two ArrayLists in lockstep" trap of the
+        // previous version.
+        java.util.stream.IntStream.range(0, n)
+            .filter(j -> j != i)
+            .forEach(srcIdx -> {
+                int dstIdx = srcIdx < i ? srcIdx : srcIdx - 1;
+                props.put("preset." + dstIdx + ".name", getPresetName(srcIdx));
+                for (Map.Entry<String, String> e : loadPreset(srcIdx).entrySet())
+                    props.put("preset." + dstIdx + "." + e.getKey(), e.getValue());
+            });
+        // Wipe the tail slot so a future preset doesn't inherit stale keys.
+        props.remove("preset." + (n - 1) + ".name");
+        for (String k : PRESET_KEYS) props.remove("preset." + (n - 1) + "." + k);
         props.put("presetCount", String.valueOf(n - 1));
         save();
     }
@@ -405,7 +404,14 @@ public class Config {
         try {
             action.run();
         } finally {
-            save();
+            // Use flushNow (synchronous) instead of save (debounced 300ms) so
+            // the caller can rely on the on-disk state matching the in-memory
+            // state when the batch returns. The debounce was inherited from
+            // setXxx (single-key writes from the EDT, where a 300 ms wait
+            // is invisible) but is wrong for withBatch: the original
+            // implementation forced the caller to wait up to 300 ms AND
+            // left a window where the JVM could exit with a pending save.
+            flushNow();
         }
     }
 
@@ -437,16 +443,55 @@ public class Config {
             try (FileOutputStream out = new FileOutputStream(tmpFile)) {
                 tmp.store(out, "Biblioteca configuration");
             }
+            // Defense in depth: the config file can carry the DB password
+            // in plaintext (see getDbPassword() Javadoc). On POSIX file
+            // systems we force 0600 (owner read/write) so a casual
+            // `ls -l` on a shared host doesn't expose it. The Javadoc on
+            // getDbPassword acknowledges the plaintext; this is the
+            // minimum-risk mitigation until the OS keystore migration
+            // path is implemented. Non-POSIX filesystems (Windows FAT,
+            // SMB) throw UnsupportedOperationException, which we
+            // catch and ignore — there's no portable equivalent.
+            try {
+                setOwnerOnlyPerms(tmpFile.toPath());
+            } catch (RuntimeException ignored) {}
             try {
                 java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING,
                     java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                // Re-apply after the move: ATOMIC_MOVE preserves the
+                // destination's permissions on some platforms, so the
+                // perms we set on tmpFile may not have carried over.
+                try { setOwnerOnlyPerms(f.toPath()); }
+                catch (RuntimeException ignored) {}
             } catch (java.nio.file.AtomicMoveNotSupportedException e) {
                 java.nio.file.Files.move(tmpFile.toPath(), f.toPath(),
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                try { setOwnerOnlyPerms(f.toPath()); }
+                catch (RuntimeException ignored) {}
             }
         } catch (IOException e) {
             LOG.log(java.util.logging.Level.WARNING, errPrefix, e);
+        }
+    }
+
+    /**
+     * Set the file to {@code 0600} (owner read/write only) on POSIX
+     * file systems. Throws {@link java.nio.file.UnsupportedOperationException}
+     * on non-POSIX filesystems (Windows, FAT, SMB) and {@link SecurityException}
+     * when the JVM security policy denies the call. IOException
+     * (rare — only on actual I/O failure) is wrapped as a
+     * {@link RuntimeException} so the caller can use a single
+     * {@code catch (RuntimeException)} guard.
+     */
+    private static void setOwnerOnlyPerms(java.nio.file.Path path) {
+        try {
+            java.nio.file.Files.setPosixFilePermissions(path,
+                java.util.EnumSet.of(
+                    java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+                    java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
         }
     }
 

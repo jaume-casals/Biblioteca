@@ -45,6 +45,37 @@ public class DetallesLlibrePanelControl {
 		try { return Double.parseDouble(t); } catch (NumberFormatException e) { return null; }
 	}
 
+	/**
+	 * Strict integer parser used by the edit-save path. Empty / blank input
+	 * is treated as "use the default"; non-numeric input is reported via
+	 * {@code errors} so the caller can surface a field-specific message
+	 * before any save is attempted. Contrast with {@link #parseIntOrNull}
+	 * which silently swallows bad input — that helper is for
+	 * "best-effort" callers (e.g. a sort or display path) that prefer
+	 * a null to an error dialog.
+	 */
+	private static int parseIntStrict(String s, int defaultValue, String fieldKey, java.util.List<String> errors) {
+		if (s == null) return defaultValue;
+		String t = s.trim();
+		if (t.isEmpty()) return defaultValue;
+		try { return Integer.parseInt(t); }
+		catch (NumberFormatException e) {
+			errors.add(I18n.t("val_must_be_int", I18n.t(fieldKey)));
+			return defaultValue;
+		}
+	}
+
+	private static double parseDoubleStrict(String s, double defaultValue, String fieldKey, java.util.List<String> errors) {
+		if (s == null) return defaultValue;
+		String t = s.trim();
+		if (t.isEmpty()) return defaultValue;
+		try { return Double.parseDouble(t); }
+		catch (NumberFormatException e) {
+			errors.add(I18n.t("val_must_be_number", I18n.t(fieldKey)));
+			return defaultValue;
+		}
+	}
+
 	private static final int IMG_W = 200;
 	private static final int MAX_DESCRIPTION_CHARS = 120;
 	private static final int MAX_NOTES_CHARS = 200;
@@ -351,17 +382,32 @@ public class DetallesLlibrePanelControl {
 				vista.getBtnEditar().setText(I18n.t("btn_save_java"));
 			} else if (vista.getBtnEditar().getText().equals(I18n.t("btn_save_java"))) {
 				try {
-					Llibre a = LlibreValidator.checkLlibre(Long.parseLong(vista.getTextISBN().getText()),
+					// Field-level validation runs BEFORE we touch the model so
+					// a single bad input does not leave a half-mutated Llibre
+					// in memory. Any non-numeric entry in a numeric field is
+					// collected and shown to the user; the save is aborted.
+					java.util.List<String> errors = new java.util.ArrayList<>();
+					Integer any = parseIntOrNull(vista.getTextAny().getText());
+					Double valoracio = parseDoubleOrNull(vista.getTextValoracio().getText());
+					Double preu = parseDoubleOrNull(vista.getTextPreu().getText());
+					int volum = parseIntStrict(vista.getTextVolum().getText(), 0, "field_volume", errors);
+					int exemplars = parseIntStrict(vista.getTextExemplars().getText(), 1, "field_exemplars", errors);
+					int pagines = parseIntStrict(vista.getTextPagines().getText(), 0, "field_pages", errors);
+					int paginesLlegides = parseIntStrict(vista.getTextPaginesLlegides().getText(), 0, "field_pages_read", errors);
+
+					if (!errors.isEmpty()) {
+						new DialogoError(new IllegalArgumentException(String.join("\n", errors))).showErrorMessage();
+						return;
+					}
+
+					Llibre a = LlibreValidator.checkLlibre(llibre.getISBN(),
 							vista.getTextNom().getText(), vista.getTextAutor().getText(),
-							parseIntOrNull(vista.getTextAny().getText()),
-							vista.getTextDescripcio().getText(),
-							parseDoubleOrNull(vista.getTextValoracio().getText()),
-							parseDoubleOrNull(vista.getTextPreu().getText()),
-							vista.getChckLlegit().isSelected(),
+							any, vista.getTextDescripcio().getText(),
+							valoracio, preu, vista.getChckLlegit().isSelected(),
 							vista.getTextPortada().getText());
 					a.setEditorial(vista.getTextEditorial().getText().trim());
 					a.setSerie(vista.getTextSerie().getText().trim());
-					try { a.setVolum(Integer.parseInt(vista.getTextVolum().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric volum — leave default 0 */ }
+					a.setVolum(volum);
 					a.setDataCompra(vista.getTextDataCompra().getText().trim());
 					a.setDataLectura(vista.getTextDataLectura().getText().trim());
 					a.setIdioma(vista.getTextIdioma().getText().trim());
@@ -370,7 +416,7 @@ public class DetallesLlibrePanelControl {
 					a.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
 					String estat = (String) vista.getComboEstat().getSelectedItem();
 					a.setEstat(estat != null && !estat.isEmpty() ? estat : null);
-					try { a.setExemplars(Integer.parseInt(vista.getTextExemplars().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric exemplars — leave default 1 */ }
+					a.setExemplars(exemplars);
 					a.setLlenguaOriginal(vista.getTextLlenguaOriginal().getText().trim());
 					String nc = vista.getTextNomCa().getText().trim(); a.setNomCa(nc.isEmpty() ? null : nc);
 					String nse = vista.getTextNomEs().getText().trim(); a.setNomEs(nse.isEmpty() ? null : nse);
@@ -380,22 +426,20 @@ public class DetallesLlibrePanelControl {
 						.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
 					a.setAutors(autors);
 					a.setNotes(vista.getTextNotes().getText());
-				try { a.setPagines(Integer.parseInt(vista.getTextPagines().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric pagines — leave default 0 */ }
-				try { a.setPaginesLlegides(Integer.parseInt(vista.getTextPaginesLlegides().getText().trim())); } catch (NumberFormatException e) { /* empty or non-numeric paginesLlegides — leave default 0 */ }
+					a.setPagines(pagines);
+					a.setPaginesLlegides(paginesLlegides);
 					if (a.getPagines() > 0 && a.getPaginesLlegides() > a.getPagines()) {
 						a.setPaginesLlegides(a.getPagines());
 						vista.getTextPaginesLlegides().setText(String.valueOf(a.getPagines()));
 					}
 					a.setImatgeBlob(pendingBlob);
 					LlibreValidator.validateExtrasAll(a.getEditorial(), a.getSerie(), a.getIdioma(), a.getFormat(), a.getPaisOrigen(), a.getEstat());
-					if (a.getISBN().equals(llibre.getISBN())) {
-						cLlibres.updateLlibre(a);
-					} else {
-						if (cLlibres.existsLlibre(a.getISBN()))
-							throw new Exception(I18n.t("dlg_isbn_exists", a.getISBN()));
-						cLlibres.deleteLlibre(llibre);
-						cLlibres.addLlibre(a);
-					}
+					// The ISBN field is permanently disabled (see setEditMode),
+					// so a.getISBN() always equals llibre.getISBN(). The
+					// earlier "changed ISBN" branch — which deleted + re-added
+					// the book to satisfy a unique-key constraint on the
+					// primary table — is unreachable and has been removed.
+					cLlibres.updateLlibre(a);
 					enActualizarBBDD.onBookUpdated(a, false);
 					setEditMode(false);
 					vista.getBtnEditar().setText(I18n.t("btn_edit_java"));

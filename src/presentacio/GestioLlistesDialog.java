@@ -182,10 +182,16 @@ public class GestioLlistesDialog extends JDialog {
         } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
     }
 
-    private void reload() {
-        listModel.clear();
-        for (Llista l : cd.getAllLlistes()) listModel.addElement(l);
-        jList.setCellRenderer(new javax.swing.DefaultListCellRenderer() {
+    /**
+     * Single stateless renderer instance reused across {@link #reload()}
+     * calls. The previous implementation allocated a fresh
+     * {@code DefaultListCellRenderer} on every {@code reload()}, so a
+     * drag-and-drop session in the shelf list produced O(n) allocations
+     * for a 10-shelf library. The renderer reads no field state — it
+     * just sets an icon based on the {@code value} argument.
+     */
+    private final javax.swing.ListCellRenderer<java.lang.Object> LIST_RENDERER =
+        new javax.swing.DefaultListCellRenderer() {
             @Override
             public java.awt.Component getListCellRendererComponent(
                     javax.swing.JList<?> list, Object value, int index,
@@ -194,14 +200,15 @@ public class GestioLlistesDialog extends JDialog {
                 if (value instanceof Llista) {
                     Llista ll = (Llista) value;
                     String col = ll.getColor();
-                    if (col != null) {
-                        lbl.setIcon(ColorUtils.colorSwatch(java.awt.Color.decode(col)));
-                    } else {
-                        lbl.setIcon(null);
-                    }
+                    lbl.setIcon(col != null ? ColorUtils.colorSwatch(java.awt.Color.decode(col)) : null);
                 }
                 return lbl;
             }
-        });
+        };
+
+    private void reload() {
+        listModel.clear();
+        for (Llista l : cd.getAllLlistes()) listModel.addElement(l);
+        jList.setCellRenderer(LIST_RENDERER);
     }
 }

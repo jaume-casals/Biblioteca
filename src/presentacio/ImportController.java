@@ -44,10 +44,10 @@ public class ImportController {
                 try {
                     BookImporter.ImportResult r = get();
                     if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
-                        new DialogoError(new Exception(r.errorDetails())).showErrorMessage(); return;
+                        new DialogoError(new Exception(String.join("\n", r.errorDetails()))).showErrorMessage(); return;
                     }
                     String msg = I18n.t("dlg_import_json_msg", r.imported());
-                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors()) + r.errorDetails();
+                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors()) + String.join("\n", r.errorDetails());
                     JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_title"),
                         r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
                     onDataChanged.run();

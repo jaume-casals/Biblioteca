@@ -84,6 +84,36 @@ class DominiPersistenciaJUnit5Test {
     }
 
     @Test
+    void searchShelfAndTagIsIntersection() throws Exception {
+        ControladorPersistencia cp = ControladorPersistencia.getInstance();
+        ControladorDomini cd = ControladorDomini.getInstance();
+        long isbn1 = 9780262533455L;
+        long isbn2 = 9780132350884L;
+        cd.addLlibre(new Llibre(isbn1, "Book One", "Author A", 2020, "", 0.0, 0.0, false, ""));
+        cd.addLlibre(new Llibre(isbn2, "Book Two", "Author B", 2021, "", 0.0, 0.0, false, ""));
+
+        var shelf = cd.addLlista("Favorites");
+        int shelfId = shelf.getId();
+        cd.addLlibreToLlista(isbn1, shelfId, 0.0, false);
+        cd.addLlibreToLlista(isbn2, shelfId, 0.0, false);
+
+        var tag = cd.addTag("science");
+        int tagId = tag.getId();
+        cd.addLlibreToTag(isbn1, tagId);
+
+        LlibreFilter onlyShelf = new LlibreFilter().withLlistaId(shelfId);
+        assertEquals(2, cp.searchLlibres(onlyShelf, 0, 0).size(), "shelf alone should match both books");
+
+        LlibreFilter onlyTag = new LlibreFilter().withTagId(tagId);
+        assertEquals(1, cp.searchLlibres(onlyTag, 0, 0).size(), "tag alone should match book 1");
+
+        LlibreFilter intersection = new LlibreFilter().withLlistaId(shelfId).withTagId(tagId);
+        var result = cp.searchLlibres(intersection, 0, 0);
+        assertEquals(1, result.size(), "shelf AND tag should intersect to a single book");
+        assertEquals(isbn1, result.get(0).getISBN());
+    }
+
+    @Test
     void sanitizeH2ProfileRejectsPathSeparators() throws Exception {
         var method = ServerConect.class.getDeclaredMethod("sanitizeH2Profile", String.class);
         method.setAccessible(true);

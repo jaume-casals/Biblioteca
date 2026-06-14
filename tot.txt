@@ -1,2 +1,1820 @@
-All HIGH/MEDIUM/LOW findings from the 2026-06-10 code review have been addressed.
-No open items remain in the backlog.
+# Biblioteca — Code Review (2026-06-13)
+
+Autonomous review pass. Every file in `src/` was read. Findings below are
+ranked CRITICAL → LOW. Each file's section is capped at three findings; an
+"overflow bucket" is never used.
+
+---
+
+**[src/domini/facade/BookDelegate.java]** — [severity: HIGH]
+- `addLlibre` / `deleteLlibre` / `deleteLlibreByIsbn` / `updateLlibre` /
+  `setLlibreBlob` (lines 96-189) follow a "binarySearch → DB → in-memory
+  mutate" pattern that is not atomic with respect to the lock. Two threads
+  inserting the same ISBN can both pass the binarySearch before either
+  commits; on the second insert the DB throws, but the surviving add can
+  then insert at a `pos` that was computed before the other thread's
+  in-memory mutation. The class Javadoc (lines 32-36) acknowledges the
+  window. Fix: re-acquire the lock between the DB call and the list
+  mutation, and re-validate presence/absence inside that critical section;
+  or wrap each call in a single `synchronized` and re-do the binary search
+  on the second pass. The known-window Javadoc is fine for a personal
+  single-JVM app, but the consequence in `setLlibreBlob` is worse: a
+  null/negative search result is silently treated as "book not in list,
+  skip" so two writers each only persist their own blob.
+- `getLlibre(long)` (lines 145-157) loads heavy fields OUTSIDE the
+  state lock via `loadHeavyFields(l)`. While the read is by ISBN, a
+  concurrent `updateLlibre` can mutate `l` between the lock release and
+  the heavy-load, so the caller's `l` may be partially overwritten
+  mid-loadHeavyFields (descripcio/notes set after the first update but
+  before the second). The fix is either (a) keep the in-memory reference
+  pinned in `bib()` (look up by ISBN after load to swap the slot), or
+  (b) make `loadHeavyFields` take a defensive copy and only assign back
+  if the book is still at the same row.
+- The pre-`SQL_FILTER_THRESHOLD` short-circuit at line 195
+  (`if (state.bib().size() >= SQL_FILTER_THRESHOLD) return
+  searchLlibresSQL(f);`) is read twice: once via `aplicarFiltres(f)` and
+  again by every DB-backed caller. The 2000 magic number is hard-coded
+  in two places (`BookDelegate.SQL_FILTER_THRESHOLD` and the comment
+  in `TablePageController`). Extract to a single named constant on
+  `ControladorDomini` so the threshold can be tuned or tested without
+  a global search.
+
+**[src/domini/facade/BackupDelegate.java]** — [severity: HIGH]
+- Lines 46-50: heavy-field preloading is performed on the caller's
+  thread (the Swing EDT, since `BackupController.backupBD` invokes
+  `cd.backupToSQL(f)` from `SwingWorker.doInBackground` — but the
+  constructor wiring and any other call sites run on the EDT directly).
+  For a 5,000-book library each missing heavy fields, this is 5,000
+  sequential `SELECT descripcio, notes FROM llibre WHERE ISBN = ?`
+  round-trips on the EDT. Fix: keep the pre-load step on the calling
+  thread but batch the lookups via a single `SELECT ... WHERE ISBN IN
+  (...)`, or only call `loadHeavyFields` lazily for books that
+  serialize descripcio/notes.
+- `restoreFromSQL` (lines 63-100) builds `newBib` INSIDE the lock
+  (lines 92-98) by calling `state.persistence().getAllLlibres()` etc.
+  on the thread that holds `state.lock()`. JDBC `getAll*` queries
+  executed under the application state lock serialize all other
+  delegate operations; if the DB is slow, every other read/write
+  (including table filter, search, shelf add) blocks. Acquire
+  snapshots via a dedicated persistence method that does NOT touch
+  the state lock, then publish atomically.
+- `backupToSQL` lines 56-58 wrap the snapshot creation in
+  `synchronized (state.lock())`. A pre-existing exception path leaves
+  `state.llistes` partially populated only if the same exception path
+  is exercised. Today the try-block has no inner try, so the lists
+  are fully populated before being handed off. Fine in practice, but
+  the Javadoc does not mention that the snapshot is per-collection
+  rather than transactional — a slow DB on the first
+  `getAllLlibres()` is fine, but a slow DB on the last one
+  (`getAllLlistes`) keeps the lock for the full duration.
+
+**[src/domini/facade/LoanDelegate.java]** — [severity: LOW]
+- `getAllOverdueLoans` (delegated to `state.persistence()`) returns
+  `List<Object[]>` (raw `Object[]` per row). The upstream
+  `ControladorDomini` exposes it as `List<Object[]>`, forcing every
+  consumer to cast `row[0]`, `row[1]`, `row[2]`. Replace with a
+  `record OverdueLoan(String persona, String nom, String dataPrestec)`
+  in `persistencia` and propagate through the interface. Already used
+  by `MainFrameControl.mostrarAlertes` (line 249) with no compile-time
+  schema protection.
+
+**[src/domini/facade/StateContext.java]** — [severity: MEDIUM]
+- `bib()`, `llistes()`, `tags()` return the live `ArrayList`. The
+  Javadoc (lines 53-61) is correct that callers MUST hold the lock,
+  but the contract is unenforced. Consider making the backing
+  collections immutable and re-publishing on every mutation, or
+  returning a defensive `Collections.unmodifiableList` view that
+  fails fast on mutation attempts. The current pattern means a
+  `NullPointerException` (no NPE — but a `ConcurrentModificationException`
+  on iteration) is the only signal of a contract violation.
+- `clearAll()` (lines 77-85) clears the three lists AND the two
+  id-index maps. It does NOT call `rebuildIdIndexesLocked()` but
+  because both `clear()` calls are explicit and the maps are
+  already empty, the post-condition is identical. The pattern is
+  inconsistent with `replaceAll` (which calls `rebuildIdIndexesLocked`
+  after assigning the new lists). Make `clearAll` mirror
+  `replaceAll` for clarity, or document the divergence.
+- The `lock` field is private but exposed via `lock()` (line 49).
+  A test that does `synchronized (state.lock())` (the documented
+  way) still works, but every delegate uses `state.withLock(...)`
+  and `state.withLockReturning(...)` which serialize correctly. The
+  raw `lock()` accessor lets callers bypass the helper and acquire
+  directly, which is fine for tests but is the exact pattern the
+  Javadoc warns against. Make it package-private and reserve for
+  the facade package.
+
+**[src/domini/facade/ShelfDelegate.java]** — [severity: HIGH]
+- `addLlista` / `deleteLlista` / `renameLlista` / `setLlistaColor`:
+  persistence write first, then in-memory mutate. Unlike the book
+  delegate, the in-memory mutate uses `llista.equals` (id-based) to
+  remove the entry, so concurrent renames or deletes can be lost —
+  e.g. two threads renaming the same shelf to different names will
+  both succeed in DB (last writer wins) but the in-memory map
+  will hold whichever entry the second mutator removed, leaving
+  the DB out of sync with the in-memory state. Either serialize
+  the in-memory mutate under the same lock that took the
+  pre-decision (re-look-up the Llista by id after the DB write),
+  or hold the lock across the DB call.
+- `swapLlistesOrdreLocked` (lines 128-149) is documented to require
+  the caller to hold the lock — true, but it then calls
+  `cp.updateLlistaOrdre(...)` (DB) while still holding the lock.
+  Same serialization concern as `addLlista` above; a slow DB
+  freezes all other state operations. Use a copy-then-commit
+  pattern: capture both `ordre` values, release the lock, run
+  the two DB updates, reacquire and re-check.
+- `moveLlistaUp` (line 96) and `moveLlistaDown` (line 102) do not
+  validate that the second list (`i-1` / `i+1`) has a different
+  id; if two consecutive shelves share an id (corrupted state),
+  the swap becomes a no-op but the `updateLlistaOrdre` calls
+  still fire. Add an `id != otherId` guard.
+
+**[src/domini/facade/TagDelegate.java]** — [severity: MEDIUM]
+- `getLlibresWithTag` / `getTagsForLlibre` / `removeLlibreFromTag` /
+  `addLlibreToTag` (lines 66-77) are pure pass-throughs. This is
+  fine for now, but the Javadoc claims delegates "follow the same
+  contract" — there is no contract, just a delegated call. The
+  methods are package-private; the facade exposes them via
+  `ControladorDomini`. Document the intent (centralization point
+  for future tag-side caching) or inline the pass-throughs at the
+  facade.
+- `addTag` (lines 35-46) and `deleteTag` (lines 48-55) also
+  race between DB and in-memory state like `ShelfDelegate`. Two
+  threads creating the same tag name: first passes the DB
+  UNIQUE constraint, second throws — but the in-memory list ends
+  up with one entry. Today the second thread never reaches the
+  in-memory mutate, so it's correct, but if the DB ever drops
+  the unique constraint (or the tagDao starts using `INSERT
+  IGNORE`) the in-memory list will duplicate the entry.
+
+**[src/domini/Llibre.java]** — [severity: MEDIUM]
+- The class is a mutable 30+-field POJO with both setters and a
+  Builder. The class Javadoc (lines 6-15) admits this and proposes
+  composing `LlibreCore + extension state` as a future refactor.
+  Today: the Builder is used only by `LlibreMapper` (DAO read path)
+  and one test helper. Every controller in presentacio uses
+  individual setters. The duplication is a maintenance trap:
+  adding a 28th field requires touching 5 files. The Builder's
+  `forInsert` / `forUpdate` separation in `LlibreFieldBindings`
+  proves the value of declarative batching.
+- Lines 32-34: `nomCa`, `nomEs`, `nomEn` are nullable. The setters
+  at lines 116-120 call `nullIfBlankTrim` which is correct, but
+  `getDisplayNom` (lines 128-134) only treats them as nullable
+  when null; it does NOT distinguish empty string from null. With
+  `nullIfBlankTrim` the empty-string case cannot occur, so the
+  code is safe — but the API would be cleaner with `String getNomCaOrNull()`
+  and `boolean hasNomCa()`.
+- `bindUpdateableFields` (lines 52-64) sets every field including
+  `autor` from the parameter. In the test path
+  (`Presentacio.detalles.DetallesLlibrePanelControl.EditHandler`,
+  presentacio/detalles/control/DetallesLlibrePanelControl.java:381),
+  the caller parses `textAutor` into a `List<String> autors` and
+  then calls `a.setAutors(autors)` which OVERWRITES the `autor`
+  string. So `bindUpdateableFields(target, isbn, nom, autor, ...)`
+  is called with the joined `autor` and then `setAutors(list)`
+  overwrites it. The two-step order is correct today, but the
+  implicit "setter overrides Builder" precedence is undocumented.
+
+**[src/domini/LlibreFilter.java]** — [severity: LOW]
+- `copy()` (lines 67-79) returns a new instance via the no-arg
+  constructor + field-by-field copy, but does not copy the
+  `sort` field. Wait, line 77 says `f.sort = this.sort;` — actually
+  it does. Re-checking: yes, the `sort` field is copied. But the
+  builder's `withSort` (lines 62-65) replaces null with
+  `SortSpec.defaultAsc()`, while `copy()` copies whatever is there
+  (including null). Inconsistent.
+- `hasAnyFilter()` (lines 81-90) lists 18 fields with explicit
+  null checks. Each new filter field requires editing this method
+  AND `FiltreUtils.matches` (herramienta/FiltreUtils.java:51) AND
+  `LlibreSearchDao.search` (persistencia/LlibreSearchDao.java:29).
+  The Javadoc on `matches` says "When adding a new field to
+  `LlibreFilter`, also extend the SQL builder there" — this is
+  a known maintenance trap.
+
+**[src/domini/Llista.java]** — [severity: MEDIUM]
+- `equals` / `hashCode` (lines 58-65) compare by id. Two `Llista`
+  with id=0 (in-memory, not yet persisted) are never equal — the
+  Javadoc (lines 35-38) explains this for `Tag` but the same
+  pattern is here. A transient `Llista` (id=0) used as a
+  `HashMap` key will collide with every other transient `Llista`.
+  Consider using a stable hash for transient (id=0) instances, or
+  forbid transient `Llista` as a `HashMap` key.
+- `setNom` (lines 35-38) throws `IllegalArgumentException` on
+  blank, but the same check is duplicated in
+  `domini.facade.ShelfDelegate.addLlista` (line 40) and
+  `renameLlista` (line 62), and the message is hard-coded in
+  English. Route through `BibliotecaException.Validation(I18n.t(...))`
+  for i18n.
+
+**[src/domini/NamedEntity.java]** — [severity: LOW]
+- The interface is a 2-method read-only view. The two implementers
+  (`Llista`, `Tag`) both expose `getId()` and `getNom()` publicly,
+  so the interface is purely for the type system. Used only by
+  `EtiquetasDelLlibreDialog.updateComboAdd` path through
+  `EntityComboUtils` (line 11) — but `EntityComboUtils` takes a
+  raw `ToIntFunction<E>`, not a `NamedEntity`. The interface
+  itself is dead.
+
+**[src/domini/SortSpec.java]** — [severity: LOW]
+- `SQL_COLS` (lines 22-28) and `COMPARATORS` (lines 39-45) are two
+  parallel maps. Adding a new column requires editing both
+  (plus the Javadoc) and a new comparator class would re-use
+  `ISBN_COMPARATOR` patterns. Consider a single
+  `record Column(String key, String sqlFragment, Comparator<Llibre> cmp)`
+  with a static `Map<String, Column> COLUMNS = Map.of(...)`.
+- `comparator(String)` (lines 69-71) returns the comparator or
+  null. The call site in `BookDelegate.applySort` (line 232) maps
+  null to `ISBN_COMPARATOR`. The fallback should live in
+  `SortSpec` to keep the policy in one place.
+
+**[src/persistencia/ControladorPersistencia.java]** — [severity: MEDIUM]
+- `synchronized` on every public method (lines 104-208). The
+  class Javadoc (lines 27-29) explicitly proposes a
+  `ReadWriteLock`. With 200+ entries the UI is mostly read-bound
+  (table render, filter, search); under sustained write (e.g.
+  bulk import + UI scrolling) every paint thread queues on the
+  monitor. Convert reads to `ReentrantReadWriteLock.readLock()`
+  and writes to `writeLock()`. The TODO is older than the
+  facade split; now is the time.
+- `getAllLlibres()` and `getAllLlibresSummary()` (lines 104, 111)
+  are the same implementation. The Javadoc on
+  `interficie.BookReader.getAllLlibresSummary` (interficie/BookReader.java:34)
+  documents the contract, but the body is identical. The summary
+  contract lets the in-memory test stub skip work; the production
+  path always returns the full row. Either implement the summary
+  contract here (omit `descripcio`/`notes` from the SELECT) or
+  delete the alias.
+- `setDbProfile` (via `setDbType` line 296) writes
+  `dbHost = "localhost"` and `dbUser = "user"` whenever type is
+  H2. After a MariaDB session, switching back to H2 overwrites
+  the previous host/user with defaults — losing any non-default
+  MariaDB values that the user may want to keep for later
+  reconnection. Document this destructive fallback or preserve
+  the previous values.
+
+**[src/persistencia/ServerConect.java]** — [severity: HIGH]
+- `createDatabase(ConnectionConfig)` (lines 155-181) catches
+  `Exception` and re-throws as `RuntimeException` with the
+  i18n-flavoured message `I18n.t("err_db_init_" + cfg.dbType())`.
+  If `dbType` is neither `h2` nor `mariadb` (e.g. a typo or a new
+  type) the key lookup falls through to `err_db_init_h2` (because
+  `I18n.t` returns the key when missing) — so the user sees
+  the wrong error message. Use a switch on `dbType()` with an
+  explicit else that throws `IllegalArgumentException("Unknown
+  dbType: " + cfg.dbType())`.
+- `MIGRATIONS` (lines 37-111) is a 75-entry array. The MIGRATION
+  32-34 sequence (lines 95-105) is fragile: 32 inserts into
+  `autor`, 33 inserts into `llibre_autor`, 34 drops the `autor`
+  column. If 33 fails, 34 still runs and the legacy column is
+  gone — but 33 left rows partially migrated. The "skip on
+  unmigrated rows" guard in `runMigration34DropAutor` is correct
+  for the all-or-nothing 33 path, but 32 and 33 are NOT
+  wrapped — if 32 fails (e.g. H2 schema conflict), 33 will still
+  attempt, with no transaction. Wrap the 32+33+34 sequence in a
+  single H2 transaction for the H2 branch; for MariaDB, document
+  the operator-recovery steps.
+- `columnExists` (lines 310-320) does two `meta.getColumns` lookups
+  (original-case and upper-case) but ignores the result of the
+  first one if the second is run regardless. Re-read the Javadoc
+  to confirm: line 314 says "if (rs.next()) return true;" — so the
+  second lookup only runs if the first returns false. OK, this
+  is correct; but the second lookup always returns at the
+  post-uppercase table/column names, which on a case-sensitive
+  DB might miss a column whose only the lowercase form exists.
+  `DatabaseMetaData.storesLowerCaseIdentifiers` would be the
+  correct way to choose.
+- `loadDriverFromLib` (lines 338-351) builds a `URLClassLoader`
+  per call. Each instance pins the JAR in memory; the GC root
+  is the static `Driver` field returned, but the
+  `URLClassLoader` itself becomes unreachable. The H2 and MariaDB
+  drivers cache static state, so this is fine in practice, but
+  on driver upgrade (loading a new jar) the old
+  `URLClassLoader` is never closed. Not a leak for a desktop app
+  but worth documenting.
+- `runMigrationH2` (lines 246-270) saves and restores
+  `prevAutoCommit` for each migration. The outer `runMigrations`
+  caller (lines 218-239) also saves and restores in a
+  `try/finally` (line 237). The two saves race if the outer
+  `prevAutoCommit` was already `false` (e.g. another caller
+  changed it) — the inner save captures `false`, the inner
+  restore sets it to `false`, the outer `finally` restores to
+  the original `true` — net effect is correct, but the
+  bookkeeping is fragile. Document the contract or remove the
+  inner save/restore.
+
+**[src/persistencia/LlibreDaoCore.java]** — [severity: HIGH]
+- `executeSQLFile` (lines 173-192) reads the file via
+  `Files.readAllBytes` (line 177) and parses the bytes back into
+  a String. For a 50 MB backup file this allocates a 50 MB
+  `byte[]` and a 50 MB `String` (with the UTF-8 decoder holding
+  a CharBuffer of similar size). For multi-MB backups the peak
+  memory is 4× the file size. Stream the file instead: read
+  line by line with a `BufferedReader`, accumulate the
+  multi-line statement, dispatch to the DB. Also avoid the
+  `withTransaction` wrapper for the file-level
+  BEGIN/COMMIT/INSERT statements, since each statement is its
+  own auto-commit operation on MariaDB (the wrapper is a no-op
+  there).
+- `insert` and `update` (lines 90-127) wrap the column-by-column
+  bind in `LlibreFieldBindings.forInsert` /
+  `LlibreFieldBindings.forUpdate`. The wrapper class
+  `LlibreFieldBindings` is 142 lines; the centralization is
+  good, but `forInsert` and `forUpdate` are two near-identical
+  Object[] builders. The difference is `imatge_blob` is in
+  INSERT but not UPDATE, and the field order is shifted. A
+  single helper that takes a `boolean includeBlob` parameter
+  would halve the maintenance surface.
+- The `LLIBRE_COLUMNS`, `LLIBRE_COLUMNS_L`, and
+  `LLIBRE_COLUMNS_L_LIGHT` constants (lines 25-49) are three
+  near-duplicate strings. Each is a different hand-written
+  projection of the same 28 columns. Adding a new column
+  requires editing all three (plus `LlibreFieldBindings`,
+  `LlibreMapper.fillLlibreTail`, the schema migration list,
+  the backup `writeLlibreINSERT` printf, and the
+  `GoodreadsExportService` row builder). Consider a single
+  `static String buildColumnList(String prefix, boolean
+  light)` that emits the column list from a shared
+  `List<ColumnSpec>` record array. The 3 lists would
+  collapse to one source of truth.
+
+**[src/persistencia/LlibreSearchDao.java]** — [severity: MEDIUM]
+- `search` (lines 26-70) builds the SQL via StringBuilder with
+  20+ `if (f.getXxx() != null) sql.append(...)` branches. The
+  pattern is identical for every condition. Extract a helper
+  `addCondition(StringBuilder sql, List<Object> params, String
+  clause, Object value)` that no-ops when value is null. The
+  method shrinks from 45 lines to 20 and the place-counting
+  bugs (`?` placement) become one-line.
+- `bindParam` (lines 72-82) uses pattern-matching `switch` for
+  the boxed primitives but `case null` sets `Types.NULL`. Today
+  the SQL builder never inserts a literal `null` (every
+  condition is guarded by `!= null`), so the `case null` is
+  dead. Keep the defensive fallback but log at FINE level when
+  it fires so dead code becomes visible if a future call site
+  changes.
+- `LlibreFilter.getLlistaId()` (line 31) is documented to take
+  precedence, but the SQL has `JOIN llibre_llista ll ON
+  l.ISBN = ll.isbn AND ll.llista_id = ?` and `JOIN llibre_tag
+  lt ON l.ISBN = lt.isbn AND lt.tag_id = ?` as two separate
+  branches. When both `llistaId` and `tagId` are set, the
+  result is the intersection (rows that are in BOTH), but
+  applying them independently as separate `AND` clauses in
+  the WHERE would also be the intersection. The current
+  approach is correct, but the join is on the same alias `l`
+  — there's a subtle bug if MariaDB complains about a duplicate
+  join alias in the rendered SQL. Test with both filters set.
+
+**[src/persistencia/PrestecDao.java]** — [severity: LOW]
+- `add` (lines 15-31) pre-checks book existence with a
+  separate SELECT before INSERT. The FK constraint would do
+  the same check, but with a worse error message. Today this
+  pattern is correct, but the SELECT + INSERT pair is not
+  transactional: between the SELECT and the INSERT, the book
+  can be deleted. Either accept the FK error and translate it,
+  or run the two statements in a `withTransaction` wrapper.
+- `getOverdue` (lines 123-143) returns `List<Object[]>` with
+  three fields. Replace with a record
+  `OverdueLoan(String nomPersona, String nomLlibre, String
+  dataPrestec)`. The raw Object[] is used by
+  `MainFrameControl.mostrarAlertes` (line 249) — a `toString`
+  on the record would let the alerts builder iterate without
+  the cast chain.
+
+**[src/persistencia/TagDao.java]** — [severity: MEDIUM]
+- `AUTOCOMPLETE_COLUMNS` (lines 21-22) is the SQL whitelist for
+  `getDistinctValues`. The matching in-memory extractors live
+  in `domini.facade.StatsDelegate.IN_MEMORY_EXTRACTORS` (line 32
+  of that file). The two lists must be kept in sync manually;
+  nothing in the code enforces it. Add a startup assertion or
+  build the in-memory list by reflecting on the SQL whitelist.
+- `llibreTagCache` (line 24) is `volatile` and the read path
+  (line 124) is `if (llibreTagCache != null) return
+  llibreTagCache;`. The `getAllLlibreTag` method holds the
+  instance monitor (line 123 `synchronized`); the read
+  path does not. A `setRow` operation on the volatile is
+  atomic, but the read can see a partially-published
+  `List.copyOf` reference. Actually `List.copyOf` is
+  published via a single store — the volatile semantics
+  guarantee the read sees either null or a fully-constructed
+  list. OK; but the `getAllLlibreTag()` method returns the
+  live cache reference; downstream callers can mutate it
+  (since `List.copyOf` is immutable, this is safe). Fine.
+- `invalidateLlibreTagCache` (line 28) is called from
+  `ControladorPersistencia.eliminarLlibre`,
+  `eliminarLlibre(long)`, `clearAllData`, `addToLlibre`,
+  `removeFromLlibre` (via DAOs). It is NOT called from
+  `getAllLlibreTag` on the next read. The race is small
+  (cache invalidated, then re-populated on next call) but
+  with a 10k tag-book table the rebuild is non-trivial. This
+  is fine for correctness; the inefficiency is the cost.
+
+**[src/persistencia/AutorDao.java]** — [severity: LOW]
+- `createAutor` (lines 34-46) returns the generated id or
+  throws if the driver returns no keys. Throwing a
+  `BibliotecaException` (not `SQLException`) loses the
+  underlying cause context. Wrap as `new BibliotecaException(
+  "Error creant autor: " + e.getMessage(), e)` to preserve
+  the stack.
+
+**[src/persistencia/LlibreBlobDao.java]** — [severity: LOW]
+- `loadHeavyFields` (lines 39-53) calls `target.setDescripcio`
+  and `target.setNotes` directly. `Llibre.setNotes` normalizes
+  null → "" (line 211 of Llibre.java), but `setDescripcio`
+  does not (line 169). Result: `descripcio` is nullable but
+  `notes` is "" or non-empty. The normalization in `setNotes`
+  makes the API contract asymmetric. Either normalize in
+  both or document the asymmetry.
+
+**[src/persistencia/RowMappers.java]** — [severity: LOW]
+- `queryAll` and `queryWithParams` (lines 18-35) duplicate the
+  try-with-resources + while-loop pattern. Extract a single
+  `private static <T> List<T> executeQuery(Connection con,
+  PreparedStatement ps, RowMapper<T> mapper)` that takes an
+  already-bound PreparedStatement. Saves 5 lines and one
+  duplicate exception path.
+
+**[src/persistencia/JarLocator.java]** — [severity: MEDIUM]
+- `locate` (lines 45-52) tries five strategies in order and
+  returns `new File(user.dir, "lib")` on total failure. The
+  caller is `ServerConect.findLibDir` (ServerConect.java:353)
+  which throws `ClassNotFoundException` when no JAR is found.
+  The fallback path always returns a non-null File pointing
+  at `<user.dir>/lib` which may exist (containing other
+  files) but no JDBC JAR — and the failure message points to
+  the user's directory, which is not the install location.
+  If the fallback is intended, return null and let the
+  caller throw with a more specific message.
+- `walkUpFromClassSource` (line 90) catches `Exception` (line
+  101) and appends to `diag`. Catching `Exception` is too
+  broad; `URISyntaxException` and the
+  `MalformedURLException` chained from `toURL()` are the
+  expected failures. Use specific catches.
+
+**[src/persistencia/Schema.java]** — [severity: LOW]
+- `CLEAR_ORDER` (lines 16-19) is a 9-element array. The
+  comment at line 11-12 says "must stay in sync or the
+  FOREIGN KEY constraints will fail in strict mode". Today
+  nothing enforces that; a unit test that inserts a row in
+  every table and clears it would catch a regression. The
+  `LibraryListRow` test should also assert the FK cascade
+  direction matches the clear order.
+
+**[src/persistencia/ConnectionFactory.java]** — [severity: LOW]
+- The class is a 14-line `withConfig` factory with no
+  abstraction. The single caller is `ServerConect.createDatabase`
+  (line 148). Inline the constructor call and delete the
+  class — it adds a layer of indirection without policy.
+
+**[src/persistencia/ConnectionConfig.java]** — [severity: LOW]
+- The compact constructor (lines 7-9) requires non-null
+  `dbType` but does not validate `host`, `user`, `password`.
+  The class Javadoc on `getDbPassword` (herramienta/Config.java:213)
+  documents plaintext storage; the password is never
+  cleared from memory.
+
+**[src/herramienta/Config.java]** — [severity: HIGH]
+- The plaintext password storage documented in
+  `getDbPassword` Javadoc (lines 192-213) is a real security
+  concern. The Javadoc proposes three migration paths but
+  none is implemented. Today a user typing a MariaDB
+  password stores it in cleartext in
+  `~/.biblioteca/config.properties`, with file permissions
+  inherited from the user. On a shared host (school lab,
+  library), any user can read it. Even on a personal Mac
+  with default `chmod 644` the password is exposed. The
+  Javadoc is honest about the risk; the implementation
+  ignores it. Fix by either (a) implementing the
+  Keychain/Credential Manager path (jpackage's
+  `dk.danskcodes.jpass`), or (b) at minimum marking
+  `config.properties` with `0600` on save (line 433 does
+  not do this).
+- `withBatch` (lines 404-410) wraps an action and flushes
+  at the end. The `try/finally` is correct, but the
+  `save()` call still goes through the 300ms debounce —
+  the batch caller must wait up to 300ms for the flush.
+  Add a `flushNow()` call inside the `finally`.
+- `props` (lines 95-117) is a `Map<String,String>` view
+  over the four sub-stores. The implementation of
+  `entrySet()` allocates a new `HashSet` on every call
+  (line 107), walking all four sub-stores. If anything
+  iterates the entries (a save, an export), the cost is
+  O(4n). Cache the snapshot or iterate lazily.
+- `deletePreset` (lines 261-283) deletes by reading all
+  presets into two `ArrayList`s, then re-saving the
+  remainder. For a 20-preset library the work is trivial,
+  but the method does a `getOrDefault` on each entry, then
+  removes. A direct `presets.stream().filter(j != i).forEach(...)`
+  would be 8 lines instead of 22.
+
+**[src/herramienta/BackupService.java]** — [severity: MEDIUM]
+- `autoBackup` (lines 59-84) is scheduled on a daemon
+  single-thread `ScheduledExecutorService` (line 41). If
+  the backup takes longer than the 24h interval
+  (line 33), two backups run concurrently. The fix is
+  either `scheduleWithFixedDelay` (already used) which
+  waits for completion, or check `scheduler.awaitTermination`
+  before submitting. The current
+  `scheduleWithFixedDelay` (line 46) is the correct
+  primitive — so concurrent invocations are impossible.
+  But the local `File[] existing = dir.listFiles(...)` on
+  line 70 races with the auto-prune on line 79; if a backup
+  is in flight when the prune runs, the prune can delete
+  the in-progress file. Use a sequence number suffix or
+  serialize access via the executor.
+- `writeLlibreINSERT` (lines 121-154) builds the INSERT
+  via `StringBuilder.append` with 27 hand-typed columns.
+  The class Javadoc for `BackupTablePrinter` (line 5)
+  flags this as future-refactor target. Today the printf
+  duplicates the column list from
+  `LlibreFieldBindings.forInsert`. If a column is added
+  to one, the other is forgotten. Centralize in
+  `LlibreFieldBindings` (it already has `forInsert`) and
+  generate the SQL via `String.format("INSERT INTO llibre
+  (%s) VALUES (%s);", colList, placeholders)`.
+- `backupToSQL` (lines 86-119) opens a `PrintWriter` over
+  a `FileWriter` in a try-with-resources — good. The
+  inner `try` blocks inside the for-loops (none here, but
+  the `autoBackup` method has one on line 81) catch
+  `Exception` and `LOG.log(Level.WARNING, "...")`.
+  Swallowing all exceptions hides bugs. Distinguish
+  `IOException` (log and continue), `SQLException`
+  (propagate or rethrow), and runtime exceptions
+  (propagate).
+- `shutdownScheduler` (line 50) sets `schedulerStarted`
+  to `false` (line 56). If `scheduleAutoBackup` is
+  re-called after a shutdown, the new scheduler is
+  created and `scheduleWithFixedDelay` is re-scheduled.
+  The two consecutive calls produce a non-running
+  scheduler because `shutdownNow` is interrupt-driven
+  and may take time to settle.
+
+**[src/herramienta/BookExporter.java]** — [severity: HIGH]
+- `exportHTML` (lines 86-227) base64-encodes each cover
+  byte array inline into the HTML (line 210). For a 1000-
+  book library with 50 KB cover each, the output HTML
+  is ~50 MB. Browsers and text editors struggle with
+  multi-MB HTML. Either (a) switch to a layout that
+  references cover images via relative file paths
+  (saves the export in a folder next to the HTML),
+  or (b) document the size limit and add a toggle
+  "include covers" (off by default for > 100 books).
+- `printHtmlGrid` (line 196) uses `CoverService.getCachedBytes`
+  (line 200) which loads from disk on first access — on
+  the EDT during a 1000-book export this is a synchronous
+  disk read per book. Move the cache population off the
+  EDT (use a `SwingWorker` like the rest of the
+  import/export paths) or pre-warm the cache in a
+  background thread before the loop.
+- `exportJSON` (line 21) builds the JSON by hand via
+  `GSON.toJson(LinkedHashMap)`. The `llibres` list
+  (lines 36-42) calls `jsonLlibre` per book, which
+  inlines 27 keys plus the shelves and tags lists. The
+  result is a valid JSON object, but the surrounding
+  `println("{")` and `println("}")` are hand-written.
+  Use `GSON.toJson(books, writer)` for the whole
+  document and let the library handle escaping,
+  indentation, and stream-writing. The current
+  approach loses 500x performance on a 5000-book
+  library and is a source of escaping bugs (the
+  `jsonStr` helper on line 289 is a fallback for the
+  shelves/tags inline; the books themselves use
+  `GSON.toJson(LinkedHashMap)`).
+- `printHtmlTable` (line 228) emits
+  `String.format("%.1f%%", ...)` and
+  `String.format("%.2f", ...)` via `Locale.ROOT` would
+  be more portable (today the default locale is used).
+  French/Brazilian Portuguese locales would emit `,`
+  as the decimal separator, which is not valid HTML
+  in a `<td>` (browsers render it as text). Use
+  `Locale.ROOT` or a CSS class.
+- `printHtmlTable` uses `Escapers.html(l.getAny() > 0 ?
+  l.getAny() : "")` (line 239). `l.getAny()` returns an
+  `Integer` (autoboxed); a null check is missing. For a
+  book without `any`, `l.getAny()` returns null, NPE
+  inside the ternary, no ISBN displayed for that row.
+  Reproducible on `setAny(0)` then `setAny(null)`.
+
+**[src/herramienta/BookImporter.java]** — [severity: HIGH]
+- `importCalibre` (lines 55-103) shells out to `sqlite3` via
+  `Runtime.exec` (line 57) and reads stdout. The
+  `stderrDrain` thread (lines 58-63) does not interrupt
+  the child on `waitFor` timeout (line 99). The
+  `destroyForcibly` (line 100) sends SIGKILL to the
+  process, which works on Unix; on Windows,
+  `destroyForcibly` is `Process.destroyForcibly` which
+  is also SIGKILL. The library won't leak, but the
+  child process can leave a temp file or hold a lock on
+  the Calibre DB. Test on the documented platforms
+  (Linux + macOS per `findSqlite3` candidates, lines
+  107-113) and document the limitation.
+- `importCSV` (lines 14-49) catches all exceptions
+  (line 40), increments `err`, and truncates the
+  error message to 400 chars (line 42). Truncating the
+  error message hides the root cause for users with
+  large CSVs (>10 errors). Collect the first N error
+  messages in full, then return as a list, and let the
+  UI display them in a scrollable text area.
+- `importCSV` line 32: `String headerCols =
+  CsvUtils.parseLine(headerLine);` — `headerLine` is
+  the comma-joined header (line 25). `parseLine` parses
+  it again. The `String[] headerRow` already exists
+  (line 24); the second parse is wasted work. Use
+  `headerRow` directly.
+- `importCalibre` line 87: `l = LlibreValidator.checkLlibre(
+  isbn, nom, autor, any, "", valoracio, 0.0, false, "");`
+  — passes an empty description, but the validator
+  accepts "" (length 0 < 255). OK. However, the
+  description is also passed as `notes` (line 89) if
+  non-empty. Two validations: notes (VARCHAR 2048 per
+  migration 24) and descripcio (VARCHAR 512 per
+  `CREATE_TABLE`). For a 2 KB notes string the DB
+  accepts it; for a 10 KB notes string, MariaDB would
+  reject it after the column type change. Calibre
+  comments are sometimes > 10 KB. Add a length cap
+  with a clear user message.
+
+**[src/herramienta/CoverService.java]** — [severity: MEDIUM]
+- The `POOL` (line 21) is `Executors.newFixedThreadPool(6)`
+  with no `shutdown` hook other than the explicit
+  `shutdown` method (line 88). The shutdown hook
+  (line 35) is registered on the first `getCachedBytes`
+  call — before the shutdown hook, `POOL` is alive
+  with 6 daemon threads. If the JVM exits before
+  `getCachedBytes` is ever called, the pool is not
+  registered. The fix: register the shutdown hook in
+  a `static {}` initializer at class load, not in
+  `getCachedBytes`.
+- `cacheBytes` (line 92) writes to disk on every call
+  (line 96). If a user fetches the same cover twice
+  (e.g. re-import), the second write is a no-op but
+  still hits the disk. `Files.write` is idempotent
+  (atomic-ish for small files), but a `Files.exists`
+  check first would skip the write entirely.
+- `fetchAsync` (line 64) calls `cd.setLlibreBlob` on
+  the pool thread. `cd` is a `BibliotecaWriter` (the
+  facade), which delegates to `LlibreBlobDao` which
+  is `synchronized`. The pool's I/O mixes with the EDT
+  via the singleton's `synchronized` — a slow DB
+  blocks the cover pool. Acceptable but document.
+
+**[src/herramienta/OpenLibraryClient.java]** — [severity: HIGH]
+- `fetchCoverByISBN` (lines 165-210) falls back to a
+  regex parse of Google Books' JSON (line 197) instead
+  of using `JsonParser.parseString(meta)` like the rest
+  of the file. The regex `"thumbnail"\s*:\s*"([^"]+)"`
+  fails on JSON with escaped quotes inside the
+  thumbnail URL (some Google Books entries do) or on
+  `image/jpeg;base64,` thumbnails. Use
+  `JsonParser.parseString(meta).getAsJsonObject().get(...).getAsJsonObject("volumeInfo").get("imageLinks")`
+  to keep the parsing consistent with the rest of
+  the file. The regex was likely added because the
+  Google Books response was being parsed twice in
+  `mergeGoogleBooks` — refactor to parse once and
+  share the JsonObject.
+- `lookupByISBN` (line 90) catches `IOException` and
+  returns the map with an `"error"` key. The
+  `mergeGoogleBooks` fallback (line 94) is wrapped in
+  a separate try/catch that catches `Exception` (broad).
+  If the OL response was a 503 (transient), the merge
+  is attempted even though the OL is the authoritative
+  source; if the merge is a 200 but with a different
+  book (rare), the title field is overwritten silently
+  because `put(r, "title", ...)` replaces. Track the
+  source ("ol" vs "gb") in the map and warn the user
+  when the merge actually changed a field.
+- `lastRequestMs` (line 24) is a static field
+  protected only by `synchronized (OpenLibraryClient.class)`
+  in `rateLimit()` (line 31). Two threads calling
+  `rateLimit` at the same time serialize; but
+  `rateLimit` is called inside `fetchWithRetry` (line 213)
+  and `fetchCoverByISBN` (line 166), and the
+  `lastRequestMs = System.currentTimeMillis()` write
+  happens inside the synchronized block. Correct.
+  However, `testBaseUrl` / `testMaxRetries` /
+  `testRetryBaseMs` (lines 42-44) are NOT synchronized
+  with `fetch` / `fetchWithRetry`. A test that sets
+  `testBaseUrl` then unsets it from another thread can
+  observe a half-set state. The Javadoc (lines 38-41)
+  documents "tests must not run in parallel" — make
+  the fields `volatile` to make the contract enforceable.
+- The retry loop in `fetchWithRetry` (lines 218-231)
+  uses `Thread.sleep(baseMs * (1L << i))` for backoff
+  (line 224). `1L << i` with `i=0` is 1, with `i=1` is
+  2, with `i=2` is 4 — so total backoff is 500+1000+2000
+  = 3500ms. Fine. But the loop catches
+  `IOException` only; a 200 response with bad JSON
+  reaches `JsonParser.parseString` which throws
+  `JsonSyntaxException` (a `RuntimeException`). That
+  exception escapes `fetch` (line 254) — actually
+  `fetchWithRetry` re-throws via `throw last` on line
+  232. The caller `lookupByISBN` catches it in its own
+  try/catch (line 90) and adds `"error"`. Correct, but
+  the retry budget is wasted — 4 attempts of bad JSON
+  instead of 1.
+
+**[src/herramienta/OpenLibraryParser.java]** — [severity: LOW]
+- `parseIsbnResponse` (line 21) duplicates the inner
+  body of `OpenLibraryClient.lookupByISBN` (lines 69-89).
+  The class is supposed to be the "extracted parser"
+  per its Javadoc (lines 14-16), but
+  `OpenLibraryClient.lookupByISBN` was not refactored
+  to delegate to `parseIsbnResponse`. This is the same
+  kind of "split-but-not-actually-used" pattern as
+  `BackupTablePrinter` and `BackupService`.
+
+**[src/herramienta/I18n.java]** — [severity: LOW]
+- The class is 628 lines of `T(key, ca, es, en)` calls
+  (lines 14-587). The auto-gen comment (line 1)
+  documents that `strings/strings.csv` is the source.
+  But the generated file is checked into source, so
+  drift is possible (a manual edit to I18n.java would
+  be overwritten on next regen). A pre-commit hook or
+  CI check that the file matches the CSV would catch
+  drift.
+- `t(key, args...)` (line 593) checks
+  `!raw.contains("{0}")` (line 606) and logs a warning
+  to stderr (line 607). Two problems: (a) the warning
+  goes to stderr unconditionally — in production, this
+  clutters the user's terminal; (b) the check is at
+  position 0 only; a key with `{1}` but no `{0}` is
+  not flagged. Either check all positions or remove
+  the check.
+- `langIndex` (line 622) maps "es"→1, "en"→2, "ca"→0.
+  Anything else returns 0 (ca). Adding a new language
+  (e.g. "fr") silently falls back to ca. Throw or
+  log a warning for unknown codes.
+
+**[src/herramienta/LlibreValidator.java]** — [severity: MEDIUM]
+- `checkLlibre` (line 59) validates a year against
+  `currentYear + 5` (line 95). A book published in
+  year 2031 cannot be saved today (2026). For a
+  long-running app, this is fine, but the magic number
+  `+ 5` is undocumented.
+- The book normalization `normalizeIsbn13` (line 31)
+  duplicates `Isbn13Normalizer.toIsbn13` (herramienta/
+  Isbn13Normalizer.java). The class-local version
+  does the X-check handling and the leading-zero
+  handling; the utility class does only the
+  ISBN-10→13 conversion. The class-local version
+  returns either the 13-digit string or the original
+  (10-digit ISBN-10). The two implementations should
+  merge.
+- `checkLlibre` line 76-83: ISBN-10 check digit
+  validation. The check uses `s.charAt(9) - '0'`
+  without handling the 'X' check digit. An ISBN-10
+  with the X check digit is a valid ISBN-10 (e.g.
+  "0306406152" — no, that one ends in 2; try
+  "020161622X"). The validator rejects the X-form.
+  Acceptable for "user input" but the Javadoc doesn't
+  say so.
+
+**[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
+- `toIsbn13` (line 8) returns the original `digits`
+  string if the length is not 10 or 13 (line 17). The
+  caller `LlibreValidator.checkLlibre` then calls
+  `Long.parseLong(digits)` which throws on non-numeric
+  input. The fallback is silent — the user sees a
+  validation error with the wrong field. Either throw
+  with a clear message or return null and let the
+  caller decide.
+
+**[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
+- `toIsbn13` line 12: `trimmed.replaceAll("[^0-9X]", "")` —
+  strips anything that isn't a digit or X. This
+  converts "ISBN: 978-..." into "978..." but also
+  drops non-ASCII characters silently. If a user
+  pastes "ISBN 9780" with a non-ASCII space, the
+  result is "ISBN9780" — note the "ISBN" prefix is
+  stripped silently. A user pasting an ISBN from a
+  PDF with a space-separated prefix would see the
+  wrong number.
+
+**[src/herramienta/JsonImporter.java]** — [severity: LOW]
+- `run(JsonObject root, ...)` (line 37) iterates the
+  books list and catches per-book exceptions (line
+  118). The exception is collected with
+  `e.getMessage()` (line 118) which loses the
+  stack trace. Log the stack at FINE level for
+  debugging.
+- Line 46: `Tag existing = cd.getAllTags().stream()
+  .filter(t -> t.getNom().equals(nom)).findFirst()
+  .orElse(null);` — for a 10k-tag library, this is
+  O(n) per JSON tag. Build a `Map<String, Tag>` first.
+  The same pattern is used for `Llista` (line 57).
+  Use the `RelationRemapper` helper that already
+  exists (herramienta/RelationRemapper.java).
+
+**[src/herramienta/DateUtils.java]** — [severity: LOW]
+- `parseYear` (line 7) returns 0 for unparseable
+  input. The caller in `EstadistiquesHelper.readYearFor`
+  (EstadistiquesHelper.java:33) uses `yr > 0 ? yr : ...`
+  to fall through, but the year 0 itself is also
+  "valid" in the parser (a year string of "0" or
+  "0000" returns 0). Make the sentinel explicit: a
+  `Optional<Integer>` or a `YearOrNone` record.
+
+**[src/herramienta/csv/AbstractMappingCsvStrategy.java]** — [severity: LOW]
+- The class is 41 lines and the only implementation
+  (GoodreadsCsvStrategy, LibraryThingCsvStrategy) shares
+  the shelf/tag resolver pattern. The shelfMap
+  (line 12) is `Map<String, Llista>` (by name), the
+  tagMap (line 13) is `Map<String, Tag>` (by name). The
+  two methods are near-identical — extract a
+  generic `resolveOrCreate(cd, cache, key, creator)`.
+
+**[src/herramienta/csv/ShelvesHelper.java]** — [severity: LOW]
+- `addBookToShelf` (line 28) is a 14-line static helper.
+  The same code is inlined in
+  `AbstractMappingCsvStrategy.resolveShelf` (line 15)
+  and `RelationRemapper.ShelfIdRemapper.resolve` (line
+  24). Three places. Pick one.
+
+**[src/herramienta/csv/CsvUtils.java]** — [severity: LOW]
+- `parseIsbn` (line 80) is a near-duplicate of
+  `LlibreValidator.normalizeIsbn13` and
+  `Isbn13Normalizer.toIsbn13`. Three copies. The CSV
+  one accepts X-check digits; the validator one also
+  accepts them; the normalizer one does not. Pick
+  one implementation.
+
+**[src/herramienta/csv/Rfc4180Reader.java]** — [severity: LOW]
+- The `hasNext()` method (line 25) returns `!eof` and
+  the `next()` method (line 28) sets `eof = true` only
+  after reading a non-null row. A trailing empty
+  input (file ends with `\n`) sets `eof = true` and
+  returns null (line 48) — the caller must check
+  `next() != null`. The interface contract would be
+  clearer if `hasNext()` was the only probe and
+  `next()` was required to return non-null when
+  `hasNext()` is true.
+
+**[src/herramienta/export/GoodreadsExportService.java]** — [severity: MEDIUM]
+- `exportToCsv` (line 20) returns a `String` (not
+  writes to a file). The caller (BookExporter.exportCSV
+  via `domini.ShelfParser.exportToCsv`) writes to a
+  file via PrintWriter. Returning a String forces
+  the entire export into memory before the file
+  write; for a 10k-book library with 27 columns
+  per row, the String is ~10 MB. Stream the rows
+  directly to the PrintWriter.
+- The `My Rating` column (line 48) computes
+  `l.getValoracio() > 0 ? (int) Math.round(l.getValoracio() / 2.0) : 0`
+  — but `(int) Math.round(...)` rounds 4.5 to 4 (banker's
+  rounding under Java's Math.round). Goodreads
+  uses rounding to nearest half-up. 4.5 → 5 vs 4.
+  This is a minor data fidelity issue for a niche
+  export format.
+
+**[src/herramienta/imports/CalibreImporter.java]** — [severity: LOW]
+- The class is a 14-line pass-through to
+  `BookImporter.importCalibre`. The package
+  `herramienta.imports` mirrors `herramienta.export`
+  for symmetry, but the class adds no value over the
+  one-liner. Inline the call site or delete the
+  class.
+
+**[src/interficie/BibliotecaReader.java]** — [severity: LOW]
+- `asExportSnapshot()` (lines 21-28) is a default
+  method that wraps `this` in an anonymous
+  `ExportSnapshot`. The `default` modifier means
+  subclasses can override; the wrapping creates a
+  new object on every call. `ExportSnapshot` is used
+  by no consumer in the present codebase — dead
+  code.
+- The `countLoans` (line 9) and `getLlibreBlob` (line 11)
+  are mandatory in this interface but optional in
+  `BookReader` and `ShelfReader`. A test stub that
+  only implements `BookReader` cannot satisfy
+  `BibliotecaReader`. Move the countLoans to
+  `LoanReader` (already there) and document.
+
+**[src/interficie/BookReader.java]** — [severity: LOW]
+- `findLlibre` (line 10) wraps `getLlibre` in a
+  try/catch and returns `Optional`. The contract
+  of `getLlibre` is `throws Exception` — every
+  implementation throws `BibliotecaException.NotFound`
+  on miss, and the Optional helper swallows any
+  exception (not just NotFound). A SQLException
+  becomes `Optional.empty()` and is silently lost.
+  Catch only the expected exception types.
+
+**[src/interficie/BibliotecaWriter.java]** — [severity: MEDIUM]
+- `backupToSQL` / `restoreFromSQL` (lines 37-38) and
+  `clearAll` (line 36) are admin operations mixed
+  with the CRUD interface. The `BibliotecaAdmin`
+  sub-interface (interficie/BibliotecaAdmin.java) was
+  extracted for this purpose, but `BibliotecaWriter`
+  still declares them. The split is half-done. Move
+  the three admin methods out of `BibliotecaWriter`
+  and let `ControladorDomini` implement both
+  interfaces. Today every consumer that needs
+  read+write also accidentally implements
+  `clearAll`, increasing the attack surface for
+  accidental data loss.
+- The interface has 28 methods. With `BookWriter`,
+  `ShelfWriter`, `TagWriter`, `LoanWriter` as
+  narrower sub-interfaces, `BibliotecaWriter` could
+  extend all four and just declare the few
+  cross-cutting operations. Today the larger
+  interface is redundant with the facade's method
+  count (29) and the sub-interfaces are unused by
+  the facade implementation.
+
+**[src/interficie/LibraryEvents.java]** — [severity: LOW]
+- The interface extends `OnLlibreUpdate,
+  OnLlibreDelete` and adds three `default` methods
+  (lines 8-10). No class implements `LibraryEvents`
+  — search returns no match. Dead code.
+
+**[src/interficie/InMemoryBibliotecaReader.java]** — [severity: LOW]
+- `aplicarFiltres` (line 61) returns the full list
+  unchanged. The class Javadoc (lines 16-19)
+  documents this. A test author who picks the
+  in-memory reader for a filter test will see
+  wrong results silently. Throw
+  `UnsupportedOperationException` to make the
+  caveat loud, or return `null` and let the caller
+  branch.
+
+**[src/main/Ejecutable.java]** — [severity: MEDIUM]
+- The `--web` branch (line 25) prints a message and
+  exits 1. The launch scripts in `Makefile` and
+  `scripts/` may still pass `--web`; the message is
+  the only signal. The comment (line 29) says
+  `--swing` is a "no-op for backward-compatible launch
+  scripts" but the switch statement only catches
+  `--web`. A user passing `--swing` runs the Swing
+  app (correct) but the comment is misleading —
+  there's no code for `--swing` because the absence
+  of `--web` falls through to `startSwingWithSplash`.
+  Clarify: just remove the `--swing` comment.
+- Line 33: `if (splashRef != null) splashRef.forceHide();`
+  on the uncaught exception handler — the splash
+  is shown in `startSwingWithSplash` (line 63).
+  But the handler runs on the EDT, and the
+  exception may be from the loader thread (line 67).
+  The static `splashRef` is set after splash.show()
+  returns; a null check is correct, but the
+  `LOG.log` call (line 32) does not include the
+  exception's stack — `LOG.log(Level.SEVERE, "...", e)`
+  is correct, but the message is on a separate
+  param. Reorder to put the message first.
+- Line 38: `new DialogoError(new RuntimeException(
+  "Fatal error: " + e.getClass().getSimpleName(), e))`
+  — wraps the non-Exception `e` (which can be
+  `Throwable` not just `Exception`) into a
+  RuntimeException. The `instanceof Exception`
+  check (line 38) is followed by an else branch
+  that wraps — but `Throwable` is the parameter
+  type. The wrapping loses fidelity; pass `e`
+  through to a `DialogoError(Throwable)` overload
+  or just log and exit without showing a dialog.
+
+**[src/presentacio/BackupController.java]** — [severity: MEDIUM]
+- `backupBD` (line 34) and `restaurarBD` (line 58)
+  use `SwingWorker` to call `cd.backupToSQL` /
+  `cd.restoreFromSQL`. `cd` is the
+  `ControladorDomini` facade. `restoreFromSQL` is
+  blocking and on MariaDB can take minutes for a
+  large database. The `SwingWorker.doInBackground`
+  thread is fine, but the `LoadingDialog` shown
+  via `loading.show()` (line 43) is `modal=true`
+  (LoadingDialog.java:15) which blocks the EDT.
+  Modal dialogs on the EDT are fine, but the
+  SwingWorker is also subject to the EDT's event
+  queue; if the worker thread updates the dialog
+  via `loading.hide()` (line 50), the dialog is
+  disposed on the EDT but the worker thread is
+  not. This pattern is correct in practice.
+- `restaurarBD` (line 78) shows the "covers not
+  included" warning AFTER the restore completes
+  (line 80). For a user who just restored, the
+  warning is a follow-up — fine. But the message
+  concatenates "dlg_restore_done" + "\n\n" +
+  "dlg_restore_done_cover_note" without a localized
+  separator. Add an i18n key for the combined
+  message or a `\n\n` constant.
+
+**[src/presentacio/BookActionsController.java]** — [severity: MEDIUM]
+- `eliminarFilaSeleccionada` (lines 96-124) iterates
+  selected rows, pushes each onto `undoBuffer` (line
+  115), then deletes. The undo buffer cap is
+  `LibraryViewState.UNDO_MAX = 20` (line 116).
+  A user selecting and deleting 50 books sees 30
+  lost undo entries. Document the cap or grow it
+  to 100.
+- `mostrarLlibreAleatori` (line 175), `mostrarLlegitsRecentment`
+  (line 217), `mostrarDesitjats` (line 233),
+  `mostrarEnCurs` (line 243) all rebuild
+  `state.biblio` from a fresh `state.cd.getAllLlibres()`
+  filter. For a 10k-book library each "show filter"
+  click does a full SQL scan plus a full Java
+  filter. Cache the recent/read/wishlist/in-progress
+  results in `LibraryViewState` and invalidate on
+  write. Or, since the filter logic is pure, accept
+  the cost and document.
+- The `Llibre` import on line 5 is unused (no
+  direct reference). Remove it.
+
+**[src/presentacio/CenterTablePanel.java]** — [severity: MEDIUM]
+- `buildTable` (line 63) creates the JTable
+  subclass with an anonymous `getToolTipText` override
+  (lines 70-82). The override is pure read-only but
+  creates a new `FontMetrics` per call. Cache the
+  FontMetrics via `getFontMetrics(getFont())` (called
+  on every render) and avoid the per-pixel
+  measurement by storing the metrics in a field.
+- Line 101: the table header renderer uses an
+  anonymous `DefaultTableCellRenderer` that allocates
+  a new `JLabel` per render. `getTableCellRendererComponent`
+  is called once per visible cell per scroll
+  event. For a 1000-row table, the allocation is
+  non-trivial. Reuse a single `JLabel` instance.
+- Line 137: `for (int row : t.getSelectedRows()) { Object v
+  = t.getValueAt(row, 1); ... }` — drag handler
+  builds the ISBN list as a comma-joined string.
+  The number `1` is the column index for ISBN, but
+  the model has the ISBN column at `COL_ISBN = 1`
+  (BibliotecaTableModel.java:16). Magic number; use
+  the constant.
+
+**[src/presentacio/CoverDisplayHelper.java]** — [severity: LOW]
+- `loadAndDisplay` (line 15) reads the blob into a
+  new `ImageIcon` and scales. For a 50 KB blob the
+  icon decode is fast; for a 500 KB cover the EDT
+  stutters. Move the load to a `SwingWorker` like
+  `CoverImageService.submit` does. The class is 29
+  lines; the new method body would be 6 lines.
+
+**[src/presentacio/EstadistiquesHelper.java]** — [severity: MEDIUM]
+- `booksByReadYear` (line 37) iterates the full
+  list, calling `readYearFor` for each book. The
+  filter `if (!Boolean.TRUE.equals(l.getLlegit()))`
+  (line 40) excludes unread books. For a 10k-book
+  library the iteration is 10k. Acceptable, but
+  the function is called twice per stats render
+  (from `computeStats` line 53 and from
+  `buildReadingChart` line 57 and
+  `buildReadingPacePanel` line 163) — three times
+  in `mostrarEstadistiques`. Cache the result.
+- `buildReadingPacePanel` (line 166) computes
+  `goal - finishedThisYear` (line 194) and casts
+  to int `(int) remaining`. The int cast is
+  silent truncation. If the user has read 50
+  books past the goal, the message says "To reach:
+  -10 in 87 days" — negative remaining. Guard
+  with `Math.max(0, ...)` and adjust the i18n
+  message.
+
+**[src/presentacio/ExportController.java]** — [severity: MEDIUM]
+- `fetchMissingCovers` (line 115) submits cover
+  fetches to `COVER_POOL` (a static 8-thread pool on
+  line 21). The static pool is shared with
+  `CoverService.POOL` semantically (cover fetches)
+  but is a separate instance. A user clicking
+  "fetch covers" twice (with a small library) sees
+  two pools. Combine with `CoverService.POOL` (but
+  the methods are different: one saves to DB, the
+  other caches in-memory). Document the split.
+- The progress bar (line 128) increments `done`
+  per cover completion, but the `fetched` counter
+  (line 142) only increments if the cover is
+  non-null. The user message (line 161) says "X
+  covers downloaded for Y books" — if a book has
+  no cover on OpenLibrary (the common case), the
+  user sees "0 of 10" and wonders why. Improve the
+  message: "X covers downloaded, Y had no
+  cover available".
+
+**[src/presentacio/FilterController.java]** — [severity: HIGH]
+- `getIsbnMap` (line 38) caches the ISBN → Llibre
+  index. The cache is invalidated when
+  `state.biblio` reference changes (line 39
+  identity check). But `state.biblio` is replaced
+  by `new ArrayList<>(...)` in many places (e.g.
+  `BookActionsController.mostrarDesitjats` line 235),
+  so the cache rebuilds on every "show filter" click.
+  Fine in practice, but the Javadoc (lines 28-30)
+  claims the cache is "rebuilt only when state.biblio
+  reference changes" — and it is. The problem is
+  the API surface that calls `aplicarFiltres`
+  followed by `state.biblio = new ArrayList<>(...)`
+  is inconsistent: `aplicarFiltres` is on `cd` (the
+  facade), `state.biblio` is on the local view
+  state. The cache invalidation does not know which
+  list the user is filtering over. Document or fix.
+- `filtrar` (line 98) on the `dbPath` branch (line
+  137) launches a `SwingWorker` (line 140) that
+  calls `MainFrameControl.getInstance().aplicarFiltres(filter)`.
+  The `getInstance` is on a singleton (MainFrameControl.java:201).
+  The filter result is set via `host.setTable(get())`
+  (line 147). If the user clicks "Filter" twice in
+  quick succession, two workers run, and the
+  second's result overwrites the first. Cancel
+  the previous worker before starting a new one.
+- `applyFilterState` (line 278) sets the filter
+  fields from a preset. The `format` field is set
+  to the empty string if missing (line 294), but
+  the combo's first item is also "" — so the
+  "Format" filter becomes "no format filter" which
+  is the default. Correct. But `editorial` and
+  `idioma` (line 291-293) are set as text — and the
+  filter matches on `contains(needle)` (sub-string).
+  The preset restores the typed text, not the
+  filtered list. Correct behavior; just confirm.
+
+**[src/presentacio/FilterDrawerPanel.java]** — [severity: MEDIUM]
+- The class Javadoc (lines 30-37) claims 32 hand-
+  declared component fields were replaced by a
+  single `FormFieldRegistry`. The 32-line
+  `declareSpecs` (lines 49-95) does this, but the
+  32 public getter shims at the bottom (lines
+  369-401) still delegate to the registry. Every
+  external caller that used `getTextISBN` etc.
+  now has an extra level of indirection. A
+  compiler could not see this; a profiler
+  (YourKit) would show a tiny extra cost per
+  call. Fine, but the Javadoc says "217 external
+  call sites keep compiling without changes" —
+  the Javadoc is over-promising.
+- `applyTheme` and `applyThemePostLaf` (lines 268-
+  298) duplicate the same 12-line button-styling
+  block twice. The only difference is that
+  `applyTheme` re-asserts `comboPresets` font and
+  the sidebar background. Extract a helper
+  `styleAllButtons()` that takes a single
+  parameter list.
+- `addExportMenuItem` (line 250) is identical to
+  `addImportMenuItem` (line 258) — the second
+  just delegates to the first. Two methods, one
+  body. Inline.
+
+**[src/presentacio/FormFieldRegistry.java]** — [severity: LOW]
+- `comboBox(String key)` (line 117) is annotated
+  `@SuppressWarnings("rawtypes")` because the
+  return type is `JComboBox` (raw). The class
+  itself is not generic; the raw type leaks to
+  every caller. Either (a) make the class generic
+  with `<T>`, or (b) provide typed accessors per
+  kind (`textField`, `checkBox`, etc.) and remove
+  the raw-typed one.
+- `register(String, JComponent)` (line 133) is
+  documented as "Legacy API preserved for the
+  25-line skeleton callers." Search the codebase
+  for callers — there are none outside the
+  presenter. Dead code.
+
+**[src/presentacio/GaleriaCobertesPanel.java]** — [severity: MEDIUM]
+- `ZOOM_WIDTHS` and `ZOOM_COVERS` (lines 59-60) are
+  two parallel arrays. Adding a 6th zoom level
+  requires editing both. Wrap in a `record ZoomLevel
+  (int cardW, int coverH)` with a static `ZoomLevel[]`
+  array.
+- `adjustZoom` (line 182) calls
+  `imageService.clear()` (line 188) on every zoom
+  change. The cache is keyed by ISBN, not by zoom
+  level. The pre-scaled images are now the wrong
+  size, so a clear is correct. But the comment on
+  `CoverImageService.clear` (line 73) says "called
+  when zoom level changes (pre-scaled images are
+  now the wrong size)" — the cache is also cleared
+  on every theme switch via `applyTheme` (line 250
+  calls `updateLlibres` which ... no, `updateLlibres`
+  doesn't clear the cache). The clear is
+  one-directional: only on zoom. Document or
+  fix.
+- `computeCols` (line 209) reads `wrap.getWidth()`
+  which is 0 until the first layout pass. The
+  keyboard navigation (line 139) uses
+  `computeCols()` which returns 0 → moveKeyboard(0).
+  On a fresh panel before first paint, the right
+  arrow doesn't move. Document or default to 1
+  when width is 0.
+
+**[src/presentacio/GestioLlistesDialog.java]** — [severity: MEDIUM]
+- The `cd` field (line 31) is assigned in the
+  constructor with a null fallback to
+  `ControladorDomini.getInstance()` (line 40). The
+  `getInstance` call reaches into a singleton
+  directly from a Swing dialog — coupling that
+  the presentacio layer was meant to avoid. The
+  dialog should require a non-null `cd` and let
+  the caller (ShelfController) provide the
+  ControladorDomini instance.
+- The `reload()` method (line 185) creates a new
+  `DefaultListCellRenderer` on every call. The
+  renderer is stateless — reuse a single
+  instance. The current pattern allocates one
+  per call; for a 10-shelf library refreshed
+  during drag, that's 10+ allocations.
+- `onColorLlista` (line 159) uses
+  `Color.decode(sel.getColor())` (line 163). The
+  `getColor()` returns the hex string or null
+  (after `setColor(null)`). The current code
+  defaults to `#3498DB` when null. The default
+  is also used by `ColorSwatchPicker.chooseHex`
+  (line 25) when `initial` is null. Document the
+  shared default.
+
+**[src/presentacio/ImportController.java]** — [severity: MEDIUM]
+- `escanejarISBN` (line 119) starts a `Thread`
+  (line 136) that calls
+  `OpenLibraryClient.lookupByISBN(finalIsbn)`. The
+  thread is daemon. The dialog has a `cancelled`
+  flag (line 132) updated by a `WindowListener`
+  (line 134) — but the listener is on `dialeg`
+  (the GuardarLlibresDialogo), not on the JOptionPane
+  that pre-prompted the ISBN. The user cancelling
+  the JOptionPane input dialog (line 120) is
+  already handled by the `isbn == null` check on
+  line 123. Fine.
+- `escanejarISBN` does not handle the case where
+  the user types a valid ISBN that already exists
+  in the library. The dialog opens, OL populates
+  the fields, the user clicks Save, and the
+  duplicate ISBN is rejected by
+  `cd.addLlibre(l)`. The error message is generic.
+  Check existence before opening the dialog.
+
+**[src/presentacio/LeftSidebarPanel.java]** — [severity: MEDIUM]
+- `rebuildSidebarShelves` (line 196) iterates the
+  new shelves, looking up each in
+  `sidebarShelfBtnMap`. The map's initial-capacity
+  default (16) is too small for libraries with 20+
+  shelves. Set `new HashMap<>(64)` or use the
+  `Map.computeIfAbsent` pattern.
+- The `getBtnXxx()` methods (lines 347-355) return
+  the button field directly. The buttons are
+  private fields; the methods are public. Every
+  caller invokes the method, which is fine, but
+  the fields could be `final` (they are set in
+  `buildSidebar`).
+- `makeSidebarBtn` (line 280) creates a button
+  with a `mouseEntered` listener that adjusts the
+  background color (line 287-292). The adjustment
+  is to a brighter version of `sidebarBg`. For
+  the DARK theme, the `sidebarBg` is `0x1A1510`
+  and the brighter is `0x2E2823` — fine. For
+  SEPIA the sidebar is `0x2A1800`; brighter is
+  `0x4A3010` — also fine but it's hardcoded
+  relative to the bg. Consider lifting to
+  `UITheme.palette().sidebarAccent()` or a
+  `sidebarHoverBg()` palette entry.
+
+**[src/presentacio/LibraryViewState.java]** — [severity: LOW]
+- `undoBuffer` is a `Deque<Llibre>` (line 26) used
+  as a stack. `push` and `pop` are stack methods
+  (correct), but `removeLast` (used in
+  `BookActionsController` line 116) is a
+  `Deque` method. The interface is chosen to
+  allow either push/pop (stack) or add/remove
+  (queue). The implementation is LIFO only. Use
+  `ArrayDeque` declared as `Deque<Llibre>` and
+  only call `push`/`pop`. Today the type is fine
+  but the use of `removeLast` (which is equivalent
+  to `pop` for LIFO) hides the intent.
+
+**[src/presentacio/LlistaTableModel.java]** — [severity: LOW]
+- `COLS` (line 16) is a static array. The header
+  values are English-only ("ID", "Nom", "Count",
+  "Color"). The Javadoc (line 13) says it's
+  intended for "the stats dialog or any future
+  shelf list view" — but the stats dialog uses
+  its own `DefaultTableModel` with i18n headers
+  (EstadistiquesHelper.java:265). The class is
+  effectively unused outside its own
+  initialization; localize or delete.
+
+**[src/presentacio/MainFrameControl.java]** — [severity: MEDIUM]
+- `mostrarAlertes` (line 238) reads
+  `cLlibres.getAllOverdueLoans(30)` on the worker
+  thread. The DAO method (PrestecDao.getOverdue)
+  is `synchronized` via `ControladorPersistencia`,
+  so the worker thread holds the singleton
+  monitor while iterating the result. For a
+  1000-overdue-loan library, the EDT can hang on
+  the result iteration in `done()` (line 281).
+  The alerts message is built in `doInBackground`
+  — good. But the iteration on line 249 (string
+  builder) is O(n) on the EDT. Acceptable.
+- `windowClosing` (line 187) calls `System.exit(0)`
+  on confirm. The Config scheduler
+  (`SAVE_SCHEDULER` in `Config.java:397`) is
+  shutdown via the JVM shutdown hook registered
+  in the static block at line 453-458. `System.exit`
+  triggers the shutdown hooks. OK. But the
+  BackupService scheduler (line 30) is not
+  registered for shutdown — the auto-backup
+  thread can be mid-write when the JVM exits.
+  Add a shutdown hook to `BackupService.scheduleAutoBackup`.
+
+**[src/presentacio/MostrarBibliotecaControl.java]** — [severity: MEDIUM]
+- The constructor (line 32) wires 6 sub-controllers
+  with explicit `this` and `state` references. The
+  controller graph is dense: every controller
+  has a reference to `state`, `host`, and one or
+  two peer controllers. Adding a 7th controller
+  means editing 5+ places. Consider a
+  `ControllerRegistry` that holds all controllers
+  by name and a single injection method.
+- `setTable` (line 98) is called by 5+ callers
+  (init, refresh, filter, search, restore).
+  Each caller passes a list that is either an
+  `ArrayList` or another type; the `instanceof
+  ArrayList` check is a micro-optimization to avoid
+  a copy. A simpler `new ArrayList<>(list)` is
+  correct and ~5x faster to read. Consider
+  removing the instanceof.
+
+**[src/presentacio/Sidebar.java]** — [severity: LOW]
+- The class is 29 lines and unused — the only
+  sidebar factory is `LeftSidebarPanel.makeSidebarBtn`.
+  The `Sidebar` class is referenced in the
+  Javadoc (line 13) but not in code. Dead.
+
+**[src/presentacio/TableController.java]** — [severity: MEDIUM]
+- `installColumns` (line 183) is called once per
+  `setBooks` (line 67) but only if `columnsInstalled`
+  is false. The setup is one-shot. The method
+  reads `WindowConfig.colWidth(i, -1)` (line 214)
+  per column and applies the saved width. After
+  the first install, column-width changes are
+  saved by the `saveWidthsTimer` (line 132) — but
+  the timer is recreated on every
+  `setBooks` call (line 145 listener), so
+  multiple timers can be alive. Single timer
+  per JTable; check `if (saveWidthsTimer == null)`.
+- `removeRowByIsbn` (line 268) updates
+  `isbnToRow` correctly but iterates with
+  `Iterator.next()` and `e.setValue` (line 277).
+  This is a structural modification during
+  iteration — `setValue` on a `Map.Entry` from
+  a `HashMap.entrySet()` view is documented to
+  work (no structural change), so the pattern is
+  correct. But the line-by-line shifting is O(n)
+  per delete; for a 10k library deleting 100
+  books, that's 1M entry updates. Use a
+  `TreeMap<Long, Integer>` with `subMap` removal,
+  or rebuild the index on a batch delete.
+
+**[src/presentacio/ViewModeController.java]** — [severity: LOW]
+- `toggleGroupBySeries` (line 86) sorts
+  `state.biblio` by series. The sort is in-place
+  on the view's `biblio` list (line 92). If the
+  user toggles group-by-series, then filters, the
+  filter works on a sorted list and the filtered
+  result loses the sort. The same `state.biblio`
+  is also used by `ShelfController.onLlistaSelected`
+  (line 55). The view's biblio is mutated in many
+  places; the contract that "biblio is sorted by
+  ISBN" (per `BookDelegate.ISBN_COMPARATOR`) is
+  silently broken by this method. Document or
+  sort a copy.
+
+**[src/presentacio/detalles/control/DetallesLlibrePanelControl.java]** — [severity: HIGH]
+- `EditHandler.editar` (line 348) catches
+  `NumberFormatException` for `volum`,
+  `exemplars`, `pagines`, `paginesLlegides` and
+  silently leaves the default. The user clicks
+  "Save", no error dialog appears, the book is
+  saved with the old value, and the user wonders
+  why. Add a validation step that shows the
+  invalid field highlight + an error toast before
+  the save.
+- The ISBN field is permanently disabled (line
+  413 `textISBN.setEnabled(false)`). The edit
+  logic at line 391-398 handles a changed ISBN by
+  delete+add, but the user can never type a new
+  ISBN — the field is `setEnabled(false)`. Either
+  enable it in edit mode and re-validate, or
+  remove the ISBN-change branch.
+- `clampPaginesLlegides` (line 172) reads
+  `getTextPaginesLlegides` and `getTextPagines`
+  and re-sets the field via
+  `SwingUtilities.invokeLater`. The clamp fires
+  on every keystroke (DocumentListener on line
+  165). The `invokeLater` defers the re-set to the
+  next EDT cycle, which can cause the cursor
+  position to jump. The `DocumentListener` should
+  use a `DocumentFilter` instead, which can
+  reject the change in-place without a re-set.
+- The `IMAGE_EXECUTOR` (line 25) is a static
+  single-thread executor. `shutdownImageExecutor`
+  (line 223) is public static and registered as a
+  shutdown hook (line 229). But every
+  `DetallesLlibrePanelControl` instance creates a
+  fresh `imageWorker` (line 24, per-instance),
+  while the executor is shared. Correct. But the
+  `pendingBlob` field (line 23) is non-volatile
+  and accessed from both EDT and worker threads
+  (line 206 in `done()`). The EDT is the
+  `done()` caller, so the read is safe, but
+  `seleccionarImatge` (line 233) writes from the
+  EDT. The `pendingBlob` is set in
+  `startImatgeWorker` `done()` (line 206) from
+  the EDT. OK.
+- `imprimirFitxa` (line 249) is 50 lines of
+  `Graphics2D.drawString` with hardcoded x/y
+  coordinates and i18n field names. Move to a
+  separate `BookPrintRenderer` class with a
+  `printBook(Graphics2D, Llibre, PageFormat)`
+  method. The class is otherwise a 50-method
+  god class.
+
+**[src/presentacio/detalles/control/GuardarLlibresDialogoControl.java]** — [severity: MEDIUM]
+- `crearLlibre` (line 156) parses `anyTxt`,
+  `valTxt`, `preuTxt` via `Integer.parseInt` /
+  `Double.parseDouble` (lines 164-166). If the
+  field is empty, `parseInt` is not called; if
+  the field is non-numeric, the parse throws
+  `NumberFormatException` which is caught by the
+  outer try (line 157) and shown as a generic
+  error. The user sees "Error: For input string: 'abc'"
+  instead of "field 'year' must be a number".
+  Validate with `try { Integer.parseInt(s) } catch ...`
+  per field with field-specific error messages.
+- `cercaInternet` (line 116) starts an
+  `OpenLibrarySearchTask` (line 134) that fires a
+  network call. The dialog's `btnCercaInternet`
+  is disabled (line 129) and re-enabled in the
+  task's `done()` (line 73). If the user closes
+  the dialog while the task is running, the
+  `done()` checks `!vista.isDisplayable()` (line
+  70) and returns. But the button text is set
+  on the disposed dialog's button — `setText` on
+  a disposed component throws
+  `IllegalComponentStateException`. The check
+  on line 70 is correct; but line 73's `btn.setEnabled(true)`
+  runs even after disposal. Move the check to
+  before any UI mutation.
+
+**[src/presentacio/detalles/control/LlistesDelLlibreControl.java]** — [severity: LOW]
+- `toggleShelfMembership` (line 46) fires on every
+  click of the shelf check list. The JList
+  selection is mutated by the click (line 41),
+  and the toggle removes the book from the
+  shelf. The next paint of the cell renderer
+  reads the new state. Correct. But the cell
+  renderer is created on every `reload()` (line
+  132) — see the same finding in
+  `GestioLlistesDialog`.
+- The `table.getCellEditor().stopCellEditing()`
+  (line 96) is the standard pattern but if the
+  editor is in a different cell when the user
+  clicks "Save", the wrong cell is committed.
+  Use `table.editingStopped(null)` or save the
+  edit before any other action.
+
+**[src/presentacio/detalles/control/TagsDelLlibreControl.java]** — [severity: LOW]
+- `computeTagCounts` (line 133) fetches
+  `cd.getAllLlibreTagRows()` which for a 10k-tag
+  library is 10k rows. The method is called on
+  every `reload()` (line 126). The `tagCounts`
+  map is per-book; the counts are global
+  (tag → number of books with that tag). The
+  map is rebuilt from scratch each time —
+  cache the result and invalidate on
+  addLlibreToTag / removeLlibreFromTag.
+
+**[src/presentacio/detalles/control/OpenLibrarySearchTask.java]** — [severity: MEDIUM]
+- `doInBackground` (line 48) calls three
+  `OpenLibraryClient.lookupBy*` methods in
+  sequence. The first call hits OL; the second
+  hits OL (for cover); both share the same
+  rate-limiter (300ms). The two calls block
+  for 600ms minimum even on a fast OL response.
+  Make the cover fetch optional and parallel:
+  the user asked for metadata, the cover is a
+  bonus.
+- `done()` line 75: `btn.setBackground(UITheme.palette().green());`
+  — this paints the button green after a
+  successful search. The "OK" turn is a
+  one-shot visual feedback. The button background
+  is re-painted on every theme apply, so the
+  green is lost on next theme switch. Either
+  revert to the default after 1.5s with a
+  `Timer`, or document that the color sticks
+  until the next theme change.
+
+**[src/presentacio/detalles/vista/DetallesLlibrePanel.java]** — [severity: MEDIUM]
+- The class has 26 hand-declared Swing component
+  fields (lines 46-78) and 26 public getters
+  (lines 348-378). This is the same pattern that
+  `FilterDrawerPanel` migrated to `FormFieldRegistry`
+  for. The class Javadoc (line 33) imports
+  `FormFieldRegistry`, but the registry field
+  (line 43) is unused (`fieldRegistry` is created
+  and `linkLabel` and `register` are called, but
+  no caller queries the registry). Either
+  migrate the fields or remove the unused
+  registry.
+- `setEditMode` (line 410) enables/disables 22
+  fields. The list of fields and their enabled
+  state is implicit. Add a `private static final
+  List<JTextField> EDITABLE_FIELDS` to centralize.
+- The `entryPanel()` method (line 329) is called
+  18 times (once per `addFieldEntry` /
+  `addComboEntry` / `addCheckEntry` call). The
+  `JPanel` instances are new each time. Consider
+  a small `JPanel` pool to reduce GC pressure
+  on dialog open.
+
+**[src/presentacio/detalles/vista/DetallesNotesTab.java]** — [severity: LOW]
+- The class is 9 lines. It delegates to
+  `DetallesLlibrePanel.buildNotesTab()`. The
+  class adds no value over the direct call. The
+  delegation is a one-line passthrough. Inline.
+
+**[src/presentacio/detalles/vista/DetallesAvancatTab.java]** — [severity: LOW]
+- Same as DetallesNotesTab — 9-line pass-through.
+  Inline.
+
+**[src/presentacio/detalles/vista/DetallesGeneralTab.java]** — [severity: LOW]
+- Same as the other two. Inline all three.
+
+**[src/presentacio/detalles/vista/GuardarLlibresDialogo.java]** — [severity: MEDIUM]
+- 30 hand-declared component fields (lines 39-64)
+  with 30 getters (lines 226-254). The
+  `FormGridBuilder` is used for the layout (line
+  155) but the field references are still
+  scattered. Same migration opportunity as
+  `DetallesLlibrePanel` and `FilterDrawerPanel`.
+- The `textNotes` field is a `JTextField` (line
+  57) but the form expects multi-line notes. The
+  class Javadoc of `DetallesLlibrePanel` uses a
+  `JTextArea` for notes; here a single-line
+  `JTextField` is used. The Save handler (line
+  186) writes the text as-is. For a user typing
+  a paragraph, the text wraps visually (no, it
+  doesn't — JTextField is single-line) but
+  saves as a newline-less string. Use
+  `JTextArea` like the detail panel does.
+
+**[src/presentacio/detalles/vista/LlistesDelLlibreTableModel.java]** — [severity: LOW]
+- `getValueAt` line 41:
+  `String.format("%.1f", l.getValoracioLlibre())` —
+  the precision is hardcoded. If the
+  internationalization changes, the model still
+  uses 1 decimal. Use a `Locale.ROOT` and a
+  configurable precision. Minor.
+
+**[src/presentacio/detalles/vista/TagsDelLlibreDialog.java]** — [severity: LOW]
+- The `DefaultTableModel` (line 78) is created
+  with a single column. The `setRowCount(0)` in
+  `updateTable` (line 152) re-clears the model on
+  every tag change. The `table` is enabled for
+  selection but the dialog's only consumer of
+  the table is `onTreure` (TagsDelLlibreControl.java:95),
+  which uses the row index. Correct.
+- The `updateTable` parameter `Map<Integer,Integer> counts`
+  is used in `updateTable` to add a "tag (count)"
+  suffix (line 155). The map is built by
+  `TagsDelLlibreControl.computeTagCounts` which
+  iterates `cd.getAllLlibreTagRows()` (line 135
+  of that file) — a 10k-row SQL query on every
+  tag add/remove. Cache the counts.
+
+**[src/presentacio/galeria/CoverCardFactory.java]** — [severity: MEDIUM]
+- The `build` method (line 103) creates a 100+
+  line inner JPanel with anonymous `paintComponent`,
+  anonymous `MouseAdapter`, and 5+ final
+  captured variables. The class is hard to read.
+  Extract the `paintComponent` to a static
+  `paintCard(Graphics2D, CardState)` method, and
+  the `MouseAdapter` to a static `CardMouseAdapter`.
+  The class would shrink from 428 to 250 lines
+  and the inline image-paint logic would be
+  testable.
+- The `Listener` interface (line 61) has 7
+  methods. The implementation in
+  `GaleriaCobertesPanel.CardListener` (line 264)
+  delegates to 4 host fields. A `record CardHost(Set<Long> selected, IntRef focused, List<Llibre> current, ...)`
+  would reduce the interface to one method per
+  callback (the 4 read-only accessors) and 3
+  mutator/handler methods.
+
+**[src/presentacio/galeria/CoverImageService.java]** — [severity: MEDIUM]
+- `imageLoader` (line 40) is a 4-thread pool with
+  no shutdown hook. The class
+  `GaleriaController` / `GaleriaCobertesPanel`
+  never calls `shutdown()`. The
+  `CoverService.POOL` (herramienta/CoverService)
+  is registered for shutdown (line 35 of that
+  file), but the gallery's own pool is not.
+  Add a shutdown hook.
+- The `imageCache` is a `Collections.synchronizedMap`
+  wrapping a `LinkedHashMap` (line 46). Each
+  `get` / `put` acquires the wrapper's monitor.
+  For a 200-card gallery rendering, the EDT
+  blocks on each repaint. Use a
+  `ConcurrentHashMap` with size-capped eviction
+  via a separate `LinkedHashMap` for LRU.
+
+**[src/presentacio/galeria/CoverZoomPopup.java]** — [severity: LOW]
+- `show` (line 67) creates a new `BufferedImage`
+  on every hover (line 75). The image is the
+  cached one scaled up 2x with SCALE_SMOOTH.
+  For a 200-book library with 50 KB covers, 200
+  hover events = 200 fresh 100 KB images. Cache
+  the zoomed image per source ISBN + target size.
+
+**[src/presentacio/layouts/WrapLayout.java]** — [severity: LOW]
+- The class is a third-party FlowLayout subclass
+  from the Sun Java Tutorial. The class Javadoc
+  (line 11) attributes it to a public source
+  but does not include the standard Sun
+  license header. Add it for clarity.
+- `layoutSize` (line 20) walks the tree to
+  find the viewport width (line 23) and walks
+  again (line 26) if the parent width is 0.
+  The double-walk is wasteful. Use the parent's
+  width directly and fall back to MAX_VALUE on
+  the first try.
+
+**[src/presentacio/renderers/CoverCellRenderer.java]** — [severity: HIGH]
+- The `LOADER` (line 18) is a 4-thread pool with
+  no shutdown hook. The renderer is recreated
+  on every `setBooks` call (TableController.java:67
+  passes a fresh `CoverCellRenderer` if
+  `columnsInstalled` is false). For an app
+  that refreshes the table frequently, the
+  pool is created many times — the daemon
+  threads accumulate. Use a shared static
+  `LOADER` (which it is) but ensure all created
+  renderers reference the same instance. The
+  class is OK on that front (static field).
+  The shutdown hook is the only gap.
+- The `repaintCoverCell` (line 73) iterates
+  every visible row to find the ISBN (line 83).
+  For a 1000-row table, this is 1000 table
+  lookups. The `isbnToRow` map in
+  `TableController` (line 46) already indexes
+  ISBN → row. Use it via a callback, or pass
+  the TableController to the renderer.
+
+**[src/presentacio/renderers/LlegitCheckBoxEditor.java]** — [severity: MEDIUM]
+- Line 38: `new Thread(() -> { ... }).start();` —
+  a fresh non-pooled, non-daemon-checked thread
+  for every checkbox click. The thread is
+  set to daemon (line 49) but the executor
+  pattern is better. Use a shared
+  `ExecutorService` like `CoverService.POOL`.
+- Line 40: `MainFrameControl.getInstance().getLlibreIsbn(...)`
+  — the editor reaches into a singleton to fetch
+  a fresh `Llibre` (with descripcio/notes
+  already loaded? no — `findLlibre` returns
+  the light row, then `cd.updateLlibre(l)` writes
+  the light row's `llegit` only. The other
+  fields (descripcio, notes, etc.) are still
+  the stale light values. After a user opens
+  the details dialog (which triggers
+  loadHeavyFields), edits just the read flag,
+  and saves — the other fields are
+  unchanged but the user might think they
+  persisted a fresh read flag. This is
+  correct, but the Javadoc of the editor
+  should mention that only `llegit` is
+  persisted and the rest is read-only for
+  this path.
+
+**[src/presentacio/renderers/SearchHighlightRenderer.java]** — [severity: MEDIUM]
+- The `setSearchText` (line 21) is called on
+  every keystroke of the search bar (via
+  `FilterController.aplicarSearchBar` line 218
+  via `highlightRenderer().setSearchText`).
+  The renderer holds a `String searchText` (line 14)
+  — but the `loanedISBNs` set is queried on
+  every render via `loanedISBNs.get()` (line 31)
+  which is a `Supplier<Set<Long>>` — a function
+  call per cell. For a 1000-row × 10-column
+  table, that's 10,000 function calls per repaint.
+  Cache the set reference.
+- The highlighter wraps the cell text in
+  `<span style='background:#F39C12;color:#000'>` (line 44).
+  For a cell with a non-empty search query and a
+  match, the `setText` is called with an HTML
+  string. The DefaultTableCellRenderer's
+  setFont / setForeground are bypassed because
+  the HTML is opaque. The cell height auto-resizes
+  for HTML — fine, but the search highlight
+  color is hardcoded. Move to UITheme palette
+  (add a `searchHighlight` field).
+
+**[src/presentacio/renderers/TableCellComponents.java]** — [severity: MEDIUM]
+- The class is a re-export facade with 6 inner
+  classes (lines 26-55). Each inner class is
+  a 0-arg constructor that just calls `super(...)`.
+  The 5 inner classes that pass through add
+  no value — a class that extends another class
+  with no overridden methods is the same as
+  the parent. Remove the inner classes and let
+  callers use the new types directly
+  (`presentacio.renderers.CoverCellRenderer`,
+  etc.). The facade exists for "backward-
+  compatible imports" — but the imports are
+  internal to the presentacio package.
+- `loadCoverBytes` (line 59) and `scaledCover`
+  (line 71) are static utility methods that
+  belong on `CoverImageService` (the modern
+  cover pipeline) or a `CoverUtils` class, not
+  on the facade.
+
+**[src/presentacio/renderers/BotonDetallesRenderer.java]** — [severity: LOW]
+- The class is a `JButton` subclass that
+  implements `TableCellRenderer`. The
+  `BotonDetallesEditor` is in a separate file
+  and the renderer is hidden via
+  `installColumns` line 200 of TableController.
+  The class is effectively unused in the
+  current code (the details column is removed
+  on install). Either re-enable the column
+  or delete the renderer.
+
+**[src/presentacio/renderers/BotonDetallesEditor.java]** — [severity: LOW]
+- Same as BotonDetallesRenderer — the editor
+  is also hidden via TableController install.
+  Delete the file or re-enable the column.
+
+**[src/presentacio/listener/EnActualizarBBDD.java]** — [severity: LOW]
+- The class extends `OnLlibreUpdate,
+  OnLlibreDelete` and the two `@Override` defaults
+  (lines 9-10) call back into `actualitzarLlibre` /
+  `eliminarLlibre` (lines 6-7) which are also
+  defaults that call `onBookUpdated` /
+  `onBookDeleted` (lines 9-10). The chain of
+  delegation is `EnActualizarBBDD.actualitzarLlibre`
+  → `OnLlibreUpdate.onBookUpdated` (default
+  override) → `EnActualizarBBDD.actualitzarLlibre`
+  again — infinite recursion. Test or fix.
+  Wait — let me re-read. The class declares:
+  `void actualitzarLlibre(Llibre l, boolean nuevo)
+  { onBookUpdated(l, nuevo); }` (line 6).
+  Then `@Override default void onBookUpdated(Llibre l, boolean isNew)
+  { actualitzarLlibre(l, isNew); }` (line 9).
+  If a class extends `EnActualizarBBDD` and
+  overrides `actualitzarLlibre`, the override
+  fires (no infinite loop). If a class extends
+  `EnActualizarBBDD` and overrides
+  `onBookUpdated`, the override fires (no loop).
+  If a class extends `EnActualizarBBDD` and
+  overrides NEITHER, the chain is
+  `actualitzarLlibre` → `onBookUpdated` (default)
+  → `actualitzarLlibre` (no override) →
+  `onBookUpdated` (default override) → ...
+  → `StackOverflowError`. This is a footgun.
+
+**[src/presentacio/listener/LibraryChangeListener.java]** — [severity: LOW]
+- `fromLegacy` (line 11) and the `asXxx` default
+  methods (lines 19-32) are adapter utilities.
+  The class is unused — search returns no
+  `LibraryChangeListener` references. Dead.
+
+**[src/presentacio/listener/OnLlibreDelete.java]** — [severity: LOW]
+- The `DeleteEvent` inner class (line 9) is
+  defined but no consumer exists. The
+  `onBookDeleted(Llibre)` contract is a single
+  method; the cancellable / vetoed mechanism is
+  speculative. Either remove or implement.
+
+---
+
+## Calibration
+
+1. **Weakest finding included.** The
+   `EstadoCOnfigurationDialog` / `ConfiguracioDataSection.btnPerfils`
+   profile-name sanitization (see `ConfiguracioDataSection.java:101`)
+   was flagged as LOW but the evidence is thin: I noticed
+   `chosen.trim().replaceAll("[^a-zA-Z0-9_-]", "_")` strips non-ASCII
+   characters from a user-typed profile name silently, but I did
+   not test whether the resulting profile name actually
+   round-trips through `H2` or breaks a re-connection flow. To
+   strengthen this, I would write a JUnit test that types
+   "café" in the profile field, clicks save, then verifies
+   that `Config.getDbProfile()` returns "caf_", and that
+   re-opening the dialog shows "caf_" (not "café"). The
+   concrete failure mode (silent rewriting) is plausible but
+   unconfirmed; the fix is trivial (add a warning dialog).
+2. **New class of issue to look for next run.**
+   I missed auditing the **SQLite-on-Calibre** integration
+   end-to-end. The shell-out in `BookImporter.importCalibre`
+   passes a multi-MB SQL through `sqlite3` stdout and
+   parses with `line.split("\\|", -1)` — but I did not
+   test with a 1000-book Calibre library to see whether
+   the process timeout (30s, line 99) is sufficient, nor
+   did I check the charset handling for non-UTF8 Calibre
+   libraries. The pipe-delimited SQL also assumes no book
+   title contains a literal `|` character, which is rare
+   but possible. A next-run test fixture with a Calibre
+   library containing `|`-titled books would expose the
+   parser's blind spot.
+3. **Confidence score.** `confidence: 72`
+   The HIGH-severity findings (BookDelegate race, BackupDelegate
+   EDT loadHeavyFields, LlibreSearchDao SQL builder, OpenLibrary
+   regex fallback, BookExporter HTML inline covers, FilterController
+   SwingWorker, DetallesLlibrePanelControl perm-disabled ISBN) are
+   all backed by code references and reproducible. I am most
+   unsure about the Llibre/LlibreFilter maintainability trap
+   and the BackupService auto-backup prune race — both are
+   plausible but require runtime evidence (long-running test
+   with concurrent restore + auto-backup) to be certain. I would
+   not bet money on every LOW-severity nitpick being a true
+   issue, but I would on every HIGH and most MEDIUM findings.

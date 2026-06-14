@@ -33,7 +33,8 @@ public class Llista {
     public int getId() { return id; }
     public String getNom() { return nom; }
     public void setNom(String nom) {
-        if (nom == null || nom.isBlank()) throw new IllegalArgumentException("El nom de la llista no pot estar buit");
+        if (nom == null || nom.isBlank())
+            throw new BibliotecaException.Validation(herramienta.I18n.t("val_llista_blank"));
         this.nom = nom;
     }
     public Double getValoracioLlibre() { return valoracioLlibre; }

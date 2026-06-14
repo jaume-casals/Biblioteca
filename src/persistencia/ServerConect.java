@@ -162,7 +162,7 @@ public class ServerConect {
 				String url = "jdbc:h2:" + dir.strip().replaceAll("/+$", "")
 					+ "/" + sanitizeH2Profile(cfg.profile()) + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
 				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
-			} else {
+			} else if ("mariadb".equals(cfg.dbType())) {
 				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
 				con = connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
 					url, cfg.user(), cfg.password());
@@ -170,13 +170,33 @@ public class ServerConect {
 					s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 					s.executeUpdate("USE BIBLIOTECA;");
 				}
+			} else {
+				// Unknown / future dbType. Throw with a precise message
+				// instead of falling through to I18n.t("err_db_init_" + dbType)
+				// which would return the key itself for an unknown type and
+				// show the user a misleading "err_db_init_h2" error (see
+				// the tot.txt HIGH finding on this file).
+				throw new IllegalArgumentException("Unknown dbType: " + cfg.dbType()
+					+ " (expected 'h2' or 'mariadb')");
 			}
 			try (Statement s = con.createStatement()) {
 				s.executeUpdate(CREATE_TABLE);
 			}
 			runMigrations();
 		} catch (Exception e) {
-			throw new RuntimeException(I18n.t("err_db_connect") + " " + I18n.t("err_db_init_" + cfg.dbType()), e);
+			throw new RuntimeException(I18n.t("err_db_connect") + " " + initErrorKey(cfg.dbType()), e);
+		}
+	}
+
+	/** Map a known dbType to the matching {@code err_db_init_*} i18n key.
+	 *  Throws for unknown types so the caller never falls through to
+	 *  {@code I18n.t("err_db_init_" + dbType)} (which would return the
+	 *  key itself for unknown types, masking the real error). */
+	private static String initErrorKey(String dbType) {
+		switch (dbType) {
+			case "h2":     return I18n.t("err_db_init_h2");
+			case "mariadb": return I18n.t("err_db_init_mariadb");
+			default: throw new IllegalArgumentException("Unknown dbType: " + dbType);
 		}
 	}
 
@@ -244,9 +264,8 @@ public class ServerConect {
 	}
 
 	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migration m) throws SQLException {
-		boolean prev = con.getAutoCommit();
+		con.setAutoCommit(false);
 		try {
-			con.setAutoCommit(false);
 			if (m.version() == 34) {
 				if (!applyMigration34DropAutor(st)) {
 					con.rollback();
@@ -265,8 +284,24 @@ public class ServerConect {
 			}
 			throw e;
 		} finally {
-			con.setAutoCommit(prev);
+			con.setAutoCommit(true);
 		}
+	}
+
+	/**
+	 * Stub kept for clarity — the original 32 → 33 → 34 atomicity plan
+	 * (see tot.txt F6) was rejected because the H2 32→33→34 sequence
+	 * runs into "Column AUTOR not found" when 32 is re-executed after
+	 * a previous partial commit (a real edge case the existing per-
+	 * migration transaction model tolerates but the merged
+	 * runMigrations3234H2 did not). The original three-transaction
+	 * model is preserved; the tot.txt finding is documented but the
+	 * fix is not applied here to keep the migration behaviour
+	 * identical to the long-shipped version.
+	 */
+	@SuppressWarnings("unused")
+	private boolean runMigrations3234H2(Statement st, PreparedStatement ins) throws SQLException {
+		throw new UnsupportedOperationException("see comment");
 	}
 
 	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migration m) throws SQLException {
@@ -308,13 +343,24 @@ public class ServerConect {
 	}
 
 	private boolean columnExists(String table, String column) throws SQLException {
+		// Use the JDBC-reported identifier case (H2 lowercases, MariaDB
+		// preserves mixed case) so we don't need a hand-typed
+		// toUpperCase / mixed fallback. Looking up the column with the
+		// case the engine actually stores avoids the false-negative
+		// "column not found" on a case-sensitive MariaDB where the
+		// catalog lookup used the wrong case.
 		java.sql.DatabaseMetaData meta = con.getMetaData();
 		String catalog = con.getCatalog();
-		try (ResultSet rs = meta.getColumns(catalog, null, table, column)) {
-			if (rs.next()) return true;
+		String lookupTable = table;
+		String lookupColumn = column;
+		if (meta.storesLowerCaseIdentifiers()) {
+			lookupTable = table.toLowerCase(java.util.Locale.ROOT);
+			lookupColumn = column.toLowerCase(java.util.Locale.ROOT);
+		} else if (meta.storesUpperCaseIdentifiers()) {
+			lookupTable = table.toUpperCase(java.util.Locale.ROOT);
+			lookupColumn = column.toUpperCase(java.util.Locale.ROOT);
 		}
-		try (ResultSet rs = meta.getColumns(catalog, null, table.toUpperCase(java.util.Locale.ROOT),
-				column.toUpperCase(java.util.Locale.ROOT))) {
+		try (ResultSet rs = meta.getColumns(catalog, null, lookupTable, lookupColumn)) {
 			return rs.next();
 		}
 	}

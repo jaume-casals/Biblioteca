@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.table.*;
@@ -28,6 +29,11 @@ public class TableCellComponents {
                 Set<Long> coverLoading, BibliotecaWriter cd) {
             super(table, coverCache, coverLoading, cd);
         }
+        public CoverCellRenderer(JTable table, Map<Long, ImageIcon> coverCache,
+                Set<Long> coverLoading, BibliotecaWriter cd,
+                LongFunction<Integer> isbnToRow) {
+            super(table, coverCache, coverLoading, cd, isbnToRow);
+        }
     }
 
     public static class SearchHighlightRenderer extends presentacio.renderers.SearchHighlightRenderer {
@@ -45,14 +51,6 @@ public class TableCellComponents {
             super(cd, onUpdated);
         }
     }
-
-    public static class BotonDetallesEditor extends presentacio.renderers.BotonDetallesEditor {
-        public BotonDetallesEditor(JCheckBox checkbox, JButton botonDetalles) {
-            super(checkbox, botonDetalles);
-        }
-    }
-
-    public static class BotonDetallesRenderer extends presentacio.renderers.BotonDetallesRenderer {}
 
     // ── Shared utility methods ────────────────────────────────────────────────
 

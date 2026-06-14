@@ -47,11 +47,15 @@ public final class SortSpec {
     private final String column;
     private final boolean ascending;
 
+    /**
+     * Unknown / null column names are tolerated and silently coerced to
+     * {@link #COL_ISBN}. The fallback lives here (not in the call site)
+     * so the policy of "unknown → ISBN" is in one place — see the
+     * tot.txt MEDIUM finding on this class. ToSql() and
+     * {@link #comparator(String)} both honour the fallback.
+     */
     public SortSpec(String column, boolean ascending) {
-        if (column == null || !SQL_COLS.containsKey(column))
-            throw new IllegalArgumentException("Unknown sort column: " + column
-                + " (valid: " + SQL_COLS.keySet() + ")");
-        this.column = column;
+        this.column = (column != null && SQL_COLS.containsKey(column)) ? column : COL_ISBN;
         this.ascending = ascending;
     }
 

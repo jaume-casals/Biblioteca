@@ -546,7 +546,6 @@ public class I18n {
         T("val_pais_llarg", "El país d'origen no pot superar 100 caràcters", "El país de origen no puede superar 100 caracteres", "Country cannot exceed 100 characters");
         T("val_preu_negatiu", "El preu no pot ser negatiu", "El precio no puede ser negativo", "Price cannot be negative");
         T("val_serie_llarg", "La sèrie no pot superar 255 caràcters", "La serie no puede superar 255 caracteres", "Series cannot exceed 255 characters");
-        T("val_tag_blank", "El nom de l'etiqueta no pot estar buit", "El nombre de la etiqueta no puede estar vacío", "Tag name cannot be empty");
         T("val_valoracio_rang", "La valoració ha d'estar entre 0 i 10", "La valoración debe estar entre 0 y 10", "Rating must be between 0 and 10");
         T("app_title", "Biblioteca", "Biblioteca", "Biblioteca");
         T("lbl_llistes", "Llistes", "Listas", "Lists");
@@ -571,6 +570,8 @@ public class I18n {
         T("theme_sepia", "Sèpia", "Sépia", "Sepia");
         T("theme_ocean", "Oceà", "Océano", "Ocean");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
+        T("val_llista_blank", "El nom de la llista no pot estar buit", "El nombre de la estante no puede estar vacío", "Shelf name cannot be empty");
+        T("val_tag_blank", "El nom de l'etiqueta no pot estar buit", "El nombre de la etiqueta no puede estar vacío", "Tag name cannot be empty");
         T("err_causa", "Causa:", "Causa:", "Cause:");
         T("err_stack_trace", "─── Traça ───", "─── Traza ───", "─── Stack trace ───");
         T("dlg_error_title", "Error", "Error", "Error");
@@ -579,6 +580,10 @@ public class I18n {
         T("dlg_import_json_errors", "{0} errors.", "{0} errores.", "{0} errors.");
         T("lbl_errors", "errors.", "errores.", "errors.");
         T("val_estat_llarg", "L'estat no pot superar 50 caràcters", "El estado no puede superar 50 caracteres", "Status cannot exceed 50 characters");
+        T("val_must_be_int", "{0} ha de ser un nombre enter vàlid.", "{0} debe ser un número entero válido.", "{0} must be a valid integer.");
+        T("val_must_be_number", "{0} ha de ser un nombre vàlid.", "{0} debe ser un número válido.", "{0} must be a valid number.");
+        T("err_db_init_h2", "No s'ha pogut inicialitzar la base de dades H2.", "No se ha podido inicializar la base de datos H2.", "Failed to initialise the H2 database.");
+        T("err_db_init_mariadb", "No s'ha pogut inicialitzar la base de dades MariaDB.", "No se ha podido inicializar la base de datos MariaDB.", "Failed to initialise the MariaDB database.");
         T("lbl_csv_files", "CSV files", "CSV files", "CSV files");
         T("btn_export_csv", "Export CSV", "Exportar CSV", "Export CSV");
         T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");

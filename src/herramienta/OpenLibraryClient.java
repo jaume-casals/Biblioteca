@@ -37,11 +37,16 @@ public class OpenLibraryClient {
 
 	// @VisibleForTesting — test-only override of base URL / retry policy.
 	// Public so the test tree (which lives in the default package, not herramienta)
-	// can read the previous value to restore it after a test. Not thread-safe;
-	// tests must not run OpenLibraryClient in parallel while these are set.
-	public static String testBaseUrl = null;
-	public static int testMaxRetries = -1;
-	public static long testRetryBaseMs = -1;
+	// can read the previous value to restore it after a test. Volatile so a
+	// concurrent test that sets testBaseUrl after a production caller has
+	// already read it observes the new value (or, conversely, a test in the
+	// middle of its setup can't be observed with a half-set state by a
+	// production call). Tests must still not run OpenLibraryClient in
+	// parallel while these are set — the Javadoc on each field documents
+	// the contract.
+	public static volatile String testBaseUrl = null;
+	public static volatile int testMaxRetries = -1;
+	public static volatile long testRetryBaseMs = -1;
 
 	private static final int   MAX_RETRIES    = 3;
 	private static final long  RETRY_BASE_MS  = 500;
@@ -194,9 +199,27 @@ public class OpenLibraryClient {
 		try {
 			String encoded = java.net.URLEncoder.encode("isbn:" + isbn, StandardCharsets.UTF_8);
 			String meta = fetch("https://www.googleapis.com/books/v1/volumes?q=" + encoded + "&maxResults=1");
-			Matcher thumb = Pattern.compile("\"thumbnail\"\\s*:\\s*\"([^\"]+)\"").matcher(meta);
-			if (!thumb.find()) return null;
-			String thumbUrl = thumb.group(1).replace("http://", "https://");
+			// Parse the Google Books response the same way as mergeGoogleBooks
+			// (the previous regex parse fell over on escaped quotes inside the
+			// thumbnail URL — some Google Books entries do embed them — and on
+			// `data:image/jpeg;base64,…` thumbnails the regex would match the
+			// whole prefix as the URL). Reuse the same JsonObject traversal.
+			JsonObject gbRoot;
+			try { gbRoot = JsonParser.parseString(meta).getAsJsonObject(); }
+			catch (RuntimeException parseEx) {
+				LOG.log(Level.FINE, "fetchCoverByISBN google fallback: malformed JSON for " + isbn, parseEx);
+				return null;
+			}
+			if (!gbRoot.has("items")) return null;
+			JsonArray items = gbRoot.getAsJsonArray("items");
+			if (items.isEmpty()) return null;
+			JsonObject info = items.get(0).getAsJsonObject();
+			if (!info.has("volumeInfo")) return null;
+			JsonObject volumeInfo = info.getAsJsonObject("volumeInfo");
+			if (!volumeInfo.has("imageLinks")) return null;
+			JsonObject imageLinks = volumeInfo.getAsJsonObject("imageLinks");
+			if (!imageLinks.has("thumbnail")) return null;
+			String thumbUrl = imageLinks.get("thumbnail").getAsString().replace("http://", "https://");
 			HttpURLConnection c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
 			c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
 			c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
@@ -230,6 +253,25 @@ public class OpenLibraryClient {
 			}
 		}
 		throw last != null ? last : new java.io.IOException("No retries performed for " + url);
+	}
+
+	/**
+	 * Like {@link #fetchWithRetry(String)} but treats a malformed-JSON
+	 * response as a non-retryable error. The previous implementation
+	 * retried 4 times on every parse failure (waste of the 3500 ms backoff
+	 * budget — the server is not going to suddenly start returning valid
+	 * JSON for the same URL) and ultimately let the
+	 * {@code JsonSyntaxException} escape. Callers can now distinguish
+	 * "we tried, the server is broken" from "transient network blip".
+	 */
+	private static String fetchJsonWithRetry(String url) throws java.io.IOException {
+		String body = fetchWithRetry(url);
+		try {
+			JsonParser.parseString(body);
+			return body;
+		} catch (RuntimeException parseEx) {
+			throw new java.io.IOException("Malformed JSON from " + url + ": " + parseEx.getMessage(), parseEx);
+		}
 	}
 
 	private static String fetch(String url) throws java.io.IOException {

@@ -194,7 +194,7 @@ class TableController {
         setWidth(t, BibliotecaTableModel.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
         setWidth(t, BibliotecaTableModel.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_COVER).setCellRenderer(
-            new TableCellComponents.CoverCellRenderer(t, coverCache, coverLoading, cd));
+            new TableCellComponents.CoverCellRenderer(t, coverCache, coverLoading, cd, isbnToRow::get));
         // Details column hidden — double-click row or Enter opens details (see installInteractionListeners)
         TableColumn detallsCol = t.getColumnModel().getColumn(BibliotecaTableModel.COL_DETALLS);
         hiddenCols.put(BibliotecaTableModel.COL_DETALLS, detallsCol);

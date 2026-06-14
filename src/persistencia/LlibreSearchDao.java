@@ -28,30 +28,45 @@ public class LlibreSearchDao {
         ArrayList<Llibre> result = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT DISTINCT " + LlibreDaoCore.LLIBRE_COLUMNS_L + " FROM llibre l");
-        if (f.getLlistaId() != null) sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
-        if (f.getTagId()    != null) sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
-        sql.append(" WHERE 1=1");
         List<Object> params = new ArrayList<>();
-        if (f.getLlistaId() != null) params.add(f.getLlistaId());
-        if (f.getTagId()    != null) params.add(f.getTagId());
-        if (f.getNom()          != null && !f.getNom().isBlank()) {
-            sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)");
+        if (f.getLlistaId() != null) {
+            sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
+            params.add(f.getLlistaId());
+        }
+        if (f.getTagId() != null) {
+            sql.append(" JOIN llibre_tag lt ON l.ISBN = lt.isbn AND lt.tag_id = ?");
+            params.add(f.getTagId());
+        }
+        sql.append(" WHERE 1=1");
+        // addCondition(sql, params, clause, value) appends nothing when
+        // value is null and the right number of placeholders otherwise.
+        // The old inline branches were 18 lines of repeated
+        // "if (f.getX() != null) { sql.append(" AND ..."); params.add(...); }"
+        // and the place-counting bugs were easy to introduce; the helper
+        // is the tot.txt MEDIUM finding on this class.
+        addCondition(sql, params, " AND l.ISBN = ?", f.getIsbn());
+        if (f.getNom() != null && !f.getNom().isBlank()) {
             String p = "%" + f.getNom() + "%";
+            sql.append(" AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)");
             params.add(p); params.add(p); params.add(p); params.add(p);
         }
-        if (f.getAutor()        != null && !f.getAutor().isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)"); params.add("%" + f.getAutor() + "%"); }
-        if (f.getIsbn()         != null) { sql.append(" AND l.ISBN = ?");          params.add(f.getIsbn()); }
-        if (f.getAnyMin()       != null) { sql.append(" AND l.`any` >= ?");        params.add(f.getAnyMin()); }
-        if (f.getAnyMax()       != null) { sql.append(" AND l.`any` <= ?");        params.add(f.getAnyMax()); }
-        if (f.getValoracioMin() != null) { sql.append(" AND l.valoracio >= ?");    params.add(f.getValoracioMin()); }
-        if (f.getValoracioMax() != null) { sql.append(" AND l.valoracio <= ?");    params.add(f.getValoracioMax()); }
-        if (f.getPreuMin()      != null) { sql.append(" AND l.preu >= ?");         params.add(f.getPreuMin()); }
-        if (f.getPreuMax()      != null) { sql.append(" AND l.preu <= ?");         params.add(f.getPreuMax()); }
-        if (f.getLlegit()       != null) { sql.append(" AND l.llegit = ?");        params.add(f.getLlegit()); }
-        if (f.getEditorial()    != null && !f.getEditorial().isBlank()) { sql.append(" AND l.editorial LIKE ?");  params.add("%" + f.getEditorial() + "%"); }
-        if (f.getSerie()        != null && !f.getSerie().isBlank()) { sql.append(" AND l.serie LIKE ?");      params.add("%" + f.getSerie() + "%"); }
-        if (f.getFormat()       != null && !f.getFormat().isBlank()) { sql.append(" AND l.format = ?");        params.add(f.getFormat()); }
-        if (f.getIdioma()       != null && !f.getIdioma().isBlank()) { sql.append(" AND l.idioma LIKE ?");     params.add("%" + f.getIdioma() + "%"); }
+        addCondition(sql, params, " AND EXISTS (SELECT 1 FROM llibre_autor la2 JOIN autor a2 ON la2.autor_id = a2.id WHERE la2.isbn = l.ISBN AND a2.nom LIKE ?)",
+            f.getAutor() != null && !f.getAutor().isBlank() ? "%" + f.getAutor() + "%" : null);
+        addCondition(sql, params, " AND l.`any` >= ?", f.getAnyMin());
+        addCondition(sql, params, " AND l.`any` <= ?", f.getAnyMax());
+        addCondition(sql, params, " AND l.valoracio >= ?", f.getValoracioMin());
+        addCondition(sql, params, " AND l.valoracio <= ?", f.getValoracioMax());
+        addCondition(sql, params, " AND l.preu >= ?", f.getPreuMin());
+        addCondition(sql, params, " AND l.preu <= ?", f.getPreuMax());
+        addCondition(sql, params, " AND l.llegit = ?", f.getLlegit());
+        addCondition(sql, params, " AND l.editorial LIKE ?",
+            f.getEditorial() != null && !f.getEditorial().isBlank() ? "%" + f.getEditorial() + "%" : null);
+        addCondition(sql, params, " AND l.serie LIKE ?",
+            f.getSerie() != null && !f.getSerie().isBlank() ? "%" + f.getSerie() + "%" : null);
+        addCondition(sql, params, " AND l.format = ?",
+            f.getFormat() != null && !f.getFormat().isBlank() ? f.getFormat() : null);
+        addCondition(sql, params, " AND l.idioma LIKE ?",
+            f.getIdioma() != null && !f.getIdioma().isBlank() ? "%" + f.getIdioma() + "%" : null);
         SortSpec sort = f.getSort();
         if (sort == null) sort = SortSpec.defaultAsc();
         sql.append(" ORDER BY ").append(sort.toSql());
@@ -67,6 +82,20 @@ public class LlibreSearchDao {
             throw new domini.BibliotecaException("Error en searchLlibres: " + e.getMessage(), e);
         }
         return result;
+    }
+
+    /**
+     * Append {@code clause} to {@code sql} and {@code value} to {@code params}
+     * if {@code value} is non-null. No-op when {@code value} is null — the
+     * caller can pass a pre-computed value (e.g. {@code "%foo%"}) and let the
+     * helper decide whether to bind it. Reduces the search() body from
+     * ~20 branches of {@code if (f.getX() != null) { sql.append(...); params.add(...); }}
+     * to single-line per-condition calls.
+     */
+    private static void addCondition(StringBuilder sql, List<Object> params, String clause, Object value) {
+        if (value == null) return;
+        sql.append(clause);
+        params.add(value);
     }
 
     private static void bindParam(PreparedStatement ps, int index, Object p) throws SQLException {

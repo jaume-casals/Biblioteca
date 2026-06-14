@@ -73,14 +73,18 @@ public final class StateContext {
         }
     }
 
-    /** Clear all three backing lists and the id-index maps (used by clearAll). */
+    /** Clear all three backing lists and the id-index maps (used by clearAll).
+     *  Mirrors {@link #replaceAll(ArrayList, ArrayList, ArrayList)}'s contract
+     *  by going through {@link #rebuildIdIndexesLocked()} for consistency
+     *  (today the two paths clear the maps directly, but the centralised
+     *  call makes future additions — e.g. a new id-index map — a single
+     *  line change rather than a two-line search). */
     public void clearAll() {
         synchronized (lock) {
             bib.clear();
             llistes.clear();
             tags.clear();
-            llistesById.clear();
-            tagsById.clear();
+            rebuildIdIndexesLocked();
         }
     }
 

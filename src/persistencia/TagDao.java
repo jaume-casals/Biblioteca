@@ -16,10 +16,43 @@ public class TagDao {
      * paràmetre per a un nom de columna en JDBC), per això la llista blanca
      * és <em>obligatòria</em> — sense ella, una entrada no validada seria
      * un vector d'SQL injection. Mantenir sincronitzada amb el switch en
-     * memòria de {@code ControladorDomini.getDistinctValues}.
+     * memòria de {@code domini.facade.StatsDelegate.IN_MEMORY_EXTRACTORS}
+     * — la verificació a {@link #verifyColumnWhitelistSync()} corre al
+     * constructor per fallar aviat si la llista queda desincronitzada.
      */
     public static final Set<String> AUTOCOMPLETE_COLUMNS = Set.of(
         "editorial", "serie", "idioma", "pais_origen", "format", "llengua_original");
+
+    /**
+     * Startup assertion: every column the in-memory path in
+     * {@code StatsDelegate.IN_MEMORY_EXTRACTORS} knows about must also be
+     * in the SQL whitelist. Without this check the two paths drift
+     * silently — a column added to the in-memory extractors but not the
+     * SQL whitelist would yield a smaller result set when the SQL path
+     * is exercised (e.g. for a column that doesn't have an in-memory
+     * extractor at all). Reference is by string to keep this DAO
+     * ignorant of the facade layer (which would create a cycle).
+     */
+    static {
+        try {
+            Class<?> statsCls = Class.forName("domini.facade.StatsDelegate");
+            java.lang.reflect.Field f = statsCls.getDeclaredField("IN_MEMORY_EXTRACTORS");
+            f.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, ?> mem = (java.util.Map<String, ?>) f.get(null);
+            java.util.Set<String> memKeys = mem.keySet();
+            java.util.Set<String> missing = new java.util.HashSet<>(memKeys);
+            missing.removeAll(AUTOCOMPLETE_COLUMNS);
+            if (!missing.isEmpty()) {
+                throw new ExceptionInInitializerError(
+                    "TagDao.AUTOCOMPLETE_COLUMNS is missing the in-memory extractors: " + missing
+                    + " (the SQL whitelist must be a superset of the in-memory map)");
+            }
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            // StatsDelegate may be absent in test classpaths; the assert
+            // is best-effort. The drift is still caught by code review.
+        }
+    }
 
     private volatile java.util.List<LlibreTagRow> llibreTagCache;
 

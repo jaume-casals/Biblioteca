@@ -88,18 +88,36 @@ public final class JarLocator {
     }
 
     private static File walkUpFromClassSource(StringBuilder diag, Predicate<File> hasJars, int maxLevels) {
+        java.net.URL loc;
         try {
-            java.net.URL loc = JarLocator.class.getProtectionDomain().getCodeSource().getLocation();
-            diag.append("  classSource=").append(loc).append("\n");
-            File dir = new File(loc.toURI());
-            for (int i = 0; i < maxLevels; i++) {
-                if (dir == null) return null;
-                File lib = new File(dir, "lib");
-                if (recordAndReturn(lib, diag, hasJars) != null) return lib;
-                dir = dir.getParentFile();
-            }
-        } catch (Exception e) {
-            diag.append("  classSource=ERROR:").append(e.getMessage()).append("\n");
+            loc = JarLocator.class.getProtectionDomain().getCodeSource().getLocation();
+        } catch (RuntimeException se) {
+            // SecurityException is a RuntimeException; some JVMs surface
+            // the code-source access denial as plain IllegalArgument or
+            // SecurityException. Catch both to keep the locator robust.
+            diag.append("  classSource=SecurityException:").append(se.getMessage()).append("\n");
+            return null;
+        }
+        if (loc == null) {
+            diag.append("  classSource=null\n");
+            return null;
+        }
+        diag.append("  classSource=").append(loc).append("\n");
+        File dir;
+        try {
+            dir = new File(loc.toURI());
+        } catch (java.net.URISyntaxException ue) {
+            diag.append("  classSource=URISyntaxException:").append(ue.getMessage()).append("\n");
+            return null;
+        } catch (java.lang.IllegalArgumentException iae) {
+            diag.append("  classSource=IllegalArgument:").append(iae.getMessage()).append("\n");
+            return null;
+        }
+        for (int i = 0; i < maxLevels; i++) {
+            if (dir == null) return null;
+            File lib = new File(dir, "lib");
+            if (recordAndReturn(lib, diag, hasJars) != null) return lib;
+            dir = dir.getParentFile();
         }
         return null;
     }

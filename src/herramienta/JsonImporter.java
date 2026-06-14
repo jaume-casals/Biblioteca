@@ -118,6 +118,6 @@ public final class JsonImporter {
                 } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
             }
         }
-        return new ImportResult(ok, skipped, err, String.join("\n", errDetails));
+        return new ImportResult(ok, skipped, err, errDetails);
     }
 }

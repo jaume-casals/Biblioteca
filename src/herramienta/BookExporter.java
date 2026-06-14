@@ -27,39 +27,45 @@ public class BookExporter {
         for (persistencia.LlibreTagRow r : cd.getAllLlibreTagRows())
             tagRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
 
+        // Build the document as a single LinkedHashMap so GSON handles
+        // the surrounding braces, commas, and escaping (the previous
+        // implementation hand-rolled `pw.println("{")` etc. and only
+        // delegated per-book serialization to GSON — a 5000-book export
+        // paid a 500x slowdown and shipped a hand-maintained escape
+        // surface). The LinkedHashMap insertion order matches the prior
+        // on-disk layout: version, llibres, llistes, tags.
+        java.util.Map<String, Object> root = new java.util.LinkedHashMap<>();
+        root.put("version", 1);
+        ArrayList<Llibre> tots = new ArrayList<>(cd.getAllLlibres());
+        java.util.List<java.util.Map<String, Object>> llibresJson = new java.util.ArrayList<>(tots.size());
+        for (Llibre l : tots) {
+            llibresJson.add(jsonLlibreMap(l,
+                llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList()),
+                tagRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList())));
+        }
+        root.put("llibres", llibresJson);
+        ArrayList<Llista> llistes = new ArrayList<>(cd.getAllLlistes());
+        java.util.List<java.util.Map<String, Object>> llistesJson = new java.util.ArrayList<>(llistes.size());
+        for (Llista ll : llistes) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", ll.getId());
+            m.put("nom", ll.getNom());
+            llistesJson.add(m);
+        }
+        root.put("llistes", llistesJson);
+        ArrayList<Tag> tags = new ArrayList<>(cd.getAllTags());
+        java.util.List<java.util.Map<String, Object>> tagsJson = new java.util.ArrayList<>(tags.size());
+        for (Tag t : tags) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", t.getId());
+            m.put("nom", t.getNom());
+            tagsJson.add(m);
+        }
+        root.put("tags", tagsJson);
+
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
-            pw.println("{");
-            pw.println("\"version\":1,");
-            // books
-            ArrayList<Llibre> tots = new ArrayList<>(cd.getAllLlibres());
-            pw.print("\"llibres\":[");
-            for (int i = 0; i < tots.size(); i++) {
-                Llibre l = tots.get(i);
-                pw.print(jsonLlibre(l, llistaRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList()),
-                                       tagRows.getOrDefault(l.getISBN(), java.util.Collections.emptyList())));
-                if (i < tots.size() - 1) pw.print(",");
-            }
-            pw.println("],");
-            // shelves
-            ArrayList<Llista> llistes = new ArrayList<>(cd.getAllLlistes());
-            pw.print("\"llistes\":[");
-            for (int i = 0; i < llistes.size(); i++) {
-                Llista ll = llistes.get(i);
-                pw.print("{\"id\":" + ll.getId() + ",\"nom\":" + jsonStr(ll.getNom()) + "}");
-                if (i < llistes.size() - 1) pw.print(",");
-            }
-            pw.println("],");
-            // tags
-            ArrayList<Tag> tags = new ArrayList<>(cd.getAllTags());
-            pw.print("\"tags\":[");
-            for (int i = 0; i < tags.size(); i++) {
-                Tag t = tags.get(i);
-                pw.print("{\"id\":" + t.getId() + ",\"nom\":" + jsonStr(t.getNom()) + "}");
-                if (i < tags.size() - 1) pw.print(",");
-            }
-            pw.println("]");
-            pw.println("}");
+            GSON.toJson(root, pw);
         }
     }
 
@@ -80,14 +86,41 @@ public class BookExporter {
         "table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}" +
         "th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}";
 
-    public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) throws Exception {
+    public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd,
+            boolean groupByShelf, boolean tableView) throws Exception {
+        exportHTML(f, view, cd, groupByShelf, tableView, null);
+    }
+
+    /**
+     * Extended HTML export with an explicit cover-inclusion flag and
+     * pre-loaded cover bytes. The simpler overload above omits covers
+     * (renders a 📖 placeholder for every book) and is the safe default
+     * for libraries with more than {@link #LARGE_LIBRARY_COVER_THRESHOLD}
+     * books — base64-encoding a 50 KB cover per book produces ~50 MB
+     * of HTML for 1 000 books, which most browsers handle poorly.
+     *
+     * <p>When {@code coverBlobs} is non-null it must contain one entry
+     * per book in {@code view} (same order). A {@code null} entry means
+     * "no cover available, render the placeholder". Callers that opt in
+     * to covers must populate the array from a background thread (the
+     * underlying {@code CoverService.getCachedBytes} and
+     * {@code cd.getLlibreBlob} do disk + DB I/O).
+     */
+    public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd,
+            boolean groupByShelf, boolean tableView,
+            java.util.Map<Long, byte[]> coverBlobs) throws Exception {
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             writeHtmlHeader(pw);
-            writeHtmlBody(pw, view, cd, groupByShelf, tableView);
+            writeHtmlBody(pw, view, cd, groupByShelf, tableView, coverBlobs);
             pw.println("</body></html>");
         }
     }
+
+    /** Above this many books, the caller should pre-load covers off the
+     *  EDT and pass them in, or skip covers entirely (the default
+     *  3-arg overload does this). */
+    static final int LARGE_LIBRARY_COVER_THRESHOLD = 100;
 
     private static void writeHtmlHeader(PrintWriter pw) {
         pw.println("<!DOCTYPE html><html lang=\"ca\"><head><meta charset=\"UTF-8\">");
@@ -97,16 +130,18 @@ public class BookExporter {
         pw.println("<h1>" + Escapers.html(I18n.t("export_html_heading")) + "</h1>");
     }
 
-    private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd, boolean groupByShelf, boolean tableView) {
+    private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd,
+            boolean groupByShelf, boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         if (groupByShelf) {
-            writeHtmlGroupedByShelf(pw, view, cd, tableView);
+            writeHtmlGroupedByShelf(pw, view, cd, tableView, coverBlobs);
         } else {
             if (tableView) printHtmlTable(pw, view);
-            else printHtmlGrid(pw, view, cd);
+            else printHtmlGrid(pw, view, coverBlobs);
         }
     }
 
-    private static void writeHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd, boolean tableView) {
+    private static void writeHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd,
+            boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         List<Llista> llistes = cd.getAllLlistes();
         java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
         for (persistencia.LlibreLlistaRow row : cd.getAllLlibreLlistaRows())
@@ -119,7 +154,7 @@ public class BookExporter {
             if (shelfBooks.isEmpty()) continue;
             writeHtmlShelfHeader(pw, llista.getNom(), shelfBooks.size());
             if (tableView) printHtmlTable(pw, shelfBooks);
-            else printHtmlGrid(pw, shelfBooks, cd);
+            else printHtmlGrid(pw, shelfBooks, coverBlobs);
             shelfBooks.forEach(l -> printed.add(l.getISBN()));
         }
         List<Llibre> unshelfed = view.stream()
@@ -127,7 +162,7 @@ public class BookExporter {
         if (!unshelfed.isEmpty()) {
             writeHtmlShelfHeader(pw, I18n.t("lbl_no_shelf"), 0);
             if (tableView) printHtmlTable(pw, unshelfed);
-            else printHtmlGrid(pw, unshelfed, cd);
+            else printHtmlGrid(pw, unshelfed, coverBlobs);
         }
     }
 
@@ -193,17 +228,12 @@ public class BookExporter {
         }
     }
 
-    private static void printHtmlGrid(PrintWriter pw, List<Llibre> books, BibliotecaWriter cd) {
+    private static void printHtmlGrid(PrintWriter pw, List<Llibre> books,
+            java.util.Map<Long, byte[]> coverBlobs) {
         pw.println("<div class=\"grid\">");
         for (Llibre l : books) {
             pw.println("<div class=\"card\">");
-            byte[] blob = CoverService.getCachedBytes(Long.toString(l.getISBN()));
-            if (blob == null) {
-                try { blob = cd.getLlibreBlob(l.getISBN()); } catch (Exception ignored) {}
-            }
-            if (blob == null && l.getImatge() != null && !l.getImatge().isEmpty()) {
-                try { blob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(l.getImatge())); } catch (Exception ignored) {}
-            }
+            byte[] blob = coverBlobs != null ? coverBlobs.get(l.getISBN()) : null;
             if (blob != null) {
                 String mime = (blob.length > 4 && blob[0] == (byte)0x89) ? "image/png" : "image/jpeg";
                 String b64 = java.util.Base64.getEncoder().encodeToString(blob);
@@ -211,8 +241,10 @@ public class BookExporter {
             } else {
                 pw.println("<div class=\"no-cover\">📖</div>");
             }
+            Integer any = l.getAny();
             pw.println("<div class=\"title\">" + Escapers.html(l.getNom()) + "</div>");
-            pw.println("<div class=\"autor\">" + Escapers.html(l.getAutor()) + " (" + l.getAny() + ")</div>");
+            pw.println("<div class=\"autor\">" + Escapers.html(l.getAutor())
+                + (any != null ? " (" + any + ")" : "") + "</div>");
             if (l.getValoracio() != null && l.getValoracio() > 0) {
                 int stars = (int) Math.round(l.getValoracio());
                 pw.println("<div class=\"stars\">" + "★".repeat(stars) + "☆".repeat(Math.max(0, 5-stars)) + "</div>");
@@ -236,16 +268,22 @@ public class BookExporter {
             pw.println("<td>" + l.getISBN() + "</td>");
             pw.println("<td>" + Escapers.html(l.getNom()) + "</td>");
             pw.println("<td>" + Escapers.html(l.getAutor()) + "</td>");
-            pw.println("<td>" + (l.getAny() > 0 ? l.getAny() : "") + "</td>");
+            Integer any = l.getAny();
+            pw.println("<td>" + (any != null && any > 0 ? any : "") + "</td>");
             pw.println("<td>" + Escapers.html(l.getEditorial() != null ? l.getEditorial() : "") + "</td>");
-            pw.println("<td>" + (l.getValoracio() != null && l.getValoracio() > 0 ? l.getValoracio() : "") + "</td>");
+            Double val = l.getValoracio();
+            // Locale.ROOT: the cell text is rendered as HTML, browsers
+            // expect '.' as the decimal separator regardless of the
+            // page's locale, and a locale-formatted `4,5` would render
+            // as a literal comma in a <td>.
+            pw.println("<td>" + (val != null && val > 0 ? String.format(java.util.Locale.ROOT, "%.1f", val) : "") + "</td>");
             pw.println("<td>" + (Boolean.TRUE.equals(l.getLlegit()) ? "✓" : "") + "</td>");
             pw.println("</tr>");
         }
         pw.println("</tbody></table>");
     }
 
-    private static String jsonLlibre(Llibre l,
+    private static java.util.Map<String, Object> jsonLlibreMap(Llibre l,
             List<persistencia.LlibreLlistaRow> llistaRows, List<persistencia.LlibreTagRow> tagRows) {
         java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("isbn", l.getISBN());
@@ -281,7 +319,7 @@ public class BookExporter {
         java.util.List<Integer> tagIds = new java.util.ArrayList<>();
         for (persistencia.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
         m.put("tags", tagIds);
-        return GSON.toJson(m);
+        return m;
     }
 
     /** Wraps {@link Escapers#json(String)} in double quotes and renders

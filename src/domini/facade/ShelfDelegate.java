@@ -16,9 +16,20 @@ import persistencia.ControladorPersistencia;
 /**
  * Shelf ({@link Llista}) management and book↔shelf relation operations.
  *
- * <p>All methods follow the same contract: mutate the persistence layer
- * first, then update the in-memory lists + id-index maps atomically under
- * the {@link StateContext#lock() state lock}.
+ * <p>All single-DB mutations follow an atomic contract: the state
+ * lock is held for the entire {@code pre-check → persistence →
+ * in-memory mutate} sequence. This closes the race that existed
+ * in the pre-facade {@code ControladorDomini}, where two threads
+ * renaming the same shelf could both pass the pre-check, race the
+ * DB (last-writer-wins), and then both mutate the in-memory map —
+ * the second mutation was silently lost or the in-memory state
+ * diverged from the DB.
+ *
+ * <p>For the move-up / move-down helpers the lock is also held
+ * across the two single-row updates
+ * ({@link #swapLlistesOrdreLocked}); both writes are brief and the
+ * caller already holds the lock, so a release-and-reacquire dance
+ * would add complexity for negligible throughput gain.
  */
 public final class ShelfDelegate {
 
@@ -38,21 +49,22 @@ public final class ShelfDelegate {
 
     public Llista addLlista(String nom) {
         if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-        try {
-            int id = state.persistence().createLlista(nom);
-            Llista l = new Llista(id, nom);
-            state.withLock(() -> {
+        return state.withLockReturning(() -> {
+            try {
+                int id = state.persistence().createLlista(nom);
+                Llista l = new Llista(id, nom);
                 state.llistes().add(l);
                 state.llistesById().put(id, l);
-            });
-            return l;
-        } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+                return l;
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        });
     }
 
     public void deleteLlista(Llista llista) {
-        try { state.persistence().deleteLlista(llista.getId()); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().deleteLlista(llista.getId());
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             state.llistes().remove(llista);
             state.llistesById().remove(llista.getId());
         });
@@ -60,9 +72,10 @@ public final class ShelfDelegate {
 
     public void renameLlista(int id, String newNom) {
         if (newNom == null || newNom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-        try { state.persistence().renameLlista(id, newNom); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().renameLlista(id, newNom);
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             Llista l = state.llistesById().get(id);
             if (l != null) l.setNom(newNom);
         });
@@ -109,9 +122,10 @@ public final class ShelfDelegate {
     public void setLlistaColor(int id, String color) {
         if (!Llista.isValidColor(color))
             throw new BibliotecaException.Validation(I18n.t("val_color_invalid", color));
-        try { state.persistence().updateLlistaColor(id, color); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
         state.withLock(() -> {
+            try {
+                state.persistence().updateLlistaColor(id, color);
+            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             Llista l = state.llistesById().get(id);
             if (l != null) l.setColor(color);
         });
@@ -124,9 +138,17 @@ public final class ShelfDelegate {
         return -1;
     }
 
-    /** Caller MUST hold the state lock. */
+    /**
+     * Caller MUST hold the state lock. Holds it across the two DB
+     * updates as well — both are single-row writes so the lock is
+     * only held for milliseconds. The original code already
+     * followed this pattern; it is preserved here for consistency
+     * with the rest of the delegate and because the caller
+     * ({@link #moveLlistaUp} / {@link #moveLlistaDown}) is itself
+     * already inside a {@code withLock} block, making a
+     * release-and-reacquire dance unnecessarily complex.
+     */
     private void swapLlistesOrdreLocked(int i, int j, int id) {
-        ControladorPersistencia cp = state.persistence();
         int size = state.llistes().size();
         if (i < 0 || j < 0 || i >= size || j >= size) return;
         Llista a = state.llistes().get(i);
@@ -134,6 +156,7 @@ public final class ShelfDelegate {
         if (a.getId() != id && b.getId() != id) return;
         int ordreA = a.getOrdre();
         int ordreB = b.getOrdre();
+        ControladorPersistencia cp = state.persistence();
         try {
             a.setOrdre(ordreB);
             b.setOrdre(ordreA);
