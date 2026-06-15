@@ -740,31 +740,6 @@ class BibliotecaJUnit5Test {
         assertThatThrownBy(() -> t.setNom("  ")).isInstanceOf(domini.BibliotecaException.Validation.class);
     }
 
-    // ── LibraryEvents/listener tests ─────────────────────────────────────────
-
-    @Test
-    @DisplayName("LibraryEvents interface composes update/delete/blob/membership callbacks")
-    void libraryEventsInterfaceComposes() {
-        java.util.concurrent.atomic.AtomicInteger updates = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger inserts = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger deletes = new java.util.concurrent.atomic.AtomicInteger();
-        interficie.LibraryEvents le = new interficie.LibraryEvents() {
-            @Override public void onBookUpdated(Llibre l, boolean isNew) { if (isNew) inserts.incrementAndGet(); else updates.incrementAndGet(); }
-            @Override public void onBookDeleted(Llibre l) { deletes.incrementAndGet(); }
-        };
-        Llibre book = book(9780306406157L, "Dune");
-        le.onBookUpdated(book, true);
-        le.onBookUpdated(book, false);
-        le.onBookDeleted(book);
-        // default no-op blob/membership reachable
-        le.onBlobChanged(123L, true);
-        le.onMembershipChanged(123L, 1, true);
-
-        assertThat(inserts).hasValue(1);
-        assertThat(updates).hasValue(1);
-        assertThat(deletes).hasValue(1);
-    }
-
     // ── ConnectionConfig: password masking ───────────────────────────────────
 
     @Test

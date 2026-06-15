@@ -76,16 +76,22 @@ public final class CsvUtils {
         return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
-    /** Parses an ISBN string, converting any valid ISBN-10 to ISBN-13. */
+    /** Parses an ISBN string, converting any valid ISBN-10 to ISBN-13.
+     *  Delegates to {@link herramienta.Isbn13Normalizer#toIsbn13(String)}
+     *  (the canonical implementation) so the ISBN-10→13 checksum and
+     *  the lowercase-X tolerance are in one place — per the tot.txt LOW
+     *  finding on the three near-duplicate parseIsbn / normalizeIsbn13
+     *  / toIsbn13 implementations. Falls back to a digit-only pass-through
+     *  for inputs that don't match the normalizer's strict shape, so the
+     *  CSV import path can still recover from unusual exports (the
+     *  normalizer returns null for those, but the CSV path wants a best
+     *  effort rather than a failed row). */
     public static String parseIsbn(String raw) {
-        String s = raw.replaceAll("[^0-9X]", "");
-        if (s.length() == 10) {
-            String base12 = "978" + s.substring(0, 9);
-            int sum = 0;
-            for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-            return base12 + (10 - sum % 10) % 10;
-        }
-        return s.replaceAll("[^0-9]", "");
+        String normalized = herramienta.Isbn13Normalizer.toIsbn13(raw);
+        if (normalized != null) return normalized;
+        // Best-effort fallback: strip non-digits, return whatever's left.
+        // Skips X because the downstream SQL columns are numeric.
+        return raw == null ? null : raw.replaceAll("[^0-9]", "");
     }
 
     /** Returns true if a book with the given ISBN already exists in the library (skip on import). */

@@ -10,13 +10,13 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Async loader + LRU cache of pre-scaled cover images.
@@ -29,6 +29,12 @@ import java.util.concurrent.Executors;
  * crop-scale math. All access from the EDT is via {@link #submit(Llibre, int, int, Runnable)};
  * background loading and cache mutation run on the executor, with the
  * repaint callback marshalled back to the EDT.
+ *
+ * <p>The LRU is protected by a {@link ReentrantReadWriteLock} so EDT reads
+ * (the paint path, dominant) run concurrently while writes (cache miss →
+ * load) take an exclusive lock. The previous {@code Collections.synchronizedMap}
+ * wrapper serialised every {@code get()} against every other {@code get()},
+ * which stalled the EDT on a 200-card repaint (per the tot.txt LOW finding).
  */
 public final class CoverImageService {
 
@@ -43,13 +49,14 @@ public final class CoverImageService {
         return t;
     });
 
-    private final Map<Long, BufferedImage> imageCache = Collections.synchronizedMap(
+    private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
+    private final LinkedHashMap<Long, BufferedImage> imageCache =
         new LinkedHashMap<Long, BufferedImage>(CACHE_LOAD_FACTOR, CACHE_LOAD_F, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Long, BufferedImage> e) {
                 return size() > CACHE_CAPACITY;
             }
-        });
+        };
 
     private final Set<Long> loading = ConcurrentHashMap.newKeySet();
 
@@ -66,10 +73,16 @@ public final class CoverImageService {
     /**
      * Return the cached image for {@code isbn} at the current zoom, or {@code null}
      * if not yet loaded. The caller (card paint) must tolerate a {@code null}
-     * return — the loader's onLoaded callback will repaint.
+     * return — the loader's onLoaded callback will repaint. Read-locked so
+     * concurrent EDT repaints on a 200-card gallery do not serialise.
      */
     public BufferedImage getCached(long isbn) {
-        return imageCache.get(isbn);
+        cacheLock.readLock().lock();
+        try {
+            return imageCache.get(isbn);
+        } finally {
+            cacheLock.readLock().unlock();
+        }
     }
 
     /**
@@ -78,7 +91,12 @@ public final class CoverImageService {
      * if the gradient palette needs to be re-applied.
      */
     public void clear() {
-        imageCache.clear();
+        cacheLock.writeLock().lock();
+        try {
+            imageCache.clear();
+        } finally {
+            cacheLock.writeLock().unlock();
+        }
         loading.clear();
     }
 
@@ -90,7 +108,7 @@ public final class CoverImageService {
      */
     public void submit(Llibre l, int w, int h, Runnable onLoaded) {
         long isbn = l.getISBN();
-        if (imageCache.containsKey(isbn)) {
+        if (containsCached(isbn)) {
             onLoaded.run();
             return;
         }
@@ -102,7 +120,12 @@ public final class CoverImageService {
             SwingUtilities.invokeLater(() -> {
                 try {
                     if (img != null) {
-                        imageCache.put(isbn, img);
+                        cacheLock.writeLock().lock();
+                        try {
+                            imageCache.put(isbn, img);
+                        } finally {
+                            cacheLock.writeLock().unlock();
+                        }
                     }
                 } finally {
                     loading.remove(isbn);
@@ -110,6 +133,16 @@ public final class CoverImageService {
                 }
             });
         });
+    }
+
+    /** Read-locked containment check (used by submit() before scheduling). */
+    private boolean containsCached(long isbn) {
+        cacheLock.readLock().lock();
+        try {
+            return imageCache.containsKey(isbn);
+        } finally {
+            cacheLock.readLock().unlock();
+        }
     }
 
     /** Visible for tests / future tooling: drain the executor on shutdown. */

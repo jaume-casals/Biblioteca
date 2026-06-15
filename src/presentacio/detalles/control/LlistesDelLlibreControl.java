@@ -20,6 +20,29 @@ public class LlistesDelLlibreControl {
     private final BibliotecaWriter cd;
     private ArrayList<Llista> llistesCache = new ArrayList<>();
     private ArrayList<Llista> allLlistesCache = new ArrayList<>();
+    private java.util.Set<Integer> memberIds = new java.util.HashSet<>();
+
+    /**
+     * Single stateless shelf-check renderer reused across {@link #reload()}
+     * calls (per the tot.txt LOW finding). The renderer captures
+     * {@code memberIds} at construction time — but memberIds is a
+     * mutable Set field on the enclosing class, so all instances share
+     * the same backing set (we re-assign the field, not the Set itself,
+     * on every reload to keep the captured reference valid).
+     */
+    private final javax.swing.ListCellRenderer<java.lang.Object> SHELF_RENDERER =
+        new javax.swing.DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(
+                    javax.swing.JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Llista ll) {
+                    setText((memberIds.contains(ll.getId()) ? "☑ " : "☐ ") + ll.getNom());
+                }
+                return this;
+            }
+        };
 
     public LlistesDelLlibreControl(LlistesDelLlibreDialog vista, Llibre llibre, BibliotecaWriter cd) {
         this.vista = vista;
@@ -117,7 +140,9 @@ public class LlistesDelLlibreControl {
         if (vista.getTableModel().getRowCount() > 0) {
             vista.getTable().setRowSelectionInterval(0, vista.getTableModel().getRowCount() - 1);
         }
-        java.util.Set<Integer> memberIds = new java.util.HashSet<>();
+        // Reuse the same HashSet across reloads (clear+addAll) so the
+        // captured SHELF_RENDERER still points to a valid set.
+        memberIds.clear();
         for (Llista l : llistesCache) memberIds.add(l.getId());
         javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
         for (Llista l : allLlistesCache) model.addElement(l);
@@ -129,17 +154,6 @@ public class LlistesDelLlibreControl {
         int[] memberIdxArr = new int[memberIdx.size()];
         for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
         vista.getShelfCheckList().setSelectedIndices(memberIdxArr);
-        vista.getShelfCheckList().setCellRenderer(new javax.swing.DefaultListCellRenderer() {
-            @Override
-            public java.awt.Component getListCellRendererComponent(
-                    javax.swing.JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof Llista ll) {
-                    boolean on = memberIds.contains(ll.getId());
-                    setText((on ? "☑ " : "☐ ") + ll.getNom());
-                }
-                return this;
-            }
-        });
+        vista.getShelfCheckList().setCellRenderer(SHELF_RENDERER);
     }
 }

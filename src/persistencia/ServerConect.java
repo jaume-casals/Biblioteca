@@ -145,7 +145,9 @@ public class ServerConect {
 
 	public void createDatabase() {
 		String testUrl = System.getProperty("biblioteca.h2.url");
-		ConnectionConfig cfg = ConnectionFactory.withConfig(
+		// The ConnectionFactory.withConfig() factory was a 14-line indirection
+		// with no policy — inlined here per the tot.txt LOW finding.
+		ConnectionConfig cfg = new ConnectionConfig(
 			testUrl != null ? "h2" : Config.getDbType(),
 			Config.getDbHost(), Config.getDbUser(), Config.getDbPassword(),
 			Config.getDbProfile(), testUrl);

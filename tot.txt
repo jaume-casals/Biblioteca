@@ -13,7 +13,9 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `EtiquetasDelLlibreDialog.updateComboAdd` path through
   `EntityComboUtils` (line 11) — but `EntityComboUtils` takes a
   raw `ToIntFunction<E>`, not a `NamedEntity`. The interface
-  itself is dead.
+  itself is dead. (Done 2026-06-15: `src/domini/NamedEntity.java`
+  is no longer present in the source tree — the file was
+  deleted. The dead interface is fully gone.)
 
 **[src/domini/SortSpec.java]** — [severity: LOW]
 - `SQL_COLS` (lines 22-28) and `COMPARATORS` (lines 39-45) are two
@@ -21,7 +23,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   (plus the Javadoc) and a new comparator class would re-use
   `ISBN_COMPARATOR` patterns. Consider a single
   `record Column(String key, String sqlFragment, Comparator<Llibre> cmp)`
-  with a static `Map<String, Column> COLUMNS = Map.of(...)`.
+  with a static `Map<String, Column> COLUMNS = Map.of(...)`. (Done
+  2026-06-15: introduced the `SortSpec.Column` record
+  `(key, sqlFragment, cmp)` and a single
+  `Map<String, Column> COLUMNS` registry. `toSql()` reads
+  `c.sqlFragment()`, `comparator(String)` reads `c.cmp()`,
+  `comparators()` is derived from `COLUMNS.values()`. Adding
+  a new column now requires editing only the registry entry.)
 
 **[src/persistencia/LlibreBlobDao.java]** — [severity: LOW]
 
@@ -38,7 +46,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 - The class is a 14-line `withConfig` factory with no
   abstraction. The single caller is `ServerConect.createDatabase`
   (line 148). Inline the constructor call and delete the
-  class — it adds a layer of indirection without policy.
+  class — it adds a layer of indirection without policy. (Done
+  2026-06-15: `ServerConect.createDatabase()` now
+  `new ConnectionConfig(...)` directly (with a comment
+  noting the inlined factory). `ConnectionFactory.java`
+  was deleted.)
 
 **[src/herramienta/BackupService.java]** — [severity: MEDIUM]
 - `autoBackup` (lines 59-84) is scheduled on a daemon
@@ -115,7 +127,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `Isbn13Normalizer.toIsbn13`. Three copies. The CSV
   one accepts X-check digits; the validator one also
   accepts them; the normalizer one does not. Pick
-  one implementation.
+  one implementation. (Done 2026-06-15: `parseIsbn`
+  now delegates to `Isbn13Normalizer.toIsbn13` (the
+  canonical implementation with the lowercase-X
+  tolerance and the ISBN-10→13 checksum). A
+  best-effort fallback strips non-digits for inputs
+  that don't match the normalizer's strict shape —
+  the CSV import path can still recover from unusual
+  exports.)
 
 **[src/herramienta/csv/Rfc4180Reader.java]** — [severity: LOW]
 - The `hasNext()` method (line 25) returns `!eof` and
@@ -126,7 +145,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `next() != null`. The interface contract would be
   clearer if `hasNext()` was the only probe and
   `next()` was required to return non-null when
-  `hasNext()` is true.
+  `hasNext()` is true. (Done 2026-06-15: replaced
+  the `eof` flag with a one-row `pending` lookahead.
+  `hasNext()` is now a probe (returns true if either
+  `pending` is set or the underlying read yields another
+  row); `next()` is guaranteed non-null when `hasNext()`
+  is true and throws `NoSuchElementException` after
+  EOF. Callers no longer need to null-check `next()`.)
 
 **[src/herramienta/imports/CalibreImporter.java]** — [severity: LOW]
 - The class is a 14-line pass-through to
@@ -134,7 +159,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `herramienta.imports` mirrors `herramienta.export`
   for symmetry, but the class adds no value over the
   one-liner. Inline the call site or delete the
-  class.
+  class. (Done 2026-06-15: `CalibreImporter.java`
+  is no longer present in the source tree — the file
+  was deleted. The dead class is fully gone; the
+  `importarCalibre` call site in `ImportController`
+  invokes `BookImporter.importCalibre` directly.)
 
 **[src/interficie/BibliotecaReader.java]** — [severity: LOW]
 - `asExportSnapshot()` (lines 21-28) is a default
@@ -177,7 +206,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 - The interface extends `OnLlibreUpdate,
   OnLlibreDelete` and adds three `default` methods
   (lines 8-10). No class implements `LibraryEvents`
-  — search returns no match. Dead code.
+  — search returns no match. Dead code. (Done
+  2026-06-15: `LibraryEvents.java` deleted from
+  the source tree. The single test that referenced
+  it (`BibliotecaJUnit5Test.libraryEventsInterfaceComposes`)
+  was also removed — test/ is gitignored, local-only.)
 
 **[src/presentacio/CenterTablePanel.java]** — [severity: MEDIUM]
 - `buildTable` (line 63) creates the JTable
@@ -207,7 +240,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   icon decode is fast; for a 500 KB cover the EDT
   stutters. Move the load to a `SwingWorker` like
   `CoverImageService.submit` does. The class is 29
-  lines; the new method body would be 6 lines.
+  lines; the new method body would be 6 lines. (Done
+  2026-06-15: the BLOB load and scale moved to a
+  `SwingWorker.doInBackground()`. The `done()`
+  callback sets the JLabel icon (or the no-cover
+  fallback text) on the EDT. The 500 KB cover case
+  no longer stutters the UI thread.)
 
 **[src/presentacio/GaleriaCobertesPanel.java]** — [severity: MEDIUM]
 - `adjustZoom` (line 182) calls
@@ -352,7 +390,10 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 - The class is 29 lines and unused — the only
   sidebar factory is `LeftSidebarPanel.makeSidebarBtn`.
   The `Sidebar` class is referenced in the
-  Javadoc (line 13) but not in code. Dead.
+  Javadoc (line 13) but not in code. Dead. (Done
+  2026-06-15: `Sidebar.java` no longer exists in
+  the source tree — the file was deleted. The dead
+  class is fully gone.)
 
 **[src/presentacio/TableController.java]** — [severity: MEDIUM]
 - `removeRowByIsbn` (line 268) updates
@@ -391,7 +432,15 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   recreates the renderer per `reload()`. The
   renderer captures `memberIds` per call; a
   shared singleton would need a setter to swap
-  the set on reload.)
+  the set on reload. Done 2026-06-15: the renderer
+  is now a `final` field `SHELF_RENDERER`. The
+  `memberIds` Set is also a class field
+  (`final` reference, mutable contents) — the
+  renderer captures the Set reference once and the
+  `reload()` method `clear()`s + `addAll`s the
+  set, so the captured reference stays valid
+  across reloads. No setter needed; no per-reload
+  allocation.)
 
 **[src/presentacio/detalles/vista/DetallesLlibrePanel.java]** — [severity: MEDIUM]
 - `setEditMode` (line 410) enables/disables 22
@@ -419,13 +468,22 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `DetallesLlibrePanel.buildNotesTab()`. The
   class adds no value over the direct call. The
   delegation is a one-line passthrough. Inline.
+  (Done 2026-06-15: `DetallesNotesTab.java`
+  deleted; `DetallesLlibrePanel` constructor
+  now calls `buildNotesTab()` directly.)
 
 **[src/presentacio/detalles/vista/DetallesAvancatTab.java]** — [severity: LOW]
 - Same as DetallesNotesTab — 9-line pass-through.
-  Inline.
+  Inline. (Done 2026-06-15:
+  `DetallesAvancatTab.java` deleted;
+  `DetallesLlibrePanel` constructor now calls
+  `buildAdvancedTab()` directly.)
 
 **[src/presentacio/detalles/vista/DetallesGeneralTab.java]** — [severity: LOW]
-- Same as the other two. Inline all three.
+- Same as the other two. Inline all three. (Done
+  2026-06-15: `DetallesGeneralTab.java` deleted;
+  `DetallesLlibrePanel` constructor now calls
+  `buildGeneralTab()` directly.)
 
 **[src/presentacio/detalles/vista/GuardarLlibresDialogo.java]** — [severity: MEDIUM]
 - 30 hand-declared component fields (lines 39-64)
@@ -504,20 +562,41 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   For a 200-card gallery rendering, the EDT
   blocks on each repaint. Use a
   `ConcurrentHashMap` with size-capped eviction
-  via a separate `LinkedHashMap` for LRU.
+  via a separate `LinkedHashMap` for LRU. (Done
+  2026-06-15: replaced the `synchronizedMap`
+  wrapper with a `ReentrantReadWriteLock`
+  protecting the same `LinkedHashMap` (access-
+  ordered, `removeEldestEntry` at `CACHE_CAPACITY`).
+  `getCached()` and the new `containsCached()`
+  take the read lock (concurrent EDT repaints);
+  `clear()` and `submit()`'s insert take the
+  write lock. LRU semantics preserved. The
+  `ConcurrentHashMap` suggestion was not feasible
+  because `LinkedHashMap` access-ordering is
+  intrinsic to its `get()`; the read-write lock
+  is the simpler change that achieves the
+  concurrency goal.)
 
 **[src/presentacio/layouts/WrapLayout.java]** — [severity: LOW]
 - The class is a third-party FlowLayout subclass
   from the Sun Java Tutorial. The class Javadoc
   (line 11) attributes it to a public source
   but does not include the standard Sun
-  license header. Add it for clarity.
+  license header. Add it for clarity. (Done
+  2026-06-15: added a comment block at the top
+  of the file citing the original Sun Java
+  Tutorial source and the Sun sample-code
+  license terms.)
 - `layoutSize` (line 20) walks the tree to
   find the viewport width (line 23) and walks
   again (line 26) if the parent width is 0.
   The double-walk is wasteful. Use the parent's
   width directly and fall back to MAX_VALUE on
-  the first try.
+  the first try. (Done 2026-06-15: the second
+  walk-up is gone. `layoutSize` reads the
+  parent width once and falls back to
+  `Integer.MAX_VALUE` on the same pass when the
+  parent is null or zero-width.)
 
 **[src/presentacio/renderers/SearchHighlightRenderer.java]** — [severity: MEDIUM]
 - The `setSearchText` (line 21) is called on
@@ -601,12 +680,18 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   The class is effectively unused in the
   current code (the details column is removed
   on install). Either re-enable the column
-  or delete the renderer.
+  or delete the renderer. (Done 2026-06-15:
+  `BotonDetallesRenderer.java` no longer exists
+  in the source tree — the file was deleted. The
+  dead class is fully gone.)
 
 **[src/presentacio/renderers/BotonDetallesEditor.java]** — [severity: LOW]
 - Same as BotonDetallesRenderer — the editor
   is also hidden via TableController install.
-  Delete the file or re-enable the column.
+  Delete the file or re-enable the column. (Done
+  2026-06-15: `BotonDetallesEditor.java` no longer
+  exists in the source tree — the file was deleted.
+  The dead class is fully gone.)
 
 **[src/presentacio/listener/EnActualizarBBDD.java]** — [severity: LOW]
 - The class extends `OnLlibreUpdate,
@@ -635,12 +720,23 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   → `actualitzarLlibre` (no override) →
   `onBookUpdated` (default override) → ...
   → `StackOverflowError`. This is a footgun.
+  (Done 2026-06-15: the Catalan alias
+  (`actualitzarLlibre` / `eliminarLlibre`) has
+  been removed from `EnActualizarBBDD`. The
+  English names are the only contract, and the
+  only implementer in the codebase
+  (`MainFrameControl`) already overrides them.
+  The footgun is gone — no self-referential
+  cycle remains.)
 
 **[src/presentacio/listener/LibraryChangeListener.java]** — [severity: LOW]
 - `fromLegacy` (line 11) and the `asXxx` default
   methods (lines 19-32) are adapter utilities.
   The class is unused — search returns no
-  `LibraryChangeListener` references. Dead.
+  `LibraryChangeListener` references. Dead. (Done
+  2026-06-15: `LibraryChangeListener.java` no
+  longer exists in the source tree — the file
+  was deleted. The dead class is fully gone.)
 
 **[src/presentacio/listener/OnLlibreDelete.java]** — [severity: LOW]
 - The `DeleteEvent` inner class (line 9) is

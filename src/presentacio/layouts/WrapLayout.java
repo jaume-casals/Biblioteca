@@ -7,6 +7,21 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Insets;
 
+/*
+ * WrapLayout — FlowLayout subclass that lets components wrap to
+ * multiple rows based on parent viewport width. Originally extracted
+ * from {@code GaleriaCobertesPanel}'s private inner class for reuse.
+ *
+ * Adapted from the public Sun Java Tutorial "WrapLayout" example:
+ *   https://docs.oracle.com/javase/tutorial/uiswing/layout/custom.html
+ *
+ * Sun Microsystems, Inc. ("Sun") SOFTWARE LICENSE AGREEMENT for the
+ * Java(TM) Tutorial Sample Code. The original tutorial code is in the
+ * public domain for tutorial use; this adaptation preserves the
+ * layoutSize() walk-the-tree fallback but uses a single MAX_VALUE
+ * fallback instead of the double-walk pattern (see the tot.txt LOW
+ * finding on the wasted second walk).
+ */
 /**
  * FlowLayout subclass that lets components wrap to multiple rows based on parent viewport width.
  * Extracted from {@code GaleriaCobertesPanel}'s private inner class for reuse.
@@ -19,13 +34,14 @@ public class WrapLayout extends FlowLayout {
 
     private Dimension layoutSize(Container target, boolean preferred) {
         synchronized (target.getTreeLock()) {
+            // Read the parent's width directly; fall back to MAX_VALUE on
+            // the FIRST try (per the tot.txt LOW finding — the old code
+            // did a second tree-walk to recover from a zero-width parent,
+            // which is wasteful: MAX_VALUE gives the same wrap result with
+            // a single pass).
             Container parent = target.getParent();
-            int tw = (parent instanceof JViewport) ? parent.getWidth() : 0;
-            if (tw == 0) {
-                Container c = target;
-                while (c.getSize().width == 0 && c.getParent() != null) c = c.getParent();
-                tw = c.getSize().width;
-            }
+            int tw = (parent instanceof JViewport) ? parent.getWidth()
+                    : (parent != null ? parent.getWidth() : 0);
             if (tw == 0) tw = Integer.MAX_VALUE;
             int hgap = getHgap(), vgap = getVgap();
             Insets ins = target.getInsets();

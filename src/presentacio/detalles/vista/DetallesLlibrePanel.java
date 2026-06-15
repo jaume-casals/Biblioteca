@@ -149,9 +149,12 @@ public class DetallesLlibrePanel extends JDialog {
 		add(east, BorderLayout.EAST);
 
 		JTabbedPane tabbedPane = new JTabbedPane();
-		tabbedPane.addTab(I18n.t("stats_tab_general"), DetallesGeneralTab.build(this));
-		tabbedPane.addTab(I18n.t("field_notes"), DetallesNotesTab.build(this));
-		tabbedPane.addTab(I18n.t("tab_advanced"), DetallesAvancatTab.build(this));
+		// The DetallesGeneralTab/DetallesNotesTab/DetallesAvancatTab thin
+		// facades were 9-line pass-throughs; inlined here per the tot.txt
+		// LOW finding (the delegation added no value).
+		tabbedPane.addTab(I18n.t("stats_tab_general"), buildGeneralTab());
+		tabbedPane.addTab(I18n.t("field_notes"), buildNotesTab());
+		tabbedPane.addTab(I18n.t("tab_advanced"), buildAdvancedTab());
 		add(tabbedPane, BorderLayout.CENTER);
 
 		setSize(800, 680);
