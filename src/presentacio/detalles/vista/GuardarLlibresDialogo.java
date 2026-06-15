@@ -21,6 +21,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
@@ -54,7 +55,7 @@ public class GuardarLlibresDialogo extends JDialog {
 	private JCheckBox  chckDesitjat;
 	private JTextField textPortada;
 	private JCheckBox  chckLlegit;
-	private JTextField textNotes;
+	private JTextArea  textNotes;
 	private JTextField textPaisOrigen;
 	private JComboBox<String> comboEstat;
 	private JTextField textExemplars;
@@ -140,7 +141,11 @@ public class GuardarLlibresDialogo extends JDialog {
 		chckLlegit     = new JCheckBox("");
 		chckLlegit.setBackground(UITheme.palette().bgPanel());
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
-		textNotes      = new JTextField(); textNotes.setColumns(10); UIComponents.styleField(textNotes);
+		textNotes      = new JTextArea(4, 20); textNotes.setLineWrap(true); textNotes.setWrapStyleWord(true);
+		textNotes.setBackground(UITheme.palette().bgMain());
+		textNotes.setForeground(UITheme.palette().textDark());
+		textNotes.setFont(UITheme.fontBase());
+		textNotes.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		textPortada    = new JTextField(); textPortada.setColumns(10); UIComponents.styleField(textPortada);
 		textPaisOrigen = new JTextField(); textPaisOrigen.setColumns(10); UIComponents.styleField(textPaisOrigen);
 		comboEstat     = new JComboBox<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
@@ -169,7 +174,7 @@ public class GuardarLlibresDialogo extends JDialog {
 		builder.addCombo(I18n.t("field_format"), comboFormat);
 		builder.addCheck(I18n.t("field_wishlist"), chckDesitjat);
 		builder.addCheck(I18n.t("field_read"), chckLlegit);
-		builder.addField(I18n.t("field_notes"), textNotes);
+		builder.addRaw(I18n.t("field_notes"), new javax.swing.JScrollPane(textNotes));
 		builder.addField(I18n.t("col_cover"), textPortada);
 		builder.addField(I18n.t("field_country"), textPaisOrigen);
 		builder.addCombo(I18n.t("field_estat"), comboEstat);
@@ -245,7 +250,7 @@ public class GuardarLlibresDialogo extends JDialog {
 	public JCheckBox     getChckDesitjat()       { return chckDesitjat; }
 	public JTextField    getTextPortada()        { return textPortada; }
 	public JCheckBox     getChckLlegit()         { return chckLlegit; }
-	public JTextField    getTextNotes()          { return textNotes; }
+	public JTextArea     getTextNotes()          { return textNotes; }
 	public JTextField    getTextPaisOrigen()     { return textPaisOrigen; }
 	public JComboBox<String> getComboEstat()     { return comboEstat; }
 	public JTextField    getTextExemplars()      { return textExemplars; }

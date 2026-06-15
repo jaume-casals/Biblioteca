@@ -44,9 +44,12 @@ public class UITheme {
             java.awt.Color green,
             java.awt.Color sidebarBg,
             java.awt.Color sidebarAccent,
+            java.awt.Color sidebarHoverBg,
             java.awt.Color sidebarText,
             java.awt.Color sidebarTextMid,
-            java.awt.Color sidebarSelBg) {}
+            java.awt.Color sidebarSelBg,
+            java.awt.Color searchHighlightBg,
+            java.awt.Color searchHighlightFg) {}
 
     /** Snapshot the current Color state into an immutable Palette record.
      *  Callers should prefer {@code UITheme.palette().xxx} over the raw
@@ -55,7 +58,8 @@ public class UITheme {
         return new Palette(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
                 BORDER_CLR, HEADER_BG, HEADER_FG, TABLE_GRID, TABLE_ALT,
                 SECONDARY_BTN_BG, FIELD_BG, NIMBUS_BLUE_GREY, DANGER, GREEN,
-                SIDEBAR_BG, SIDEBAR_ACCENT, SIDEBAR_TEXT, SIDEBAR_TEXT_MID, SIDEBAR_SEL_BG);
+                SIDEBAR_BG, SIDEBAR_ACCENT, SIDEBAR_HOVER_BG, SIDEBAR_TEXT, SIDEBAR_TEXT_MID, SIDEBAR_SEL_BG,
+                SEARCH_HIGHLIGHT_BG, SEARCH_HIGHLIGHT_FG);
     }
 
     public enum Theme {
@@ -105,9 +109,16 @@ public class UITheme {
     public static final Color DANGER = new Color(0xC0392B);
     public static final Color GREEN  = new Color(0x117A65);
 
+    /** Search-highlight palette entries — used by the SearchHighlightRenderer.
+     *  Theme-independent: the highlight should pop on any background, so the
+     *  amber bg / black fg combo is shared across all themes. */
+    public static final Color SEARCH_HIGHLIGHT_BG = new Color(0xF39C12);
+    public static final Color SEARCH_HIGHLIGHT_FG = new Color(0x000000);
+
     // ── Sidebar colors (updated by setDark) ───────────────────────────────────
     public static Color SIDEBAR_BG;
     public static Color SIDEBAR_ACCENT;
+    public static Color SIDEBAR_HOVER_BG;
     public static Color SIDEBAR_TEXT;
     public static Color SIDEBAR_TEXT_MID;
     public static Color SIDEBAR_SEL_BG;
@@ -222,6 +233,7 @@ public class UITheme {
             case DARK:
                 SIDEBAR_BG       = new Color(0x1A1510);
                 SIDEBAR_ACCENT   = new Color(0xC48F45);
+                SIDEBAR_HOVER_BG = new Color(0x2E241A);
                 SIDEBAR_TEXT     = new Color(0xE0D8D0);
                 SIDEBAR_TEXT_MID = new Color(0x8B7E74);
                 SIDEBAR_SEL_BG   = new Color(0x2A2010);
@@ -237,6 +249,7 @@ public class UITheme {
             case SEPIA:
                 SIDEBAR_BG       = new Color(0x2A1800);
                 SIDEBAR_ACCENT   = new Color(0xD4A040);
+                SIDEBAR_HOVER_BG = new Color(0x3E270A);
                 SIDEBAR_TEXT     = new Color(0xF0E8D8);
                 SIDEBAR_TEXT_MID = new Color(0x9B8870);
                 SIDEBAR_SEL_BG   = new Color(0x4A3020);
@@ -252,6 +265,7 @@ public class UITheme {
             case OCEAN:
                 SIDEBAR_BG       = new Color(0x071828);
                 SIDEBAR_ACCENT   = new Color(0x40C8E0);
+                SIDEBAR_HOVER_BG = new Color(0x1B2732);
                 SIDEBAR_TEXT     = new Color(0xC8E8F8);
                 SIDEBAR_TEXT_MID = new Color(0x6898B0);
                 SIDEBAR_SEL_BG   = new Color(0x102840);
@@ -259,14 +273,15 @@ public class UITheme {
                 ACCENT           = OC_ACCENT;   ACCENT_ALT  = OC_ACCENT_ALT;
                 TEXT_DARK        = OC_TEXT_DARK; TEXT_MID   = OC_TEXT_MID;
                 BORDER_CLR       = OC_BORDER_CLR;
-                HEADER_BG        = OC_HEADER_BG; HEADER_FG  = OC_HEADER_FG;
-                TABLE_GRID       = OC_TABLE_GRID; TABLE_ALT = OC_TABLE_ALT;
+                HEADER_BG        = OC_HEADER_BG; HEADER_FG   = OC_HEADER_FG;
+                TABLE_GRID       = OC_TABLE_GRID; TABLE_ALT  = OC_TABLE_ALT;
                 SECONDARY_BTN_BG = OC_SECONDARY_BTN;
-                FIELD_BG         = OC_FIELD_BG; NIMBUS_BLUE_GREY = OC_NIMBUS_BG;
+                FIELD_BG         = OC_FIELD_BG;  NIMBUS_BLUE_GREY = OC_NIMBUS_BG;
                 break;
             default: // LIGHT
                 SIDEBAR_BG       = new Color(0x2A2520);
                 SIDEBAR_ACCENT   = new Color(0xC48F45);
+                SIDEBAR_HOVER_BG = new Color(0x3E342A);
                 SIDEBAR_TEXT     = new Color(0xE8E0D8);
                 SIDEBAR_TEXT_MID = new Color(0x9B8E84);
                 SIDEBAR_SEL_BG   = new Color(0x3D3028);

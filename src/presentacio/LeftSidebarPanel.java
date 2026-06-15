@@ -43,6 +43,14 @@ public class LeftSidebarPanel extends JPanel {
 	// finding flagged this as an unnecessary spike during initial
 	// sidebar build for medium libraries.
 	private final Map<Integer, JButton> sidebarShelfBtnMap = new HashMap<>(64);
+	// The button fields cannot be `final` because they are assigned in
+	// {@link #buildSidebar()}, which the constructor calls as a helper.
+	// Java's definite-assignment analysis does not track assignments in
+	// helper methods, so the `final` keyword would require either
+	// inlining the entire sidebar build into the constructor (large
+	// refactor) or moving the button creation to field initializers
+	// (the panel hierarchy must be set up first — out of order).
+	// Tracked in tot.txt MEDIUM as a known minor smell.
 	private JButton btnTotsElsLlibres;
 	private final List<JButton> sidebarBtns = new ArrayList<>();
 
@@ -290,10 +298,7 @@ public class LeftSidebarPanel extends JPanel {
 		btn.addMouseListener(new java.awt.event.MouseAdapter() {
 			@Override public void mouseEntered(java.awt.event.MouseEvent e) {
 				if (!btn.getBackground().equals(UITheme.palette().sidebarSelBg()))
-					btn.setBackground(new Color(
-						Math.min(UITheme.palette().sidebarBg().getRed()   + 20, 255),
-						Math.min(UITheme.palette().sidebarBg().getGreen() + 15, 255),
-						Math.min(UITheme.palette().sidebarBg().getBlue()  + 10, 255)));
+					btn.setBackground(UITheme.palette().sidebarHoverBg());
 			}
 			@Override public void mouseExited(java.awt.event.MouseEvent e) {
 				if (!btn.getBackground().equals(UITheme.palette().sidebarSelBg()))

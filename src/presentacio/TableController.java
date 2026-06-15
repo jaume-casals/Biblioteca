@@ -5,7 +5,11 @@ import herramienta.I18n;
 import herramienta.UiConfig;
 import herramienta.WindowConfig;
 import interficie.BibliotecaWriter;
-import presentacio.renderers.TableCellComponents;
+import presentacio.renderers.CoverCellRenderer;
+import presentacio.renderers.LlegitCheckBoxEditor;
+import presentacio.renderers.LlegitCheckBoxRenderer;
+import presentacio.renderers.ProgressBarRenderer;
+import presentacio.renderers.SearchHighlightRenderer;
 
 import javax.swing.*;
 import javax.swing.table.TableColumn;
@@ -40,7 +44,7 @@ class TableController {
     private final BibliotecaTableModel tableModel = new BibliotecaTableModel();
     private boolean columnsInstalled;
     private boolean sortListenerAttached;
-    private TableCellComponents.SearchHighlightRenderer highlightRenderer;
+    private SearchHighlightRenderer highlightRenderer;
     private final java.util.TreeMap<Integer, TableColumn> hiddenCols = new java.util.TreeMap<>();
     /** O(1) lookup from ISBN to model row index. Rebuilt on {@link #setBooks}; updated incrementally on row mutations. */
     private final java.util.HashMap<Long, Integer> isbnToRow = new java.util.HashMap<>();
@@ -50,11 +54,11 @@ class TableController {
     }
 
     BibliotecaTableModel model() { return tableModel; }
-    TableCellComponents.SearchHighlightRenderer highlightRenderer() { return highlightRenderer; }
+    SearchHighlightRenderer highlightRenderer() { return highlightRenderer; }
 
     void setBooks(List<Llibre> books, BibliotecaWriter cd, JButton detallesBtn,
                   Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
-                  Supplier<Set<Long>> loanedIsbns, Consumer<Llibre> onRowUpdated) {
+                  Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         tableModel.setBooks(books);
         rebuildIsbnIndex();
         JTable t = vista.getjTableBilio();
@@ -65,6 +69,15 @@ class TableController {
         }
         attachSortPersistenceListener(t);
         if (!columnsInstalled) installColumns(t, cd, detallesBtn, coverCache, coverLoading, loanedIsbns, onRowUpdated);
+    }
+
+    /** Update the renderer's cached loaned-ISBN set. Called by
+     *  {@code MostrarBibliotecaControl} / {@code ContextMenuController}
+     *  whenever the host's {@code state.loanedISBNs} is reassigned.
+     *  Avoids the per-cell supplier dispatch the tot.txt MEDIUM
+     *  finding flagged. */
+    public void setLoanedISBNs(Set<Long> isbns) {
+        if (highlightRenderer != null) highlightRenderer.setLoanedISBNs(isbns);
     }
 
     private void rebuildIsbnIndex() {
@@ -182,7 +195,7 @@ class TableController {
 
     private void installColumns(JTable t, BibliotecaWriter cd, JButton detallesBtn,
                                 Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
-                                Supplier<Set<Long>> loanedIsbns, Consumer<Llibre> onRowUpdated) {
+                                Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         t.setRowHeight(ROW_HEIGHT);
         setWidth(t, BibliotecaTableModel.COL_COVER, 48, 48, 56);
         setWidth(t, BibliotecaTableModel.COL_ISBN, 130, 80, Integer.MAX_VALUE);
@@ -194,17 +207,17 @@ class TableController {
         setWidth(t, BibliotecaTableModel.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
         setWidth(t, BibliotecaTableModel.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_COVER).setCellRenderer(
-            new TableCellComponents.CoverCellRenderer(t, coverCache, coverLoading, cd, isbnToRow::get));
+            new CoverCellRenderer(t, coverCache, coverLoading, cd, isbnToRow::get));
         // Details column hidden — double-click row or Enter opens details (see installInteractionListeners)
         TableColumn detallsCol = t.getColumnModel().getColumn(BibliotecaTableModel.COL_DETALLS);
         hiddenCols.put(BibliotecaTableModel.COL_DETALLS, detallsCol);
         t.removeColumn(detallsCol);
         WindowConfig.setColVisible(BibliotecaTableModel.COL_DETALLS, false);
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellRenderer(new TableCellComponents.LlegitCheckBoxRenderer());
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellEditor(
-            new TableCellComponents.LlegitCheckBoxEditor(cd, onRowUpdated));
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_PROGRES).setCellRenderer(new TableCellComponents.ProgressBarRenderer());
-        highlightRenderer = new TableCellComponents.SearchHighlightRenderer(loanedIsbns);
+            new LlegitCheckBoxEditor(cd, onRowUpdated));
+        t.getColumnModel().getColumn(BibliotecaTableModel.COL_PROGRES).setCellRenderer(new ProgressBarRenderer());
+        highlightRenderer = new SearchHighlightRenderer(loanedIsbns);
         for (int v = 0; v < t.getColumnCount(); v++) {
             int modelIndex = t.getColumnModel().getColumn(v).getModelIndex();
             if (modelIndex != BibliotecaTableModel.COL_COVER && modelIndex != BibliotecaTableModel.COL_LLEGIT && modelIndex != BibliotecaTableModel.COL_PROGRES)
@@ -269,15 +282,32 @@ class TableController {
         int idx = indexOfIsbn(isbn);
         if (idx >= 0) {
             tableModel.getBooks().remove(idx);
-            isbnToRow.remove(isbn);
-            // shift down all entries with row > idx
-            java.util.Iterator<java.util.Map.Entry<Long, Integer>> it = isbnToRow.entrySet().iterator();
-            while (it.hasNext()) {
-                java.util.Map.Entry<Long, Integer> e = it.next();
-                if (e.getValue() > idx) e.setValue(e.getValue() - 1);
-            }
+            // Rebuild the row index in one pass — the O(n) per-delete
+            // shift was the tot.txt MEDIUM finding (1M entry updates
+            // for a 10k library deleting 100 books). rebuildIsbnIndex
+            // is O(n) once regardless of delete count.
+            rebuildIsbnIndex();
             tableModel.fireTableRowsDeleted(idx, idx);
         }
+    }
+
+    /** Batch delete. O(books + deletes) instead of O(books * deletes)
+     *  for the entry-shift pattern. */
+    void removeRowsByIsbn(java.util.Collection<Long> isbns) {
+        if (isbns == null || isbns.isEmpty()) return;
+        // Sort by descending row index so each removal does not invalidate
+        // the indexes we haven't processed yet.
+        java.util.List<Integer> rows = new java.util.ArrayList<>(isbns.size());
+        for (Long isbn : isbns) {
+            Integer r = isbnToRow.get(isbn);
+            if (r != null) rows.add(r);
+        }
+        rows.sort(java.util.Collections.reverseOrder());
+        for (int r : rows) {
+            tableModel.getBooks().remove(r);
+            tableModel.fireTableRowsDeleted(r, r);
+        }
+        rebuildIsbnIndex();
     }
 
     void appendBook(Llibre l) {

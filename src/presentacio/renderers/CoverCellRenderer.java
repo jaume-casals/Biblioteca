@@ -81,8 +81,8 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
                 final Llibre book = l;
                 LOADER.submit(() -> {
                     try {
-                        ImageIcon img = TableCellComponents.scaledCover(
-                            TableCellComponents.loadCoverBytes(book, cd));
+                        ImageIcon img = presentacio.galeria.CoverImageService.scaledCover(
+                            presentacio.galeria.CoverImageService.loadCoverBytes(book, cd));
                         coverCache.put(isbn, img != null ? img : CoverImageCache.NO_COVER);
                     } finally {
                         coverLoading.remove(isbn);

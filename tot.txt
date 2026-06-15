@@ -54,24 +54,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   line 70 races with the auto-prune on line 79; if a backup
   is in flight when the prune runs, the prune can delete
   the in-progress file. Use a sequence number suffix or
-  serialize access via the executor.
-- `writeLlibreINSERT` (lines 121-154) builds the INSERT
-  via `StringBuilder.append` with 27 hand-typed columns.
-  The class Javadoc for `BackupTablePrinter` (line 5)
-  flags this as future-refactor target. Today the printf
-  duplicates the column list from
-  `LlibreFieldBindings.forInsert`. If a column is added
-  to one, the other is forgotten. Centralize in
-  `LlibreFieldBindings` (it already has `forInsert`) and
-  generate the SQL via `String.format("INSERT INTO llibre
-  (%s) VALUES (%s);", colList, placeholders)`. (Done
-  2026-06-15: `LlibreFieldBindings` now exposes
-  `COLUMNS_INSERT` + `forInsert()` as the single source of
-  truth; `writeLlibreINSERT` iterates them and formats
-  each value via `formatValue`. The `imatge_blob` column
-  is intentionally excluded from the SQL — covers are
-  dropped from the dump per the class Javadoc. Adding a
-  new column now touches only `LlibreFieldBindings`.)
+  serialize access via the executor. (Done 2026-06-15: the
+  in-flight file is now written to a `.tmp` sibling, the
+  prune runs only AFTER the atomic rename to the final
+  name, and the prune sorts by `lastModified`. The
+  in-progress `.tmp` is invisible to the prune filter
+  because the filter is `n.endsWith(".sql")` only.)
 - `backupToSQL` (lines 86-119) opens a `PrintWriter` over
   a `FileWriter` in a try-with-resources — good. The
   inner `try` blocks inside the for-loops (none here, but
@@ -80,78 +68,30 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   Swallowing all exceptions hides bugs. Distinguish
   `IOException` (log and continue), `SQLException`
   (propagate or rethrow), and runtime exceptions
-  (propagate).
+  (propagate). (Done 2026-06-15: the catch-all is gone.
+  `autoBackup` now catches `IOException`
+  (log + continue — the next scheduled run can recover),
+  `SQLException` (log + rethrow as `RuntimeException` —
+  a corrupt DB affects every operation), and
+  `RuntimeException` (log + rethrow — per the finding,
+  no silent swallowing). The `backupToSQL` method
+  signature changed from `throws Exception` to
+  `throws IOException, SQLException` for clarity.)
 - `shutdownScheduler` (line 50) sets `schedulerStarted`
   to `false` (line 56). If `scheduleAutoBackup` is
   re-called after a shutdown, the new scheduler is
   created and `scheduleWithFixedDelay` is re-scheduled.
   The two consecutive calls produce a non-running
   scheduler because `shutdownNow` is interrupt-driven
-  and may take time to settle.
+  and may take time to settle. (Done 2026-06-15: the
+  `schedulerStarted` flip is now the first line of
+  `shutdownScheduler` (before the `shutdownNow()` call)
+  so a racing `scheduleAutoBackup()` call cannot
+  observe the half-stopped state and create a
+  concurrent scheduler. The else branch on null
+  `scheduler` is also explicit so the flag is
+  reset even on a redundant shutdown.)
 
-
-**[src/herramienta/I18n.java]** — [severity: LOW]
-- The class is 628 lines of `T(key, ca, es, en)` calls
-  (lines 14-587). The auto-gen comment (line 1)
-  documents that `strings/strings.csv` is the source.
-  But the generated file is checked into source, so
-  drift is possible (a manual edit to I18n.java would
-  be overwritten on next regen). A pre-commit hook or
-  CI check that the file matches the CSV would catch
-  drift. (Skipped 2026-06-15: infra/devops concern;
-  out of scope for a code review cleanup. The stderr
-  warnings in `t()` and `langIndex()` already surface
-  drift at runtime; a hook would add belt-and-braces
-  at the cost of pre-commit latency.)
-- `t(key, args...)` (line 593) checks
-  `!raw.contains("{0}")` (line 606) and logs a warning
-  to stderr (line 607). Two problems: (a) the warning
-  goes to stderr unconditionally — in production, this
-  clutters the user's terminal; (b) the check is at
-  position 0 only; a key with `{1}` but no `{0}` is
-  not flagged. Either check all positions or remove
-  the check. (Done 2026-06-15: now uses the
-  highest-arg-position marker, so `{1}` without `{0}`
-  is also flagged. Stderr warning kept; the auto-gen
-  pipeline intentionally surfaces drift.)
-- `langIndex` (line 622) maps "es"→1, "en"→2, "ca"→0.
-  Anything else returns 0 (ca). Adding a new language
-  (e.g. "fr") silently falls back to ca. Throw or
-  log a warning for unknown codes. (Done 2026-06-15:
-  non-null/non-"ca" codes log a warning to stderr
-  and fall back to ca. Same pattern as the missing-
-  key warning — the I18n class is auto-gen, and the
-  warning is the documented drift signal.)
-
-**[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
-- `toIsbn13` (line 8) returns the original `digits`
-  string if the length is not 10 or 13 (line 17). The
-  caller `LlibreValidator.checkLlibre` then calls
-  `Long.parseLong(digits)` which throws on non-numeric
-  input. The fallback is silent — the user sees a
-  validation error with the wrong field. Either throw
-  with a clear message or return null and let the
-  caller decide. (Done 2026-06-15: returns null for
-  any length that is not 10 (with X) or 13. The
-  caller now surfaces a clear validation error.)
-  Tests in test/herramienta/Isbn13NormalizerTest.java
-  were updated to match the new contract.
-
-**[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
-- `toIsbn13` line 12: `trimmed.replaceAll("[^0-9X]", "")` —
-  strips anything that isn't a digit or X. This
-  converts "ISBN: 978-..." into "978..." but also
-  drops non-ASCII characters silently. If a user
-  pastes "ISBN 9780" with a non-ASCII space, the
-  result is "ISBN9780" — note the "ISBN" prefix is
-  stripped silently. A user pasting an ISBN from a
-  PDF with a space-separated prefix would see the
-  wrong number. (Done 2026-06-15: `toIsbn13` now
-  uppercases the trimmed input first, so
-  "019853110x" → "019853110X" → valid ISBN-13
-  "9780198531104". The case-sensitivity of 'X' is
-  now uniform. Test for `isbn10LowercaseX` updated
-  to expect the new valid-ISBN-13 output.)
 
 **[src/herramienta/DateUtils.java]** — [severity: LOW]
 - `parseYear` (line 7) returns 0 for unparseable
@@ -246,30 +186,20 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   creates a new `FontMetrics` per call. Cache the
   FontMetrics via `getFontMetrics(getFont())` (called
   on every render) and avoid the per-pixel
-  measurement by storing the metrics in a field.
+  measurement by storing the metrics in a field. (Done
+  2026-06-15: `fm()` now caches the FontMetrics and
+  invalidates only when the font changes — see the
+  inner-class fields `cachedFm` / `cachedFont` and the
+  `fm()` helper at line 79-86.)
 - Line 101: the table header renderer uses an
   anonymous `DefaultTableCellRenderer` that allocates
   a new `JLabel` per render. `getTableCellRendererComponent`
   is called once per visible cell per scroll
   event. For a 1000-row table, the allocation is
-  non-trivial. Reuse a single `JLabel` instance.
-- Line 137: `for (int row : t.getSelectedRows()) { Object v
-  = t.getValueAt(row, 1); ... }` — drag handler
-  builds the ISBN list as a comma-joined string.
-  The number `1` is the column index for ISBN, but
-  the model has the ISBN column at `COL_ISBN = 1`
-  (BibliotecaTableModel.java:16). Magic number; use
-  the constant. (Note: as of 2026-06-15, line 159
-  already uses `presentacio.BibliotecaTableModel.COL_ISBN`.)
-- Line 101: the table header renderer uses an
-  anonymous `DefaultTableCellRenderer` that allocates
-  a new `JLabel` per render. (Note: as of 2026-06-15,
-  the renderer reuses the JLabel returned by `super`
-  — no new allocation per render.)
-- `buildTable` `getToolTipText` allocates `FontMetrics`
-  per call. (Note: as of 2026-06-15, `fm()` caches
-  the FontMetrics and invalidates only when the
-  font changes.)
+  non-trivial. Reuse a single `JLabel` instance. (Done
+  2026-06-15: the renderer reuses the JLabel returned
+  by `super.getTableCellRendererComponent` (line 126)
+  and mutates it in place — no new allocation per render.)
 
 **[src/presentacio/CoverDisplayHelper.java]** — [severity: LOW]
 - `loadAndDisplay` (line 15) reads the blob into a
@@ -278,108 +208,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   stutters. Move the load to a `SwingWorker` like
   `CoverImageService.submit` does. The class is 29
   lines; the new method body would be 6 lines.
-
-**[src/presentacio/EstadistiquesHelper.java]** — [severity: MEDIUM]
-- `booksByReadYear` (line 37) iterates the full
-  list, calling `readYearFor` for each book. The
-  filter `if (!Boolean.TRUE.equals(l.getLlegit()))`
-  (line 40) excludes unread books. For a 10k-book
-  library the iteration is 10k. Acceptable, but
-  the function is called twice per stats render
-  (from `computeStats` line 53 and from
-  `buildReadingChart` line 57 and
-  `buildReadingPacePanel` line 163) — three times
-  in `mostrarEstadistiques`. Cache the result.
-  (Done 2026-06-15: removed the 1-arg `buildReadingChart(List)`
-  and 1-arg `buildReadingPacePanel(List)` overloads
-  that internally called `booksByReadYear(books)`.
-  The 2-arg overloads now require the pre-computed
-  `Map<Integer, Long>` and the only call site
-  (`BookActionsController.mostrarEstadistiques`)
-  already uses the cached `globalStats.booksByReadYear`.
-  Result: `booksByReadYear` runs once per stats dialog.)
-
-**[src/presentacio/ExportController.java]** — [severity: MEDIUM]
-- `fetchMissingCovers` (line 115) submits cover
-  fetches to `COVER_POOL` (a static 8-thread pool on
-  line 21). The static pool is shared with
-  `CoverService.POOL` semantically (cover fetches)
-  but is a separate instance. A user clicking
-  "fetch covers" twice (with a small library) sees
-  two pools. Combine with `CoverService.POOL` (but
-  the methods are different: one saves to DB, the
-  other caches in-memory). Document the split.
-  (Done 2026-06-15: `COVER_POOL` is now an alias
-  for `CoverService.POOL` (the public static
-  `POOL` field in `CoverService.java`). The OL
-  rate-limiter inside `fetchCoverByISBN` enforces
-  the 300ms throttle across both consumers, so
-  combining is safe. Same 6-thread pool serves
-  both the "fetch + cache + persist" path and the
-  "fetch + preview" export dialog.)
-- The progress bar (line 128) increments `done`
-  per cover completion, but the `fetched` counter
-  (line 142) only increments if the cover is
-  non-null. The user message (line 161) says "X
-  covers downloaded for Y books" — if a book has
-  no cover on OpenLibrary (the common case), the
-  user sees "0 of 10" and wonders why. Improve the
-  message: "X covers downloaded, Y had no
-  cover available". (Done 2026-06-15: tracks
-  `missingCover` counter separately and shows
-  the new `dlg_fetch_portades_done_partial` i18n
-  key when at least one cover was unavailable.)
-
-**[src/presentacio/FilterDrawerPanel.java]** — [severity: MEDIUM]
-- The class Javadoc (lines 30-37) claims 32 hand-
-  declared component fields were replaced by a
-  single `FormFieldRegistry`. The 32-line
-  `declareSpecs` (lines 49-95) does this, but the
-  32 public getter shims at the bottom (lines
-  369-401) still delegate to the registry. Every
-  external caller that used `getTextISBN` etc.
-  now has an extra level of indirection. A
-  compiler could not see this; a profiler
-  (YourKit) would show a tiny extra cost per
-  call. Fine, but the Javadoc says "217 external
-  call sites keep compiling without changes" —
-  the Javadoc is over-promising. (Note: as of
-  2026-06-15, the 11-button `styleAllButtons()`
-  helper at line 281 is already extracted and
-  called from both `applyTheme` (line 265) and
-  `applyThemePostLaf` (line 271) — the review's
-  "duplicated block" claim is no longer
-  reproducible.)
-- `addExportMenuItem` (line 250) is identical to
-  `addImportMenuItem` (line 258) — the second
-  just delegates to the first. Two methods, one
-  body. Inline. (Done 2026-06-15: wrapper removed;
-  callers now use `addExportMenuItem` directly.)
-
-**[src/presentacio/FormFieldRegistry.java]** — [severity: LOW]
-- `comboBox(String key)` (line 117) is annotated
-  `@SuppressWarnings("rawtypes")` because the
-  return type is `JComboBox` (raw). The class
-  itself is not generic; the raw type leaks to
-  every caller. Either (a) make the class generic
-  with `<T>`, or (b) provide typed accessors per
-  kind (`textField`, `checkBox`, etc.) and remove
-  the raw-typed one. (Note: as of 2026-06-15, the
-  raw type is retained for backward compat — the
-  60+ callers in `FilterDrawerPanel` declare
-  `JComboBox<String>` or `JComboBox<Object>` locally
-  and the wildcard return type does not fit. Typed
-  variant would require per-component T knowledge.)
-- `register(String, JComponent)` (line 133) is
-  documented as "Legacy API preserved for the
-  25-line skeleton callers." Search the codebase
-  for callers — there are none outside the
-  presenter. Dead code. (Done 2026-06-15: marked
-  `@Deprecated`; only one caller remains
-  — `DetallesLlibrePanel` line 295 — but its
-  fieldRegistry was removed in the same round, so
-  the method is now genuinely dead and can be
-  removed in a follow-up.)
 
 **[src/presentacio/GaleriaCobertesPanel.java]** — [severity: MEDIUM]
 - `adjustZoom` (line 182) calls
@@ -400,7 +228,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   already in place. The "adjustZoom one-directional
   clear" finding remains valid as a documentation
   gap but is not user-visible; the cache is
-  cleared on zoom only by design.)
+  cleared on zoom only by design. Documented in
+  the `CoverImageService.clear` Javadoc — "called
+  when the zoom level changes (pre-scaled images
+  are now the wrong size) or on theme switch if
+  the gradient palette needs to be re-applied" —
+  callers are responsible for the trigger.)
 
 **[src/presentacio/GestioLlistesDialog.java]** — [severity: MEDIUM]
 - The `cd` field (line 31) is assigned in the
@@ -411,23 +244,23 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   the presentacio layer was meant to avoid. The
   dialog should require a non-null `cd` and let
   the caller (ShelfController) provide the
-  ControladorDomini instance.
+  ControladorDomini instance. (Done 2026-06-15:
+  the no-arg constructor was removed; the
+  remaining single constructor now requires
+  non-null `cd` (throws `IllegalArgumentException`
+  otherwise). The only caller (ShelfController)
+  already passes `state.cd`.)
 - The `reload()` method (line 185) creates a new
   `DefaultListCellRenderer` on every call. The
   renderer is stateless — reuse a single
   instance. The current pattern allocates one
   per call; for a 10-shelf library refreshed
-  during drag, that's 10+ allocations.
-- `onColorLlista` (line 159) uses
-  `Color.decode(sel.getColor())` (line 163). The
-  `getColor()` returns the hex string or null
-  (after `setColor(null)`). The current code
-  defaults to `#3498DB` when null. The default
-  is also used by `ColorSwatchPicker.chooseHex`
-  (line 25) when `initial` is null. Document the
-  shared default. (Done 2026-06-15: lifted to
-  `ColorSwatchPicker.DEFAULT_HEX` constant; both
-  call sites now reference the constant.)
+  during drag, that's 10+ allocations. (Done
+  2026-06-15: `LIST_RENDERER` is now a final
+  field at line 196 and is re-set only on
+  reload via `jList.setCellRenderer(LIST_RENDERER)`.
+  Drag-and-drop sessions no longer allocate a
+  fresh renderer per refresh.)
 
 **[src/presentacio/ImportController.java]** — [severity: MEDIUM]
 - `escanejarISBN` (line 119) starts a `Thread`
@@ -440,39 +273,29 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   that pre-prompted the ISBN. The user cancelling
   the JOptionPane input dialog (line 120) is
   already handled by the `isbn == null` check on
-  line 123. Fine.
-- `escanejarISBN` does not handle the case where
-  the user types a valid ISBN that already exists
-  in the library. The dialog opens, OL populates
-  the fields, the user clicks Save, and the
-  duplicate ISBN is rejected by
-  `cd.addLlibre(l)`. The error message is generic.
-  Check existence before opening the dialog.
-  (Done 2026-06-15: pre-check via
-  `cd.existsLlibre(parsedIsbn)`; if true, a
-  confirm dialog using the existing
-  `dlg_isbn_exists` key lets the user force-open
-  the dialog or abort. Non-numeric input also
-  surfaces a clear `val_isbn_invalid` warning
-  instead of falling through to a confusing
-  `Long.parseLong` exception.)
+  line 123. Fine. (Skipped 2026-06-15: the bullet
+  documents an observation ("Fine") rather than a
+  defect. The WindowListener scope is intentional
+  — the JOptionPane-input cancel is handled by the
+  `isbn == null` guard. No code change required.)
 
 **[src/presentacio/LeftSidebarPanel.java]** — [severity: MEDIUM]
-- `rebuildSidebarShelves` (line 196) iterates the
-  new shelves, looking up each in
-  `sidebarShelfBtnMap`. The map's initial-capacity
-  default (16) is too small for libraries with 20+
-  shelves. Set `new HashMap<>(64)` or use the
-  `Map.computeIfAbsent` pattern. (Note: as of
-  2026-06-15, `sidebarShelfBtnMap` is already
-  declared `new HashMap<>(64)` at line 45 — the
-  review's "default 16" claim is not reproducible.)
 - The `getBtnXxx()` methods (lines 347-355) return
   the button field directly. The buttons are
   private fields; the methods are public. Every
   caller invokes the method, which is fine, but
   the fields could be `final` (they are set in
-  `buildSidebar`).
+  `buildSidebar`). (Skipped 2026-06-15: the buttons
+  are assigned in the `buildSidebar()` helper called
+  from the constructor. Java's definite-assignment
+  analysis does not track helper-method assignments,
+  so `final` would require either inlining the
+  entire sidebar build into the constructor (large
+  refactor — moves ~150 lines) or moving each
+  button creation to a field initializer that
+  captures the half-built panel (out-of-order).
+  Documented as a known minor smell at the field
+  declaration.)
 - `makeSidebarBtn` (line 280) creates a button
   with a `mouseEntered` listener that adjusts the
   background color (line 287-292). The adjustment
@@ -483,7 +306,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `0x4A3010` — also fine but it's hardcoded
   relative to the bg. Consider lifting to
   `UITheme.palette().sidebarAccent()` or a
-  `sidebarHoverBg()` palette entry.
+  `sidebarHoverBg()` palette entry. (Done
+  2026-06-15: added `sidebarHoverBg` to the
+  UITheme.Palette record (set per theme in
+  `setTheme()` — values match the previous
+  per-call +20/+15/+10 calculation). The
+  listener now reads `UITheme.palette().sidebarHoverBg()`
+  directly.)
 
 **[src/presentacio/LibraryViewState.java]** — [severity: LOW]
 - `undoBuffer` is a `Deque<Llibre>` (line 26) used
@@ -526,24 +355,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   Javadoc (line 13) but not in code. Dead.
 
 **[src/presentacio/TableController.java]** — [severity: MEDIUM]
-- `installColumns` (line 183) is called once per
-  `setBooks` (line 67) but only if `columnsInstalled`
-  is false. The setup is one-shot. The method
-  reads `WindowConfig.colWidth(i, -1)` (line 214)
-  per column and applies the saved width. After
-  the first install, column-width changes are
-  saved by the `saveWidthsTimer` (line 132) — but
-  the timer is recreated on every
-  `setBooks` call (line 145 listener), so
-  multiple timers can be alive. Single timer
-  per JTable; check `if (saveWidthsTimer == null)`.
-  (Note: as of 2026-06-15, the `saveWidthsTimer`
-  is created **inside** `installColumns` (line
-  132), which only runs once due to the
-  `columnsInstalled` guard at line 67 — so the
-  timer is a single instance, not recreated per
-  `setBooks`. The review's "multiple timers" claim
-  is not reproducible from the current code.)
 - `removeRowByIsbn` (line 268) updates
   `isbnToRow` correctly but iterates with
   `Iterator.next()` and `e.setValue` (line 277).
@@ -555,7 +366,15 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   per delete; for a 10k library deleting 100
   books, that's 1M entry updates. Use a
   `TreeMap<Long, Integer>` with `subMap` removal,
-  or rebuild the index on a batch delete.
+  or rebuild the index on a batch delete. (Done
+  2026-06-15: `removeRowByIsbn` now calls
+  `rebuildIsbnIndex()` once after the delete
+  (O(books), regardless of delete count). A new
+  `removeRowsByIsbn(Collection<Long>)` batch
+  method sorts by descending row index so each
+  removal does not invalidate the indexes not yet
+  processed; it also rebuilds the index once at
+  the end.)
 
 **[src/presentacio/detalles/control/LlistesDelLlibreControl.java]** — [severity: LOW]
 - `toggleShelfMembership` (line 46) fires on every
@@ -574,55 +393,7 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   shared singleton would need a setter to swap
   the set on reload.)
 
-**[src/presentacio/detalles/control/TagsDelLlibreControl.java]** — [severity: LOW]
-- `computeTagCounts` (line 133) fetches
-  `cd.getAllLlibreTagRows()` which for a 10k-tag
-  library is 10k rows. The method is called on
-  every `reload()` (line 126). The `tagCounts`
-  map is per-book; the counts are global
-  (tag → number of books with that tag). The
-  map is rebuilt from scratch each time —
-  cache the result and invalidate on
-  addLlibreToTag / removeLlibreFromTag. (Note:
-  `reload()` runs only on dialog open / add /
-  remove, so the cache miss rate is low. Caching
-  across reloads would require plumbing through
-  `addLlibreToTag` / `removeLlibreFromTag` events
-  to invalidate — the Plumbing cost outweighs the
-  one-time 10k-row query. Skipped.)
-
-**[src/presentacio/detalles/control/OpenLibrarySearchTask.java]** — [severity: MEDIUM]
-- `doInBackground` (line 48) calls three
-  `OpenLibraryClient.lookupBy*` methods in
-  sequence. The first call hits OL; the second
-  hits OL (for cover); both share the same
-  rate-limiter (300ms). The two calls block
-  for 600ms minimum even on a fast OL response.
-  Make the cover fetch optional and parallel:
-  the user asked for metadata, the cover is a
-  bonus. (Done 2026-06-15: cover fetch is now
-  offloaded to a `CompletableFuture.supplyAsync`
-  and `join()`ed at the end. The OL rate-limiter
-  inside `fetchCoverByISBN` still throttles
-  correctly — the second call waits for the
-  shared lock, not for the metadata response.)
-
 **[src/presentacio/detalles/vista/DetallesLlibrePanel.java]** — [severity: MEDIUM]
-- The class has 26 hand-declared Swing component
-  fields (lines 46-78) and 26 public getters
-  (lines 348-378). This is the same pattern that
-  `FilterDrawerPanel` migrated to `FormFieldRegistry`
-  for. The class Javadoc (line 33) imports
-  `FormFieldRegistry`, but the registry field
-  (line 43) is unused (`fieldRegistry` is created
-  and `linkLabel` and `register` are called, but
-  no caller queries the registry). Either
-  migrate the fields or remove the unused
-  registry. (Done 2026-06-15: unused `fieldRegistry`
-  field, its `register` call, and its `getFieldRegistry`
-  getter removed. The `linkLabel` call's underlying
-  Swing behavior — `JLabel.setLabelFor(component)` —
-  is preserved via a direct call.)
 - `setEditMode` (line 410) enables/disables 22
   fields. The list of fields and their enabled
   state is implicit. Add a `private static final
@@ -663,6 +434,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   155) but the field references are still
   scattered. Same migration opportunity as
   `DetallesLlibrePanel` and `FilterDrawerPanel`.
+  (Skipped 2026-06-15: the field migration
+  would require introducing a `FormFieldRegistry`
+  (already in `FilterDrawerPanel`) plus
+  refactoring the 30 getters to delegate — a
+  large mechanical change. The fields are
+  `final` once assigned; the 30 getters are
+  `final` and have no side effects. Future
+  refactor target.)
 - The `textNotes` field is a `JTextField` (line
   57) but the form expects multi-line notes. The
   class Javadoc of `DetallesLlibrePanel` uses a
@@ -672,7 +451,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   a paragraph, the text wraps visually (no, it
   doesn't — JTextField is single-line) but
   saves as a newline-less string. Use
-  `JTextArea` like the detail panel does.
+  `JTextArea` like the detail panel does. (Done
+  2026-06-15: `textNotes` is now a `JTextArea`
+  with `lineWrap` + `wrapStyleWord` (4 rows,
+  20 cols), wrapped in a `JScrollPane` via
+  `FormGridBuilder.addRaw`. The getter return
+  type is now `JTextArea`. The save handler
+  reads `getText()` which now preserves
+  user-typed newlines correctly.)
 
 **[src/presentacio/detalles/vista/LlistesDelLlibreTableModel.java]** — [severity: LOW]
 
@@ -733,27 +519,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   width directly and fall back to MAX_VALUE on
   the first try.
 
-**[src/presentacio/renderers/LlegitCheckBoxEditor.java]** — [severity: MEDIUM]
-- Line 40: `MainFrameControl.getInstance().getLlibreIsbn(...)`
-  — the editor reaches into a singleton to fetch
-  a fresh `Llibre` (with descripcio/notes
-  already loaded? no — `findLlibre` returns
-  the light row, then `cd.updateLlibre(l)` writes
-  the light row's `llegit` only. The other
-  fields (descripcio, notes, etc.) are still
-  the stale light values. After a user opens
-  the details dialog (which triggers
-  loadHeavyFields), edits just the read flag,
-  and saves — the other fields are
-  unchanged but the user might think they
-  persisted a fresh read flag. This is
-  correct, but the Javadoc of the editor
-  should mention that only `llegit` is
-  persisted and the rest is read-only for
-  this path. (Done 2026-06-15: class Javadoc
-  added documenting the light-row fetch +
-  `llegit`-only persistence contract.)
-
 **[src/presentacio/renderers/SearchHighlightRenderer.java]** — [severity: MEDIUM]
 - The `setSearchText` (line 21) is called on
   every keystroke of the search bar (via
@@ -765,7 +530,19 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   which is a `Supplier<Set<Long>>` — a function
   call per cell. For a 1000-row × 10-column
   table, that's 10,000 function calls per repaint.
-  Cache the set reference.
+  Cache the set reference. (Done 2026-06-15: the
+  constructor signature changed from
+  `SearchHighlightRenderer(Supplier<Set<Long>>)`
+  to `SearchHighlightRenderer(Set<Long>)` (plus
+  a no-arg overload for empty-set defaults).
+  Callers (`TableController.setBooks`,
+  `MostrarBibliotecaControl`,
+  `ContextMenuController`) now pass the current
+  set directly and call
+  `tableCtrl.setLoanedISBNs(set)` whenever
+  `state.loanedISBNs` is reassigned — the
+  renderer caches the reference and the
+  per-cell `.get()` dispatch is gone.)
 - The highlighter wraps the cell text in
   `<span style='background:#F39C12;color:#000'>` (line 44).
   For a cell with a non-empty search query and a
@@ -775,7 +552,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   the HTML is opaque. The cell height auto-resizes
   for HTML — fine, but the search highlight
   color is hardcoded. Move to UITheme palette
-  (add a `searchHighlight` field).
+  (add a `searchHighlight` field). (Done
+  2026-06-15: added `searchHighlightBg` and
+  `searchHighlightFg` to `UITheme.Palette` (the
+  highlight is theme-independent amber/black per
+  the `static final` constants). The renderer
+  now reads `UITheme.palette().searchHighlightBg()`
+  / `searchHighlightFg()` and formats them as
+  `#RRGGBB` for the inline `<span style=…>`.)
 
 **[src/presentacio/renderers/TableCellComponents.java]** — [severity: MEDIUM]
 - The class is a re-export facade with 6 inner
@@ -789,12 +573,24 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   (`presentacio.renderers.CoverCellRenderer`,
   etc.). The facade exists for "backward-
   compatible imports" — but the imports are
-  internal to the presentacio package.
+  internal to the presentacio package. (Done
+  2026-06-15: the 5 inner classes are removed;
+  `TableController` now imports the 5
+  renderer/editor types directly from
+  `presentacio.renderers`. The `TableCellComponents`
+  facade file was deleted after the last caller
+  was migrated to `CoverImageService` utilities.)
 - `loadCoverBytes` (line 59) and `scaledCover`
   (line 71) are static utility methods that
   belong on `CoverImageService` (the modern
   cover pipeline) or a `CoverUtils` class, not
-  on the facade.
+  on the facade. (Done 2026-06-15: both moved
+  to `CoverImageService` as `static` methods
+  (`loadCoverBytes(Llibre, BibliotecaWriter)`
+  and `scaledCover(byte[])`). `CoverCellRenderer`
+  is now the only caller and references
+  `presentacio.galeria.CoverImageService`
+  directly.)
 
 **[src/presentacio/renderers/BotonDetallesRenderer.java]** — [severity: LOW]
 - The class is a `JButton` subclass that

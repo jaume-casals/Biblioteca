@@ -50,56 +50,89 @@ public class BackupService {
     public void shutdownScheduler() {
         java.util.concurrent.ScheduledExecutorService local = scheduler;
         if (local != null) {
+            // Disable rescheduling before tearing down the executor so a
+            // racing scheduleAutoBackup() call cannot create a new
+            // scheduler while shutdownNow is in flight (the tot.txt
+            // MEDIUM finding on the half-stopped double-scheduler).
+            schedulerStarted.set(false);
             local.shutdownNow();
             scheduler = null;
+        } else {
+            schedulerStarted.set(false);
         }
-        schedulerStarted.set(false);
     }
 
     private void autoBackup() {
         List<Llibre> bib = cp.getAllLlibres();
         if (bib.isEmpty()) return;
-        try {
-            File dir = Config.getBackupDir();
-            if (!dir.exists()) {
-                dir.mkdirs();
-                if (!dir.exists()) return;
+        File dir = Config.getBackupDir();
+        if (!dir.exists()) {
+            // mkdirs is the rare/IO error case — log and bail (was
+            // previously swallowed by the catch-all below; the tot.txt
+            // MEDIUM finding flagged the loss of the IOException signal).
+            if (!dir.mkdirs()) {
+                LOG.log(Level.WARNING, "Backup automàtic: no s'ha pogut crear el directori " + dir);
+                return;
             }
-            String today = java.time.LocalDate.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-            File[] existing = dir.listFiles((d, n) -> n.startsWith("biblioteca_" + today) && n.endsWith(".sql"));
-            if (existing != null && existing.length > 0) return;
-            String ts = java.time.LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-            File outFile = new File(dir, "biblioteca_" + ts + ".sql");
-            // Reserve a unique filename up front so a concurrent prune
-            // can't delete the in-progress file. The .tmp suffix marks
-            // it as in-flight; we rename to the final name after the
-            // backup completes.
-            File tmpFile = new File(dir, outFile.getName() + ".tmp");
+        }
+        String today = java.time.LocalDate.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        File[] existing = dir.listFiles((d, n) -> n.startsWith("biblioteca_" + today) && n.endsWith(".sql"));
+        if (existing != null && existing.length > 0) return;
+        String ts = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+        File outFile = new File(dir, "biblioteca_" + ts + ".sql");
+        // Reserve a unique filename up front so a concurrent prune
+        // can't delete the in-progress file. The .tmp suffix marks
+        // it as in-flight; we rename to the final name after the
+        // backup completes.
+        File tmpFile = new File(dir, outFile.getName() + ".tmp");
+        try {
             backupToSQL(tmpFile, bib, cp.getAllLlistes(), cp.getAllTags());
+        } catch (java.io.IOException ioe) {
+            // Per the tot.txt MEDIUM finding on swallowed exceptions:
+            // log+continue (this is the scheduled auto-backup; one
+            // failure should not poison the next scheduled run).
+            LOG.log(Level.WARNING, "Backup automàtic fallat (I/O)", ioe);
+            return;
+        } catch (java.sql.SQLException sqle) {
+            // Propagate DB errors loudly — a corrupt DB affects every
+            // operation, not just backups.
+            LOG.log(Level.SEVERE, "Backup automàtic fallat (SQL)", sqle);
+            throw new RuntimeException("Auto-backup SQL failure", sqle);
+        } catch (RuntimeException re) {
+            // Propagate unexpected runtime errors (NPE, IllegalState, …).
+            // Per the finding: do not catch these silently.
+            LOG.log(Level.SEVERE, "Backup automàtic fallat (runtime)", re);
+            throw re;
+        }
+        try {
+            java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
             try {
                 java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),
-                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-                java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.io.IOException ioe) {
+                LOG.log(Level.WARNING, "Backup automàtic: no s'ha pogut moure el .tmp", ioe);
+                return;
             }
-            // Prune AFTER rename so a race between prune and a fresh
-            // backup run can't delete the just-written file (the .tmp
-            // suffix is gone, the file is no longer "in flight").
-            File[] backups = dir.listFiles((d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
-            if (backups != null && backups.length > 5) {
-                java.util.Arrays.sort(backups, java.util.Comparator.comparingLong(File::lastModified));
-                for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
-            }
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "Backup automàtic fallat", e);
+        } catch (java.io.IOException ioe) {
+            LOG.log(Level.WARNING, "Backup automàtic: no s'ha pogut moure el .tmp", ioe);
+            return;
+        }
+        // Prune AFTER rename so a race between prune and a fresh
+        // backup run can't delete the just-written file (the .tmp
+        // suffix is gone, the file is no longer "in flight").
+        File[] backups = dir.listFiles((d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
+        if (backups != null && backups.length > 5) {
+            java.util.Arrays.sort(backups, java.util.Comparator.comparingLong(File::lastModified));
+            for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
         }
     }
 
-    public void backupToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws Exception {
+    public void backupToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws java.io.IOException, java.sql.SQLException {
         // Column list is the single source of truth — the tot.txt MEDIUM
         // finding on the INSERT printf duplication is closed by deriving
         // the SQL from LlibreFieldBindings (which the new

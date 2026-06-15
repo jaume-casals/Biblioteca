@@ -53,6 +53,7 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
         viewModeCtrl.initGaleria();
 
         state.loanedISBNs = cd.getLoanedISBNs();
+        tableCtrl.setLoanedISBNs(state.loanedISBNs);
         shelfCtrl.refreshComboLlistes();
         shelfCtrl.refreshComboTags();
 
@@ -98,7 +99,7 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
     @Override public void setTable(java.util.List<Llibre> llibres) {
         state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
         tableCtrl.setBooks(llibres != null ? llibres : new ArrayList<>(), state.cd, botonDetalles,
-            CoverImageCache.cache(), CoverImageCache.loading(), () -> state.loanedISBNs, this::refreshRow);
+            CoverImageCache.cache(), CoverImageCache.loading(), state.loanedISBNs, this::refreshRow);
         tableCtrl.applyColumnVisibility();
         filterCtrl.aplicarSearchBar();
         if (state.vista.isGaleriaMode()) {

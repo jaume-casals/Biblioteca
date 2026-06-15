@@ -96,6 +96,7 @@ class ContextMenuController {
                         try {
                             state.cd.retornarLlibre(isbnLong);
                             state.loanedISBNs = state.cd.getLoanedISBNs();
+                            host.tableCtrl().setLoanedISBNs(state.loanedISBNs);
                             state.vista.getjTableBilio().repaint();
                         } catch (Exception ex) { new DialogoError(ex).showErrorMessage(); }
                     });
@@ -268,6 +269,7 @@ class ContextMenuController {
         try {
             state.cd.prestarLlibre(isbn, nom.trim());
             state.loanedISBNs = state.cd.getLoanedISBNs();
+            host.tableCtrl().setLoanedISBNs(state.loanedISBNs);
             state.vista.getjTableBilio().repaint();
             JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_loan_done", nom.trim()),
                 I18n.t("dlg_loan_done_title"), JOptionPane.INFORMATION_MESSAGE);

@@ -30,14 +30,15 @@ public class GestioLlistesDialog extends JDialog {
     private final JList<Llista> jList = new JList<>(listModel);
     private final BibliotecaWriter cd;
 
-    public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl) {
-        this(owner, mainControl, null);
-    }
-
+    /** The dialog requires a non-null {@code cd} (BibliotecaWriter) — the
+     *  null-fallback to {@code ControladorDomini.getInstance()} was removed
+     *  per the tot.txt MEDIUM finding. Caller (ShelfController) is the only
+     *  entry point and always provides {@code state.cd}. */
     public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl, BibliotecaWriter cd) {
         super(owner, I18n.t("dlg_gestio_llistes_title"), ModalityType.APPLICATION_MODAL);
+        if (cd == null) throw new IllegalArgumentException("cd (BibliotecaWriter) is required");
         this.mainControl = mainControl;
-        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
+        this.cd = cd;
         setSize(340, 400);
         setLocationRelativeTo(owner);
         setResizable(false);

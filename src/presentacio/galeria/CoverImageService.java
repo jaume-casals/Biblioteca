@@ -117,6 +117,41 @@ public final class CoverImageService {
         imageLoader.shutdownNow();
     }
 
+    // ── Static utility methods (single source of truth for the cover pipeline) ─
+    //
+    // These were previously re-exported by {@code TableCellComponents}.
+    // Moved here so {@code CoverImageService} owns the cover-byte + scaled-icon
+    // contract end-to-end (tot.txt MEDIUM finding: the facade's utility
+    // methods belonged on the modern cover pipeline, not on the legacy
+    // re-export class).
+
+    /** Read the cover bytes for a book. Tries in-memory blob first, then the
+     *  path, then falls back to a DB load via {@code cd}. */
+    public static byte[] loadCoverBytes(Llibre l, BibliotecaWriter cd) {
+        byte[] blob = l.getImatgeBlob();
+        if (blob == null && l.hasBlob() && cd != null)
+            blob = cd.getLlibreBlob(l.getISBN());
+        if (blob != null) return blob;
+        String path = l.getImatge();
+        if (path != null && !path.isEmpty()) {
+            try { return java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path)); } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /** Decode a cover byte array and scale it to the standard row-icon height.
+     *  Returns null if the data is null or undecodable. */
+    public static javax.swing.ImageIcon scaledCover(byte[] data) {
+        if (data == null) return null;
+        try {
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(data));
+            if (img == null) return null;
+            int h = 46;
+            int w = Math.max(1, (int)(img.getWidth() * (h / (double) img.getHeight())));
+            return new javax.swing.ImageIcon(img.getScaledInstance(w, h, java.awt.Image.SCALE_SMOOTH));
+        } catch (Exception ignored) { return null; }
+    }
+
     private BufferedImage loadAndScale(Llibre l, int w, int h) {
         BufferedImage raw = loadRaw(l);
         if (raw == null) return null;
