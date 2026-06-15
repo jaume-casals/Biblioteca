@@ -130,6 +130,16 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
 
     @Override public TableController tableCtrl() { return tableCtrl; }
 
+    @Override public FilterController filterCtrl() { return filterCtrl; }
+
+    @Override public ShelfController shelfCtrl() { return shelfCtrl; }
+
+    @Override public BookActionsController bookActionsCtrl() { return bookActionsCtrl; }
+
+    @Override public ContextMenuController contextMenuCtrl() { return contextMenuCtrl; }
+
+    @Override public ViewModeController viewModeCtrl() { return viewModeCtrl; }
+
     @Override public JButton detallesBtn() { return botonDetalles; }
 
     @Override public LibraryViewState state() { return state; }

@@ -101,146 +101,200 @@ public final class CoverCardFactory {
     }
 
     public JPanel build(Llibre l, int cardIdx, Listener listener) {
-        boolean llegit   = Boolean.TRUE.equals(l.getLlegit());
-        int     hue      = bookHue(l.getNom());
-        double  val      = l.getValoracio() != null ? l.getValoracio() : 0.0;
-        int     pagines  = l.getPagines();
-        int     pagLleg  = l.getPaginesLlegides();
-        double  pct      = pagines > 0 ? (double) pagLleg / pagines : 0.0;
-        boolean showProg = pagines > 0 && !llegit && pct > 0;
-        Long    isbn     = l.getISBN();
-
         final int capW = cardW, capH = coverH, capCardH = cardH;
+        final int hue = bookHue(l.getNom());
+        final boolean llegit = Boolean.TRUE.equals(l.getLlegit());
+        final Long isbn = l.getISBN();
 
-        BufferedImage cached = imageService.getCached(isbn);
-        final BufferedImage[] imgRef = {cached};
-        final boolean[] hov = {false};
+        // Card state — captured at build time, mutated by mouse listeners
+        // (hover) and the image loader (imgRef). Painted in paintCard().
+        final BufferedImage[] imgRef = { imageService.getCached(isbn) };
+        final boolean[] hov = { false };
+
+        // Snapshot the Llibre fields paintCard needs into a record so the
+        // static paint method has no JPanel-coupling (per the tot.txt MEDIUM
+        // finding — extracting the inline paintComponent makes the image
+        // paint logic testable in isolation).
+        final CardState state = new CardState(
+            l, isbn, hue, llegit, imgRef, hov, capW, capH, capCardH);
 
         JPanel card = new JPanel(null) {
             @Override
             protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                g2.setColor(UITheme.palette().bgMain());
-                g2.fillRect(0, 0, getWidth(), getHeight());
-
-                boolean h = hov[0];
-
-                int sdY = h ? SDY + 6 : SDY;
-                g2.setColor(h ? SHADOW_HA : SHADOW_A);
-                g2.fillRoundRect(SDX, sdY, capW, capCardH, ARC + 2, ARC + 2);
-                g2.setColor(h ? SHADOW_HB : SHADOW_B);
-                g2.fillRoundRect(SDX + 2, sdY + 3, capW + 1, capCardH + 1, ARC + 4, ARC + 4);
-
-                g2.setColor(UITheme.palette().bgPanel());
-                g2.fillRoundRect(0, 0, capW, capCardH, ARC, ARC);
-
-                Shape oldClip = g2.getClip();
-                g2.clip(new RoundRectangle2D.Float(0, 0, capW, capH + ARC, ARC, ARC));
-                paintCover(g2, imgRef[0], hue,
-                    l.getDisplayNom(Config.getLang()), l.getAutor(), capW, capH);
-                g2.setClip(oldClip);
-
-                int dotD = 9, dotX = capW - dotD - 7, dotY = 7;
-                g2.setColor(llegit ? DOT_READ : DOT_UNREAD);
-                g2.fillOval(dotX, dotY, dotD, dotD);
-                g2.setStroke(new BasicStroke(2f));
-                g2.setColor(DOT_RIM);
-                g2.drawOval(dotX, dotY, dotD, dotD);
-
-                boolean sel = listener.selectedISBNs().contains(isbn);
-                if (sel) {
-                    g2.setColor(SEL_FILL);
-                    g2.fillRoundRect(1, 1, capW - 2, capCardH - 2, ARC, ARC);
-                }
-
-                g2.setStroke(new BasicStroke(sel || h ? 2f : 1f));
-                Color bdr;
-                if (sel) bdr = UITheme.palette().accent();
-                else if (h) bdr = new Color(UITheme.palette().accent().getRed(), UITheme.palette().accent().getGreen(), UITheme.palette().accent().getBlue(), 140);
-                else bdr = new Color(UITheme.palette().borderClr().getRed(), UITheme.palette().borderClr().getGreen(), UITheme.palette().borderClr().getBlue(), 180);
-                g2.setColor(bdr);
-                g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
-
-                g2.dispose();
+                paintCard((Graphics2D) g, state, listener);
             }
-
             @Override public boolean isOpaque() { return false; }
         };
-
         card.setPreferredSize(new Dimension(capW + SDX + 3, capCardH + SDY + 4));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
+        double val = l.getValoracio() != null ? l.getValoracio() : 0.0;
+        int pagines = l.getPagines();
+        int pagLleg = l.getPaginesLlegides();
+        double pct = pagines > 0 ? (double) pagLleg / pagines : 0.0;
+        boolean showProg = pagines > 0 && !llegit && pct > 0;
         JPanel footer = buildFooter(l, val, showProg, pct, capW);
         footer.setBounds(0, capH, capW, footH);
         card.add(footer);
 
         card.setFocusable(true);
-        card.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                hov[0] = true; card.repaint();
-            }
-            @Override public void mouseExited (MouseEvent e) {
-                hov[0] = false; card.repaint();
-            }
-            @Override public void mousePressed(MouseEvent e) {
-                card.requestFocusInWindow();
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    Set<Long> sel = listener.selectedISBNs();
-                    if (!sel.contains(isbn)) {
-                        List<Long> prev = new ArrayList<>(sel);
-                        sel.clear();
-                        sel.add(isbn);
-                        listener.onSelectionMutated(prev);
-                    }
-                    listener.onCardRightClicked(e, collectSelected(listener));
-                    return;
-                }
-                boolean ctrl  = (e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK)  != 0;
-                boolean shift = (e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) != 0;
-                Set<Long> sel = listener.selectedISBNs();
-                if (shift && listener.focusedIdx() >= 0) {
-                    int lo = Math.min(cardIdx, listener.focusedIdx());
-                    int hi = Math.max(cardIdx, listener.focusedIdx());
-                    List<Llibre> all = listener.currentLlibres();
-                    List<Long> prev = new ArrayList<>(sel);
-                    if (!ctrl) sel.clear();
-                    for (int i = lo; i <= hi && i < all.size(); i++)
-                        sel.add(all.get(i).getISBN());
-                    java.util.HashSet<Long> changed = new java.util.HashSet<>(prev);
-                    for (int i = lo; i <= hi && i < all.size(); i++)
-                        changed.add(all.get(i).getISBN());
-                    listener.onSelectionMutated(changed);
-                } else if (ctrl) {
-                    if (sel.contains(isbn)) sel.remove(isbn);
-                    else sel.add(isbn);
-                    listener.setFocusedIdx(cardIdx);
-                    listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
-                } else {
-                    List<Long> prev = new ArrayList<>(sel);
-                    sel.clear();
-                    sel.add(isbn);
-                    listener.setFocusedIdx(cardIdx);
-                    listener.onSelectionMutated(prev);
-                    listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
-                }
-            }
-            @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e))
-                    listener.onCardClicked(l);
-            }
-        });
+        card.addMouseListener(new CardMouseAdapter(card, l, isbn, cardIdx, hov, listener));
 
         // Async image load — pre-scale at current card dimensions
         imageService.submit(l, capW, capH, () -> {
             BufferedImage now = imageService.getCached(isbn);
-            if (now != null) imgRef[0] = now;
-            card.repaint();
+            if (now != null) { imgRef[0] = now; card.repaint(); }
         });
 
         return card;
+    }
+
+    /**
+     * Read-only snapshot of everything {@link #paintCard} needs to draw a
+     * card. Carries the live references to {@code imgRef} and {@code hov}
+     * so the image-loader / mouse-Entered mutations are visible on the
+     * next paint.
+     */
+    private record CardState(
+            Llibre l,
+            Long isbn,
+            int hue,
+            boolean llegit,
+            BufferedImage[] imgRef,
+            boolean[] hov,
+            int capW, int capH, int capCardH) {}
+
+    /**
+     * Static card paint — extracted from the anonymous JPanel's
+     * paintComponent (per the tot.txt MEDIUM finding). All drawing
+     * parameters come from the {@link CardState} record; the only
+     * listener interaction is the selection check. Testable in
+     * isolation by constructing a CardState and a mock Listener.
+     */
+    static void paintCard(Graphics2D g, CardState state, Listener listener) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        int capW = state.capW(), capH = state.capH(), capCardH = state.capCardH();
+
+        g2.setColor(UITheme.palette().bgMain());
+        g2.fillRect(0, 0, capW, capCardH);
+
+        boolean h = state.hov()[0];
+
+        int sdY = h ? SDY + 6 : SDY;
+        g2.setColor(h ? SHADOW_HA : SHADOW_A);
+        g2.fillRoundRect(SDX, sdY, capW, capCardH, ARC + 2, ARC + 2);
+        g2.setColor(h ? SHADOW_HB : SHADOW_B);
+        g2.fillRoundRect(SDX + 2, sdY + 3, capW + 1, capCardH + 1, ARC + 4, ARC + 4);
+
+        g2.setColor(UITheme.palette().bgPanel());
+        g2.fillRoundRect(0, 0, capW, capCardH, ARC, ARC);
+
+        Shape oldClip = g2.getClip();
+        g2.clip(new RoundRectangle2D.Float(0, 0, capW, capH + ARC, ARC, ARC));
+        paintCover(g2, state.imgRef()[0], state.hue(),
+            state.l().getDisplayNom(Config.getLang()), state.l().getAutor(), capW, capH);
+        g2.setClip(oldClip);
+
+        int dotD = 9, dotX = capW - dotD - 7, dotY = 7;
+        g2.setColor(state.llegit() ? DOT_READ : DOT_UNREAD);
+        g2.fillOval(dotX, dotY, dotD, dotD);
+        g2.setStroke(new BasicStroke(2f));
+        g2.setColor(DOT_RIM);
+        g2.drawOval(dotX, dotY, dotD, dotD);
+
+        boolean sel = listener.selectedISBNs().contains(state.isbn());
+        if (sel) {
+            g2.setColor(SEL_FILL);
+            g2.fillRoundRect(1, 1, capW - 2, capCardH - 2, ARC, ARC);
+        }
+
+        g2.setStroke(new BasicStroke(sel || h ? 2f : 1f));
+        Color bdr;
+        if (sel) bdr = UITheme.palette().accent();
+        else if (h) bdr = new Color(UITheme.palette().accent().getRed(), UITheme.palette().accent().getGreen(), UITheme.palette().accent().getBlue(), 140);
+        else bdr = new Color(UITheme.palette().borderClr().getRed(), UITheme.palette().borderClr().getGreen(), UITheme.palette().borderClr().getBlue(), 180);
+        g2.setColor(bdr);
+        g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
+
+        g2.dispose();
+    }
+
+    /**
+     * Static mouse adapter — extracted from the inline MouseAdapter
+     * (per the tot.txt MEDIUM finding). Handles hover repaints and
+     * selection / right-click / double-click. The adapter is stateless
+     * beyond the references it captures at construction.
+     */
+    private static final class CardMouseAdapter extends MouseAdapter {
+        private final JPanel card;
+        private final Llibre l;
+        private final long isbn;
+        private final int cardIdx;
+        private final boolean[] hov;
+        private final Listener listener;
+
+        CardMouseAdapter(JPanel card, Llibre l, long isbn, int cardIdx, boolean[] hov, Listener listener) {
+            this.card = card;
+            this.l = l;
+            this.isbn = isbn;
+            this.cardIdx = cardIdx;
+            this.hov = hov;
+            this.listener = listener;
+        }
+
+        @Override public void mouseEntered(MouseEvent e) { hov[0] = true; card.repaint(); }
+        @Override public void mouseExited (MouseEvent e) { hov[0] = false; card.repaint(); }
+
+        @Override public void mousePressed(MouseEvent e) {
+            card.requestFocusInWindow();
+            if (SwingUtilities.isRightMouseButton(e)) {
+                Set<Long> sel = listener.selectedISBNs();
+                if (!sel.contains(isbn)) {
+                    List<Long> prev = new ArrayList<>(sel);
+                    sel.clear();
+                    sel.add(isbn);
+                    listener.onSelectionMutated(prev);
+                }
+                listener.onCardRightClicked(e, collectSelected(listener));
+                return;
+            }
+            boolean ctrl  = (e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK)  != 0;
+            boolean shift = (e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) != 0;
+            Set<Long> sel = listener.selectedISBNs();
+            if (shift && listener.focusedIdx() >= 0) {
+                int lo = Math.min(cardIdx, listener.focusedIdx());
+                int hi = Math.max(cardIdx, listener.focusedIdx());
+                List<Llibre> all = listener.currentLlibres();
+                List<Long> prev = new ArrayList<>(sel);
+                if (!ctrl) sel.clear();
+                java.util.HashSet<Long> changed = new java.util.HashSet<>(prev);
+                for (int i = lo; i <= hi && i < all.size(); i++) {
+                    sel.add(all.get(i).getISBN());
+                    changed.add(all.get(i).getISBN());
+                }
+                listener.onSelectionMutated(changed);
+            } else if (ctrl) {
+                if (sel.contains(isbn)) sel.remove(isbn);
+                else sel.add(isbn);
+                listener.setFocusedIdx(cardIdx);
+                listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
+            } else {
+                List<Long> prev = new ArrayList<>(sel);
+                sel.clear();
+                sel.add(isbn);
+                listener.setFocusedIdx(cardIdx);
+                listener.onSelectionMutated(prev);
+                listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
+            }
+        }
+
+        @Override public void mouseClicked(MouseEvent e) {
+            if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e))
+                listener.onCardClicked(l);
+        }
     }
 
     private static List<Llibre> collectSelected(Listener listener) {

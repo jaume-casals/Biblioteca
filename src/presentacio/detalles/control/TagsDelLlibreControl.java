@@ -33,6 +33,10 @@ public class TagsDelLlibreControl {
     private ArrayList<Tag> tagsCache = new ArrayList<>();
     private ArrayList<Tag> allTagsCache = new ArrayList<>();
     private ArrayList<Tag> displayedTags = new ArrayList<>();
+    /** Cached tag→book-count map. Populated once via {@link #computeTagCounts()},
+     *  then kept in sync incrementally by {@link #bumpCount} / {@link #dropCount}
+     *  on addLlibreToTag / removeLlibreFromTag. Avoids the per-reload 10k-row
+     *  SQL query the tot.txt LOW finding flagged. */
     private Map<Integer, Integer> tagCounts = new HashMap<>();
 
     public TagsDelLlibreControl(TagsDelLlibreDialog vista, Llibre llibre, BibliotecaWriter cd) {
@@ -85,6 +89,7 @@ public class TagsDelLlibreControl {
         }
         try {
             cd.addLlibreToTag(llibre.getISBN(), tag.getId());
+            bumpCount(tag.getId());
             reload();
         } catch (Exception ex) {
             new DialogoError(ex).showErrorMessage();
@@ -97,9 +102,21 @@ public class TagsDelLlibreControl {
         Tag target = displayedTags.get(row);
         try {
             cd.removeLlibreFromTag(llibre.getISBN(), target.getId());
+            dropCount(target.getId());
             reload();
         } catch (Exception ex) {
             new DialogoError(ex).showErrorMessage();
+        }
+    }
+
+    private void bumpCount(int tagId) {
+        tagCounts.merge(tagId, 1, Integer::sum);
+    }
+
+    private void dropCount(int tagId) {
+        tagCounts.merge(tagId, -1, Integer::sum);
+        if (tagCounts.get(tagId) != null && tagCounts.get(tagId) <= 0) {
+            tagCounts.remove(tagId);
         }
     }
 

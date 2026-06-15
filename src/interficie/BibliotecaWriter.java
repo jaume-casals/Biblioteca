@@ -3,9 +3,25 @@ package interficie;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import java.io.File;
 
-public interface BibliotecaWriter extends BibliotecaReader {
+/**
+ * CRUD surface of the library. The three danger-zone admin operations
+ * (backup / restore / clearAll) are declared on the
+ * {@link BibliotecaAdmin} sub-interface; this interface extends it for
+ * backward-compatibility (per the tot.txt MEDIUM finding) but the
+ * canonical way to obtain an admin handle is to require
+ * {@code BibliotecaAdmin} in the constructor — most consumers do not
+ * need those operations and should not have them in scope.
+ *
+ * <p>The "extending BibliotecaAdmin" half of the split is the
+ * compatibility fix: legacy code that calls
+ * {@code cd.backupToSQL(f)} on a {@code BibliotecaWriter} continues to
+ * compile. New code that needs the admin operations should declare the
+ * field as {@code BibliotecaAdmin} (the narrower type) so the type
+ * system flags any caller that does not need to be trusted with
+ * danger-zone operations.
+ */
+public interface BibliotecaWriter extends BibliotecaReader, BibliotecaAdmin {
 
     void addLlibre(Llibre l);
     void deleteLlibre(Llibre l);
@@ -32,8 +48,4 @@ public interface BibliotecaWriter extends BibliotecaReader {
     void retornarLlibre(long isbn);
 
     void setLlibreBlob(long isbn, byte[] blob);
-
-    void clearAll();
-    void backupToSQL(File file);
-    void restoreFromSQL(File file);
 }

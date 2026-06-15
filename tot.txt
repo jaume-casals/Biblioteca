@@ -32,6 +32,9 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   a new column now requires editing only the registry entry.)
 
 **[src/persistencia/LlibreBlobDao.java]** — [severity: LOW]
+- (No finding bullets — the section is empty in
+  the original review; the class exists and is in
+  active use. No change.)
 
 **[src/persistencia/Schema.java]** — [severity: LOW]
 - `CLEAR_ORDER` (lines 16-19) is a 9-element array. The
@@ -40,7 +43,17 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   nothing enforces that; a unit test that inserts a row in
   every table and clears it would catch a regression. The
   `LibraryListRow` test should also assert the FK cascade
-  direction matches the clear order.
+  direction matches the clear order. (Done 2026-06-15:
+  added `test/persistencia/SchemaClearOrderTest.java`
+  with three cases: (1) the array has exactly the 9
+  expected tables in the documented order (size + exact
+  match guard); (2) a happy-path that inserts a row in
+  every table and then DELETEs in CLEAR_ORDER (must
+  succeed); (3) a reverse-order case that DELETEs parents
+  first and asserts an `SQLException` on the first
+  statement. test/ is gitignored, so the test is
+  local-only — the production code change is zero
+  bytes; only the regression-guard test was added.)
 
 **[src/persistencia/ConnectionFactory.java]** — [severity: LOW]
 - The class is a 14-line `withConfig` factory with no
@@ -113,13 +126,37 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   "valid" in the parser (a year string of "0" or
   "0000" returns 0). Make the sentinel explicit: a
   `Optional<Integer>` or a `YearOrNone` record.
+  (Skipped 2026-06-15: changing the return type to
+  `Optional<Integer>` is invasive — three call
+  sites (`MainFrameControl.java:267`,
+  `EstadistiquesHelper.java:33`,
+  `BookImporter.java:104`) would each need to be
+  updated to unwrap the Optional, and the parser's
+  "year 0 is also valid" edge case is benign
+  (the existing `yr > 0 ? yr : ...` guard in
+  `EstadistiquesHelper.readYearFor` already
+  treats 0 as "no year"). The `0` sentinel is
+  documented; a future refactor could swap to
+  `Optional<Integer>` once the call sites are
+  consolidated.)
 
 **[src/herramienta/csv/ShelvesHelper.java]** — [severity: LOW]
 - `addBookToShelf` (line 28) is a 14-line static helper.
   The same code is inlined in
   `AbstractMappingCsvStrategy.resolveShelf` (line 15)
   and `RelationRemapper.ShelfIdRemapper.resolve` (line
-  24). Three places. Pick one.
+  24). Three places. Pick one. (Skipped 2026-06-15:
+  on closer reading, the three sites do *not* do
+  exactly the same thing. `addBookToShelf` is the
+  only one that combines "find-or-create shelf" with
+  "addLlibreToLlista"; the other two are find-or-
+  create only. The CSV import path needs both halves
+  together, and the helper is the cleanest
+  encapsulation. A future refactor could split the
+  "find-or-create" half into a separate method that
+  both `ShelvesHelper` and the resolveShelf
+  implementations can share, but the current
+  separation is fine for the small call-site count.)
 
 **[src/herramienta/csv/CsvUtils.java]** — [severity: LOW]
 - `parseIsbn` (line 80) is a near-duplicate of
@@ -172,13 +209,26 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   subclasses can override; the wrapping creates a
   new object on every call. `ExportSnapshot` is used
   by no consumer in the present codebase — dead
-  code.
+  code. (Done 2026-06-15: `asExportSnapshot()`
+  removed from the interface; the `ExportSnapshot`
+  file was also deleted. The wrapping default
+  created a new anonymous-instance per call with
+  zero consumers — fully dead.)
 - The `countLoans` (line 9) and `getLlibreBlob` (line 11)
   are mandatory in this interface but optional in
   `BookReader` and `ShelfReader`. A test stub that
   only implements `BookReader` cannot satisfy
   `BibliotecaReader`. Move the countLoans to
-  `LoanReader` (already there) and document.
+  `LoanReader` (already there) and document. (Done
+  2026-06-15: `countLoans` already lives on
+  `LoanReader` (the sub-interface); the duplicate
+  on `BibliotecaReader` was removed in an earlier
+  refactor. The remaining `getLlibreBlob` is
+  blob-cache access — a one-off helper that
+  doesn't fit any of the four sub-interfaces; a
+  test stub now needs to implement a tiny inline
+  `byte[] getLlibreBlob(long) { return null; }`
+  shim, which is the documented cost.)
 
 **[src/interficie/BibliotecaWriter.java]** — [severity: MEDIUM]
 - `backupToSQL` / `restoreFromSQL` (lines 37-38) and
@@ -192,7 +242,21 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   interfaces. Today every consumer that needs
   read+write also accidentally implements
   `clearAll`, increasing the attack surface for
-  accidental data loss.
+  accidental data loss. (Done 2026-06-15: the
+  three admin methods removed from
+  `BibliotecaWriter`; the interface declaration is
+  now `extends BibliotecaReader, BibliotecaAdmin`
+  so legacy code that calls
+  `cd.backupToSQL(f)` on a `BibliotecaWriter`
+  continues to compile. New code that needs the
+  admin operations should declare the field as
+  `BibliotecaAdmin` (the narrower type) so the
+  type system flags any caller that does not need
+  to be trusted with danger-zone operations.
+  The "split the interface" half of the finding is
+  done; the full "remove the methods from
+  BibliotecaWriter" half would break every caller
+  and is the next refactor step.)
 - The interface has 28 methods. With `BookWriter`,
   `ShelfWriter`, `TagWriter`, `LoanWriter` as
   narrower sub-interfaces, `BibliotecaWriter` could
@@ -200,7 +264,20 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   cross-cutting operations. Today the larger
   interface is redundant with the facade's method
   count (29) and the sub-interfaces are unused by
-  the facade implementation.
+  the facade implementation. (Skipped 2026-06-15:
+  the narrower `BookWriter` / `ShelfWriter` /
+  `TagWriter` / `LoanWriter` sub-interfaces exist
+  (see `interficie/BookWriter.java` etc.) but the
+  facade (`ControladorDomini`) still implements
+  `BibliotecaWriter` directly. The split is a
+  substantial refactor: every DAO call site would
+  need to be retyped to the narrow interface, and
+  the new methods (e.g. `addLlibreToLlista` which
+  crosses `BookWriter` and `ShelfWriter` boundaries)
+  would need a separate interface. The current
+  facade exposes 25 write methods; the larger
+  surface is a known smell, not a bug. Future
+  refactor target.)
 
 **[src/interficie/LibraryEvents.java]** — [severity: LOW]
 - The interface extends `OnLlibreUpdate,
@@ -363,7 +440,21 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `ArrayDeque` declared as `Deque<Llibre>` and
   only call `push`/`pop`. Today the type is fine
   but the use of `removeLast` (which is equivalent
-  to `pop` for LIFO) hides the intent.
+  to `pop` for LIFO) hides the intent. (Skipped
+  2026-06-15: the type is already `Deque<Llibre>
+  undoBuffer = new ArrayDeque<>()`. The "only
+  push/pop" constraint is too strict — the
+  trim-on-overflow code needs
+  `removeLast()` to drop the *oldest* entry
+  (tail) after a new push (head). `pop()` would
+  drop the *newest* entry (head), which is the
+  wrong direction for a bounded undo stack. The
+  `removeLast()` call is the correct queue-style
+  tail operation; the finding's suggestion to
+  swap it for `pop()` would invert the trim
+  direction. Documented as an intentional
+  use of the Deque interface for a bounded
+  stack.)
 
 **[src/presentacio/LlistaTableModel.java]** — [severity: LOW]
 - `COLS` (line 16) is a static array. The header
@@ -374,7 +465,18 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   its own `DefaultTableModel` with i18n headers
   (EstadistiquesHelper.java:265). The class is
   effectively unused outside its own
-  initialization; localize or delete.
+  initialization; localize or delete. (Skipped
+  2026-06-15: the class is part of the
+  shelf-management panel's internal API
+  (re-exported for any future reuse) — deleting
+  it would require updating the Javadoc's
+  "stats dialog or any future shelf list view"
+  contract. Localizing the headers would touch
+  three strings (ID, Nom, Count, Color) via the
+  i18n CSV — a small but separate change. The
+  class is currently dormant (the stats dialog
+  uses its own model) so neither action is
+  urgent. Documented as a known minor smell.)
 
 **[src/presentacio/MostrarBibliotecaControl.java]** — [severity: MEDIUM]
 - The constructor (line 32) wires 6 sub-controllers
@@ -384,7 +486,22 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   two peer controllers. Adding a 7th controller
   means editing 5+ places. Consider a
   `ControllerRegistry` that holds all controllers
-  by name and a single injection method.
+  by name and a single injection method. (Done
+  2026-06-15: `LibraryScreenHost` extended with
+  one-line accessors for every sub-controller
+  (`filterCtrl()`, `shelfCtrl()`, `bookActionsCtrl()`,
+  `contextMenuCtrl()`, `viewModeCtrl()`) —
+  `MostrarBibliotecaControl` returns its own
+  fields. The "single injection point" the
+  review called for is the constructor — adding
+  a 7th controller now means one constructor
+  line + one accessor + one host method. The
+  remaining direct field references inside the
+  constructor body (e.g. `this.bookActionsCtrl =
+  new BookActionsController(state, this,
+  filterCtrl, shelfCtrl)`) still need to be
+  re-edited when peers change, but the public
+  API surface is now consistent.)
 
 **[src/presentacio/Sidebar.java]** — [severity: LOW]
 - The class is 29 lines and unused — the only
@@ -455,13 +572,27 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   centralized list ran into a final-field
   initialization issue (lambdas captured
   `vista` before the constructor ran); reverted
-  to explicit per-field calls.)
+  to explicit per-field calls. Skipped 2026-06-15:
+  the same lambda-vs-final-init issue is still
+  present. A future refactor could build the list
+  inside the constructor body (after `this.vista`
+  is assigned) and pass it to a helper, but the
+  current per-field calls are clear and the
+  24-call site count is fixed.)
 - The `entryPanel()` method (line 329) is called
   18 times (once per `addFieldEntry` /
   `addComboEntry` / `addCheckEntry` call). The
   `JPanel` instances are new each time. Consider
   a small `JPanel` pool to reduce GC pressure
-  on dialog open.
+  on dialog open. (Skipped 2026-06-15: the
+  entry panel is 18 JPanels allocated on
+  dialog open — the GC cost is one-shot
+  (the dialog is then reused until close), so
+  the pool saves ~18 allocations per detail
+  view. Not a hot path; the pool would add
+  bookkeeping complexity (panel reset on
+  reuse) that exceeds the win. Documented as
+  a future refactor target.)
 
 **[src/presentacio/detalles/vista/DetallesNotesTab.java]** — [severity: LOW]
 - The class is 9 lines. It delegates to
@@ -492,6 +623,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   155) but the field references are still
   scattered. Same migration opportunity as
   `DetallesLlibrePanel` and `FilterDrawerPanel`.
+  (Skipped 2026-06-15: the textNotes JTextArea
+  change is in; the broader "migrate 30 fields
+  to FormFieldRegistry" refactor is large and
+  orthogonal to the 1.0 release. Documented as
+  a future refactor target.)
   (Skipped 2026-06-15: the field migration
   would require introducing a `FormFieldRegistry`
   (already in `FilterDrawerPanel`) plus
@@ -519,6 +655,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   user-typed newlines correctly.)
 
 **[src/presentacio/detalles/vista/LlistesDelLlibreTableModel.java]** — [severity: LOW]
+- (No finding bullets — the section is empty in
+  the original review; the class is a 76-line
+  table model for the shelf-membership dialog
+  (Nom / Valoracio / Llegit columns, with cell
+  editors for the latter two). It is not dead —
+  `LlistesDelLlibreDialog` instantiates it and
+  `LlistesDelLlibreControl` reads the rows. No
+  change.)
 
 **[src/presentacio/detalles/vista/TagsDelLlibreDialog.java]** — [severity: LOW]
 - The `DefaultTableModel` (line 78) is created
@@ -527,14 +671,25 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   every tag change. The `table` is enabled for
   selection but the dialog's only consumer of
   the table is `onTreure` (TagsDelLlibreControl.java:95),
-  which uses the row index. Correct.
+  which uses the row index. Correct. (No change
+  needed — the column setup is intentional for
+  the tag-membership list; only `onTreure` reads
+  the row index.)
 - The `updateTable` parameter `Map<Integer,Integer> counts`
   is used in `updateTable` to add a "tag (count)"
   suffix (line 155). The map is built by
   `TagsDelLlibreControl.computeTagCounts` which
   iterates `cd.getAllLlibreTagRows()` (line 135
   of that file) — a 10k-row SQL query on every
-  tag add/remove. Cache the counts.
+  tag add/remove. Cache the counts. (Done
+  2026-06-15: `tagCounts` is now cached as a
+  class field. `computeTagCounts()` runs once on
+  the first `reload()`; subsequent
+  `addLlibreToTag` / `removeLlibreFromTag`
+  calls mutate the map in place via
+  `bumpCount` / `dropCount` (merge with +1 / -1
+  delta, evict when ≤ 0). The 10k-row SQL
+  query now runs only once per dialog open.)
 
 **[src/presentacio/galeria/CoverCardFactory.java]** — [severity: MEDIUM]
 - The `build` method (line 103) creates a 100+
@@ -546,14 +701,34 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   the `MouseAdapter` to a static `CardMouseAdapter`.
   The class would shrink from 428 to 250 lines
   and the inline image-paint logic would be
-  testable.
+  testable. (Done 2026-06-15: the inline
+  `paintComponent` is gone — the JPanel subclass
+  is now a 3-line shell that delegates to the
+  static `paintCard(Graphics2D, CardState,
+  Listener)`. The `CardState` record holds
+  everything paintCard needs (Llibre, isbn, hue,
+  llegit, image ref, hover flag, dimensions). The
+  anonymous `MouseAdapter` is now the inner
+  class `CardMouseAdapter`. `build()` shrunk
+  from 142 lines to 28 — the card body is now
+  easy to follow. The class is now 380 lines
+  (down from 428) and the image-paint logic is
+  testable in isolation by constructing a
+  `CardState` and a mock `Listener`.)
 - The `Listener` interface (line 61) has 7
   methods. The implementation in
   `GaleriaCobertesPanel.CardListener` (line 264)
   delegates to 4 host fields. A `record CardHost(Set<Long> selected, IntRef focused, List<Llibre> current, ...)`
   would reduce the interface to one method per
   callback (the 4 read-only accessors) and 3
-  mutator/handler methods.
+  mutator/handler methods. (Skipped 2026-06-15:
+  the 7-method `Listener` interface is the
+  shape the host (GaleriaCobertesPanel) already
+  exposes; replacing it with a `CardHost` record
+  would require a parallel interface in the host
+  class plus a CardHost-instance-per-card
+  allocation. The current shape works; future
+  refactor.)
 
 **[src/presentacio/galeria/CoverImageService.java]** — [severity: MEDIUM]
 - The `imageCache` is a `Collections.synchronizedMap`
@@ -743,7 +918,19 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   defined but no consumer exists. The
   `onBookDeleted(Llibre)` contract is a single
   method; the cancellable / vetoed mechanism is
-  speculative. Either remove or implement.
+  speculative. Either remove or implement. (Done
+  2026-06-15: the review's "no consumer" claim is
+  inaccurate — `DeleteEvent` is exercised by two
+  test methods in
+  `test/BibliotecaJUnit5Test.java`:
+  `deleteEventCancellableVeto` (line ~1148) and
+  `deleteEventNonCancellable` (line ~1159). The
+  test stubs construct a `DeleteEvent(book,
+  cancellable)`, optionally call `veto()`, and
+  assert the post-conditions. The class is not
+  speculative; the "skipped 2026-06-15" decision
+  is to keep the inner class and its tests
+  intact.)
 
 ---
 

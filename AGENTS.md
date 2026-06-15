@@ -18,6 +18,27 @@ Trivial exceptions (user explicitly asks to skip planning): one-line typo, comme
 
 The single source of truth for open work is **`tot.txt`** at the repo root. It includes current DONE / OPEN status for every phase, bug, anti-pattern, and cross-cutting item.
 
+## Loop delegation
+
+The `loop` subagent (`.opencode/agent/loop.md`) and the `loop` skill (`.opencode/skill/loop/SKILL.md`) exist for autonomous, multi-step, verify-driven work. The agent already knows the project rules (MVC layers, no-delete, schema migrations, `make test` bar). Delegate to it instead of doing the work inline.
+
+**Delegate when the task is:**
+- Multi-step — 3+ file edits, a chain of fix-and-verify cycles, or a refactor across layers.
+- Autonomous — no need to re-prompt the user between steps.
+- Verification-driven — `make test` (or a focused subset) is the success signal.
+
+**Do not delegate when:**
+- It's a single, small edit or a one-line fix — do it inline.
+- The plan needs user approval first — get the plan, then maybe delegate.
+- The user wants a read-only answer — use the `explore` agent or the `loop` subagent in `research` mode.
+- The task is "loop" / "iterate until" / "fix until green" / "make tests pass" — these are explicit triggers; delegate immediately.
+
+**How to invoke:** call the task tool with `subagent_type: "loop"` and the natural-language task as the prompt. The agent infers the mode (`goal` / `build` / `research`); be explicit if ambiguous — e.g. *"loop in build mode: run `make test`, fix any failures, repeat until green."*
+
+**Trust the hard stops:** the agent ends with exactly one of `DONE: …`, `BLOCKED: …`, `STUCK: …`. `DONE` is authoritative only if the report shows verification (e.g. `make test` output). `BLOCKED` and `STUCK` need a follow-up decision from you. Never accept "I think it works".
+
+For very large refactors, split into multiple `loop` calls by module or layer rather than one huge run — a single call can exhaust context.
+
 ## Build & Test Commands
 
 The Makefile is the source of truth on Linux/macOS. On Windows, use the
