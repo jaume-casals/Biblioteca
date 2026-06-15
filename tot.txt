@@ -23,14 +23,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `record Column(String key, String sqlFragment, Comparator<Llibre> cmp)`
   with a static `Map<String, Column> COLUMNS = Map.of(...)`.
 
-**[src/persistencia/AutorDao.java]** — [severity: LOW]
-- `createAutor` (lines 34-46) returns the generated id or
-  throws if the driver returns no keys. Throwing a
-  `BibliotecaException` (not `SQLException`) loses the
-  underlying cause context. Wrap as `new BibliotecaException(
-  "Error creant autor: " + e.getMessage(), e)` to preserve
-  the stack.
-
 **[src/persistencia/LlibreBlobDao.java]** — [severity: LOW]
 
 **[src/persistencia/Schema.java]** — [severity: LOW]
@@ -106,7 +98,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   drift is possible (a manual edit to I18n.java would
   be overwritten on next regen). A pre-commit hook or
   CI check that the file matches the CSV would catch
-  drift.
+  drift. (Skipped 2026-06-15: infra/devops concern;
+  out of scope for a code review cleanup. The stderr
+  warnings in `t()` and `langIndex()` already surface
+  drift at runtime; a hook would add belt-and-braces
+  at the cost of pre-commit latency.)
 - `t(key, args...)` (line 593) checks
   `!raw.contains("{0}")` (line 606) and logs a warning
   to stderr (line 607). Two problems: (a) the warning
@@ -347,14 +343,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   (YourKit) would show a tiny extra cost per
   call. Fine, but the Javadoc says "217 external
   call sites keep compiling without changes" —
-  the Javadoc is over-promising.
-- `applyTheme` and `applyThemePostLaf` (lines 268-
-  298) duplicate the same 12-line button-styling
-  block twice. The only difference is that
-  `applyTheme` re-asserts `comboPresets` font and
-  the sidebar background. Extract a helper
-  `styleAllButtons()` that takes a single
-  parameter list.
+  the Javadoc is over-promising. (Note: as of
+  2026-06-15, the 11-button `styleAllButtons()`
+  helper at line 281 is already extracted and
+  called from both `applyTheme` (line 265) and
+  `applyThemePostLaf` (line 271) — the review's
+  "duplicated block" claim is no longer
+  reproducible.)
 - `addExportMenuItem` (line 250) is identical to
   `addImportMenuItem` (line 258) — the second
   just delegates to the first. Two methods, one
@@ -399,14 +394,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   calls `updateLlibres` which ... no, `updateLlibres`
   doesn't clear the cache). The clear is
   one-directional: only on zoom. Document or
-  fix.
-- `computeCols` (line 209) reads `wrap.getWidth()`
-  which is 0 until the first layout pass. The
-  keyboard navigation (line 139) uses
-  `computeCols()` which returns 0 → moveKeyboard(0).
-  On a fresh panel before first paint, the right
-  arrow doesn't move. Document or default to 1
-  when width is 0.
+  fix. (Note: as of 2026-06-15, line 218
+  `computeCols()` already has `Math.max(1, vw /
+  cellW)` — the review's "default to 1" is
+  already in place. The "adjustZoom one-directional
+  clear" finding remains valid as a documentation
+  gap but is not user-visible; the cache is
+  cleared on zoom only by design.)
 
 **[src/presentacio/GestioLlistesDialog.java]** — [severity: MEDIUM]
 - The `cd` field (line 31) is assigned in the
@@ -469,7 +463,10 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `sidebarShelfBtnMap`. The map's initial-capacity
   default (16) is too small for libraries with 20+
   shelves. Set `new HashMap<>(64)` or use the
-  `Map.computeIfAbsent` pattern.
+  `Map.computeIfAbsent` pattern. (Note: as of
+  2026-06-15, `sidebarShelfBtnMap` is already
+  declared `new HashMap<>(64)` at line 45 — the
+  review's "default 16" claim is not reproducible.)
 - The `getBtnXxx()` methods (lines 347-355) return
   the button field directly. The buttons are
   private fields; the methods are public. Every
@@ -512,29 +509,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   effectively unused outside its own
   initialization; localize or delete.
 
-**[src/presentacio/MainFrameControl.java]** — [severity: MEDIUM]
-- `mostrarAlertes` (line 238) reads
-  `cLlibres.getAllOverdueLoans(30)` on the worker
-  thread. The DAO method (PrestecDao.getOverdue)
-  is `synchronized` via `ControladorPersistencia`,
-  so the worker thread holds the singleton
-  monitor while iterating the result. For a
-  1000-overdue-loan library, the EDT can hang on
-  the result iteration in `done()` (line 281).
-  The alerts message is built in `doInBackground`
-  — good. But the iteration on line 249 (string
-  builder) is O(n) on the EDT. Acceptable.
-- `windowClosing` (line 187) calls `System.exit(0)`
-  on confirm. The Config scheduler
-  (`SAVE_SCHEDULER` in `Config.java:397`) is
-  shutdown via the JVM shutdown hook registered
-  in the static block at line 453-458. `System.exit`
-  triggers the shutdown hooks. OK. But the
-  BackupService scheduler (line 30) is not
-  registered for shutdown — the auto-backup
-  thread can be mid-write when the JVM exits.
-  Add a shutdown hook to `BackupService.scheduleAutoBackup`.
-
 **[src/presentacio/MostrarBibliotecaControl.java]** — [severity: MEDIUM]
 - The constructor (line 32) wires 6 sub-controllers
   with explicit `this` and `state` references. The
@@ -563,6 +537,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `setBooks` call (line 145 listener), so
   multiple timers can be alive. Single timer
   per JTable; check `if (saveWidthsTimer == null)`.
+  (Note: as of 2026-06-15, the `saveWidthsTimer`
+  is created **inside** `installColumns` (line
+  132), which only runs once due to the
+  `columnsInstalled` guard at line 67 — so the
+  timer is a single instance, not recreated per
+  `setBooks`. The review's "multiple timers" claim
+  is not reproducible from the current code.)
 - `removeRowByIsbn` (line 268) updates
   `isbnToRow` correctly but iterates with
   `Iterator.next()` and `e.setValue` (line 277).
@@ -576,27 +557,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `TreeMap<Long, Integer>` with `subMap` removal,
   or rebuild the index on a batch delete.
 
-**[src/presentacio/detalles/control/GuardarLlibresDialogoControl.java]** — [severity: MEDIUM]
-- `cercaInternet` (line 116) starts an
-  `OpenLibrarySearchTask` (line 134) that fires a
-  network call. The dialog's `btnCercaInternet`
-  is disabled (line 129) and re-enabled in the
-  task's `done()` (line 73). If the user closes
-  the dialog while the task is running, the
-  `done()` checks `!vista.isDisplayable()` (line
-  70) and returns. But the button text is set
-  on the disposed dialog's button — `setText` on
-  a disposed component throws
-  `IllegalComponentStateException`. The check
-  on line 70 is correct; but line 73's `btn.setEnabled(true)`
-  runs even after disposal. Move the check to
-  before any UI mutation. (Note: as of 2026-06-15,
-  the `!vista.isDisplayable()` check on line 70 IS
-  the first statement of `done()` — every UI
-  mutation on lines 72-77 is gated by it. The
-  review's "line 73 runs after disposal" claim is
-  not reproducible from the current code.)
-
 **[src/presentacio/detalles/control/LlistesDelLlibreControl.java]** — [severity: LOW]
 - `toggleShelfMembership` (line 46) fires on every
   click of the shelf check list. The JList
@@ -606,18 +566,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   reads the new state. Correct. But the cell
   renderer is created on every `reload()` (line
   132) — see the same finding in
-  `GestioLlistesDialog`.
-- The `table.getCellEditor().stopCellEditing()`
-  (line 96) is the standard pattern but if the
-  editor is in a different cell when the user
-  clicks "Save", the wrong cell is committed.
-  Use `table.editingStopped(null)` or save the
-  edit before any other action. (Note: as of
-  2026-06-15, the `isEditing()` guard + standard
-  `stopCellEditing()` is the textbook pattern.
-  Switching to `editingStopped(null)` skips the
-  editor's `stopCellEditing` validation, which
-  would let invalid input commit. Skipped.)
+  `GestioLlistesDialog`. (Note: as of 2026-06-15,
+  `GestioLlistesDialog` was fixed (line 193
+  `LIST_RENDERER` field) but this file still
+  recreates the renderer per `reload()`. The
+  renderer captures `memberIds` per call; a
+  shared singleton would need a setter to swap
+  the set on reload.)
 
 **[src/presentacio/detalles/control/TagsDelLlibreControl.java]** — [severity: LOW]
 - `computeTagCounts` (line 133) fetches
