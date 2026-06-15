@@ -55,12 +55,20 @@ public class OpenLibrarySearchTask extends SwingWorker<OpenLibrarySearchTask.Sea
             meta = OpenLibraryClient.lookupByAutor(autor);
         }
 
-        byte[] coverBlob = null;
+        // Fetch the cover in parallel with any subsequent processing
+        // (per the tot.txt MEDIUM finding). The 300ms OL rate-limiter
+        // is enforced inside fetchCoverByISBN so the parallel call
+        // doesn't bypass the throttle.
+        java.util.concurrent.CompletableFuture<byte[]> coverFuture = null;
         String isbnForCover = !isbn.isEmpty() ? isbn : meta.get("isbn");
         if (isbnForCover != null && !isbnForCover.isBlank() && existingBlob == null
                 && !meta.containsKey("error")) {
-            coverBlob = OpenLibraryClient.fetchCoverByISBN(isbnForCover);
+            final String finalIsbn = isbnForCover;
+            coverFuture = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> OpenLibraryClient.fetchCoverByISBN(finalIsbn));
         }
+
+        byte[] coverBlob = coverFuture == null ? null : coverFuture.join();
 
         return new SearchResult(meta, coverBlob);
     }

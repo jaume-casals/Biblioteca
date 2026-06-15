@@ -18,7 +18,10 @@ import javax.imageio.ImageIO;
 public final class CoverService {
     private static final int MAX_PARALLEL = 6;
     private static final int L1_MAX = 200;
-    private static final ExecutorService POOL = Executors.newFixedThreadPool(MAX_PARALLEL, r -> {
+    /** Shared cover-fetch pool. Visible to other consumers (e.g.
+     *  ExportController.fetchMissingCovers) so they don't spin
+     *  up a second pool for the same OL endpoint. */
+    public static final ExecutorService POOL = Executors.newFixedThreadPool(MAX_PARALLEL, r -> {
         Thread t = new Thread(r, "cover-fetch");
         t.setDaemon(true);
         return t;

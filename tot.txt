@@ -22,10 +22,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `ISBN_COMPARATOR` patterns. Consider a single
   `record Column(String key, String sqlFragment, Comparator<Llibre> cmp)`
   with a static `Map<String, Column> COLUMNS = Map.of(...)`.
-- `comparator(String)` (lines 69-71) returns the comparator or
-  null. The call site in `BookDelegate.applySort` (line 232) maps
-  null to `ISBN_COMPARATOR`. The fallback should live in
-  `SortSpec` to keep the policy in one place.
 
 **[src/persistencia/AutorDao.java]** — [severity: LOW]
 - `createAutor` (lines 34-46) returns the generated id or
@@ -36,13 +32,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   the stack.
 
 **[src/persistencia/LlibreBlobDao.java]** — [severity: LOW]
-- `loadHeavyFields` (lines 39-53) calls `target.setDescripcio`
-  and `target.setNotes` directly. `Llibre.setNotes` normalizes
-  null → "" (line 211 of Llibre.java), but `setDescripcio`
-  does not (line 169). Result: `descripcio` is nullable but
-  `notes` is "" or non-empty. The normalization in `setNotes`
-  makes the API contract asymmetric. Either normalize in
-  both or document the asymmetry.
 
 **[src/persistencia/Schema.java]** — [severity: LOW]
 - `CLEAR_ORDER` (lines 16-19) is a 9-element array. The
@@ -83,7 +72,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   to one, the other is forgotten. Centralize in
   `LlibreFieldBindings` (it already has `forInsert`) and
   generate the SQL via `String.format("INSERT INTO llibre
-  (%s) VALUES (%s);", colList, placeholders)`.
+  (%s) VALUES (%s);", colList, placeholders)`. (Done
+  2026-06-15: `LlibreFieldBindings` now exposes
+  `COLUMNS_INSERT` + `forInsert()` as the single source of
+  truth; `writeLlibreINSERT` iterates them and formats
+  each value via `formatValue`. The `imatge_blob` column
+  is intentionally excluded from the SQL — covers are
+  dropped from the dump per the class Javadoc. Adding a
+  new column now touches only `LlibreFieldBindings`.)
 - `backupToSQL` (lines 86-119) opens a `PrintWriter` over
   a `FileWriter` in a try-with-resources — good. The
   inner `try` blocks inside the for-loops (none here, but
@@ -118,11 +114,18 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   clutters the user's terminal; (b) the check is at
   position 0 only; a key with `{1}` but no `{0}` is
   not flagged. Either check all positions or remove
-  the check.
+  the check. (Done 2026-06-15: now uses the
+  highest-arg-position marker, so `{1}` without `{0}`
+  is also flagged. Stderr warning kept; the auto-gen
+  pipeline intentionally surfaces drift.)
 - `langIndex` (line 622) maps "es"→1, "en"→2, "ca"→0.
   Anything else returns 0 (ca). Adding a new language
   (e.g. "fr") silently falls back to ca. Throw or
-  log a warning for unknown codes.
+  log a warning for unknown codes. (Done 2026-06-15:
+  non-null/non-"ca" codes log a warning to stderr
+  and fall back to ca. Same pattern as the missing-
+  key warning — the I18n class is auto-gen, and the
+  warning is the documented drift signal.)
 
 **[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
 - `toIsbn13` (line 8) returns the original `digits`
@@ -132,7 +135,11 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   input. The fallback is silent — the user sees a
   validation error with the wrong field. Either throw
   with a clear message or return null and let the
-  caller decide.
+  caller decide. (Done 2026-06-15: returns null for
+  any length that is not 10 (with X) or 13. The
+  caller now surfaces a clear validation error.)
+  Tests in test/herramienta/Isbn13NormalizerTest.java
+  were updated to match the new contract.
 
 **[src/herramienta/Isbn13Normalizer.java]** — [severity: LOW]
 - `toIsbn13` line 12: `trimmed.replaceAll("[^0-9X]", "")` —
@@ -143,7 +150,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   result is "ISBN9780" — note the "ISBN" prefix is
   stripped silently. A user pasting an ISBN from a
   PDF with a space-separated prefix would see the
-  wrong number.
+  wrong number. (Done 2026-06-15: `toIsbn13` now
+  uppercases the trimmed input first, so
+  "019853110x" → "019853110X" → valid ISBN-13
+  "9780198531104". The case-sensitivity of 'X' is
+  now uniform. Test for `isbn10LowercaseX` updated
+  to expect the new valid-ISBN-13 output.)
 
 **[src/herramienta/DateUtils.java]** — [severity: LOW]
 - `parseYear` (line 7) returns 0 for unparseable
@@ -282,6 +294,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `buildReadingChart` line 57 and
   `buildReadingPacePanel` line 163) — three times
   in `mostrarEstadistiques`. Cache the result.
+  (Done 2026-06-15: removed the 1-arg `buildReadingChart(List)`
+  and 1-arg `buildReadingPacePanel(List)` overloads
+  that internally called `booksByReadYear(books)`.
+  The 2-arg overloads now require the pre-computed
+  `Map<Integer, Long>` and the only call site
+  (`BookActionsController.mostrarEstadistiques`)
+  already uses the cached `globalStats.booksByReadYear`.
+  Result: `booksByReadYear` runs once per stats dialog.)
 
 **[src/presentacio/ExportController.java]** — [severity: MEDIUM]
 - `fetchMissingCovers` (line 115) submits cover
@@ -293,6 +313,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   two pools. Combine with `CoverService.POOL` (but
   the methods are different: one saves to DB, the
   other caches in-memory). Document the split.
+  (Done 2026-06-15: `COVER_POOL` is now an alias
+  for `CoverService.POOL` (the public static
+  `POOL` field in `CoverService.java`). The OL
+  rate-limiter inside `fetchCoverByISBN` enforces
+  the 300ms throttle across both consumers, so
+  combining is safe. Same 6-thread pool serves
+  both the "fetch + cache + persist" path and the
+  "fetch + preview" export dialog.)
 - The progress bar (line 128) increments `done`
   per cover completion, but the `fetched` counter
   (line 142) only increments if the cover is
@@ -301,7 +329,10 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   no cover on OpenLibrary (the common case), the
   user sees "0 of 10" and wonders why. Improve the
   message: "X covers downloaded, Y had no
-  cover available".
+  cover available". (Done 2026-06-15: tracks
+  `missingCover` counter separately and shows
+  the new `dlg_fetch_portades_done_partial` i18n
+  key when at least one cover was unavailable.)
 
 **[src/presentacio/FilterDrawerPanel.java]** — [severity: MEDIUM]
 - The class Javadoc (lines 30-37) claims 32 hand-
@@ -338,12 +369,22 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   every caller. Either (a) make the class generic
   with `<T>`, or (b) provide typed accessors per
   kind (`textField`, `checkBox`, etc.) and remove
-  the raw-typed one.
+  the raw-typed one. (Note: as of 2026-06-15, the
+  raw type is retained for backward compat — the
+  60+ callers in `FilterDrawerPanel` declare
+  `JComboBox<String>` or `JComboBox<Object>` locally
+  and the wildcard return type does not fit. Typed
+  variant would require per-component T knowledge.)
 - `register(String, JComponent)` (line 133) is
   documented as "Legacy API preserved for the
   25-line skeleton callers." Search the codebase
   for callers — there are none outside the
-  presenter. Dead code.
+  presenter. Dead code. (Done 2026-06-15: marked
+  `@Deprecated`; only one caller remains
+  — `DetallesLlibrePanel` line 295 — but its
+  fieldRegistry was removed in the same round, so
+  the method is now genuinely dead and can be
+  removed in a follow-up.)
 
 **[src/presentacio/GaleriaCobertesPanel.java]** — [severity: MEDIUM]
 - `adjustZoom` (line 182) calls
@@ -390,7 +431,9 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   defaults to `#3498DB` when null. The default
   is also used by `ColorSwatchPicker.chooseHex`
   (line 25) when `initial` is null. Document the
-  shared default.
+  shared default. (Done 2026-06-15: lifted to
+  `ColorSwatchPicker.DEFAULT_HEX` constant; both
+  call sites now reference the constant.)
 
 **[src/presentacio/ImportController.java]** — [severity: MEDIUM]
 - `escanejarISBN` (line 119) starts a `Thread`
@@ -411,6 +454,14 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   duplicate ISBN is rejected by
   `cd.addLlibre(l)`. The error message is generic.
   Check existence before opening the dialog.
+  (Done 2026-06-15: pre-check via
+  `cd.existsLlibre(parsedIsbn)`; if true, a
+  confirm dialog using the existing
+  `dlg_isbn_exists` key lets the user force-open
+  the dialog or abort. Non-numeric input also
+  surfaces a clear `val_isbn_invalid` warning
+  instead of falling through to a confusing
+  `Long.parseLong` exception.)
 
 **[src/presentacio/LeftSidebarPanel.java]** — [severity: MEDIUM]
 - `rebuildSidebarShelves` (line 196) iterates the
@@ -577,7 +628,13 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   (tag → number of books with that tag). The
   map is rebuilt from scratch each time —
   cache the result and invalidate on
-  addLlibreToTag / removeLlibreFromTag.
+  addLlibreToTag / removeLlibreFromTag. (Note:
+  `reload()` runs only on dialog open / add /
+  remove, so the cache miss rate is low. Caching
+  across reloads would require plumbing through
+  `addLlibreToTag` / `removeLlibreFromTag` events
+  to invalidate — the Plumbing cost outweighs the
+  one-time 10k-row query. Skipped.)
 
 **[src/presentacio/detalles/control/OpenLibrarySearchTask.java]** — [severity: MEDIUM]
 - `doInBackground` (line 48) calls three
@@ -588,7 +645,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   for 600ms minimum even on a fast OL response.
   Make the cover fetch optional and parallel:
   the user asked for metadata, the cover is a
-  bonus.
+  bonus. (Done 2026-06-15: cover fetch is now
+  offloaded to a `CompletableFuture.supplyAsync`
+  and `join()`ed at the end. The OL rate-limiter
+  inside `fetchCoverByISBN` still throttles
+  correctly — the second call waits for the
+  shared lock, not for the metadata response.)
 
 **[src/presentacio/detalles/vista/DetallesLlibrePanel.java]** — [severity: MEDIUM]
 - The class has 26 hand-declared Swing component
@@ -601,11 +663,24 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   and `linkLabel` and `register` are called, but
   no caller queries the registry). Either
   migrate the fields or remove the unused
-  registry.
+  registry. (Done 2026-06-15: unused `fieldRegistry`
+  field, its `register` call, and its `getFieldRegistry`
+  getter removed. The `linkLabel` call's underlying
+  Swing behavior — `JLabel.setLabelFor(component)` —
+  is preserved via a direct call.)
 - `setEditMode` (line 410) enables/disables 22
   fields. The list of fields and their enabled
   state is implicit. Add a `private static final
   List<JTextField> EDITABLE_FIELDS` to centralize.
+  (Note: as of 2026-06-15, the line numbers
+  shifted — `setEditMode` is now in
+  `DetallesLlibrePanelControl.java` (was 454, now
+  a 1-line method at the bottom). The 24 fields
+  are still hardcoded. The lambdas-based
+  centralized list ran into a final-field
+  initialization issue (lambdas captured
+  `vista` before the constructor ran); reverted
+  to explicit per-field calls.)
 - The `entryPanel()` method (line 329) is called
   18 times (once per `addFieldEntry` /
   `addComboEntry` / `addCheckEntry` call). The
@@ -720,7 +795,9 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   correct, but the Javadoc of the editor
   should mention that only `llegit` is
   persisted and the rest is read-only for
-  this path.
+  this path. (Done 2026-06-15: class Javadoc
+  added documenting the light-row fetch +
+  `llegit`-only persistence contract.)
 
 **[src/presentacio/renderers/SearchHighlightRenderer.java]** — [severity: MEDIUM]
 - The `setSearchText` (line 21) is called on

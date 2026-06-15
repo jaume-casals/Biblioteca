@@ -124,6 +124,26 @@ public class ImportController {
         isbn = isbn.trim();
         if (isbn.isEmpty()) return;
 
+        // Pre-check for duplicates before opening the dialog so the
+        // user gets an immediate, field-specific message rather than
+        // a generic "addLlibre" error after typing all the metadata
+        // (per the tot.txt MEDIUM finding). The user can still
+        // confirm and force the dialog open by clicking "Yes".
+        long parsedIsbn;
+        try { parsedIsbn = Long.parseLong(isbn); }
+        catch (NumberFormatException nfe) {
+            JOptionPane.showMessageDialog(parent, I18n.t("val_isbn_invalid"),
+                I18n.t("dlg_duplicate_title"), JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (cd.existsLlibre(parsedIsbn)) {
+            int ans = JOptionPane.showConfirmDialog(parent,
+                I18n.t("dlg_isbn_exists", parsedIsbn),
+                I18n.t("dlg_duplicate_title"),
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (ans != JOptionPane.YES_OPTION) return;
+        }
+
         GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
         new GuardarLlibresDialogoControl(dialeg, null, cd);
         dialeg.getTextISBN().setText(isbn);

@@ -53,10 +53,6 @@ public class EstadistiquesHelper {
         return new BookStats(total, llegits, avgVal, avgPreu, booksByReadYear(books));
     }
 
-    public static javax.swing.JPanel buildReadingChart(List<Llibre> books) {
-        return buildReadingChart(booksByReadYear(books));
-    }
-
     static javax.swing.JPanel buildReadingChart(java.util.Map<Integer, Long> perYear) {
         java.awt.Font chartFont9 = herramienta.UITheme.fontBase().deriveFont(9f);
         return new javax.swing.JPanel() {
@@ -157,10 +153,6 @@ public class EstadistiquesHelper {
                 panel.add(lbl);
             });
         return panel;
-    }
-
-    public static javax.swing.JPanel buildReadingPacePanel(List<Llibre> books) {
-        return buildReadingPacePanel(books, booksByReadYear(books));
     }
 
     static javax.swing.JPanel buildReadingPacePanel(List<Llibre> books, java.util.Map<Integer, Long> byYear) {

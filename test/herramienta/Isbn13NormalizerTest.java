@@ -38,13 +38,14 @@ class Isbn13NormalizerTest {
     }
 
     @Test
-    @DisplayName("toIsbn13: ISBN-10 with lowercase x is stripped (regex is case-sensitive on 'X')")
+    @DisplayName("toIsbn13: ISBN-10 with lowercase x is uppercased before stripping (tot.txt LOW finding)")
     void isbn10LowercaseX() {
-        // The pattern [^0-9X] in the source keeps only uppercase X; lowercase x is removed.
-        // So '019853110x' becomes '019853110' (9 digits) which is not a
-        // valid 10- or 13-digit ISBN, so the normalizer returns null
-        // (caller must reject the input) — per the tot.txt LOW finding.
-        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isNull();
+        // The pattern [^0-9X] is case-sensitive; without the
+        // uppercase prefix, lowercase 'x' was silently dropped and
+        // the normalizer returned a 9-digit string. Now
+        // '019853110x' is uppercased first → '019853110X' → 10 digits
+        // with X check → ISBN-13 '9780198531104'.
+        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isEqualTo("9780198531104");
     }
 
     @Test

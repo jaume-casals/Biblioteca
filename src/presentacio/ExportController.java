@@ -16,17 +16,15 @@ import interficie.BibliotecaWriter;
 
 public class ExportController {
 
-    /** Reused cover-fetch pool — guard against concurrent invocations of
-     *  {@link #fetchMissingCovers(JButton)} (the button is also disabled). */
+    /** Reused cover-fetch executor — delegates to {@link herramienta.CoverService#POOL}
+     *  instead of a separate 8-thread pool. Both code paths call
+     *  {@code OpenLibraryClient.fetchCoverByISBN} and the 300ms rate
+     *  limiter enforces the throttle across both consumers. The
+     *  concurrent-invocation guard around
+     *  {@link #fetchMissingCovers(JButton)} still prevents the user
+     *  from double-clicking the button (per the tot.txt MEDIUM finding). */
     private static final java.util.concurrent.ExecutorService COVER_POOL =
-        java.util.concurrent.Executors.newFixedThreadPool(8, new java.util.concurrent.ThreadFactory() {
-            private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger();
-            @Override public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "cover-fetch-" + counter.incrementAndGet());
-                t.setDaemon(true);
-                return t;
-            }
-        });
+        herramienta.CoverService.POOL;
     private static final java.util.concurrent.atomic.AtomicBoolean COVER_FETCH_RUNNING =
         new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -140,6 +138,7 @@ public class ExportController {
         if (fetchBtn != null) fetchBtn.setEnabled(false);
         java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger(0);
         java.util.concurrent.atomic.AtomicInteger fetched = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger missingCover = new java.util.concurrent.atomic.AtomicInteger(0);
         try {
             for (Llibre l : missing) {
                 COVER_POOL.submit(() -> {
@@ -148,6 +147,8 @@ public class ExportController {
                         if (blob != null && blob.length > 0) {
                             cd.setLlibreBlob(l.getISBN(), blob);
                             fetched.incrementAndGet();
+                        } else {
+                            missingCover.incrementAndGet();
                         }
                     } catch (Exception ignored) {} finally {
                         int d = done.incrementAndGet();
@@ -157,9 +158,21 @@ public class ExportController {
                             if (d >= total) {
                                 dlg.dispose();
                                 if (fetchBtn != null) fetchBtn.setEnabled(true);
-                                JOptionPane.showMessageDialog(parent,
-                                    I18n.t("dlg_fetch_portades_done", fetched.get(), total),
-                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                // Distinguish "downloaded" from "had no
+                                // cover on OpenLibrary" — the old
+                                // message read "0 of 10" which the
+                                // user misread as a failure (per the
+                                // tot.txt MEDIUM finding).
+                                int noCover = missingCover.get();
+                                if (noCover == 0) {
+                                    JOptionPane.showMessageDialog(parent,
+                                        I18n.t("dlg_fetch_portades_done", fetched.get(), total),
+                                        I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                } else {
+                                    JOptionPane.showMessageDialog(parent,
+                                        I18n.t("dlg_fetch_portades_done_partial", fetched.get(), total, noCover),
+                                        I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                }
                                 onDataChanged.run();
                                 COVER_FETCH_RUNNING.set(false);
                             }

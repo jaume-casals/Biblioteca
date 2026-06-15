@@ -139,38 +139,51 @@ public class BackupService {
     }
 
     private void writeLlibreINSERT(java.io.PrintWriter pw, Llibre l) {
-        StringBuilder sb = new StringBuilder(512);
-        sb.append("INSERT INTO llibre (`ISBN`,`nom`,`any`,`descripcio`,`valoracio`,`preu`,`llegit`,`imatge`,`notes`,")
-          .append("`pagines`,`pagines_llegides`,`editorial`,`serie`,`volum`,`data_compra`,`data_lectura`,`idioma`,`format`,")
-          .append("`desitjat`,`pais_origen`,`estat`,`exemplars`,`llengua_original`,`nom_ca`,`nom_es`,`nom_en`) VALUES (")
-          .append(l.getISBN()).append(',')
-          .append(sqlNullable(l.getNom())).append(',')
-          .append(l.getAny() != null ? l.getAny() : 0).append(',')
-          .append(sqlNullable(l.getDescripcio())).append(',')
-          .append(String.format(java.util.Locale.ROOT, "%.4f", l.getValoracio() != null ? l.getValoracio() : 0.0)).append(',')
-          .append(String.format(java.util.Locale.ROOT, "%.4f", l.getPreu() != null ? l.getPreu() : 0.0)).append(',')
-          .append(Boolean.TRUE.equals(l.getLlegit())).append(',')
-          .append(sqlNullable(l.getImatge())).append(',')
-          .append(sqlNullable(l.getNotes())).append(',')
-          .append(l.getPagines()).append(',')
-          .append(l.getPaginesLlegides()).append(',')
-          .append(sqlNullable(l.getEditorial())).append(',')
-          .append(sqlNullable(l.getSerie())).append(',')
-          .append(l.getVolum()).append(',')
-          .append(sqlNullable(l.getDataCompra())).append(',')
-          .append(sqlNullable(l.getDataLectura())).append(',')
-          .append(sqlNullable(l.getIdioma())).append(',')
-          .append(sqlNullable(l.getFormat())).append(',')
-          .append(l.isDesitjat()).append(',')
-          .append(sqlNullable(l.getPaisOrigen())).append(',')
-          .append(sqlNullable(l.getEstat())).append(',')
-          .append(l.getExemplars()).append(',')
-          .append(sqlNullable(l.getLlenguaOriginal())).append(',')
-          .append(sqlNullable(l.getNomCa())).append(',')
-          .append(sqlNullable(l.getNomEs())).append(',')
-          .append(sqlNullable(l.getNomEn()))
-          .append(");\n");
+        // The 27 column list + the 27 value list both come from
+        // LlibreFieldBindings (the single source of truth for the
+        // Llibre INSERT shape). Adding a new column now requires
+        // touching only LlibreFieldBindings.COLUMNS_INSERT +
+        // forInsert() (per the tot.txt MEDIUM finding on column-
+        // list drift). The literal `imatge_blob` column is
+        // excluded here because the BackupService does NOT embed
+        // cover bytes in the SQL dump (see class Javadoc).
+        Object[] vals = persistencia.LlibreFieldBindings.forInsert(l);
+        String[] cols = persistencia.LlibreFieldBindings.COLUMNS_INSERT;
+        // Find the imatge_blob index in COLUMNS_INSERT and skip it
+        // for the SQL output, but keep the corresponding value in
+        // place — the dump intentionally drops the blob.
+        StringBuilder sb = new StringBuilder(640);
+        sb.append("INSERT INTO llibre (");
+        boolean first = true;
+        for (String c : cols) {
+            if ("imatge_blob".equals(c)) continue;
+            if (!first) sb.append(',');
+            sb.append('`').append(c).append('`');
+            first = false;
+        }
+        sb.append(") VALUES (");
+        first = true;
+        for (int i = 0; i < cols.length; i++) {
+            if ("imatge_blob".equals(cols[i])) continue;
+            if (!first) sb.append(',');
+            sb.append(formatValue(vals[i]));
+            first = false;
+        }
+        sb.append(");\n");
         pw.print(sb);
+    }
+
+    private static String formatValue(Object v) {
+        if (v == null) return "NULL";
+        if (v instanceof persistencia.LlibreFieldBindings.Null) return "NULL";
+        if (v instanceof Boolean b) return b.toString();
+        if (v instanceof Integer i) return i.toString();
+        if (v instanceof Long l) return l.toString();
+        if (v instanceof Double d) return String.format(java.util.Locale.ROOT, "%.4f", d);
+        if (v instanceof java.sql.Date dt) return "'" + dt.toString() + "'";
+        if (v instanceof byte[] bytes) return "NULL /* " + bytes.length + " bytes dropped */";
+        // String
+        return sqlNullable(v.toString());
     }
 
     private void writeAutorINSERT(java.io.PrintWriter pw, int id, String nom) {

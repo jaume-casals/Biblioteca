@@ -159,8 +159,11 @@ public class GestioLlistesDialog extends JDialog {
     private void onColorLlista() {
         Llista sel = jList.getSelectedValue();
         if (sel == null) return;
+        // Default to the swatch picker's shared blue when the shelf
+        // has no color yet (lifted to ColorSwatchPicker.DEFAULT_HEX
+        // per the tot.txt MEDIUM finding on the shared default).
         java.awt.Color initial = sel.getColor() != null
-            ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode("#3498DB");
+            ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode(herramienta.ColorSwatchPicker.DEFAULT_HEX);
         String hex = herramienta.ColorSwatchPicker.chooseHex(this, initial, "dlg_escull_color_title");
         if (hex == null) return;
         try {

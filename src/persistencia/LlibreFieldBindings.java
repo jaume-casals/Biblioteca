@@ -94,6 +94,39 @@ public final class LlibreFieldBindings {
      *  {@code ISBN}). The caller appends the WHERE-clause ISBN. */
     public static Object[] forUpdate(Llibre ll) { return forLlibre(ll, false, false); }
 
+    /** 27-column list for the INSERT, in the same order as
+     *  {@link #forInsert(Llibre)}. Used by {@code BackupService}
+     *  to generate the SQL column list without re-typing the names
+     *  (per the tot.txt MEDIUM finding on INSERT column-list drift). */
+    public static final String[] COLUMNS_INSERT = {
+        "ISBN", "nom", "any", "descripcio", "valoracio", "preu", "llegit", "imatge",
+        "imatge_blob", "notes", "pagines", "pagines_llegides", "editorial", "serie",
+        "volum", "data_compra", "data_lectura", "idioma", "format", "desitjat",
+        "pais_origen", "estat", "exemplars", "llengua_original", "nom_ca", "nom_es", "nom_en"
+    };
+
+    /** Render the column list as a single comma-separated SQL fragment
+     *  (e.g. {@code "`ISBN`,`nom`,`any`,..."}) for use in an INSERT. */
+    public static String insertColumnsSql() {
+        StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 12);
+        for (int i = 0; i < COLUMNS_INSERT.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append('`').append(COLUMNS_INSERT[i]).append('`');
+        }
+        return sb.toString();
+    }
+
+    /** Render the placeholder list for a 27-value INSERT
+     *  (e.g. {@code "?,?,?,...,?"}). */
+    public static String insertPlaceholders() {
+        StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 2);
+        for (int i = 0; i < COLUMNS_INSERT.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append('?');
+        }
+        return sb.toString();
+    }
+
     private static Object dateOrNull(String s) {
         if (s == null) return new Null(Types.DATE);
         try { return java.sql.Date.valueOf(s); }

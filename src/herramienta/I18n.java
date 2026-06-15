@@ -402,6 +402,7 @@ public class I18n {
         T("dlg_fetch_portades_title", "Fetch portades", "Descàrrega portades", "Fetch covers");
         T("dlg_fetch_portades_progress", "Descarregant portades {0}/{1}...", "Descargando portadas {0}/{1}...", "Downloading covers {0}/{1}...");
         T("dlg_fetch_portades_done", "{0} portades noves descarregades de {1} llibres.", "{0} portadas nuevas descargadas de {1} libros.", "{0} new covers downloaded for {1} books.");
+        T("dlg_fetch_portades_done_partial", "{0} portades noves descarregades, {2} sense portada a OpenLibrary.", "{0} portadas nuevas descargadas, {2} sin portada en OpenLibrary.", "{0} new covers downloaded, {2} had no cover on OpenLibrary.");
         T("dlg_fetch_portades_done_title", "Fetch portades completat", "Descarga portadas completada", "Cover fetch complete");
         T("dlg_pdf_title", "La meva biblioteca — {0} llibres", "Mi biblioteca — {0} libros", "My library — {0} books");
         T("pdf_col_title", "Títol", "Título", "Title");

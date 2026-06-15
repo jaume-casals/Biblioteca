@@ -16,8 +16,14 @@ public final class Isbn13Normalizer {
         if (raw == null) return null;
         String trimmed = raw.trim();
         if (trimmed.isEmpty()) return null;
-        String digits = trimmed.replaceAll("[^0-9X]", "");
-        if (digits.length() == 10 && (Character.isDigit(digits.charAt(9)) || Character.toUpperCase(digits.charAt(9)) == 'X')) {
+        // Uppercase any 'x' before stripping non-digits, so a paste
+        // like "ISBN 978019853110x" (lowercase x as the ISBN-10
+        // check digit) still keeps the X (per the second tot.txt
+        // LOW finding on this file). Without this normalisation the
+        // regex [^0-9X] silently drops the lowercase 'x' and the
+        // ISBN falls through to the null branch.
+        String digits = trimmed.toUpperCase().replaceAll("[^0-9X]", "");
+        if (digits.length() == 10 && (Character.isDigit(digits.charAt(9)) || digits.charAt(9) == 'X')) {
             return convertToIsbn13("978" + digits.substring(0, 9));
         }
         if (digits.length() == 13) return digits;

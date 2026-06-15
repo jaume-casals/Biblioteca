@@ -13,6 +13,16 @@ import javax.swing.JPanel;
 /** Compact shelf-color picker using a fixed palette (no full {@code JColorChooser}). */
 public final class ColorSwatchPicker {
 
+    /**
+     * Default shelf color when none has been assigned. Shared by
+     * {@link #chooseHex} (when the caller passes {@code null}) and
+     * {@code GestioLlistesDialog.onColorLlista} (when the existing
+     * shelf has no color). Lifting it to a single constant makes
+     * the policy "new shelf starts blue" easy to change in one
+     * place (per the tot.txt MEDIUM finding on the shared default).
+     */
+    public static final String DEFAULT_HEX = "#3498DB";
+
     public static final Color[] SHELF_PALETTE = {
         new Color(0xE74C3C), new Color(0x3498DB), new Color(0x27AE60), new Color(0x2C3E50),
         Color.WHITE, new Color(0xE67E22), new Color(0x9B59B6), new Color(0x795548)
@@ -22,7 +32,7 @@ public final class ColorSwatchPicker {
 
     /** @return chosen color hex (#RRGGBB) or {@code null} if cancelled */
     public static String chooseHex(java.awt.Component parent, Color initial, String titleKey) {
-        final Color[] chosen = { initial != null ? initial : Color.decode("#3498DB") };
+        final Color[] chosen = { initial != null ? initial : Color.decode(DEFAULT_HEX) };
         JPanel grid = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
         grid.setBackground(UITheme.palette().bgPanel());
         for (Color c : SHELF_PALETTE) {

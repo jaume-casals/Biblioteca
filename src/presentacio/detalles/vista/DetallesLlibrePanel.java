@@ -30,7 +30,6 @@ import javax.swing.border.EmptyBorder;
 
 import herramienta.I18n;
 import herramienta.UITheme;
-import presentacio.FormFieldRegistry;
 
 public class DetallesLlibrePanel extends JDialog {
 
@@ -40,7 +39,6 @@ public class DetallesLlibrePanel extends JDialog {
 	private static final int SIDE_W      = 215;
 	private static final int IMG_SIZE    = 185;
 
-	private final FormFieldRegistry fieldRegistry = new FormFieldRegistry();
 	private JLabel     labelIcono;
 	private JTextField textISBN;
 	private JTextField textNom;
@@ -291,14 +289,17 @@ public class DetallesLlibrePanel extends JDialog {
 		field.setEnabled(false);
 		field.setColumns(10);
 		UIComponents.styleField(field);
-		fieldRegistry.linkLabel(lbl, field);
-		fieldRegistry.register(label, field);
+		// Link the label to the field for screen readers and keyboard
+		// navigation. The previous implementation also stored the
+		// pair in a FormFieldRegistry, but no caller ever queried
+		// the registry (see tot.txt MEDIUM finding) — the storage
+		// was dead. The linkLabel call has visible behavior on its
+		// own, so keep it.
+		lbl.setLabelFor(field);
 		entry.add(field, BorderLayout.CENTER);
 		grid.add(entry);
 		return field;
 	}
-
-	public FormFieldRegistry getFieldRegistry() { return fieldRegistry; }
 
 	JComboBox<String> addComboEntry(JPanel grid, String label, String[] items) {
 		JPanel entry = entryPanel();

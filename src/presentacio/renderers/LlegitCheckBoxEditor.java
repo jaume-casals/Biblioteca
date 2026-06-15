@@ -13,6 +13,14 @@ import herramienta.UITheme;
 import interficie.BibliotecaWriter;
 import presentacio.MainFrameControl;
 
+/**
+ * Cell editor for the "llegit" column. Only persists the {@code llegit}
+ * flag — all other fields on the loaded {@code Llibre} are stale
+ * (the table model only loads the light row, not descripcio/notes).
+ * The user is expected to open the details dialog (which calls
+ * {@code loadHeavyFields}) before editing the read flag if they want
+ * the other fields refreshed (per the tot.txt MEDIUM finding).
+ */
 public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCellEditor {
     private static final int COLUMNA_ISBN = 1;
     private static final java.util.concurrent.ExecutorService LLEGIT_EXEC =
