@@ -342,31 +342,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   caveat loud, or return `null` and let the caller
   branch.
 
-**[src/presentacio/BackupController.java]** — [severity: MEDIUM]
-- `backupBD` (line 34) and `restaurarBD` (line 58)
-  use `SwingWorker` to call `cd.backupToSQL` /
-  `cd.restoreFromSQL`. `cd` is the
-  `ControladorDomini` facade. `restoreFromSQL` is
-  blocking and on MariaDB can take minutes for a
-  large database. The `SwingWorker.doInBackground`
-  thread is fine, but the `LoadingDialog` shown
-  via `loading.show()` (line 43) is `modal=true`
-  (LoadingDialog.java:15) which blocks the EDT.
-  Modal dialogs on the EDT are fine, but the
-  SwingWorker is also subject to the EDT's event
-  queue; if the worker thread updates the dialog
-  via `loading.hide()` (line 50), the dialog is
-  disposed on the EDT but the worker thread is
-  not. This pattern is correct in practice.
-- `restaurarBD` (line 78) shows the "covers not
-  included" warning AFTER the restore completes
-  (line 80). For a user who just restored, the
-  warning is a follow-up — fine. But the message
-  concatenates "dlg_restore_done" + "\n\n" +
-  "dlg_restore_done_cover_note" without a localized
-  separator. Add an i18n key for the combined
-  message or a `\n\n` constant.
-
 **[src/presentacio/CenterTablePanel.java]** — [severity: MEDIUM]
 - `buildTable` (line 63) creates the JTable
   subclass with an anonymous `getToolTipText` override

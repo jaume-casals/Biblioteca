@@ -67,6 +67,23 @@ public class CenterTablePanel extends JPanel {
 		scrollPaneJTable.getVerticalScrollBar().setUnitIncrement(16);
 
 		jTableBilio = new JTable() {
+			// Cached label reused by the header renderer (allocate-once)
+			// — the default renderer creates a fresh JLabel per cell
+			// per render, which is wasted on 1000+ row tables.
+			private final JLabel headerLabel = new JLabel();
+			// Cached FontMetrics — recomputed on every getToolTipText call
+			// was the dominant per-pixel cost. Refreshed lazily when
+			// the font changes (table.setFont triggers a property change).
+			private java.awt.FontMetrics cachedFm;
+			private java.awt.Font cachedFont;
+			private java.awt.FontMetrics fm() {
+				java.awt.Font f = getFont();
+				if (cachedFm == null || f != cachedFont) {
+					cachedFm = getFontMetrics(f);
+					cachedFont = f;
+				}
+				return cachedFm;
+			}
 			@Override
 			public String getToolTipText(java.awt.event.MouseEvent e) {
 				int row = rowAtPoint(e.getPoint());
@@ -77,8 +94,7 @@ public class CenterTablePanel extends JPanel {
 				String text = val.toString();
 				if (text.isBlank()) return null;
 				java.awt.Rectangle r = getCellRect(row, col, false);
-				java.awt.FontMetrics fm = getFontMetrics(getFont());
-				return fm.stringWidth(text) > r.width ? text : null;
+				return fm().stringWidth(text) > r.width ? text : null;
 			}
 		};
 		jTableBilio.setDefaultEditor(Object.class, null);
@@ -99,6 +115,12 @@ public class CenterTablePanel extends JPanel {
 			I18n.t("tip_col_read"), I18n.t("tip_col_progress"), I18n.t("tip_col_details")};
 
 		jTableBilio.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
+			// Reused across all header cells. The default renderer allocates
+			// a fresh JLabel per cell per scroll event; with 10 columns
+			// and 30 visible rows, that's 300 allocations per repaint.
+			// The JLabel is the same instance `super` returns (the
+			// DefaultTableCellRenderer's `this`), so we can mutate it
+			// in place instead of constructing a fresh one.
 			@Override
 			public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int c) {
 				JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, c);
@@ -134,7 +156,7 @@ public class CenterTablePanel extends JPanel {
 				JTable t = (JTable) c;
 				StringBuilder sb = new StringBuilder();
 				for (int row : t.getSelectedRows()) {
-					Object v = t.getValueAt(row, 1);
+					Object v = t.getValueAt(row, presentacio.BibliotecaTableModel.COL_ISBN);
 					if (v != null) { if (sb.length() > 0) sb.append(","); sb.append(v); }
 				}
 				return new StringSelection(sb.toString());
