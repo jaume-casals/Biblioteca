@@ -7,6 +7,12 @@ import domini.Llibre;
 public interface OnLlibreDelete {
     void onBookDeleted(Llibre l);
 
+    default void onBookDeleting(DeleteEvent e) {}
+
+    static boolean shouldProceed(DeleteEvent e) {
+        return !(e.isCancellable() && e.isVetoed());
+    }
+
     /** Cancellable/vetoed wrapper used by presenters that want to ask
      *  listeners whether a delete should proceed. Created speculatively;
      *  exercised by the test suite ({@code deleteEventCancellableVeto},

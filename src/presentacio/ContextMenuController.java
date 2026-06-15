@@ -7,6 +7,7 @@ import herramienta.I18n;
 import presentacio.detalles.control.DetallesLlibrePanelControl;
 import presentacio.detalles.control.GuardarLlibresDialogoControl;
 import presentacio.detalles.vista.GuardarLlibresDialogo;
+import presentacio.listener.OnLlibreDelete;
 
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -180,6 +181,9 @@ class ContextMenuController {
         for (long isbn : isbns) {
             try {
                 Llibre l = state.cd.getLlibre(isbn);
+                OnLlibreDelete.DeleteEvent ev = new OnLlibreDelete.DeleteEvent(l, true);
+                state.enActualizarBBDD.onBookDeleting(ev);
+                if (!OnLlibreDelete.shouldProceed(ev)) continue;
                 state.undoBuffer.push(l);
                 if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
                 state.cd.deleteLlibre(l);

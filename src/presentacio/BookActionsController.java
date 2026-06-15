@@ -9,6 +9,7 @@ import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
 import presentacio.detalles.control.DetallesLlibrePanelControl;
+import presentacio.listener.OnLlibreDelete;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -112,6 +113,9 @@ class BookActionsController {
         for (long isbn : isbns) {
             try {
                 state.cd.findLlibre(isbn).ifPresent(l -> {
+                    OnLlibreDelete.DeleteEvent ev = new OnLlibreDelete.DeleteEvent(l, true);
+                    state.enActualizarBBDD.onBookDeleting(ev);
+                    if (!OnLlibreDelete.shouldProceed(ev)) return;
                     state.undoBuffer.push(l);
                     // Cap the undo buffer at UNDO_MAX (20). When the user
                     // deletes more than UNDO_MAX books in one batch, the

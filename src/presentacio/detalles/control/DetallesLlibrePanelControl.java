@@ -11,6 +11,7 @@ import herramienta.FieldAutoComplete;
 import herramienta.I18n;
 import herramienta.LlibreValidator;
 import presentacio.listener.EnActualizarBBDD;
+import presentacio.listener.OnLlibreDelete;
 import presentacio.detalles.vista.DetallesLlibrePanel;
 import presentacio.detalles.vista.LlistesDelLlibreDialog;
 import presentacio.detalles.vista.TagsDelLlibreDialog;
@@ -340,6 +341,9 @@ public class DetallesLlibrePanelControl {
 				javax.swing.JOptionPane.YES_NO_OPTION,
 				javax.swing.JOptionPane.WARNING_MESSAGE);
 			if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
+			OnLlibreDelete.DeleteEvent ev = new OnLlibreDelete.DeleteEvent(llibre, true);
+			enActualizarBBDD.onBookDeleting(ev);
+			if (!OnLlibreDelete.shouldProceed(ev)) return;
 			try {
 				cLlibres.deleteLlibre(llibre);
 				enActualizarBBDD.onBookDeleted(llibre);

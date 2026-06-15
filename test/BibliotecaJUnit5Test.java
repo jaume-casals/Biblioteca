@@ -1163,6 +1163,47 @@ class BibliotecaJUnit5Test {
         assertThat(ev.isCancellable()).isFalse();
     }
 
+    @Test
+    @DisplayName("DeleteEvent: cancellable=true + listener.veto() cancels the delete")
+    void deleteEventVetoCancelsDelete() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
+
+        presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
+            @Override public void onBookDeleted(Llibre l) {}
+            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.DeleteEvent e) { e.veto(); }
+        };
+        presentacio.listener.OnLlibreDelete.DeleteEvent ev =
+            new presentacio.listener.OnLlibreDelete.DeleteEvent(cd.getLlibre(9780306406157L), true);
+        vetoer.onBookDeleting(ev);
+        assertThat(presentacio.listener.OnLlibreDelete.shouldProceed(ev)).isFalse();
+        if (presentacio.listener.OnLlibreDelete.shouldProceed(ev)) cd.deleteLlibre(cd.getLlibre(9780306406157L));
+
+        assertThat(cd.getSize()).isEqualTo(1);
+        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune");
+    }
+
+    @Test
+    @DisplayName("DeleteEvent: cancellable=false + listener.veto() still proceeds")
+    void deleteEventNonCancellableVetoProceeds() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
+
+        presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
+            @Override public void onBookDeleted(Llibre l) {}
+            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.DeleteEvent e) { e.veto(); }
+        };
+        presentacio.listener.OnLlibreDelete.DeleteEvent ev =
+            new presentacio.listener.OnLlibreDelete.DeleteEvent(cd.getLlibre(9780306406157L), false);
+        vetoer.onBookDeleting(ev);
+        assertThat(ev.isVetoed()).isTrue();
+        assertThat(presentacio.listener.OnLlibreDelete.shouldProceed(ev)).isTrue();
+        if (presentacio.listener.OnLlibreDelete.shouldProceed(ev)) cd.deleteLlibre(cd.getLlibre(9780306406157L));
+
+        assertThat(cd.getSize()).isEqualTo(0);
+        assertThat(cd.findLlibre(9780306406157L)).isEmpty();
+    }
+
     // ── H2 in-memory: full CRUD roundtrip ──────────────────────────────────────
 
     @Test

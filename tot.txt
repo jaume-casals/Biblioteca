@@ -930,7 +930,23 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   assert the post-conditions. The class is not
   speculative; the "skipped 2026-06-15" decision
   is to keep the inner class and its tests
-  intact.)
+  intact.) (Done 2026-06-15: `DeleteEvent` is now
+  wired into the production delete path. Added
+  `OnLlibreDelete.onBookDeleting(DeleteEvent)`
+  default hook and `OnLlibreDelete.shouldProceed(
+  DeleteEvent)` static helper; the three
+  interactive delete entry points
+  (`BookActionsController.eliminarFilaSeleccionada`,
+  `ContextMenuController.eliminarLlibresGaleria`,
+  `DetallesLlibrePanelControl.DeleteHandler.eliminar`)
+  build a `DeleteEvent(cancellable=true)`, dispatch
+  it to `state.enActualizarBBDD`, and skip the
+  `cd.deleteLlibre` call when
+  `!shouldProceed(ev)`. Two new JUnit 5 tests
+  (`deleteEventVetoCancelsDelete`,
+  `deleteEventNonCancellableVetoProceeds`) drive a
+  real `ControladorDomini` and assert the veto
+  contract.)
 
 ---
 
