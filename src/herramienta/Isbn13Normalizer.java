@@ -4,7 +4,14 @@ package herramienta;
 public final class Isbn13Normalizer {
     private Isbn13Normalizer() {}
 
-    /** Returns ISBN-13 (or original digits) for any reasonable input; null if no digits. */
+    /**
+     * Returns ISBN-13 for any reasonable input; null if no digits at all,
+     * or if the stripped length is not 10 (with X check) or 13 (no X).
+     * Callers (e.g. {@code LlibreValidator.checkLlibre}) used to fall
+     * through to {@code Long.parseLong(digits)} on a 12-digit result
+     * which threw on the trailing non-digit. The previous silent
+     * fallback hid the real failure (per the tot.txt LOW finding).
+     */
     public static String toIsbn13(String raw) {
         if (raw == null) return null;
         String trimmed = raw.trim();
@@ -14,7 +21,7 @@ public final class Isbn13Normalizer {
             return convertToIsbn13("978" + digits.substring(0, 9));
         }
         if (digits.length() == 13) return digits;
-        return digits;
+        return null;
     }
 
     private static String convertToIsbn13(String base12) {

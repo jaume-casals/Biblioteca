@@ -255,7 +255,7 @@ public final class BookDelegate {
     private static void applySort(ArrayList<Llibre> list, LlibreFilter f) {
         SortSpec sort = f.getSort();
         if (sort == null || list.size() < 2) return;
-        Comparator<Llibre> cmp = SORT_BY.getOrDefault(sort.column(), ISBN_COMPARATOR);
+        Comparator<Llibre> cmp = SortSpec.comparator(sort.column());
         if (!sort.ascending()) cmp = cmp.reversed();
         list.sort(cmp);
     }

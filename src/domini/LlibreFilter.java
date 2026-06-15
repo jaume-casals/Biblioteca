@@ -74,7 +74,7 @@ public class LlibreFilter {
         f.editorial = this.editorial; f.serie = this.serie;
         f.format = this.format; f.idioma = this.idioma;
         f.llistaId = this.llistaId;
-        f.sort = this.sort;
+        f.sort = (this.sort != null) ? this.sort : SortSpec.defaultAsc();
         return f;
     }
 

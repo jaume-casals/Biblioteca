@@ -179,7 +179,7 @@ public class Llibre {
 	}
 
 	public void setDescripcio(String descripcio) {
-		this.descripcio = descripcio;
+		this.descripcio = descripcio != null ? descripcio : "";
 	}
 
 	public Double getValoracio() {

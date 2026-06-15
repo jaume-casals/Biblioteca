@@ -113,6 +113,14 @@ public class FormFieldRegistry {
     public JComponent get(String key)            { return components.get(key); }
     public JTextField  textField(String key)     { return (JTextField)  components.get(key); }
     public JCheckBox   checkBox(String key)      { return (JCheckBox)   components.get(key); }
+    /**
+     * Raw-typed accessor kept for the 60+ existing callers that
+     * declared {@code JComboBox<String>} or {@code JComboBox<Object>}
+     * locally. A typed variant would require per-component knowledge
+     * (T from the spec) — not worth the migration given the
+     * existing call sites work as-is. Documented in the tot.txt
+     * LOW finding; kept raw for backward compatibility.
+     */
     @SuppressWarnings("rawtypes")
     public JComboBox   comboBox(String key)      { return (JComboBox)   components.get(key); }
     public JButton     button(String key)        { return (JButton)     components.get(key); }
@@ -129,7 +137,15 @@ public class FormFieldRegistry {
         return Collections.unmodifiableCollection(components.values());
     }
 
-    /** Legacy API preserved for the 25-line skeleton callers. */
+    /**
+     * Legacy API for the 25-line skeleton callers that wired
+     * components by hand before the declarative spec existed.
+     * Currently only {@code DetallesLlibrePanel.addFieldEntry}
+     * still uses this (line 295 of that file); the registry-based
+     * spec system is the supported path. Marked {@link Deprecated}
+     * for removal once the last external caller migrates.
+     */
+    @Deprecated
     public void register(String name, JComponent component) {
         components.put(name, component);
     }

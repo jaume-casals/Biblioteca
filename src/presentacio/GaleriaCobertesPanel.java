@@ -56,8 +56,14 @@ import presentacio.layouts.WrapLayout;
  */
 public class GaleriaCobertesPanel extends JPanel {
 
-    private static final int[] ZOOM_WIDTHS = {100, 120, 140, 170, 210};
-    private static final int[] ZOOM_COVERS = {150, 180, 210, 255, 315};
+    private record ZoomLevel(int cardW, int coverH) {}
+    private static final ZoomLevel[] ZOOM_LEVELS = {
+        new ZoomLevel(100, 150),
+        new ZoomLevel(120, 180),
+        new ZoomLevel(140, 210),
+        new ZoomLevel(170, 255),
+        new ZoomLevel(210, 315),
+    };
     private static final int   FOOT_H    = 84;
     private static final int   GAP       = 14;
 
@@ -180,7 +186,7 @@ public class GaleriaCobertesPanel extends JPanel {
     }
 
     public void adjustZoom(int delta) {
-        int newZoom = Math.max(0, Math.min(ZOOM_WIDTHS.length - 1, zoomLevel + delta));
+        int newZoom = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, zoomLevel + delta));
         if (newZoom == zoomLevel) return;
         zoomLevel = newZoom;
         UiConfig.setGalleryZoom(zoomLevel);
@@ -200,8 +206,8 @@ public class GaleriaCobertesPanel extends JPanel {
     }
 
     private void applyZoom(int level) {
-        CARD_W  = ZOOM_WIDTHS[level];
-        COVER_H = ZOOM_COVERS[level];
+        CARD_W  = ZOOM_LEVELS[level].cardW();
+        COVER_H = ZOOM_LEVELS[level].coverH();
         CARD_H  = COVER_H + FOOT_H;
         cardFactory = new CoverCardFactory(imageService, CARD_W, CARD_H, COVER_H, FOOT_H);
     }

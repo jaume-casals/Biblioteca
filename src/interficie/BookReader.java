@@ -9,7 +9,11 @@ public interface BookReader {
     Llibre getLlibre(long isbn) throws Exception;
     default java.util.Optional<Llibre> findLlibre(long isbn) {
         try { return java.util.Optional.ofNullable(getLlibre(isbn)); }
-        catch (Exception e) { return java.util.Optional.empty(); }
+        catch (Exception e) {
+            if (e instanceof domini.BibliotecaException.NotFound) return java.util.Optional.empty();
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
+            throw new RuntimeException("Unexpected checked exception in findLlibre(" + isbn + ")", e);
+        }
     }
     int getSize();
     boolean existsLlibre(long isbn);

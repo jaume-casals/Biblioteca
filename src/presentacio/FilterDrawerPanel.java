@@ -215,9 +215,9 @@ public class FilterDrawerPanel extends JPanel {
 		UIComponents.styleSecondaryButton(registry.button("btnImportDropdown"));
 		registry.button("btnImportDropdown").setText(I18n.t("btn_import_lbl") + " \u25BE");
 		JPopupMenu importMenu = new JPopupMenu();
-		addImportMenuItem(importMenu, "btn_import_csv",     "tip_import_csv",     "btnImportarCSV");
-		addImportMenuItem(importMenu, "btn_import_json_lbl","tip_import_json",    "btnImportarJSON");
-		addImportMenuItem(importMenu, "btn_import_calibre", "tip_import_calibre", "btnImportarCalibre");
+		addExportMenuItem(importMenu, "btn_import_csv",     "tip_import_csv",     "btnImportarCSV");
+		addExportMenuItem(importMenu, "btn_import_json_lbl","tip_import_json",    "btnImportarJSON");
+		addExportMenuItem(importMenu, "btn_import_calibre", "tip_import_calibre", "btnImportarCalibre");
 		registry.button("btnImportDropdown").addActionListener(e ->
 			importMenu.show(registry.button("btnImportDropdown"), 0, registry.button("btnImportDropdown").getHeight()));
 		row3.add(registry.button("btnImportDropdown"));
@@ -253,10 +253,6 @@ public class FilterDrawerPanel extends JPanel {
 		JButton target = registry.button(targetKey);
 		mi.addActionListener(e -> target.doClick());
 		menu.add(mi);
-	}
-
-	private void addImportMenuItem(JPopupMenu menu, String labelKey, String tipKey, String targetKey) {
-		addExportMenuItem(menu, labelKey, tipKey, targetKey);
 	}
 
 	private void styleCheckBox(JCheckBox cb) {

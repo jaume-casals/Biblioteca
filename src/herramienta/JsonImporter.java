@@ -115,7 +115,12 @@ public final class JsonImporter {
                         }
                     }
                     ok++;
-                } catch (Exception e) { err++; errDetails.add(e.getMessage()); }
+                } catch (Exception e) {
+                    err++;
+                    errDetails.add(e.getMessage());
+                    Logger.getLogger(JsonImporter.class.getName())
+                        .log(Level.FINE, "Failed to import book entry: " + e.getMessage(), e);
+                }
             }
         }
         return new ImportResult(ok, skipped, err, errDetails);

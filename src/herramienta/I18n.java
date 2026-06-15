@@ -609,8 +609,16 @@ public class I18n {
             int idx = langIndex();
             raw = vals[Math.min(idx, vals.length - 1)];
         }
-        if (args.length > 0 && !raw.contains("{0}")) {
-            System.err.println("[I18n] Key '" + key + "' has no placeholder for args");
+        if (args.length > 0) {
+            // Check every requested arg position, not just {0}, so a
+            // key with `{1}` but no `{0}` is flagged too (see the
+            // tot.txt LOW finding). Use the highest arg index as the
+            // sentinel — if the template has at least that one, the
+            // earlier positions are usually present too.
+            String marker = "{" + (args.length - 1) + "}";
+            if (!raw.contains(marker)) {
+                System.err.println("[I18n] Key '" + key + "' has no placeholder for " + args.length + " arg(s)");
+            }
         }
         for (int i = 0; i < args.length; i++)
             raw = raw.replace("{" + i + "}", String.valueOf(args[i]));
@@ -629,6 +637,12 @@ public class I18n {
         String lang = Config.getLang();
         if ("es".equals(lang)) return 1;
         if ("en".equals(lang)) return 2;
+        if (lang != null && !lang.isEmpty() && !"ca".equals(lang)) {
+            // Unknown language code (e.g. "fr") — log a warning and
+            // fall back to ca rather than silently rendering in
+            // Catalan (per the tot.txt LOW finding on langIndex).
+            System.err.println("[I18n] Unknown language code '" + lang + "', falling back to ca");
+        }
         return 0; // ca default
     }
 }

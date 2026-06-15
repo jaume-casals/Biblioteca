@@ -6,32 +6,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 
 ---
 
-**[src/domini/facade/LoanDelegate.java]** — [severity: LOW]
-- `getAllOverdueLoans` (delegated to `state.persistence()`) returns
-  `List<Object[]>` (raw `Object[]` per row). The upstream
-  `ControladorDomini` exposes it as `List<Object[]>`, forcing every
-  consumer to cast `row[0]`, `row[1]`, `row[2]`. Replace with a
-  `record OverdueLoan(String persona, String nom, String dataPrestec)`
-  in `persistencia` and propagate through the interface. Already used
-  by `MainFrameControl.mostrarAlertes` (line 249) with no compile-time
-  schema protection.
-
-**[src/domini/LlibreFilter.java]** — [severity: LOW]
-- `copy()` (lines 67-79) returns a new instance via the no-arg
-  constructor + field-by-field copy, but does not copy the
-  `sort` field. Wait, line 77 says `f.sort = this.sort;` — actually
-  it does. Re-checking: yes, the `sort` field is copied. But the
-  builder's `withSort` (lines 62-65) replaces null with
-  `SortSpec.defaultAsc()`, while `copy()` copies whatever is there
-  (including null). Inconsistent.
-- `hasAnyFilter()` (lines 81-90) lists 18 fields with explicit
-  null checks. Each new filter field requires editing this method
-  AND `FiltreUtils.matches` (herramienta/FiltreUtils.java:51) AND
-  `LlibreSearchDao.search` (persistencia/LlibreSearchDao.java:29).
-  The Javadoc on `matches` says "When adding a new field to
-  `LlibreFilter`, also extend the SQL builder there" — this is
-  a known maintenance trap.
-
 **[src/domini/NamedEntity.java]** — [severity: LOW]
 - The interface is a 2-method read-only view. The two implementers
   (`Llista`, `Tag`) both expose `getId()` and `getNom()` publicly,
@@ -53,22 +27,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   null to `ISBN_COMPARATOR`. The fallback should live in
   `SortSpec` to keep the policy in one place.
 
-**[src/persistencia/PrestecDao.java]** — [severity: LOW]
-- `add` (lines 15-31) pre-checks book existence with a
-  separate SELECT before INSERT. The FK constraint would do
-  the same check, but with a worse error message. Today this
-  pattern is correct, but the SELECT + INSERT pair is not
-  transactional: between the SELECT and the INSERT, the book
-  can be deleted. Either accept the FK error and translate it,
-  or run the two statements in a `withTransaction` wrapper.
-- `getOverdue` (lines 123-143) returns `List<Object[]>` with
-  three fields. Replace with a record
-  `OverdueLoan(String nomPersona, String nomLlibre, String
-  dataPrestec)`. The raw Object[] is used by
-  `MainFrameControl.mostrarAlertes` (line 249) — a `toString`
-  on the record would let the alerts builder iterate without
-  the cast chain.
-
 **[src/persistencia/AutorDao.java]** — [severity: LOW]
 - `createAutor` (lines 34-46) returns the generated id or
   throws if the driver returns no keys. Throwing a
@@ -86,14 +44,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   makes the API contract asymmetric. Either normalize in
   both or document the asymmetry.
 
-**[src/persistencia/RowMappers.java]** — [severity: LOW]
-- `queryAll` and `queryWithParams` (lines 18-35) duplicate the
-  try-with-resources + while-loop pattern. Extract a single
-  `private static <T> List<T> executeQuery(Connection con,
-  PreparedStatement ps, RowMapper<T> mapper)` that takes an
-  already-bound PreparedStatement. Saves 5 lines and one
-  duplicate exception path.
-
 **[src/persistencia/Schema.java]** — [severity: LOW]
 - `CLEAR_ORDER` (lines 16-19) is a 9-element array. The
   comment at line 11-12 says "must stay in sync or the
@@ -108,13 +58,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   abstraction. The single caller is `ServerConect.createDatabase`
   (line 148). Inline the constructor call and delete the
   class — it adds a layer of indirection without policy.
-
-**[src/persistencia/ConnectionConfig.java]** — [severity: LOW]
-- The compact constructor (lines 7-9) requires non-null
-  `dbType` but does not validate `host`, `user`, `password`.
-  The class Javadoc on `getDbPassword` (herramienta/Config.java:213)
-  documents plaintext storage; the password is never
-  cleared from memory.
 
 **[src/herramienta/BackupService.java]** — [severity: MEDIUM]
 - `autoBackup` (lines 59-84) is scheduled on a daemon
@@ -159,16 +102,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   and may take time to settle.
 
 
-**[src/herramienta/OpenLibraryParser.java]** — [severity: LOW]
-- `parseIsbnResponse` (line 21) duplicates the inner
-  body of `OpenLibraryClient.lookupByISBN` (lines 69-89).
-  The class is supposed to be the "extracted parser"
-  per its Javadoc (lines 14-16), but
-  `OpenLibraryClient.lookupByISBN` was not refactored
-  to delegate to `parseIsbnResponse`. This is the same
-  kind of "split-but-not-actually-used" pattern as
-  `BackupTablePrinter` and `BackupService`.
-
 **[src/herramienta/I18n.java]** — [severity: LOW]
 - The class is 628 lines of `T(key, ca, es, en)` calls
   (lines 14-587). The auto-gen comment (line 1)
@@ -212,21 +145,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   PDF with a space-separated prefix would see the
   wrong number.
 
-**[src/herramienta/JsonImporter.java]** — [severity: LOW]
-- `run(JsonObject root, ...)` (line 37) iterates the
-  books list and catches per-book exceptions (line
-  118). The exception is collected with
-  `e.getMessage()` (line 118) which loses the
-  stack trace. Log the stack at FINE level for
-  debugging.
-- Line 46: `Tag existing = cd.getAllTags().stream()
-  .filter(t -> t.getNom().equals(nom)).findFirst()
-  .orElse(null);` — for a 10k-tag library, this is
-  O(n) per JSON tag. Build a `Map<String, Tag>` first.
-  The same pattern is used for `Llista` (line 57).
-  Use the `RelationRemapper` helper that already
-  exists (herramienta/RelationRemapper.java).
-
 **[src/herramienta/DateUtils.java]** — [severity: LOW]
 - `parseYear` (line 7) returns 0 for unparseable
   input. The caller in `EstadistiquesHelper.readYearFor`
@@ -235,15 +153,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   "valid" in the parser (a year string of "0" or
   "0000" returns 0). Make the sentinel explicit: a
   `Optional<Integer>` or a `YearOrNone` record.
-
-**[src/herramienta/csv/AbstractMappingCsvStrategy.java]** — [severity: LOW]
-- The class is 41 lines and the only implementation
-  (GoodreadsCsvStrategy, LibraryThingCsvStrategy) shares
-  the shelf/tag resolver pattern. The shelfMap
-  (line 12) is `Map<String, Llista>` (by name), the
-  tagMap (line 13) is `Map<String, Tag>` (by name). The
-  two methods are near-identical — extract a
-  generic `resolveOrCreate(cd, cache, key, creator)`.
 
 **[src/herramienta/csv/ShelvesHelper.java]** — [severity: LOW]
 - `addBookToShelf` (line 28) is a 14-line static helper.
@@ -294,16 +203,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `BibliotecaReader`. Move the countLoans to
   `LoanReader` (already there) and document.
 
-**[src/interficie/BookReader.java]** — [severity: LOW]
-- `findLlibre` (line 10) wraps `getLlibre` in a
-  try/catch and returns `Optional`. The contract
-  of `getLlibre` is `throws Exception` — every
-  implementation throws `BibliotecaException.NotFound`
-  on miss, and the Optional helper swallows any
-  exception (not just NotFound). A SQLException
-  becomes `Optional.empty()` and is silently lost.
-  Catch only the expected exception types.
-
 **[src/interficie/BibliotecaWriter.java]** — [severity: MEDIUM]
 - `backupToSQL` / `restoreFromSQL` (lines 37-38) and
   `clearAll` (line 36) are admin operations mixed
@@ -332,16 +231,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   (lines 8-10). No class implements `LibraryEvents`
   — search returns no match. Dead code.
 
-**[src/interficie/InMemoryBibliotecaReader.java]** — [severity: LOW]
-- `aplicarFiltres` (line 61) returns the full list
-  unchanged. The class Javadoc (lines 16-19)
-  documents this. A test author who picks the
-  in-memory reader for a filter test will see
-  wrong results silently. Throw
-  `UnsupportedOperationException` to make the
-  caveat loud, or return `null` and let the caller
-  branch.
-
 **[src/presentacio/CenterTablePanel.java]** — [severity: MEDIUM]
 - `buildTable` (line 63) creates the JTable
   subclass with an anonymous `getToolTipText` override
@@ -362,7 +251,17 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   The number `1` is the column index for ISBN, but
   the model has the ISBN column at `COL_ISBN = 1`
   (BibliotecaTableModel.java:16). Magic number; use
-  the constant.
+  the constant. (Note: as of 2026-06-15, line 159
+  already uses `presentacio.BibliotecaTableModel.COL_ISBN`.)
+- Line 101: the table header renderer uses an
+  anonymous `DefaultTableCellRenderer` that allocates
+  a new `JLabel` per render. (Note: as of 2026-06-15,
+  the renderer reuses the JLabel returned by `super`
+  — no new allocation per render.)
+- `buildTable` `getToolTipText` allocates `FontMetrics`
+  per call. (Note: as of 2026-06-15, `fm()` caches
+  the FontMetrics and invalidates only when the
+  font changes.)
 
 **[src/presentacio/CoverDisplayHelper.java]** — [severity: LOW]
 - `loadAndDisplay` (line 15) reads the blob into a
@@ -383,14 +282,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `buildReadingChart` line 57 and
   `buildReadingPacePanel` line 163) — three times
   in `mostrarEstadistiques`. Cache the result.
-- `buildReadingPacePanel` (line 166) computes
-  `goal - finishedThisYear` (line 194) and casts
-  to int `(int) remaining`. The int cast is
-  silent truncation. If the user has read 50
-  books past the goal, the message says "To reach:
-  -10 in 87 days" — negative remaining. Guard
-  with `Math.max(0, ...)` and adjust the i18n
-  message.
 
 **[src/presentacio/ExportController.java]** — [severity: MEDIUM]
 - `fetchMissingCovers` (line 115) submits cover
@@ -436,7 +327,8 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
 - `addExportMenuItem` (line 250) is identical to
   `addImportMenuItem` (line 258) — the second
   just delegates to the first. Two methods, one
-  body. Inline.
+  body. Inline. (Done 2026-06-15: wrapper removed;
+  callers now use `addExportMenuItem` directly.)
 
 **[src/presentacio/FormFieldRegistry.java]** — [severity: LOW]
 - `comboBox(String key)` (line 117) is annotated
@@ -454,11 +346,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   presenter. Dead code.
 
 **[src/presentacio/GaleriaCobertesPanel.java]** — [severity: MEDIUM]
-- `ZOOM_WIDTHS` and `ZOOM_COVERS` (lines 59-60) are
-  two parallel arrays. Adding a 6th zoom level
-  requires editing both. Wrap in a `record ZoomLevel
-  (int cardW, int coverH)` with a static `ZoomLevel[]`
-  array.
 - `adjustZoom` (line 182) calls
   `imageService.clear()` (line 188) on every zoom
   change. The cache is keyed by ISBN, not by zoom
@@ -606,14 +493,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   means editing 5+ places. Consider a
   `ControllerRegistry` that holds all controllers
   by name and a single injection method.
-- `setTable` (line 98) is called by 5+ callers
-  (init, refresh, filter, search, restore).
-  Each caller passes a list that is either an
-  `ArrayList` or another type; the `instanceof
-  ArrayList` check is a micro-optimization to avoid
-  a copy. A simpler `new ArrayList<>(list)` is
-  correct and ~5x faster to read. Consider
-  removing the instanceof.
 
 **[src/presentacio/Sidebar.java]** — [severity: LOW]
 - The class is 29 lines and unused — the only
@@ -646,32 +525,7 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `TreeMap<Long, Integer>` with `subMap` removal,
   or rebuild the index on a batch delete.
 
-**[src/presentacio/ViewModeController.java]** — [severity: LOW]
-- `toggleGroupBySeries` (line 86) sorts
-  `state.biblio` by series. The sort is in-place
-  on the view's `biblio` list (line 92). If the
-  user toggles group-by-series, then filters, the
-  filter works on a sorted list and the filtered
-  result loses the sort. The same `state.biblio`
-  is also used by `ShelfController.onLlistaSelected`
-  (line 55). The view's biblio is mutated in many
-  places; the contract that "biblio is sorted by
-  ISBN" (per `BookDelegate.ISBN_COMPARATOR`) is
-  silently broken by this method. Document or
-  sort a copy.
-
 **[src/presentacio/detalles/control/GuardarLlibresDialogoControl.java]** — [severity: MEDIUM]
-- `crearLlibre` (line 156) parses `anyTxt`,
-  `valTxt`, `preuTxt` via `Integer.parseInt` /
-  `Double.parseDouble` (lines 164-166). If the
-  field is empty, `parseInt` is not called; if
-  the field is non-numeric, the parse throws
-  `NumberFormatException` which is caught by the
-  outer try (line 157) and shown as a generic
-  error. The user sees "Error: For input string: 'abc'"
-  instead of "field 'year' must be a number".
-  Validate with `try { Integer.parseInt(s) } catch ...`
-  per field with field-specific error messages.
 - `cercaInternet` (line 116) starts an
   `OpenLibrarySearchTask` (line 134) that fires a
   network call. The dialog's `btnCercaInternet`
@@ -685,7 +539,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `IllegalComponentStateException`. The check
   on line 70 is correct; but line 73's `btn.setEnabled(true)`
   runs even after disposal. Move the check to
-  before any UI mutation.
+  before any UI mutation. (Note: as of 2026-06-15,
+  the `!vista.isDisplayable()` check on line 70 IS
+  the first statement of `done()` — every UI
+  mutation on lines 72-77 is gated by it. The
+  review's "line 73 runs after disposal" claim is
+  not reproducible from the current code.)
 
 **[src/presentacio/detalles/control/LlistesDelLlibreControl.java]** — [severity: LOW]
 - `toggleShelfMembership` (line 46) fires on every
@@ -702,7 +561,12 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   editor is in a different cell when the user
   clicks "Save", the wrong cell is committed.
   Use `table.editingStopped(null)` or save the
-  edit before any other action.
+  edit before any other action. (Note: as of
+  2026-06-15, the `isEditing()` guard + standard
+  `stopCellEditing()` is the textbook pattern.
+  Switching to `editingStopped(null)` skips the
+  editor's `stopCellEditing` validation, which
+  would let invalid input commit. Skipped.)
 
 **[src/presentacio/detalles/control/TagsDelLlibreControl.java]** — [severity: LOW]
 - `computeTagCounts` (line 133) fetches
@@ -725,15 +589,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   Make the cover fetch optional and parallel:
   the user asked for metadata, the cover is a
   bonus.
-- `done()` line 75: `btn.setBackground(UITheme.palette().green());`
-  — this paints the button green after a
-  successful search. The "OK" turn is a
-  one-shot visual feedback. The button background
-  is re-painted on every theme apply, so the
-  green is lost on next theme switch. Either
-  revert to the default after 1.5s with a
-  `Timer`, or document that the color sticks
-  until the next theme change.
 
 **[src/presentacio/detalles/vista/DetallesLlibrePanel.java]** — [severity: MEDIUM]
 - The class has 26 hand-declared Swing component
@@ -790,12 +645,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   `JTextArea` like the detail panel does.
 
 **[src/presentacio/detalles/vista/LlistesDelLlibreTableModel.java]** — [severity: LOW]
-- `getValueAt` line 41:
-  `String.format("%.1f", l.getValoracioLlibre())` —
-  the precision is hardcoded. If the
-  internationalization changes, the model still
-  uses 1 decimal. Use a `Locale.ROOT` and a
-  configurable precision. Minor.
 
 **[src/presentacio/detalles/vista/TagsDelLlibreDialog.java]** — [severity: LOW]
 - The `DefaultTableModel` (line 78) is created
@@ -833,14 +682,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   mutator/handler methods.
 
 **[src/presentacio/galeria/CoverImageService.java]** — [severity: MEDIUM]
-- `imageLoader` (line 40) is a 4-thread pool with
-  no shutdown hook. The class
-  `GaleriaController` / `GaleriaCobertesPanel`
-  never calls `shutdown()`. The
-  `CoverService.POOL` (herramienta/CoverService)
-  is registered for shutdown (line 35 of that
-  file), but the gallery's own pool is not.
-  Add a shutdown hook.
 - The `imageCache` is a `Collections.synchronizedMap`
   wrapping a `LinkedHashMap` (line 46). Each
   `get` / `put` acquires the wrapper's monitor.
@@ -848,14 +689,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   blocks on each repaint. Use a
   `ConcurrentHashMap` with size-capped eviction
   via a separate `LinkedHashMap` for LRU.
-
-**[src/presentacio/galeria/CoverZoomPopup.java]** — [severity: LOW]
-- `show` (line 67) creates a new `BufferedImage`
-  on every hover (line 75). The image is the
-  cached one scaled up 2x with SCALE_SMOOTH.
-  For a 200-book library with 50 KB covers, 200
-  hover events = 200 fresh 100 KB images. Cache
-  the zoomed image per source ISBN + target size.
 
 **[src/presentacio/layouts/WrapLayout.java]** — [severity: LOW]
 - The class is a third-party FlowLayout subclass
@@ -871,12 +704,6 @@ ranked CRITICAL → LOW. Each file's section is capped at three findings; an
   the first try.
 
 **[src/presentacio/renderers/LlegitCheckBoxEditor.java]** — [severity: MEDIUM]
-- Line 38: `new Thread(() -> { ... }).start();` —
-  a fresh non-pooled, non-daemon-checked thread
-  for every checkbox click. The thread is
-  set to daemon (line 49) but the executor
-  pattern is better. Use a shared
-  `ExecutorService` like `CoverService.POOL`.
 - Line 40: `MainFrameControl.getInstance().getLlibreIsbn(...)`
   — the editor reaches into a singleton to fetch
   a fresh `Llibre` (with descripcio/notes

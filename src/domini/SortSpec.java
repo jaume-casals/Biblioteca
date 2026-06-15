@@ -69,9 +69,15 @@ public final class SortSpec {
         return SQL_COLS.getOrDefault(column, "l.`ISBN`") + (ascending ? " ASC" : " DESC");
     }
 
-    /** In-memory comparator for the column, or null if column is unknown. */
+    /**
+     * In-memory comparator for the column. Falls back to
+     * {@link #ISBN_COMPARATOR} for unknown columns so callers don't
+     * have to repeat the null-coalesce (per the tot.txt LOW finding —
+     * the policy "unknown → ISBN" lives here, not at every call site).
+     */
     public static Comparator<Llibre> comparator(String column) {
-        return COMPARATORS.get(column);
+        Comparator<Llibre> cmp = COMPARATORS.get(column);
+        return cmp != null ? cmp : ISBN_COMPARATOR;
     }
 
     /** Read-only view of all in-memory comparators keyed by SortSpec column name. */

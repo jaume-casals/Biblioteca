@@ -191,9 +191,9 @@ public class EstadistiquesHelper {
         addLine.accept(I18n.t("stats_pace_per_month", String.format("%.1f", booksPerMonth)));
         addLine.accept(I18n.t("stats_pace_projected", String.format("%.0f", projectedYear)));
         if (goal > 0) {
-            double remaining = goal - finishedThisYear;
+            int remaining = Math.max(0, (int) (goal - finishedThisYear));
             int daysLeft = 365 - dayOfYear;
-            addLine.accept(I18n.t("stats_pace_goal_remaining", goal, (int) remaining, daysLeft));
+            addLine.accept(I18n.t("stats_pace_goal_remaining", goal, remaining, daysLeft));
         }
         addLine.accept(I18n.t("stats_pace_total_pages", totalPages));
         return panel;

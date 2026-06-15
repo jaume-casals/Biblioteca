@@ -160,10 +160,10 @@ public class GuardarLlibresDialogoControl {
 			String valTxt  = vista.getTextValoracio().getText().trim();
 			String preuTxt = vista.getTextPreu().getText().trim();
 
-			Long isbn       = isbnTxt.isEmpty()  ? null : Long.parseLong(isbnTxt);
-			Integer any     = anyTxt.isEmpty()   ? null : Integer.parseInt(anyTxt);
-			Double valoracio = valTxt.isEmpty()  ? null : Double.parseDouble(valTxt);
-			Double preu      = preuTxt.isEmpty() ? null : Double.parseDouble(preuTxt);
+			Long isbn       = parseLongOrNull("ISBN", isbnTxt);
+			Integer any     = parseIntOrNull(herramienta.I18n.t("field_year"), anyTxt);
+			Double valoracio = parseDoubleOrNull(herramienta.I18n.t("field_rating"), valTxt);
+			Double preu      = parseDoubleOrNull(herramienta.I18n.t("field_price"), preuTxt);
 
 			Llibre l = herramienta.LlibreValidator.checkLlibre(
 				isbn, vista.getTextNom().getText().trim(),
@@ -209,4 +209,28 @@ public class GuardarLlibresDialogoControl {
 	}
 
 	public Dialog getVista() { return vista; }
+
+	private static Long parseLongOrNull(String fieldName, String s) {
+		if (s == null || s.isEmpty()) return null;
+		try { return Long.parseLong(s); }
+		catch (NumberFormatException e) {
+			throw new NumberFormatException(fieldName + ": '" + s + "' is not a valid number");
+		}
+	}
+
+	private static Integer parseIntOrNull(String fieldName, String s) {
+		if (s == null || s.isEmpty()) return null;
+		try { return Integer.parseInt(s); }
+		catch (NumberFormatException e) {
+			throw new NumberFormatException(fieldName + ": '" + s + "' is not a valid integer");
+		}
+	}
+
+	private static Double parseDoubleOrNull(String fieldName, String s) {
+		if (s == null || s.isEmpty()) return null;
+		try { return Double.parseDouble(s); }
+		catch (NumberFormatException e) {
+			throw new NumberFormatException(fieldName + ": '" + s + "' is not a valid number");
+		}
+	}
 }

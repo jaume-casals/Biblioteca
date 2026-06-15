@@ -41,9 +41,10 @@ class Isbn13NormalizerTest {
     @DisplayName("toIsbn13: ISBN-10 with lowercase x is stripped (regex is case-sensitive on 'X')")
     void isbn10LowercaseX() {
         // The pattern [^0-9X] in the source keeps only uppercase X; lowercase x is removed.
-        // So '019853110x' becomes '019853110' (9 digits), which falls through the 10-digit
-        // conversion branch and is returned as-is.
-        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isEqualTo("019853110");
+        // So '019853110x' becomes '019853110' (9 digits) which is not a
+        // valid 10- or 13-digit ISBN, so the normalizer returns null
+        // (caller must reject the input) — per the tot.txt LOW finding.
+        assertThat(Isbn13Normalizer.toIsbn13("019853110x")).isNull();
     }
 
     @Test
@@ -68,10 +69,12 @@ class Isbn13NormalizerTest {
     }
 
     @Test
-    @DisplayName("toIsbn13: non-recognisable digit count returns whatever digits it can extract")
+    @DisplayName("toIsbn13: non-recognisable digit count returns null (caller must reject)")
     void unknownLength() {
-        // 5 digits: regex strips non-digits → "12345"
-        assertThat(Isbn13Normalizer.toIsbn13("12345")).isEqualTo("12345");
+        // 5 digits is neither a valid ISBN-10 nor ISBN-13; the
+        // normalizer returns null so the caller surfaces a clear
+        // validation error (per the tot.txt LOW finding).
+        assertThat(Isbn13Normalizer.toIsbn13("12345")).isNull();
     }
 
     @ParameterizedTest

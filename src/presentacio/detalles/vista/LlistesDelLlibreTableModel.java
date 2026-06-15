@@ -38,7 +38,7 @@ public class LlistesDelLlibreTableModel extends AbstractTableModel {
         Llista l = rows.get(r);
         return switch (c) {
             case COL_NOM -> l.getNom();
-            case COL_VAL -> String.format("%.1f", l.getValoracioLlibre());
+            case COL_VAL -> String.format(java.util.Locale.ROOT, "%.1f", l.getValoracioLlibre());
             case COL_LLEGIT -> l.getLlegitLlibre();
             default -> null;
         };

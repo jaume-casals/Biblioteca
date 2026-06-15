@@ -35,6 +35,6 @@ public final class LoanDelegate {
     public Set<Long> getLoanedISBNs() { return state.persistence().getLoanedISBNs(); }
     public List<PrestecRow> getAllActiveLoans() { return state.persistence().getAllActiveLoans(); }
     public List<PrestecRow> getLoansForIsbn(long isbn) { return state.persistence().getLoansForIsbn(isbn); }
-    public List<Object[]> getAllOverdueLoans(int daysThreshold) { return state.persistence().getAllOverdueLoans(daysThreshold); }
+    public List<persistencia.OverdueLoan> getAllOverdueLoans(int daysThreshold) { return state.persistence().getAllOverdueLoans(daysThreshold); }
     public int countLoans(long isbn) { return state.persistence().countLoans(isbn); }
 }

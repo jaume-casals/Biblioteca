@@ -34,7 +34,8 @@ public final class OpenLibraryParser {
             Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
             if (m.find()) r.put("any", m.group(1));
         }
-        if (book.has("number_of_pages")) r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
+        if (book.has("number_of_pages") && !book.get("number_of_pages").isJsonNull())
+            r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
         put(r, "editorial", jsonArrayFirstField(book, "publishers", "name"));
         put(r, "autor",     jsonArrayFirstField(book, "authors",    "name"));
         if (book.has("languages")) {

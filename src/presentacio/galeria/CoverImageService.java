@@ -55,6 +55,10 @@ public final class CoverImageService {
 
     private volatile BibliotecaWriter cd;
 
+    public CoverImageService() {
+        main.ShutdownHooks.register(this::shutdown);
+    }
+
     public void setCd(BibliotecaWriter cd) {
         this.cd = cd;
     }

@@ -6,6 +6,8 @@ import herramienta.UITheme;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.image.BufferedImage;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -30,6 +32,10 @@ public final class CoverZoomPopup {
 
     private JPanel overlay;
     private Timer timer;
+    private static final int ZOOM_CACHE_CAP = 32;
+    private final Map<Long, BufferedImage> zoomCache = new LinkedHashMap<Long, BufferedImage>(ZOOM_CACHE_CAP, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<Long, BufferedImage> e) { return size() > ZOOM_CACHE_CAP; }
+    };
 
     /**
      * Schedule a zoom popup for {@code card}. The popup is shown
@@ -67,14 +73,19 @@ public final class CoverZoomPopup {
     private void show(Llibre l, Component card, CoverImageService images) {
         hide();
         if (!card.isDisplayable()) return;
-        BufferedImage img = images.getCached(l.getISBN());
+        long isbn = l.getISBN();
+        BufferedImage img = images.getCached(isbn);
         if (img == null) return;
 
         int pw = Math.min(img.getWidth() * 2, MAX_POPUP_WIDTH);
         int ph = (int) ((double) img.getHeight() / img.getWidth() * pw);
-        BufferedImage scaled = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_ARGB);
-        scaled.createGraphics().drawImage(
-            img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+        BufferedImage scaled = zoomCache.get(isbn);
+        if (scaled == null || scaled.getWidth() != pw || scaled.getHeight() != ph) {
+            scaled = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_ARGB);
+            scaled.createGraphics().drawImage(
+                img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+            zoomCache.put(isbn, scaled);
+        }
 
         JLabel lbl = new JLabel(new ImageIcon(scaled));
         lbl.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr(), 1));

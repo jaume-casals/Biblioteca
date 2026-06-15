@@ -243,11 +243,11 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 			protected Void doInBackground() {
 				StringBuilder sb;
 				try {
-					List<Object[]> loans = cLlibres.getAllOverdueLoans(30);
+					List<persistencia.OverdueLoan> loans = cLlibres.getAllOverdueLoans(30);
 					if (!loans.isEmpty()) {
 						sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
-						for (Object[] row : loans) {
-							sb.append("• ").append(row[0]).append(" → ").append(row[1]).append(" (").append(row[2]).append(")\n");
+						for (persistencia.OverdueLoan row : loans) {
+							sb.append("• ").append(row.nomPersona()).append(" → ").append(row.nomLlibre()).append(" (").append(row.dataPrestecDisplay()).append(")\n");
 						}
 						overdueMsg = sb.toString();
 					}

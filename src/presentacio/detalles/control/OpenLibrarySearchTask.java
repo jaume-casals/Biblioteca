@@ -73,6 +73,19 @@ public class OpenLibrarySearchTask extends SwingWorker<OpenLibrarySearchTask.Sea
         btn.setEnabled(true);
         btn.setText(I18n.t("btn_cerca_internet"));
         btn.setBackground(UITheme.palette().green());
+        // Revert the green success flash after 1.5s so a subsequent
+        // search starts from a neutral button (per the tot.txt MEDIUM
+        // finding: the green is one-shot feedback, not a persistent
+        // style). The Timer is one-shot and stored on the dialog via
+        // a client property keyed by the button itself so a second
+        // success doesn't stack two timers.
+        javax.swing.Timer revert = new javax.swing.Timer(1500, ev -> {
+            if (vista.isDisplayable()) {
+                btn.setBackground(UITheme.palette().accent());
+            }
+        });
+        revert.setRepeats(false);
+        revert.start();
         vista.getProgressBar().setVisible(false);
         vista.getTextISBN().setEditable(true);
 

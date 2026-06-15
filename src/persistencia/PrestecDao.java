@@ -120,8 +120,8 @@ public class PrestecDao {
         return 0;
     }
 
-    public List<Object[]> getOverdue(int daysThreshold) {
-        List<Object[]> rows = new ArrayList<>();
+    public List<OverdueLoan> getOverdue(int daysThreshold) {
+        List<OverdueLoan> rows = new ArrayList<>();
         try {
             java.sql.Date cutoff = java.sql.Date.valueOf(
                 java.time.LocalDate.now().minusDays(daysThreshold));
@@ -133,7 +133,7 @@ public class PrestecDao {
                 ps.setDate(1, cutoff);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next())
-                        rows.add(new Object[]{ rs.getString(1), rs.getString(2), rs.getString(3) });
+                        rows.add(OverdueLoan.fromStrings(rs.getString(1), rs.getString(2), rs.getString(3)));
                 }
             }
         } catch (SQLException e) {

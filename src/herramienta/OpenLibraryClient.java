@@ -60,37 +60,11 @@ public class OpenLibraryClient {
 		Map<String, String> r = new HashMap<>();
 		try {
 			String json = fetchWithRetry(base() + "/api/books?bibkeys=ISBN:" + isbn + "&format=json&jscmd=data");
-			JsonObject root;
 			try {
-				root = JsonParser.parseString(json).getAsJsonObject();
+				r.putAll(OpenLibraryParser.parseIsbnResponse(json));
 			} catch (RuntimeException e) {
 				r.put("error", "Malformed JSON response: " + e.getMessage());
 				return r;
-			}
-			JsonObject book = null;
-			for (Map.Entry<String, JsonElement> e : root.entrySet()) {
-				if (e.getValue().isJsonObject()) { book = e.getValue().getAsJsonObject(); break; }
-			}
-			if (book != null) {
-				put(r, "title",      jsonStr(book, "title"));
-				put(r, "descripcio", jsonStrNested(book, "description", "value"));
-				if (r.get("descripcio") == null) put(r, "descripcio", jsonStr(book, "description"));
-				String date = jsonStr(book, "publish_date");
-				if (date != null) {
-					Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
-					if (m.find()) r.put("any", m.group(1));
-				}
-				if (book.has("number_of_pages") && !book.get("number_of_pages").isJsonNull())
-					r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
-				put(r, "editorial", jsonArrayFirstField(book, "publishers", "name"));
-				put(r, "autor",     jsonArrayFirstField(book, "authors",    "name"));
-				if (book.has("languages")) {
-					JsonArray langs = book.getAsJsonArray("languages");
-					if (langs.size() > 0) {
-						String key = jsonStr(langs.get(0).getAsJsonObject(), "key");
-						if (key != null) r.put("idioma", key.replaceAll(".*/", ""));
-					}
-				}
 			}
 		} catch (java.io.IOException e) {
 			r.put("error", e.getMessage());

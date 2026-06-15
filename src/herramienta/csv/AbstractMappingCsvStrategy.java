@@ -6,6 +6,7 @@ import interficie.BibliotecaWriter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 abstract class AbstractMappingCsvStrategy implements CsvImportStrategy {
     @Override public abstract String getName();
@@ -13,29 +14,37 @@ abstract class AbstractMappingCsvStrategy implements CsvImportStrategy {
     private Map<String, Tag>    tagMap;
 
     protected Llista resolveShelf(BibliotecaWriter cd, String name) {
-        if (shelfMap == null) shelfMap = buildShelfMap(cd);
-        Llista existing = shelfMap.get(name);
-        if (existing != null) return existing;
-        Llista created = cd.addLlista(name);
-        shelfMap.put(name, created);
-        return created;
+        return resolveOrCreate(cd, name, cd::getAllLlistes, Llista::getNom, cd::addLlista, this.shelfMap,
+            m -> { this.shelfMap = m; });
     }
 
     protected Tag resolveTag(BibliotecaWriter cd, String name) {
-        if (tagMap == null) {
-            tagMap = new HashMap<>();
-            for (Tag t : cd.getAllTags()) tagMap.put(t.getNom(), t);
-        }
-        Tag existing = tagMap.get(name);
-        if (existing != null) return existing;
-        Tag created = cd.addTag(name);
-        tagMap.put(name, created);
-        return created;
+        return resolveOrCreate(cd, name, cd::getAllTags, Tag::getNom, cd::addTag, this.tagMap,
+            m -> { this.tagMap = m; });
     }
 
-    private static Map<String, Llista> buildShelfMap(BibliotecaWriter cd) {
-        Map<String, Llista> map = new HashMap<>();
-        for (Llista ll : cd.getAllLlistes()) map.put(ll.getNom(), ll);
-        return map;
+    /**
+     * Generic "find or create by name" lookup. Caches the full table on
+     * first call so subsequent lookups are O(1) hash hits. The cache is
+     * held in the strategy so the same map is reused across rows.
+     */
+    private static <E> E resolveOrCreate(BibliotecaWriter cd,
+                                         String name,
+                                         java.util.function.Supplier<java.util.List<E>> all,
+                                         Function<E, String> nameOf,
+                                         java.util.function.Function<String, E> add,
+                                         Map<String, E> cache,
+                                         java.util.function.Consumer<Map<String, E>> cacheSink) {
+        if (cache == null) {
+            Map<String, E> m = new HashMap<>();
+            for (E e : all.get()) m.put(nameOf.apply(e), e);
+            cacheSink.accept(m);
+            cache = m;
+        }
+        E existing = cache.get(name);
+        if (existing != null) return existing;
+        E created = add.apply(name);
+        cache.put(name, created);
+        return created;
     }
 }

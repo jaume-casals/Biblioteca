@@ -58,9 +58,18 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
         int to = Math.min(offset + pageSize, books.size());
         return offset >= books.size() ? new ArrayList<>() : new ArrayList<>(books.subList(offset, to));
     }
-    @Override public List<Llibre> aplicarFiltres(LlibreFilter f) { return new ArrayList<>(books); }
-    @Override public List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f) { return new ArrayList<>(font); }
-    @Override public List<Llibre> searchLlibresSQL(LlibreFilter f) { return new ArrayList<>(books); }
+    @Override public List<Llibre> aplicarFiltres(LlibreFilter f) {
+        throw new UnsupportedOperationException(
+            "InMemoryBibliotecaReader does not honour filter criteria — use a real BibliotecaReader (see class Javadoc).");
+    }
+    @Override public List<Llibre> aplicarFiltres(List<Llibre> font, LlibreFilter f) {
+        throw new UnsupportedOperationException(
+            "InMemoryBibliotecaReader does not honour filter criteria — use a real BibliotecaReader (see class Javadoc).");
+    }
+    @Override public List<Llibre> searchLlibresSQL(LlibreFilter f) {
+        throw new UnsupportedOperationException(
+            "InMemoryBibliotecaReader does not honour search criteria — use a real BibliotecaReader (see class Javadoc).");
+    }
     @Override public List<Llista> getAllLlistes() { return new ArrayList<>(llistes); }
     @Override public Llista getLlistaById(int id) throws Exception {
         for (Llista l : llistes) if (l.getId() == id) return l;
@@ -95,7 +104,7 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
         for (PrestecRow r : loans) if (r.isbn() == isbn) out.add(r);
         return out;
     }
-    @Override public List<Object[]> getAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
+    @Override public List<persistencia.OverdueLoan> getAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
     @Override public int countLoans(long isbn) {
         int c = 0;
         for (PrestecRow r : loans) if (r.isbn() == isbn) c++;

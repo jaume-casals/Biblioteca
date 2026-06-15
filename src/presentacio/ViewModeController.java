@@ -89,9 +89,11 @@ class ViewModeController {
             ? state.vista.getBtnGroupSeries().getFont().deriveFont(java.awt.Font.BOLD)
             : UITheme.fontBold());
         if (state.groupBySeries && state.biblio != null) {
-            state.biblio.sort(Comparator
+            java.util.List<Llibre> sorted = new java.util.ArrayList<>(state.biblio);
+            sorted.sort(Comparator
                 .comparing((Llibre l) -> l.getSerie() == null || l.getSerie().isBlank() ? "￿" : l.getSerie())
                 .thenComparingInt(Llibre::getVolum));
+            state.biblio = sorted;
         }
         host.pageCtrl().setCurrentPage(0);
         host.showPage(0);

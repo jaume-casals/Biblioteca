@@ -6,6 +6,9 @@ public record ConnectionConfig(
 
     public ConnectionConfig {
         java.util.Objects.requireNonNull(dbType, "dbType");
+        java.util.Objects.requireNonNull(host, "host");
+        java.util.Objects.requireNonNull(user, "user");
+        java.util.Objects.requireNonNull(password, "password");
     }
 
     @Override

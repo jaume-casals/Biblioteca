@@ -156,7 +156,7 @@ public class ControladorDomini implements BibliotecaWriter {
 	public java.util.Set<Long> getLoanedISBNs()                                                   { return loans.getLoanedISBNs(); }
 	public java.util.List<PrestecRow> getAllActiveLoans()                                         { return loans.getAllActiveLoans(); }
 	public java.util.List<PrestecRow> getLoansForIsbn(long isbn)                                  { return loans.getLoansForIsbn(isbn); }
-	public java.util.List<Object[]> getAllOverdueLoans(int daysThreshold)                         { return loans.getAllOverdueLoans(daysThreshold); }
+	public java.util.List<persistencia.OverdueLoan> getAllOverdueLoans(int daysThreshold)          { return loans.getAllOverdueLoans(daysThreshold); }
 	public int countLoans(long isbn)                                                              { return loans.countLoans(isbn); }
 
 	// ── Stats / autocomplete / backup payload ────────────────────────────────

@@ -96,7 +96,7 @@ public class MostrarBibliotecaControl implements LibraryScreenHost {
     // ── LibraryScreenHost ──────────────────────────────────────────────────────
 
     @Override public void setTable(java.util.List<Llibre> llibres) {
-        state.modelLibres = llibres instanceof ArrayList<Llibre> a ? a : new ArrayList<>(llibres);
+        state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
         tableCtrl.setBooks(llibres != null ? llibres : new ArrayList<>(), state.cd, botonDetalles,
             CoverImageCache.cache(), CoverImageCache.loading(), () -> state.loanedISBNs, this::refreshRow);
         tableCtrl.applyColumnVisibility();

@@ -15,6 +15,13 @@ import presentacio.MainFrameControl;
 
 public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCellEditor {
     private static final int COLUMNA_ISBN = 1;
+    private static final java.util.concurrent.ExecutorService LLEGIT_EXEC =
+        java.util.concurrent.Executors.newFixedThreadPool(2, r -> {
+            Thread t = new Thread(r, "llegit-update");
+            t.setDaemon(true);
+            return t;
+        });
+    static { main.ShutdownHooks.register(() -> LLEGIT_EXEC.shutdownNow()); }
     private final JCheckBox cb = new JCheckBox();
     private int editingRow = -1;
     private JTable editingTable = null;
@@ -35,7 +42,7 @@ public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCel
             fireEditingStopped();
             if (isbnStr != null) {
                 String isbn = isbnStr;
-                Thread t = new Thread(() -> {
+                LLEGIT_EXEC.submit(() -> {
                     try {
                         Llibre l = MainFrameControl.getInstance().getLlibreIsbn(Long.parseLong(isbn));
                         if (l == null) return;
@@ -46,8 +53,6 @@ public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCel
                         SwingUtilities.invokeLater(() -> new DialogoError(ex).showErrorMessage());
                     }
                 });
-                t.setDaemon(true);
-                t.start();
             }
         });
     }

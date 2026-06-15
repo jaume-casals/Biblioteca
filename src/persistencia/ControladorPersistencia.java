@@ -186,7 +186,7 @@ public class ControladorPersistencia {
 		return prestecDao.getActiveLoans();
 	}
 	public synchronized java.util.List<persistencia.PrestecRow> getLoansForIsbn(long isbn) { return prestecDao.getForIsbn(isbn); }
-	public synchronized java.util.List<Object[]> getAllOverdueLoans(int days) { return prestecDao.getOverdue(days); }
+	public synchronized java.util.List<persistencia.OverdueLoan> getAllOverdueLoans(int days) { return prestecDao.getOverdue(days); }
 	public synchronized void addPrestec(long isbn, String nom) throws java.sql.SQLException { prestecDao.add(isbn, nom); }
 	public synchronized void returnPrestec(long isbn) throws java.sql.SQLException { prestecDao.returnLoan(isbn); }
 	public synchronized java.util.Set<Long> getLoanedISBNs() { return prestecDao.getLoanedISBNs(); }
