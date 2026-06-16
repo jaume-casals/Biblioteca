@@ -101,7 +101,7 @@ public class BookImporter {
                     String autor = c.length > 2 ? c[2].trim() : "";
                     String editorial = c.length > 4 ? c[4].trim() : "";
                     int any = 0;
-                    if (c.length > 5 && !c[5].isBlank()) any = DateUtils.parseYear(c[5]);
+                    if (c.length > 5 && !c[5].isBlank()) any = DateUtils.parseYear(c[5]).orElse(0);
                     double valoracio = c.length > 6 ? CsvUtils.parseDoubleOrZero(c[6]) * 2.0 : 0.0;
                     String notes = c.length > 7 ? c[7].trim() : "";
                     if (notes.length() > MAX_NOTES_CHARS) {

@@ -6,6 +6,8 @@ import java.util.logging.Logger;
 
 import domini.Llibre;
 import interficie.BibliotecaWriter;
+import interficie.ShelfWriter;
+import interficie.TagWriter;
 import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
@@ -271,11 +273,11 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void obrirLlistes(Llibre l) {
-		new LlistesDelLlibreDialog(this.vista, l, cLlibres).setVisible(true);
+		new LlistesDelLlibreDialog(this.vista, l, (ShelfWriter) cLlibres).setVisible(true);
 	}
 
 	private void obrirTags(Llibre l) {
-		new TagsDelLlibreDialog(this.vista, l, cLlibres).setVisible(true);
+		new TagsDelLlibreDialog(this.vista, l, (TagWriter) cLlibres).setVisible(true);
 	}
 
 	private void imprimirFitxa(Llibre l) {
@@ -456,30 +458,8 @@ public class DetallesLlibrePanelControl {
 	}
 
 	private void setEditMode(boolean enabled) {
-		vista.getTextAny().setEnabled(enabled);
-		vista.getTextAutor().setEnabled(enabled);
+		for (javax.swing.JComponent c : vista.getEditableInputs()) c.setEnabled(enabled);
 		vista.getTextISBN().setEnabled(false);
-		vista.getTextDescripcio().setEnabled(enabled);
-		vista.getTextNom().setEnabled(enabled);
-		vista.getTextPortada().setEnabled(enabled);
-		vista.getTextPreu().setEnabled(enabled);
-		vista.getTextValoracio().setEnabled(enabled);
-		vista.getTextEditorial().setEnabled(enabled);
-		vista.getTextSerie().setEnabled(enabled);
-		vista.getTextVolum().setEnabled(enabled);
-		vista.getTextDataCompra().setEnabled(enabled);
-		vista.getTextDataLectura().setEnabled(enabled);
-		vista.getTextIdioma().setEnabled(enabled);
-		vista.getTextPaisOrigen().setEnabled(enabled);
-		vista.getComboFormat().setEnabled(enabled);
-		vista.getComboEstat().setEnabled(enabled);
-		vista.getTextExemplars().setEnabled(enabled);
-		vista.getTextLlenguaOriginal().setEnabled(enabled);
-		vista.getChckDesitjat().setEnabled(enabled);
-		vista.getChckLlegit().setEnabled(enabled);
 		vista.getBtnSeleccionarImatge().setEnabled(enabled);
-		vista.getTextNotes().setEnabled(enabled);
-		vista.getTextPagines().setEnabled(enabled);
-		vista.getTextPaginesLlegides().setEnabled(enabled);
 	}
 }

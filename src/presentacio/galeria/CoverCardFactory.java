@@ -24,6 +24,8 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -58,31 +60,33 @@ public final class CoverCardFactory {
     private static final int SDX = 3;
     private static final int SDY = 5;
 
-    public interface Listener {
-        /** Return the current set of selected ISBNs (live; mutated by the card). */
-        Set<Long> selectedISBNs();
+    /**
+     * Host-side state + callbacks shared by every card built by this factory.
+     *
+     * <p>Replaces the former 7-method {@code Listener} interface (tot.txt MEDIUM
+     * finding): the host ({@code GaleriaCobertesPanel}) builds a single
+     * {@code CardHost} that captures its live selection / focus state plus
+     * three callback consumers, and passes it to every card. The card's
+     * mouse adapter reads {@link #selectedISBNs()} / {@link #focusedIdx()} /
+     * {@link #currentLlibres()} for read-only access, mutates
+     * {@link #focusedIdx()} via the int[] wrapper, and dispatches
+     * {@link #onCardClicked}, {@link #onCardRightClicked}, and
+     * {@link #onSelectionMutated} on user input.
+     *
+     * <p>The {@code int[]} wrapper for {@code focusedIdx} is the simplest
+     * mutable-int carrier that survives both lambda capture and per-card
+     * mouse-adapter mutation without resorting to {@code AtomicInteger}.
+     */
+    public record CardHost(
+            Set<Long> selectedISBNs,
+            int[] focusedRef,
+            java.util.function.Supplier<List<Llibre>> currentLlibres,
+            Consumer<Llibre> onCardClicked,
+            BiConsumer<MouseEvent, List<Llibre>> onCardRightClicked,
+            Consumer<Iterable<Long>> onSelectionMutated) {
 
-        /** Current focused card index in the visible list, or -1 for none. */
-        int focusedIdx();
-
-        void setFocusedIdx(int idx);
-
-        /** Full list of currently displayed books (for shift-range selection). */
-        List<Llibre> currentLlibres();
-
-        /** A card was double-clicked; the host should open the book. */
-        void onCardClicked(Llibre l);
-
-        /** A card was right-clicked; the host should show its context menu. */
-        void onCardRightClicked(MouseEvent e, List<Llibre> selected);
-
-        /**
-         * The selection set has changed. The host should repaint every ISBN
-         * in {@code changedIsbns} (these are the cards whose border / overlay
-         * may need to be redrawn). The set may include ISBNs that were
-         * previously selected and are now de-selected, and vice versa.
-         */
-        void onSelectionMutated(Iterable<Long> changedIsbns);
+        public int focusedIdx()           { return focusedRef[0]; }
+        public void setFocusedIdx(int v)  { focusedRef[0] = v; }
     }
 
     private final CoverImageService imageService;
@@ -100,7 +104,7 @@ public final class CoverCardFactory {
         this.footH = footH;
     }
 
-    public JPanel build(Llibre l, int cardIdx, Listener listener) {
+    public JPanel build(Llibre l, int cardIdx, CardHost host) {
         final int capW = cardW, capH = coverH, capCardH = cardH;
         final int hue = bookHue(l.getNom());
         final boolean llegit = Boolean.TRUE.equals(l.getLlegit());
@@ -121,7 +125,7 @@ public final class CoverCardFactory {
         JPanel card = new JPanel(null) {
             @Override
             protected void paintComponent(Graphics g) {
-                paintCard((Graphics2D) g, state, listener);
+                paintCard((Graphics2D) g, state, host);
             }
             @Override public boolean isOpaque() { return false; }
         };
@@ -138,7 +142,7 @@ public final class CoverCardFactory {
         card.add(footer);
 
         card.setFocusable(true);
-        card.addMouseListener(new CardMouseAdapter(card, l, isbn, cardIdx, hov, listener));
+        card.addMouseListener(new CardMouseAdapter(card, l, isbn, cardIdx, hov, host));
 
         // Async image load — pre-scale at current card dimensions
         imageService.submit(l, capW, capH, () -> {
@@ -168,10 +172,10 @@ public final class CoverCardFactory {
      * Static card paint — extracted from the anonymous JPanel's
      * paintComponent (per the tot.txt MEDIUM finding). All drawing
      * parameters come from the {@link CardState} record; the only
-     * listener interaction is the selection check. Testable in
-     * isolation by constructing a CardState and a mock Listener.
+     * host interaction is the selection check. Testable in
+     * isolation by constructing a CardState and a mock CardHost.
      */
-    static void paintCard(Graphics2D g, CardState state, Listener listener) {
+    static void paintCard(Graphics2D g, CardState state, CardHost host) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -205,7 +209,7 @@ public final class CoverCardFactory {
         g2.setColor(DOT_RIM);
         g2.drawOval(dotX, dotY, dotD, dotD);
 
-        boolean sel = listener.selectedISBNs().contains(state.isbn());
+        boolean sel = host.selectedISBNs().contains(state.isbn());
         if (sel) {
             g2.setColor(SEL_FILL);
             g2.fillRoundRect(1, 1, capW - 2, capCardH - 2, ARC, ARC);
@@ -234,15 +238,15 @@ public final class CoverCardFactory {
         private final long isbn;
         private final int cardIdx;
         private final boolean[] hov;
-        private final Listener listener;
+        private final CardHost host;
 
-        CardMouseAdapter(JPanel card, Llibre l, long isbn, int cardIdx, boolean[] hov, Listener listener) {
+        CardMouseAdapter(JPanel card, Llibre l, long isbn, int cardIdx, boolean[] hov, CardHost host) {
             this.card = card;
             this.l = l;
             this.isbn = isbn;
             this.cardIdx = cardIdx;
             this.hov = hov;
-            this.listener = listener;
+            this.host = host;
         }
 
         @Override public void mouseEntered(MouseEvent e) { hov[0] = true; card.repaint(); }
@@ -251,23 +255,23 @@ public final class CoverCardFactory {
         @Override public void mousePressed(MouseEvent e) {
             card.requestFocusInWindow();
             if (SwingUtilities.isRightMouseButton(e)) {
-                Set<Long> sel = listener.selectedISBNs();
+                Set<Long> sel = host.selectedISBNs();
                 if (!sel.contains(isbn)) {
                     List<Long> prev = new ArrayList<>(sel);
                     sel.clear();
                     sel.add(isbn);
-                    listener.onSelectionMutated(prev);
+                    host.onSelectionMutated().accept(prev);
                 }
-                listener.onCardRightClicked(e, collectSelected(listener));
+                host.onCardRightClicked().accept(e, collectSelected(host));
                 return;
             }
             boolean ctrl  = (e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK)  != 0;
             boolean shift = (e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) != 0;
-            Set<Long> sel = listener.selectedISBNs();
-            if (shift && listener.focusedIdx() >= 0) {
-                int lo = Math.min(cardIdx, listener.focusedIdx());
-                int hi = Math.max(cardIdx, listener.focusedIdx());
-                List<Llibre> all = listener.currentLlibres();
+            Set<Long> sel = host.selectedISBNs();
+            if (shift && host.focusedIdx() >= 0) {
+                int lo = Math.min(cardIdx, host.focusedIdx());
+                int hi = Math.max(cardIdx, host.focusedIdx());
+                List<Llibre> all = host.currentLlibres().get();
                 List<Long> prev = new ArrayList<>(sel);
                 if (!ctrl) sel.clear();
                 java.util.HashSet<Long> changed = new java.util.HashSet<>(prev);
@@ -275,32 +279,32 @@ public final class CoverCardFactory {
                     sel.add(all.get(i).getISBN());
                     changed.add(all.get(i).getISBN());
                 }
-                listener.onSelectionMutated(changed);
+                host.onSelectionMutated().accept(changed);
             } else if (ctrl) {
                 if (sel.contains(isbn)) sel.remove(isbn);
                 else sel.add(isbn);
-                listener.setFocusedIdx(cardIdx);
-                listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
+                host.setFocusedIdx(cardIdx);
+                host.onSelectionMutated().accept(java.util.Collections.singletonList(isbn));
             } else {
                 List<Long> prev = new ArrayList<>(sel);
                 sel.clear();
                 sel.add(isbn);
-                listener.setFocusedIdx(cardIdx);
-                listener.onSelectionMutated(prev);
-                listener.onSelectionMutated(java.util.Collections.singletonList(isbn));
+                host.setFocusedIdx(cardIdx);
+                host.onSelectionMutated().accept(prev);
+                host.onSelectionMutated().accept(java.util.Collections.singletonList(isbn));
             }
         }
 
         @Override public void mouseClicked(MouseEvent e) {
             if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e))
-                listener.onCardClicked(l);
+                host.onCardClicked().accept(l);
         }
     }
 
-    private static List<Llibre> collectSelected(Listener listener) {
+    private static List<Llibre> collectSelected(CardHost host) {
         List<Llibre> out = new ArrayList<>();
-        Set<Long> sel = listener.selectedISBNs();
-        for (Llibre l : listener.currentLlibres())
+        Set<Long> sel = host.selectedISBNs();
+        for (Llibre l : host.currentLlibres().get())
             if (sel.contains(l.getISBN())) out.add(l);
         return out;
     }

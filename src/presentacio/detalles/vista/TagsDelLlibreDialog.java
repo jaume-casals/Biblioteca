@@ -53,7 +53,7 @@ public class TagsDelLlibreDialog extends JDialog {
         this(owner, llibre, null);
     }
 
-    public TagsDelLlibreDialog(Window owner, Llibre llibre, interficie.BibliotecaWriter cd) {
+    public TagsDelLlibreDialog(Window owner, Llibre llibre, interficie.TagWriter cd) {
         super(owner, I18n.t("dlg_tags_for_book", llibre.getNom()), ModalityType.APPLICATION_MODAL);
         setSize(400, 440);
         setLocationRelativeTo(owner);

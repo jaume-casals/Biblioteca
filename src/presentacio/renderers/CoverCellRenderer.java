@@ -10,7 +10,7 @@ import javax.swing.table.*;
 
 import domini.Llibre;
 import herramienta.UITheme;
-import interficie.BibliotecaWriter;
+import interficie.BookReader;
 import presentacio.BibliotecaTableModel;
 import presentacio.CoverImageCache;
 
@@ -31,7 +31,7 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
     }
     private final Map<Long, ImageIcon> coverCache;
     private final Set<Long> coverLoading;
-    private final BibliotecaWriter cd;
+    private final BookReader cd;
     private final JTable table;
     /**
      * ISBN → model row index. Caller-provided so the renderer can repaint
@@ -43,12 +43,12 @@ public class CoverCellRenderer extends JLabel implements TableCellRenderer {
     private final java.util.function.LongFunction<Integer> isbnToRow;
 
     public CoverCellRenderer(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, BibliotecaWriter cd) {
+            Set<Long> coverLoading, BookReader cd) {
         this(table, coverCache, coverLoading, cd, null);
     }
 
     public CoverCellRenderer(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, BibliotecaWriter cd,
+            Set<Long> coverLoading, BookReader cd,
             java.util.function.LongFunction<Integer> isbnToRow) {
         this.table = table;
         this.coverCache = coverCache;

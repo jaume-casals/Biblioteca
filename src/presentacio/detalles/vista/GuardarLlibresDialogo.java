@@ -28,6 +28,8 @@ import javax.swing.border.EmptyBorder;
 
 import herramienta.I18n;
 import herramienta.UITheme;
+import presentacio.FormFieldRegistry;
+import presentacio.FormFieldRegistry.Field;
 import presentacio.FormGridBuilder;
 
 public class GuardarLlibresDialogo extends JDialog {
@@ -115,47 +117,80 @@ public class GuardarLlibresDialogo extends JDialog {
 		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
-		textISBN       = new JTextField(); textISBN.setColumns(10); UIComponents.styleField(textISBN);
-		textNom        = new JTextField(); textNom.setColumns(10); UIComponents.styleField(textNom);
-		textAutor      = new JTextField(); textAutor.setColumns(10); UIComponents.styleField(textAutor);
-		textAny        = new JTextField(); textAny.setColumns(10); UIComponents.styleField(textAny);
-		textDescripcio = new JTextField(); textDescripcio.setColumns(10); UIComponents.styleField(textDescripcio);
-		textValoracio  = new JTextField(); textValoracio.setColumns(10); UIComponents.styleField(textValoracio);
-		textPreu       = new JTextField(); textPreu.setColumns(10); UIComponents.styleField(textPreu);
-		textEditorial  = new JTextField(); textEditorial.setColumns(10); UIComponents.styleField(textEditorial);
-		textSerie      = new JTextField(); textSerie.setColumns(10); UIComponents.styleField(textSerie);
-		textVolum      = new JTextField(); textVolum.setColumns(10); UIComponents.styleField(textVolum);
-		textDataCompra  = new JTextField(); textDataCompra.setColumns(10); UIComponents.styleField(textDataCompra);
-		textDataLectura = new JTextField(); textDataLectura.setColumns(10); UIComponents.styleField(textDataLectura);
+		FormFieldRegistry reg = new FormFieldRegistry()
+			.add(Field.text("textISBN",       "field_isbn",        10))
+			.add(Field.text("textNom",        "field_title",       10))
+			.add(Field.text("textAutor",      "field_author",      10))
+			.add(Field.text("textAny",        "field_year",        10))
+			.add(Field.text("textDescripcio", "field_description", 10))
+			.add(Field.text("textValoracio",  "field_rating",      10))
+			.add(Field.text("textPreu",       "field_price",       10))
+			.add(Field.text("textEditorial",  "field_publisher",   10))
+			.add(Field.text("textSerie",      "field_series",      10))
+			.add(Field.text("textVolum",      "field_volume",      10))
+			.add(Field.text("textDataCompra", "field_purchased",   10))
+			.add(Field.text("textDataLectura","field_read_on",     10))
+			.add(Field.text("textIdioma",     "field_language",    10))
+			.add(Field.combo("comboFormat",   "field_format",      null, 0))
+			.add(Field.check("chckDesitjat",  null,                "tip_desitjat"))
+			.add(Field.check("chckLlegit",    null,                null))
+			.add(Field.text("textPortada",    "col_cover",         10))
+			.add(Field.text("textPaisOrigen", "field_country",     10))
+			.add(Field.combo("comboEstat",    "field_estat",       null, 0))
+			.add(Field.text("textExemplars",  "field_exemplars",   10))
+			.add(Field.text("textNomCa",      "field_title_ca",    10))
+			.add(Field.text("textNomEs",      "field_title_es",    10))
+			.add(Field.text("textNomEn",      "field_title_en",    10))
+			.build();
+
+		for (Field f : reg.specsOfKind(FormFieldRegistry.Kind.TEXT)) {
+			UIComponents.styleField(reg.textField(f.key()));
+		}
+
+		textISBN       = reg.textField("textISBN");
+		textNom        = reg.textField("textNom");
+		textAutor      = reg.textField("textAutor");
+		textAny        = reg.textField("textAny");
+		textDescripcio = reg.textField("textDescripcio");
+		textValoracio  = reg.textField("textValoracio");
+		textPreu       = reg.textField("textPreu");
+		textEditorial  = reg.textField("textEditorial");
+		textSerie      = reg.textField("textSerie");
+		textVolum      = reg.textField("textVolum");
+		textDataCompra  = reg.textField("textDataCompra");
+		textDataLectura = reg.textField("textDataLectura");
 		textDataCompra.setToolTipText("YYYY-MM-DD");
 		textDataLectura.setToolTipText("YYYY-MM-DD");
-		textIdioma     = new JTextField(); textIdioma.setColumns(10); UIComponents.styleField(textIdioma);
-		comboFormat    = new JComboBox<>(herramienta.FormatOptions.withBlank());
+		textIdioma     = reg.textField("textIdioma");
+		textPortada    = reg.textField("textPortada");
+		textPaisOrigen = reg.textField("textPaisOrigen");
+		textExemplars  = reg.textField("textExemplars");
+		textNomCa      = reg.textField("textNomCa");
+		textNomEs      = reg.textField("textNomEs");
+		textNomEn      = reg.textField("textNomEn");
+
+		comboFormat    = reg.comboBox("comboFormat");
+		comboFormat.setModel(new javax.swing.DefaultComboBoxModel<>(herramienta.FormatOptions.withBlank()));
 		comboFormat.setBackground(UITheme.palette().bgMain());
 		comboFormat.setForeground(UITheme.palette().textDark());
 		comboFormat.setFont(UITheme.fontBase());
-		chckDesitjat   = new JCheckBox("");
+		comboEstat     = reg.comboBox("comboEstat");
+		comboEstat.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")}));
+		comboEstat.setBackground(UITheme.palette().bgMain());
+		comboEstat.setForeground(UITheme.palette().textDark());
+		comboEstat.setFont(UITheme.fontBase());
+		chckDesitjat   = reg.checkBox("chckDesitjat");
 		chckDesitjat.setBackground(UITheme.palette().bgPanel());
 		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);
-		chckDesitjat.setToolTipText(I18n.t("tip_desitjat"));
-		chckLlegit     = new JCheckBox("");
+		chckLlegit     = reg.checkBox("chckLlegit");
 		chckLlegit.setBackground(UITheme.palette().bgPanel());
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
+
 		textNotes      = new JTextArea(4, 20); textNotes.setLineWrap(true); textNotes.setWrapStyleWord(true);
 		textNotes.setBackground(UITheme.palette().bgMain());
 		textNotes.setForeground(UITheme.palette().textDark());
 		textNotes.setFont(UITheme.fontBase());
 		textNotes.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.palette().borderClr()));
-		textPortada    = new JTextField(); textPortada.setColumns(10); UIComponents.styleField(textPortada);
-		textPaisOrigen = new JTextField(); textPaisOrigen.setColumns(10); UIComponents.styleField(textPaisOrigen);
-		comboEstat     = new JComboBox<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
-		comboEstat.setBackground(UITheme.palette().bgMain());
-		comboEstat.setForeground(UITheme.palette().textDark());
-		comboEstat.setFont(UITheme.fontBase());
-		textExemplars  = new JTextField(); textExemplars.setColumns(10); UIComponents.styleField(textExemplars);
-		textNomCa      = new JTextField(); textNomCa.setColumns(10); UIComponents.styleField(textNomCa);
-		textNomEs      = new JTextField(); textNomEs.setColumns(10); UIComponents.styleField(textNomEs);
-		textNomEn      = new JTextField(); textNomEn.setColumns(10); UIComponents.styleField(textNomEn);
 
 		FormGridBuilder builder = FormGridBuilder.columnsOf(grid);
 		builder.addField(I18n.t("field_isbn"), textISBN);

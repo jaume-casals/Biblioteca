@@ -1,6 +1,6 @@
 package herramienta.csv;
 
-import interficie.BibliotecaWriter;
+import interficie.BookReader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,7 +95,7 @@ public final class CsvUtils {
     }
 
     /** Returns true if a book with the given ISBN already exists in the library (skip on import). */
-    public static boolean existsInLibrary(BibliotecaWriter cd, long isbn) {
+    public static boolean existsInLibrary(BookReader cd, long isbn) {
         try { cd.getLlibre(isbn); return true; } catch (Exception e) { return false; }
     }
 }

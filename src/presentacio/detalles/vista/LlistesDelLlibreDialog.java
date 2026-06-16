@@ -21,7 +21,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import domini.Llibre;
-import interficie.BibliotecaWriter;
+import interficie.ShelfWriter;
 import domini.Llista;
 import herramienta.I18n;
 import herramienta.UITheme;
@@ -39,13 +39,13 @@ public class LlistesDelLlibreDialog extends JDialog {
     private JButton btnAfegir;
     private JButton btnTreure;
     private JButton btnGuardar;
-    private final BibliotecaWriter cd;
+    private final ShelfWriter cd;
 
     public LlistesDelLlibreDialog(Window owner, Llibre llibre) {
         this(owner, llibre, null);
     }
 
-    public LlistesDelLlibreDialog(Window owner, Llibre llibre, BibliotecaWriter cd) {
+    public LlistesDelLlibreDialog(Window owner, Llibre llibre, ShelfWriter cd) {
         super(owner, I18n.t("dlg_llistes_title", llibre.getNom()), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();

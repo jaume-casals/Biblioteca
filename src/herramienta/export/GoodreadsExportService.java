@@ -3,7 +3,7 @@ package herramienta.export;
 import domini.Llibre;
 import domini.Llista;
 import herramienta.csv.CsvUtils;
-import interficie.BibliotecaWriter;
+import interficie.BibliotecaReader;
 import persistencia.LlibreLlistaRow;
 
 import java.io.PrintWriter;
@@ -18,7 +18,7 @@ import static java.util.stream.Collectors.joining;
 public final class GoodreadsExportService {
     private GoodreadsExportService() {}
 
-    public static String exportToCsv(BibliotecaWriter cd) throws Exception {
+    public static String exportToCsv(BibliotecaReader cd) throws Exception {
         // String overload retained for back-compat with the few existing
         // callers that read the whole export into memory. For 10k-book
         // libraries this allocates ~10 MB transiently; the streaming
@@ -36,7 +36,7 @@ public final class GoodreadsExportService {
      * intermediate String. For a 10k-book library this is ~10x faster
      * (no full-doc allocation) and ~20x friendlier on the heap.
      */
-    public static void exportToCsv(BibliotecaWriter cd, PrintWriter pw) throws Exception {
+    public static void exportToCsv(BibliotecaReader cd, PrintWriter pw) throws Exception {
         pw.println("Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
                  + "Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publicación Year,"
                  + "Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,"

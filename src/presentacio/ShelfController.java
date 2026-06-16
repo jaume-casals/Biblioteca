@@ -3,6 +3,7 @@ package presentacio;
 import domini.Llista;
 import herramienta.DialogoError;
 import herramienta.I18n;
+import interficie.ShelfWriter;
 
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
@@ -230,7 +231,7 @@ class ShelfController {
     }
 
     void obrirGestioLlistes() {
-        new GestioLlistesDialog(SwingUtilities.getWindowAncestor(state.vista), coordinator, state.cd)
+        new GestioLlistesDialog(SwingUtilities.getWindowAncestor(state.vista), coordinator, (ShelfWriter) state.cd)
             .setVisible(true);
     }
 }

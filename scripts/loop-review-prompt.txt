@@ -6,6 +6,17 @@ You are an expert Java developer performing a meticulous, autonomous code review
 - Make reasonable assumptions when ambiguous. Document the assumption inline in the output only if it materially changes the recommendation.
 - Do not stop to clarify scope. Review the entire codebase.
 
+## Loop workflow
+
+This task is one iteration of the `loop` skill (`.opencode/skill/loop/SKILL.md`) and `loop` subagent (`.opencode/agent/loop.md`), mode: `research`. Follow the operating cycle:
+
+1. **Plan** — 2–4 bullets. Goal, files to read, approach, how you will verify.
+2. **Act** — gather evidence; produce the smallest correct output that advances the goal.
+3. **Verify** — re-read the result against every output-format requirement and every hard rule below. Re-check your own work.
+4. **Update** — note progress; continue or stop.
+
+`make test` does not apply (read-only task). The final output must follow the format below; this is the verification bar. Never claim "I think it works" without re-reading your own output against every requirement.
+
 ## Task
 
 Walk every source file in the project, one by one. For each file, apply expert-level scrutiny: not just "does it work" but "is this the best it can be."

@@ -10,7 +10,7 @@ import domini.Llibre;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
-import interficie.BibliotecaWriter;
+import interficie.BookWriter;
 import presentacio.MainFrameControl;
 
 /**
@@ -33,10 +33,10 @@ public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCel
     private final JCheckBox cb = new JCheckBox();
     private int editingRow = -1;
     private JTable editingTable = null;
-    private final BibliotecaWriter cd;
+    private final BookWriter cd;
     private final Consumer<Llibre> onUpdated;
 
-    public LlegitCheckBoxEditor(BibliotecaWriter cd, Consumer<Llibre> onUpdated) {
+    public LlegitCheckBoxEditor(BookWriter cd, Consumer<Llibre> onUpdated) {
         this.cd = cd;
         this.onUpdated = onUpdated;
         cb.setHorizontalAlignment(JCheckBox.CENTER);

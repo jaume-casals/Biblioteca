@@ -2,7 +2,7 @@ package presentacio;
 
 import domini.Llibre;
 import herramienta.I18n;
-import interficie.BibliotecaWriter;
+import interficie.BookReader;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -39,10 +39,10 @@ class TablePageController {
     void invalidateCache() { model.invalidateCache(); }
 
     private final MostrarBibliotecaPanel vista;
-    private final BibliotecaWriter cd;
+    private final BookReader cd;
     private final Consumer<java.util.List<Llibre>> setTable;
 
-    TablePageController(MostrarBibliotecaPanel vista, BibliotecaWriter cd,
+    TablePageController(MostrarBibliotecaPanel vista, BookReader cd,
                         Consumer<java.util.List<Llibre>> setTable) {
         this.vista = vista;
         this.cd = cd;

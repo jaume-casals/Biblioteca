@@ -2,7 +2,6 @@ package presentacio.config;
 
 import herramienta.Config;
 import herramienta.UITheme;
-import interficie.BibliotecaWriter;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;

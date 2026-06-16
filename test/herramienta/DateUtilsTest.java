@@ -16,38 +16,38 @@ class DateUtilsTest {
     @Test
     @DisplayName("parseYear: 4-digit ISO year prefix is taken")
     void parseYearIsoPrefix() {
-        assertThat(DateUtils.parseYear("1984")).isEqualTo(1984);
-        assertThat(DateUtils.parseYear("2024-03-15")).isEqualTo(2024);
+        assertThat(DateUtils.parseYear("1984")).contains(1984);
+        assertThat(DateUtils.parseYear("2024-03-15")).contains(2024);
     }
 
     @Test
     @DisplayName("parseYear: extracts year from free text")
     void parseYearFreeText() {
-        assertThat(DateUtils.parseYear("Published 1984")).isEqualTo(1984);
-        assertThat(DateUtils.parseYear("Year: 2020")).isEqualTo(2020);
+        assertThat(DateUtils.parseYear("Published 1984")).contains(1984);
+        assertThat(DateUtils.parseYear("Year: 2020")).contains(2020);
     }
 
     @Test
-    @DisplayName("parseYear: null / blank / no digits → 0")
+    @DisplayName("parseYear: null / blank / no digits → empty")
     void parseYearEmpty() {
-        assertThat(DateUtils.parseYear(null)).isZero();
-        assertThat(DateUtils.parseYear("")).isZero();
-        assertThat(DateUtils.parseYear("   ")).isZero();
-        assertThat(DateUtils.parseYear("not a year")).isZero();
+        assertThat(DateUtils.parseYear(null)).isEmpty();
+        assertThat(DateUtils.parseYear("")).isEmpty();
+        assertThat(DateUtils.parseYear("   ")).isEmpty();
+        assertThat(DateUtils.parseYear("not a year")).isEmpty();
     }
 
     @Test
     @DisplayName("parseYear: years outside 1000-2200 from prefix are rejected; regex fallback")
     void parseYearOutOfPrefixRange() {
         // Prefix is "1234" which is in [1000, 2200], so it returns 1234
-        assertThat(DateUtils.parseYear("1234-05-06")).isEqualTo(1234);
+        assertThat(DateUtils.parseYear("1234-05-06")).contains(1234);
     }
 
     @Test
     @DisplayName("parseYear: 3-digit prefix rejected by length check; regex kicks in if any year found")
     void parseYearShortPrefix() {
         // "999" is < 4 chars, so the int parse branch is skipped; regex finds none
-        assertThat(DateUtils.parseYear("999x")).isZero();
+        assertThat(DateUtils.parseYear("999x")).isEmpty();
     }
 
     // ── normalizeDate ────────────────────────────────────────────────────
@@ -124,6 +124,6 @@ class DateUtilsTest {
     })
     @DisplayName("parseYear parameterized")
     void parseYearParameterized(String input, int expected) {
-        assertThat(DateUtils.parseYear(input)).isEqualTo(expected);
+        assertThat(DateUtils.parseYear(input)).contains(expected);
     }
 }

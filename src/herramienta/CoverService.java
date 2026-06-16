@@ -1,6 +1,6 @@
 package herramienta;
 
-import interficie.BibliotecaWriter;
+import interficie.BookWriter;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -64,7 +64,7 @@ public final class CoverService {
     }
 
     /** Fetch cover bytes for {@code isbn}, save to DB blob, invoke callback on success. */
-    public static void fetchAsync(BibliotecaWriter cd, String isbn, Runnable onDone) {
+    public static void fetchAsync(BookWriter cd, String isbn, Runnable onDone) {
         byte[] cached = getCachedBytes(isbn);
         if (cached != null) {
             try {

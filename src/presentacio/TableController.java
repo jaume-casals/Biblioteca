@@ -5,6 +5,7 @@ import herramienta.I18n;
 import herramienta.UiConfig;
 import herramienta.WindowConfig;
 import interficie.BibliotecaWriter;
+import interficie.BookWriter;
 import presentacio.renderers.CoverCellRenderer;
 import presentacio.renderers.LlegitCheckBoxEditor;
 import presentacio.renderers.LlegitCheckBoxRenderer;
@@ -215,7 +216,7 @@ class TableController {
         WindowConfig.setColVisible(BibliotecaTableModel.COL_DETALLS, false);
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellEditor(
-            new LlegitCheckBoxEditor(cd, onRowUpdated));
+            new LlegitCheckBoxEditor((BookWriter) cd, onRowUpdated));
         t.getColumnModel().getColumn(BibliotecaTableModel.COL_PROGRES).setCellRenderer(new ProgressBarRenderer());
         highlightRenderer = new SearchHighlightRenderer(loanedIsbns);
         for (int v = 0; v < t.getColumnCount(); v++) {

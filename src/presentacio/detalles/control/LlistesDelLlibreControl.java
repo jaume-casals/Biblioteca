@@ -9,7 +9,7 @@ import domini.Llista;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.SwingUtils;
-import interficie.BibliotecaWriter;
+import interficie.ShelfWriter;
 import presentacio.detalles.vista.LlistesDelLlibreDialog;
 import presentacio.detalles.vista.LlistesDelLlibreTableModel;
 
@@ -17,7 +17,7 @@ public class LlistesDelLlibreControl {
 
     private final LlistesDelLlibreDialog vista;
     private final Llibre llibre;
-    private final BibliotecaWriter cd;
+    private final ShelfWriter cd;
     private ArrayList<Llista> llistesCache = new ArrayList<>();
     private ArrayList<Llista> allLlistesCache = new ArrayList<>();
     private java.util.Set<Integer> memberIds = new java.util.HashSet<>();
@@ -44,7 +44,7 @@ public class LlistesDelLlibreControl {
             }
         };
 
-    public LlistesDelLlibreControl(LlistesDelLlibreDialog vista, Llibre llibre, BibliotecaWriter cd) {
+    public LlistesDelLlibreControl(LlistesDelLlibreDialog vista, Llibre llibre, ShelfWriter cd) {
         this.vista = vista;
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();

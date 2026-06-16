@@ -9,16 +9,16 @@ import javax.swing.*;
 import domini.Llibre;
 import herramienta.DialogoError;
 import herramienta.I18n;
-import interficie.BibliotecaWriter;
+import interficie.BibliotecaAdmin;
 
 public class BackupController {
 
     private final Component parent;
-    private final BibliotecaWriter cd;
+    private final BibliotecaAdmin cd;
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
 
-    public BackupController(Component parent, BibliotecaWriter cd,
+    public BackupController(Component parent, BibliotecaAdmin cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
         this.parent = parent;
         this.cd = cd;

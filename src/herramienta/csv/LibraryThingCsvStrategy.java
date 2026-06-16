@@ -59,10 +59,10 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
         String collections = CsvUtils.colVal(hMap, c, "Collections");
         if (!collections.isEmpty()) {
-            java.util.Map<String, domini.Llista> shelfMap = new java.util.HashMap<>();
-            for (domini.Llista ll : cd.getAllLlistes()) shelfMap.put(ll.getNom(), ll);
+            java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : collections.split(",")) {
-                ShelvesHelper.addBookToShelf(cd, shelfMap, isbn, s.trim(), valoracio, false);
+                domini.Llista llista = ShelvesHelper.findOrCreateShelf(cd, shelfCache, s.trim());
+                if (llista != null) cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
             }
         }
 

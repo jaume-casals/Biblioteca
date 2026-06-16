@@ -10,4 +10,5 @@ public interface LoanReader {
     List<PrestecRow> getAllActiveLoans();
     List<PrestecRow> getLoansForIsbn(long isbn);
     List<OverdueLoan> getAllOverdueLoans(int daysThreshold);
+    int countLoans(long isbn);
 }

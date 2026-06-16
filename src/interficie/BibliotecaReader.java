@@ -6,8 +6,6 @@ import java.util.List;
 
 public interface BibliotecaReader extends BookReader, ShelfReader, TagReader, LoanReader {
 
-    int countLoans(long isbn);
-
     byte[] getLlibreBlob(long isbn);
 
     long getDbSizeBytes();

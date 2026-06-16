@@ -17,7 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
 import domini.Llista;
-import interficie.BibliotecaWriter;
+import interficie.ShelfWriter;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import herramienta.UITheme;
@@ -28,15 +28,15 @@ public class GestioLlistesDialog extends JDialog {
     private final MostrarBibliotecaControl mainControl;
     private final DefaultListModel<Llista> listModel = new DefaultListModel<>();
     private final JList<Llista> jList = new JList<>(listModel);
-    private final BibliotecaWriter cd;
+    private final ShelfWriter cd;
 
-    /** The dialog requires a non-null {@code cd} (BibliotecaWriter) — the
+    /** The dialog requires a non-null {@code cd} (ShelfWriter) — the
      *  null-fallback to {@code ControladorDomini.getInstance()} was removed
      *  per the tot.txt MEDIUM finding. Caller (ShelfController) is the only
      *  entry point and always provides {@code state.cd}. */
-    public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl, BibliotecaWriter cd) {
+    public GestioLlistesDialog(Window owner, MostrarBibliotecaControl mainControl, ShelfWriter cd) {
         super(owner, I18n.t("dlg_gestio_llistes_title"), ModalityType.APPLICATION_MODAL);
-        if (cd == null) throw new IllegalArgumentException("cd (BibliotecaWriter) is required");
+        if (cd == null) throw new IllegalArgumentException("cd (ShelfWriter) is required");
         this.mainControl = mainControl;
         this.cd = cd;
         setSize(340, 400);

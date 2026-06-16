@@ -33,7 +33,7 @@ public final class ShelfParser {
         return "true".equalsIgnoreCase(s) || "1".equals(s);
     }
 
-    public static void exportToCsv(File f, List<Llibre> view, interficie.BibliotecaWriter cd) throws Exception {
+    public static void exportToCsv(File f, List<Llibre> view, interficie.ShelfReader cd) throws Exception {
         java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
         for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
         java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();

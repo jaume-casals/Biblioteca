@@ -14,6 +14,10 @@ import domini.facade.StatsDelegate;
 import domini.facade.TagDelegate;
 import herramienta.BackupService;
 import interficie.BibliotecaWriter;
+import interficie.BookWriter;
+import interficie.LoanWriter;
+import interficie.ShelfWriter;
+import interficie.TagWriter;
 import persistencia.ControladorPersistencia;
 import persistencia.LecturaRow;
 import persistencia.LlibreLlistaRow;
@@ -40,7 +44,7 @@ import persistencia.PrestecRow;
  * exceptions, and same side effects. The only externally observable
  * change is the file's line count (637 → ~150).
  */
-public class ControladorDomini implements BibliotecaWriter {
+public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWriter, TagWriter, LoanWriter {
 
 	private static ControladorDomini inst;
 

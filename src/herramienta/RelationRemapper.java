@@ -2,7 +2,8 @@ package herramienta;
 
 import domini.Llista;
 import domini.Tag;
-import interficie.BibliotecaWriter;
+import interficie.ShelfWriter;
+import interficie.TagWriter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,9 +16,9 @@ import java.util.Map;
 public final class RelationRemapper {
 
     public static final class ShelfIdRemapper {
-        private final BibliotecaWriter cd;
+        private final ShelfWriter cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public ShelfIdRemapper(BibliotecaWriter cd) {
+        public ShelfIdRemapper(ShelfWriter cd) {
             this.cd = cd;
             for (Llista l : cd.getAllLlistes()) byNom.put(l.getNom(), l.getId());
         }
@@ -31,9 +32,9 @@ public final class RelationRemapper {
     }
 
     public static final class TagIdRemapper {
-        private final BibliotecaWriter cd;
+        private final TagWriter cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public TagIdRemapper(BibliotecaWriter cd) {
+        public TagIdRemapper(TagWriter cd) {
             this.cd = cd;
             for (Tag t : cd.getAllTags()) byNom.put(t.getNom(), t.getId());
         }

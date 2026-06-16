@@ -922,12 +922,12 @@ class BibliotecaJUnit5Test {
     // ── DateUtils ────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("DateUtils.parseYear accepts plausible years, returns 0 on garbage")
+    @DisplayName("DateUtils.parseYear accepts plausible years, returns empty on garbage")
     void dateUtilsParseYear() {
-        assertThat(herramienta.DateUtils.parseYear("1984")).isEqualTo(1984);
-        assertThat(herramienta.DateUtils.parseYear("Published 1984")).isEqualTo(1984);
-        assertThat(herramienta.DateUtils.parseYear("not a year")).isZero();
-        assertThat(herramienta.DateUtils.parseYear(null)).isZero();
+        assertThat(herramienta.DateUtils.parseYear("1984")).contains(1984);
+        assertThat(herramienta.DateUtils.parseYear("Published 1984")).contains(1984);
+        assertThat(herramienta.DateUtils.parseYear("not a year")).isEmpty();
+        assertThat(herramienta.DateUtils.parseYear(null)).isEmpty();
     }
 
     // ── LlibreValidator: thrown branches ─────────────────────────────────────

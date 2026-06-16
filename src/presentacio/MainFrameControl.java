@@ -264,7 +264,8 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 						long readThisYear = all.stream()
 							.filter(l -> Boolean.TRUE.equals(l.getLlegit()))
 							.filter(l -> l.getDataLectura() != null
-								&& herramienta.DateUtils.parseYear(l.getDataLectura()) == currentYear)
+								&& herramienta.DateUtils.parseYear(l.getDataLectura())
+									.filter(y -> y == currentYear).isPresent())
 							.count();
 						int daysLeft = daysInYear - dayOfYear;
 						double neededPerDay = daysLeft > 0 ? (double)(goal - readThisYear) / daysLeft : 0;

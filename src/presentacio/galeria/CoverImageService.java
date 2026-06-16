@@ -1,7 +1,7 @@
 package presentacio.galeria;
 
 import domini.Llibre;
-import interficie.BibliotecaWriter;
+import interficie.BookReader;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -60,13 +60,13 @@ public final class CoverImageService {
 
     private final Set<Long> loading = ConcurrentHashMap.newKeySet();
 
-    private volatile BibliotecaWriter cd;
+    private volatile BookReader cd;
 
     public CoverImageService() {
         main.ShutdownHooks.register(this::shutdown);
     }
 
-    public void setCd(BibliotecaWriter cd) {
+    public void setCd(BookReader cd) {
         this.cd = cd;
     }
 
@@ -160,7 +160,7 @@ public final class CoverImageService {
 
     /** Read the cover bytes for a book. Tries in-memory blob first, then the
      *  path, then falls back to a DB load via {@code cd}. */
-    public static byte[] loadCoverBytes(Llibre l, BibliotecaWriter cd) {
+    public static byte[] loadCoverBytes(Llibre l, BookReader cd) {
         byte[] blob = l.getImatgeBlob();
         if (blob == null && l.hasBlob() && cd != null)
             blob = cd.getLlibreBlob(l.getISBN());
@@ -194,7 +194,7 @@ public final class CoverImageService {
     private BufferedImage loadRaw(Llibre l) {
         byte[] blob = l.getImatgeBlob();
         if (blob == null && l.hasBlob()) {
-            BibliotecaWriter writer = this.cd;
+            BookReader writer = this.cd;
             if (writer != null) blob = writer.getLlibreBlob(l.getISBN());
             else blob = domini.ControladorDomini.getInstance().getLlibreBlob(l.getISBN());
         }

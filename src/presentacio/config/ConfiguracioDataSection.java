@@ -20,6 +20,10 @@ import static herramienta.I18n.t;
 public final class ConfiguracioDataSection {
     private ConfiguracioDataSection() {}
 
+    public static String sanitizeProfileName(String name) {
+        return name == null ? "" : name.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
+    }
+
     public static JPanel build(JDialog owner, BibliotecaWriter cd, ConfiguracioDialogListener listener) {
         JPanel panel = new JPanel();
         panel.setBackground(UITheme.palette().bgPanel());
@@ -98,7 +102,7 @@ public final class ConfiguracioDataSection {
                 t("dlg_perfil_actiu", current),
                 t("dlg_canviar_perfil_title"), JOptionPane.PLAIN_MESSAGE, null, opts, current);
             if (chosen == null) return;
-            chosen = chosen.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
+            chosen = sanitizeProfileName(chosen);
             if (chosen.isEmpty() || chosen.equals(current)) return;
             int confirm = JOptionPane.showConfirmDialog(owner,
                 t("dlg_perfil_confirmar", chosen), t("dlg_perfil_confirmar_title"),

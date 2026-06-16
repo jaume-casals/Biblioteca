@@ -12,7 +12,7 @@ import javax.swing.event.DocumentListener;
 import domini.Llibre;
 import persistencia.LlibreTagRow;
 import domini.Tag;
-import interficie.BibliotecaWriter;
+import interficie.TagWriter;
 import herramienta.DialogoError;
 import herramienta.I18n;
 import presentacio.detalles.vista.TagsDelLlibreDialog;
@@ -29,7 +29,7 @@ public class TagsDelLlibreControl {
 
     private final TagsDelLlibreDialog vista;
     private final Llibre llibre;
-    private final BibliotecaWriter cd;
+    private final TagWriter cd;
     private ArrayList<Tag> tagsCache = new ArrayList<>();
     private ArrayList<Tag> allTagsCache = new ArrayList<>();
     private ArrayList<Tag> displayedTags = new ArrayList<>();
@@ -39,7 +39,7 @@ public class TagsDelLlibreControl {
      *  SQL query the tot.txt LOW finding flagged. */
     private Map<Integer, Integer> tagCounts = new HashMap<>();
 
-    public TagsDelLlibreControl(TagsDelLlibreDialog vista, Llibre llibre, BibliotecaWriter cd) {
+    public TagsDelLlibreControl(TagsDelLlibreDialog vista, Llibre llibre, TagWriter cd) {
         this.vista = vista;
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();

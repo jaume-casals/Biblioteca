@@ -46,7 +46,7 @@ import presentacio.layouts.WrapLayout;
  * <ul>
  *   <li>{@link CoverImageService} — async LRU image cache + crop-scale.</li>
  *   <li>{@link CoverCardFactory} — paints each card, wires mouse + selection
- *       events back through a {@link CoverCardFactory.Listener}.</li>
+ *       events back through a {@link CoverCardFactory.CardHost}.</li>
  *   <li>{@link CoverZoomPopup} — hover-zoom overlay shown next to a card.</li>
  * </ul>
  *
@@ -81,12 +81,13 @@ public class GaleriaCobertesPanel extends JPanel {
     private final Set<Long> selectedISBNs = new LinkedHashSet<>();
     private final java.util.HashMap<Long, JPanel> cardMap = new java.util.HashMap<>();
     private List<Llibre> currentLlibres;
-    private int focusedIdx = -1;
+    private final int[] focusedRef = { -1 };
 
     private Consumer<Llibre> onCardClick;
     private BiConsumer<MouseEvent, List<Llibre>> onRightClick;
     private Consumer<List<Llibre>> onDeleteSelected;
     private BibliotecaWriter cd;
+    private final CoverCardFactory.CardHost cardHost;
 
     public GaleriaCobertesPanel() {
         setLayout(new BorderLayout());
@@ -149,11 +150,19 @@ public class GaleriaCobertesPanel extends JPanel {
         });
         getActionMap().put("galEnter", new AbstractAction() {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (focusedIdx >= 0 && currentLlibres != null
-                        && focusedIdx < currentLlibres.size() && onCardClick != null)
-                    onCardClick.accept(currentLlibres.get(focusedIdx));
+                if (focusedRef[0] >= 0 && currentLlibres != null
+                        && focusedRef[0] < currentLlibres.size() && onCardClick != null)
+                    onCardClick.accept(currentLlibres.get(focusedRef[0]));
             }
         });
+
+        cardHost = new CoverCardFactory.CardHost(
+            selectedISBNs,
+            focusedRef,
+            () -> currentLlibres,
+            l -> { if (onCardClick != null) onCardClick.accept(l); },
+            (e, sel) -> { if (onRightClick != null) onRightClick.accept(e, sel); },
+            changedIsbns -> repaintCards(changedIsbns));
     }
 
     public void setCd(BibliotecaWriter cd) {
@@ -194,11 +203,11 @@ public class GaleriaCobertesPanel extends JPanel {
         imageService.clear();
         if (currentLlibres != null) {
             Set<Long> savedSelection = new LinkedHashSet<>(selectedISBNs);
-            int savedFocus = focusedIdx;
+            int savedFocus = focusedRef[0];
             updateLlibres(currentLlibres);
             selectedISBNs.addAll(savedSelection);
             if (savedFocus >= 0 && savedFocus < currentLlibres.size()) {
-                focusedIdx = savedFocus;
+                focusedRef[0] = savedFocus;
             }
             revalidate();
             repaint();
@@ -221,19 +230,19 @@ public class GaleriaCobertesPanel extends JPanel {
     private void moveKeyboard(int delta) {
         if (currentLlibres == null || currentLlibres.isEmpty()) return;
         int n = currentLlibres.size();
-        if (focusedIdx < 0) focusedIdx = 0;
-        else focusedIdx = Math.max(0, Math.min(n - 1, focusedIdx + delta));
+        if (focusedRef[0] < 0) focusedRef[0] = 0;
+        else focusedRef[0] = Math.max(0, Math.min(n - 1, focusedRef[0] + delta));
         selectedISBNs.clear();
-        selectedISBNs.add(currentLlibres.get(focusedIdx).getISBN());
+        selectedISBNs.add(currentLlibres.get(focusedRef[0]).getISBN());
         wrap.repaint();
-        JPanel card = cardMap.get(currentLlibres.get(focusedIdx).getISBN());
+        JPanel card = cardMap.get(currentLlibres.get(focusedRef[0]).getISBN());
         if (card != null) card.scrollRectToVisible(new Rectangle(0, 0, card.getWidth(), card.getHeight()));
     }
 
     public void updateLlibres(List<Llibre> llibres) {
         this.currentLlibres = llibres;
         selectedISBNs.clear();
-        focusedIdx = -1;
+        focusedRef[0] = -1;
         cardMap.clear();
         zoomPopup.hide();
         wrap.setBackground(UITheme.palette().bgMain());
@@ -241,7 +250,7 @@ public class GaleriaCobertesPanel extends JPanel {
         if (llibres != null) {
             for (int i = 0; i < llibres.size(); i++) {
                 Llibre l = llibres.get(i);
-                JPanel card = cardFactory.build(l, i, new CardListener(l, i));
+                JPanel card = cardFactory.build(l, i, cardHost);
                 cardMap.put(l.getISBN(), card);
                 wrap.add(card);
             }
@@ -262,35 +271,6 @@ public class GaleriaCobertesPanel extends JPanel {
         for (Long isbn : isbns) {
             JPanel c = cardMap.get(isbn);
             if (c != null) c.repaint();
-        }
-    }
-
-    // ── CardListener: bridge from CoverCardFactory to host state ──────────────
-
-    private final class CardListener implements CoverCardFactory.Listener {
-        private final Llibre l;
-        private final int cardIdx;
-
-        CardListener(Llibre l, int cardIdx) {
-            this.l = l;
-            this.cardIdx = cardIdx;
-        }
-
-        @Override public Set<Long> selectedISBNs() { return selectedISBNs; }
-        @Override public int focusedIdx() { return focusedIdx; }
-        @Override public void setFocusedIdx(int idx) { focusedIdx = idx; }
-        @Override public List<Llibre> currentLlibres() { return currentLlibres; }
-
-        @Override public void onCardClicked(Llibre l) {
-            if (onCardClick != null) onCardClick.accept(l);
-        }
-
-        @Override public void onCardRightClicked(MouseEvent e, List<Llibre> selected) {
-            if (onRightClick != null) onRightClick.accept(e, selected);
-        }
-
-        @Override public void onSelectionMutated(Iterable<Long> changedIsbns) {
-            repaintCards(changedIsbns);
         }
     }
 }

@@ -11,6 +11,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -18,6 +19,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -74,6 +76,8 @@ public class DetallesLlibrePanel extends JDialog {
 	private JButton    btnGestioTags;
 	private JButton    btnHistorialPrestecs;
 	private JButton    btnImprimir;
+
+	private final List<JComponent> editableInputs;
 
 	public DetallesLlibrePanel() {
 		setModal(true);
@@ -156,6 +160,13 @@ public class DetallesLlibrePanel extends JDialog {
 		tabbedPane.addTab(I18n.t("field_notes"), buildNotesTab());
 		tabbedPane.addTab(I18n.t("tab_advanced"), buildAdvancedTab());
 		add(tabbedPane, BorderLayout.CENTER);
+
+		editableInputs = List.of(
+			textAny, textAutor, textDescripcio, textNom, textPortada, textPreu, textValoracio,
+			textEditorial, textSerie, textVolum, textDataCompra, textDataLectura, textIdioma,
+			textPaisOrigen, textExemplars, textLlenguaOriginal, textPagines, textPaginesLlegides,
+			textNomCa, textNomEs, textNomEn,
+			comboFormat, comboEstat, chckDesitjat, chckLlegit, textNotes);
 
 		setSize(800, 680);
 	}
@@ -347,6 +358,7 @@ public class DetallesLlibrePanel extends JDialog {
 
 	public JLabel     getLabelIcono()          { return labelIcono; }
 	public JButton    getBtnSeleccionarImatge() { return btnSeleccionarImatge; }
+	public List<JComponent> getEditableInputs() { return editableInputs; }
 	public JButton    getBtnEliminar()          { return btnEliminar; }
 	public JButton    getBtnEditar()            { return btnEditar; }
 	public JTextField getTextISBN()             { return textISBN; }

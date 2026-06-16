@@ -30,8 +30,10 @@ public class EstadistiquesHelper {
     }
 
     private static int readYearFor(Llibre l) {
-        int yr = l.getDataLectura() != null ? herramienta.DateUtils.parseYear(l.getDataLectura()) : 0;
-        return yr > 0 ? yr : (l.getAny() != null && l.getAny() > 1900 ? l.getAny() : 0);
+        java.util.Optional<Integer> yr = l.getDataLectura() != null
+            ? herramienta.DateUtils.parseYear(l.getDataLectura())
+            : java.util.Optional.empty();
+        return yr.filter(y -> y > 0).orElse(l.getAny() != null && l.getAny() > 1900 ? l.getAny() : 0);
     }
 
     public static java.util.Map<Integer, Long> booksByReadYear(List<Llibre> books) {

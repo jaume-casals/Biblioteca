@@ -3,7 +3,8 @@ package herramienta;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import interficie.BibliotecaWriter;
+import interficie.BibliotecaReader;
+import interficie.ShelfReader;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -14,11 +15,11 @@ public class BookExporter {
 
     private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
 
-    public static void exportCSV(File f, List<Llibre> view, BibliotecaWriter cd) throws Exception {
+    public static void exportCSV(File f, List<Llibre> view, ShelfReader cd) throws Exception {
         domini.ShelfParser.exportToCsv(f, view, cd);
     }
 
-    public static void exportJSON(File f, BibliotecaWriter cd) throws Exception {
+    public static void exportJSON(File f, BibliotecaReader cd) throws Exception {
         // Bulk-load relational data to avoid N+1
         java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
         for (persistencia.LlibreLlistaRow r : cd.getAllLlibreLlistaRows())
@@ -86,7 +87,7 @@ public class BookExporter {
         "table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}" +
         "th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}";
 
-    public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd,
+    public static void exportHTML(File f, List<Llibre> view, ShelfReader cd,
             boolean groupByShelf, boolean tableView) throws Exception {
         exportHTML(f, view, cd, groupByShelf, tableView, null);
     }
@@ -106,7 +107,7 @@ public class BookExporter {
      * underlying {@code CoverService.getCachedBytes} and
      * {@code cd.getLlibreBlob} do disk + DB I/O).
      */
-    public static void exportHTML(File f, List<Llibre> view, BibliotecaWriter cd,
+    public static void exportHTML(File f, List<Llibre> view, ShelfReader cd,
             boolean groupByShelf, boolean tableView,
             java.util.Map<Long, byte[]> coverBlobs) throws Exception {
         try (PrintWriter pw = new PrintWriter(
@@ -130,7 +131,7 @@ public class BookExporter {
         pw.println("<h1>" + Escapers.html(I18n.t("export_html_heading")) + "</h1>");
     }
 
-    private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd,
+    private static void writeHtmlBody(PrintWriter pw, List<Llibre> view, ShelfReader cd,
             boolean groupByShelf, boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         if (groupByShelf) {
             writeHtmlGroupedByShelf(pw, view, cd, tableView, coverBlobs);
@@ -140,7 +141,7 @@ public class BookExporter {
         }
     }
 
-    private static void writeHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, BibliotecaWriter cd,
+    private static void writeHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, ShelfReader cd,
             boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         List<Llista> llistes = cd.getAllLlistes();
         java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();

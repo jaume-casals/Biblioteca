@@ -39,6 +39,23 @@ The `loop` subagent (`.opencode/agent/loop.md`) and the `loop` skill (`.opencode
 
 For very large refactors, split into multiple `loop` calls by module or layer rather than one huge run — a single call can exhaust context.
 
+## Concurrent subagents (parallel work in one turn)
+
+Main agent only exists during a turn. Between user prompts it is dead — no work happens. To run work in parallel, **launch multiple subagents in a single message** (one user turn, multiple `task` tool calls). Each subagent runs concurrently; main waits for all to return before responding.
+
+**When to fan out:**
+- `loop` (build/fix) + `explore` (read-only research for the next refactor).
+- Two `loop` calls on **disjoint** file sets or modules.
+- `loop` + `general` reviewer (one builds, one reads the diff and reports).
+
+**Don't:**
+- Two `loop` calls editing the same files — they race and corrupt state. Split by module first.
+- Treat parallelism as a substitute for planning — concurrent subagents still need a clear scope each.
+
+**Example prompt shape:** "Run two tasks in parallel: (1) `loop` in build mode to fix the `Llibre` CRUD bugs in `domini/Llibre.java` + `persistencia/LlibreDAO.java`; (2) `explore` to list every place in `presentacio/` that still calls the deprecated `ControladorDomini.refresh()` overload. Report both."
+
+**Limits:** token cost multiplies with concurrency. 2–3 subagents per turn is usually the ceiling before context returns get unwieldy.
+
 ## Build & Test Commands
 
 The Makefile is the source of truth on Linux/macOS. On Windows, use the
