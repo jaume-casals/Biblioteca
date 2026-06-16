@@ -1,5 +1,10 @@
 # ---------- RUN & COMPILE ---------- #
 
+# Multiple targets share the same `bin/` output (compile, fuzz-test-compile,
+# populate, test). They must run serially to avoid javac-on-bin races and
+# the resulting "rm: cannot remove classes.txt" / corrupted class files.
+.NOTPARALLEL:
+
 JAVAC := $(shell which javac 2>/dev/null || find /usr/lib/jvm -name javac 2>/dev/null | head -1)
 ifeq ($(JAVAC),)
     JAVAC := /usr/lib/jvm/java-21-openjdk/bin/javac
@@ -59,7 +64,7 @@ JAZZER_JUNIT := lib/jazzer-junit-0.24.0.jar
 # 0.24.0's agent install requires a working native-lib setup that
 # conflicts with the regression-mode JUnit 5 run; they are run via
 # `make fuzz-jazzer` instead.
-TEST_CP := $(TEST_CP):$(JQWIK_API):$(JQWIK_ENGINE)
+TEST_CP := $(TEST_CP):$(JQWIK_API):$(JQWIK_ENGINE):$(JAZZER_API):$(JAZZER_JUNIT)
 FUZZ_CP := $(TEST_CP):$(JAZZER):$(JAZZER_API):$(JAZZER_JUNIT)
 # Jazzer 0.24.0 has a packaging inconsistency: the native libs in
 # jazzer-0.24.0.jar live at com/.../driver/jazzer_driver_<os>_<arch>/
@@ -94,6 +99,7 @@ test: compile test-deps fuzz-deps
 	@java -cp bin:$(TEST_CP) BibliotecaTest
 	@DB_COUNTER=0; for cls in $$(find ./test/ -name '*Test.java' \
 	    | grep -v '/BibliotecaTest\.java$$' \
+	    | grep -v '/fuzz/' \
 	    | sed -e 's|^\./test/||' -e 's|\.java$$||' -e 's|/|.|g'); do \
 	    DB_COUNTER=$$((DB_COUNTER+1)); \
 	    echo "=== Running $$cls (JUnit 5) ==="; \
@@ -364,11 +370,15 @@ $(FUZZ_SHIM_JAR):
 	        jazzer_fuzzed_data_provider_linux_x86_64:libjazzer_fuzzed_data_provider.so \
 	        jazzer_signal_handler_linux_x86_64:libjazzer_signal_handler.so ; do \
 	        src=$$(echo $$pair | cut -d: -f1); dst=$$(echo $$pair | cut -d: -f2); \
-	        target=com/code_intelligence/jazzer/driver/lib$$src; \
+	        target=com/code_intelligence/jazzer/driver/$$src; \
 	        mkdir -p $$target; \
 	        unzip -j -oq ../$(JAZZER) "com/code_intelligence/jazzer/driver/$$src/$$dst" -d $$target 2>/dev/null \
 	            || echo "  WARN: $$src/$$dst not in $(JAZZER) (build/arch mismatch?)"; \
 	    done && \
+	    mkdir -p com/code_intelligence/jazzer/utils && \
+	    unzip -j -oq ../$(JAZZER) 'com/code_intelligence/jazzer/utils/Log.class' \
+	        -d com/code_intelligence/jazzer/utils 2>/dev/null \
+	        || echo "  WARN: Log.class not in $(JAZZER)"; \
 	    jar cf ../$(FUZZ_SHIM_JAR) .
 
 # Run the jqwik property tests for the domini layer. Per-test try counts
@@ -376,7 +386,7 @@ $(FUZZ_SHIM_JAR):
 # regression-only mode (one try per property). This target uses the
 # dedicated H2 instance name `fuzz_prop` so the in-memory DB is shared
 # across all 5 properties within this run.
-fuzz-property: compile fuzz-deps
+fuzz-property: compile fuzz-deps fuzz-test-compile
 	@echo "=== jqwik: fuzz.domini.LlibreInvariantPropertiesTest ==="
 	@java $(BOOTCP) -Dbiblioteca.test=true \
 	    -Dbiblioteca.h2.url="jdbc:h2:mem:fuzz_prop;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
@@ -388,7 +398,7 @@ fuzz-property: compile fuzz-deps
 # mode (one run with a seed) to coverage-guided fuzzing. The @FuzzTest
 # annotation's maxDuration caps each harness; FUZZ_TIME is exposed for
 # callers who want to bump it via the env var.
-fuzz-jazzer: compile fuzz-deps
+fuzz-jazzer: compile fuzz-deps fuzz-test-compile
 	@echo "=== Jazzer: fuzz.herramienta.Rfc4180FuzzTest ==="
 	@JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
 	    -jar $(JUNIT5_STANDALONE) execute \
@@ -399,6 +409,13 @@ fuzz-jazzer: compile fuzz-deps
 	    -jar $(JUNIT5_STANDALONE) execute \
 	    --select-class=fuzz.herramienta.CsvUtilsFuzzTest --details=tree \
 	    --classpath bin:$(FUZZ_CP)
+
+# Compile test sources (including fuzz tests) into bin/. Used by the
+# fuzz targets so they don't depend on `make test` having run first.
+fuzz-test-compile:
+	@find ./test/ -name '*.java' > test_classes.txt
+	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
+	@rm test_classes.txt
 
 fuzz: fuzz-property fuzz-jazzer
 

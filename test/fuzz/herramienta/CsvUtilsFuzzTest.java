@@ -3,6 +3,7 @@ package fuzz.herramienta;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import herramienta.csv.CsvUtils;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,9 +12,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>The fuzz body consumes an attacker-controlled string of up to 64K
  * characters and asserts the parser's basic contract: returns a
- * non-null array and every element is non-null. A secondary property
- * (encoded as a small {@code @FuzzTest} sanity check) confirms the
- * "trailing newline" stability rule on a manually constructed input.
+ * non-null array and every element is non-null. A secondary
+ * regression test (plain JUnit 5, not driven by the fuzzer) confirms
+ * the "trailing newline" stability rule on a manually constructed
+ * input.
  */
 class CsvUtilsFuzzTest {
 
@@ -32,7 +34,7 @@ class CsvUtilsFuzzTest {
      * plain comma-separated line must not change the field count.
      * This is a manually-built property, not driven by the fuzzer.
      */
-    @FuzzTest(maxDuration = "5s")
+    @Test
     void trailingNewlineDoesNotChangeFieldCount() {
         String s = "a,b,c";
         assertThat(CsvUtils.parseLine(s)).hasSameSizeAs(CsvUtils.parseLine(s + "\n"));

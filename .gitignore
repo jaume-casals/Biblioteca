@@ -46,6 +46,8 @@ test/_test_classes.txt
 
 # Fuzzing artifacts
 fuzz-corpus/
+.cifuzz-corpus/
+crash-*
 fuzz-shim/
 lib/jqwik-*.jar
 lib/jazzer-*.jar
