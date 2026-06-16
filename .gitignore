@@ -52,3 +52,4 @@ fuzz-shim/
 lib/jqwik-*.jar
 lib/jazzer-*.jar
 
+.jqwik-database

@@ -20,7 +20,9 @@ public final class ShelfParser {
         if (raw == null || raw.isBlank()) return entries;
         for (String entry : raw.split(";")) {
             String[] parts = entry.split("\\|", 3);
-            if (parts.length < 1 || parts[0].isBlank()) continue;
+            // isBlank() doesn't catch NUL / control chars; use trim().isEmpty()
+            // so a name like "\0\0\0" is correctly treated as missing.
+            if (parts.length < 1 || parts[0].trim().isEmpty()) continue;
             String nom = parts[0].trim();
             double val = parts.length > 1 ? CsvUtils.parseDoubleOrZero(parts[1]) : 0.0;
             boolean llegit = parts.length > 2 && parseBool(parts[2].trim());
