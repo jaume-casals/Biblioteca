@@ -17,5 +17,6 @@ public final class DbConfig {
     public static void setHost(String host)       { Config.setDbHost(host); }
     public static void setUser(String user)       { Config.setDbUser(user); }
     public static void setPassword(String pw)     { Config.setDbPassword(pw); }
+    public static void setPassword(char[] pw)     { Config.setDbPassword(pw); }
     public static void setProfile(String name)    { Config.setDbProfile(name); }
 }

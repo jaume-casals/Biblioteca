@@ -124,7 +124,14 @@ public class ServerConect {
 	}
 
 	/** Variant that takes the password as a {@code char[]} so the caller can
-	 *  zero it after the call instead of leaving a {@code String} in the heap. */
+	 *  zero it after the call instead of leaving a {@code String} in the heap.
+	 *  <p>The JDBC {@link java.sql.Driver#connect(String, java.util.Properties)}
+	 *  contract requires the password as a {@code String} in the
+	 *  {@code Properties} bag, so a single {@code String} copy of the password
+	 *  is unavoidable for MariaDB; the copy lives inside the
+	 *  {@link Connection}'s {@code Properties} until the driver releases it.
+	 *  The caller's {@code char[]} is the only chunk this method can keep
+	 *  short-lived: zero it as soon as the connection succeeds or fails. */
 	public static Connection testConnection(java.util.Properties props, char[] password) throws Exception {
 		String dbType = props.getProperty("dbType", "h2");
 		ServerConect sc = new ServerConect();

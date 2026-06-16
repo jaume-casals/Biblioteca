@@ -217,6 +217,17 @@ public class Config {
     public static boolean hasDbPassword() { return props.containsKey("dbPassword"); }
     public static void setDbPassword(String pw) { props.put("dbPassword", pw); save(); }
 
+    /** Variant that takes the password as a {@code char[]} so the caller can
+     *  zero it after the call instead of leaving a {@code String} in the heap.
+     *  The {@code char[]} is zeroed here as soon as the {@code String} copy is
+     *  created — the caller's array is wiped for them. The on-disk plaintext
+     *  is unaffected (this is in-heap protection only). */
+    public static void setDbPassword(char[] pw) {
+        String s = new String(pw);
+        java.util.Arrays.fill(pw, '\0');
+        setDbPassword(s);
+    }
+
     private static final java.util.Set<String> VALID_FONT_SIZES = java.util.Set.of("small", "medium", "large");
     public static String getFontSize() { return props.getOrDefault("fontSize", "medium"); }
     public static void setFontSize(String size) {

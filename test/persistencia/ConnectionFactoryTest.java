@@ -6,17 +6,18 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * Per-class unit tests for {@link ConnectionFactory}.
- * ConnectionFactory.open() is hard to test in isolation because it reaches
- * into Config + system properties + ServerConect. We at least cover
- * the simple {@code withConfig} constructor delegate.
+ * Per-class unit tests for {@link ConnectionConfig}. The
+ * {@code ConnectionFactory} wrapper was inlined into
+ * {@code ServerConect.createDatabase} by the LOW-tot refactor; we
+ * cover the surviving public surface (the record ctor + accessor
+ * record components) here.
  */
 class ConnectionFactoryTest {
 
     @Test
-    @DisplayName("withConfig: returns a ConnectionConfig with the given fields")
+    @DisplayName("new ConnectionConfig: returns a record with the given fields")
     void withConfigReturnsConfig() {
-        var c = ConnectionFactory.withConfig("mariadb", "h", "u", "p", "profile", null);
+        var c = new ConnectionConfig("mariadb", "h", "u", "p", "profile", null);
         assertThat(c.dbType()).isEqualTo("mariadb");
         assertThat(c.host()).isEqualTo("h");
         assertThat(c.user()).isEqualTo("u");
@@ -26,9 +27,9 @@ class ConnectionFactoryTest {
     }
 
     @Test
-    @DisplayName("withConfig: null dbType throws NPE via ConnectionConfig's compact ctor")
+    @DisplayName("new ConnectionConfig: null dbType throws NPE via the compact ctor")
     void withConfigNullDbType() {
-        assertThatThrownBy(() -> ConnectionFactory.withConfig(null, "h", "u", "p", "pr", null))
+        assertThatThrownBy(() -> new ConnectionConfig(null, "h", "u", "p", "pr", null))
             .isInstanceOf(NullPointerException.class);
     }
 }

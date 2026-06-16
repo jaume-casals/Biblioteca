@@ -83,6 +83,7 @@ public class Ejecutable {
                     } catch (RuntimeException e) {
                         final String msg = e.getMessage();
                         LOG.log(Level.SEVERE, "Failed to initialise ControladorDomini", e);
+                        if (splashRef != null) splashRef.forceHide();
                         EventQueue.invokeLater(() -> {
                             javax.swing.JOptionPane.showMessageDialog(null, msg);
                             System.exit(1);

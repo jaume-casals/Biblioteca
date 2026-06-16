@@ -70,7 +70,9 @@ public final class ConfiguracioButtonBar {
                 if (external) {
                     DbConfig.setHost(txtHost.getText().trim());
                     DbConfig.setUser(txtUser.getText().trim());
-                    DbConfig.setPassword(new String(txtPass.getPassword()));
+                    char[] pw = txtPass.getPassword();
+                    try { DbConfig.setPassword(pw); }
+                    finally { java.util.Arrays.fill(pw, '\0'); }
                 }
                 DbConfig.setType(external ? "mariadb" : "h2");
                 String imgDir = txtImgDir.getText().trim();
