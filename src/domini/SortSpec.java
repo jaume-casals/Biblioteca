@@ -67,9 +67,11 @@ public final class SortSpec {
     /**
      * In-memory comparator for the column. Falls back to
      * {@link #ISBN_COMPARATOR} for unknown columns so callers don't
-     * have to repeat the null-coalesce.
+     * have to repeat the null-coalesce. Null column is treated as
+     * unknown (same coercion the constructor applies).
      */
     public static Comparator<Llibre> comparator(String column) {
+        if (column == null) return ISBN_COMPARATOR;
         Column c = COLUMNS.get(column);
         return c != null ? c.cmp() : ISBN_COMPARATOR;
     }

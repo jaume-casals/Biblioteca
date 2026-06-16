@@ -37,24 +37,56 @@ regression-only mode.
 
 ## Adding a harness (Jazzer)
 
-1. Add a class in `test/fuzz/herramienta/`. Annotate the method with
-   `@FuzzTest(maxDuration = "30s")`. `maxDuration` is the runtime cap;
-   bump it for harnesses that need more time to reach deep branches.
+1. Add a class in `test/fuzz/herramienta/` (parsers, I/O) or
+   `test/fuzz/domini/` (pure-function logic). Annotate the method
+   with `@FuzzTest(maxDuration = "30s")`. `maxDuration` is the runtime
+   cap; bump it for harnesses that need more time to reach deep
+   branches.
 2. The single parameter is `FuzzedDataProvider data`. Call
    `data.consumeRemainingAsBytes()` for byte-stream targets,
    `data.consumeString(65536)` for parser targets, or primitive
-   combinators (`data.consumeInt(0, 100)`) for API fuzzing.
+   combinators (`data.consumeInt(0, 100)`, `data.consumeBoolean()`)
+   for API fuzzing.
 3. Let only the contract exceptions escape (`IOException`,
    `NoSuchElementException`). Assert no NPE / OOM / StackOverflow.
 4. For an infinite-loop cap, count iterations in the harness body and
    return after, say, 10_000 — otherwise a buggy `hasNext()` will hang
    the fuzzer.
+5. **Add seed corpus** to `.cifuzz-corpus/fuzz.<package>.<Class>/fuzz/`
+   — at least a few representative inputs. Without seeds Jazzer
+   starts blind and coverage growth stalls within a few hundred runs.
 
 Run with `make fuzz-jazzer` (or `scripts\fuzz-jazzer.bat`). The
 `JAZZER_FUZZ=1` env var switches Jazzer from regression mode (one
 run, deterministic) to coverage-guided fuzzing. Without the env var
 the `@FuzzTest` runs as a normal JUnit test, so the same suite is
 safe to run under `make test`.
+
+To run a single harness:
+```
+make fuzz-jazzer JARZER_SEL=fuzz.domini.SortSpecFuzzTest
+```
+
+## Nightly run
+
+`scripts/fuzz-nightly.sh` runs every harness in parallel, each
+iterating with the accumulated corpus, until one crashes or you hit
+Ctrl+C. Logs land in `/tmp/jazzer/YYYYMMDD-HHMMSS.log` (with
+`/tmp/jazzer/latest.log` symlinked to the most recent). Crashes are
+moved to `fuzz-corpus/crashes/`.
+
+```
+# Foreground (Ctrl+C to stop)
+scripts/fuzz-nightly.sh
+
+# Background, watch the log
+nohup scripts/fuzz-nightly.sh &
+tail -f /tmp/jazzer/latest.log
+```
+
+Each iteration of a single harness is capped at 30 s by the
+`@FuzzTest(maxDuration = "30s")` annotation; bump it for harnesses
+that need longer to reach deep branches.
 
 ## Triaging a finding
 
@@ -81,9 +113,18 @@ the seed bytes, and run it under `make test` to debug.
   the streaming CSV reader.
 - `test/fuzz/herramienta/CsvUtilsFuzzTest.java` — Jazzer harness for
   `CsvUtils.parseLine`.
+- `test/fuzz/domini/LlibreFilterBuilderFuzzTest.java` — Jazzer
+  harness for the `LlibreFilterBuilder` + `SortSpec` round-trip.
+- `test/fuzz/domini/SortSpecFuzzTest.java` — Jazzer harness for
+  `SortSpec` (column coercion, SQL direction, comparator).
+- `test/fuzz/domini/ShelfParserFuzzTest.java` — Jazzer harness for
+  `ShelfParser.parseShelfEntries` + round-trip with `joinShelfEntries`.
+- `scripts/fuzz-nightly.sh` — parallel runner, dated logs, crash
+  capture, clean Ctrl+C.
 - `lib/jqwik-*.jar`, `lib/jazzer-*.jar` — downloaded by
   `make fuzz-deps`, .gitignored.
-- `fuzz-corpus/` — Jazzer output (crash + generated corpus),
+- `.cifuzz-corpus/` — Jazzer's persistent corpus, .gitignored.
+- `fuzz-corpus/` — Crash files (moved here on detection),
   .gitignored.
 
 ## House rules

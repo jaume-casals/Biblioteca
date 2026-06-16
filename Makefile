@@ -24,7 +24,7 @@ compile:
 	fi
 	@find ./src/ -name "*.java" > classes.txt
 	@$(JAVAC) -g --release 21 -cp $(CP) @classes.txt -d bin
-	@rm classes.txt
+	@rm -f classes.txt
 	@if [ -d src/herramienta ]; then cp src/herramienta/*.properties bin/herramienta/ 2>/dev/null || true; fi
 	@if [ -d src/web ]; then cp -r src/web bin/web; fi
 	@if [ -f src/LICENSE ]; then cp src/LICENSE bin/; fi
@@ -396,26 +396,39 @@ fuzz-property: compile fuzz-deps fuzz-test-compile
 
 # Run the Jazzer harnesses. JAZZER_FUZZ=1 switches Jazzer from regression
 # mode (one run with a seed) to coverage-guided fuzzing. The @FuzzTest
-# annotation's maxDuration caps each harness; FUZZ_TIME is exposed for
-# callers who want to bump it via the env var.
+# annotation's maxDuration caps each harness.
+#
+# JAZZER_SEL=<fqn>: run a single harness by fully-qualified class name.
+#                    Used by scripts/fuzz-nightly.sh to run both harnesses
+#                    in parallel without them racing on .cifuzz-corpus/.
+#                    If unset, runs every harness serially.
 fuzz-jazzer: compile fuzz-deps fuzz-test-compile
-	@echo "=== Jazzer: fuzz.herramienta.Rfc4180FuzzTest ==="
-	@JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
-	    -jar $(JUNIT5_STANDALONE) execute \
-	    --select-class=fuzz.herramienta.Rfc4180FuzzTest --details=tree \
-	    --classpath bin:$(FUZZ_CP)
-	@echo "=== Jazzer: fuzz.herramienta.CsvUtilsFuzzTest ==="
-	@JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
-	    -jar $(JUNIT5_STANDALONE) execute \
-	    --select-class=fuzz.herramienta.CsvUtilsFuzzTest --details=tree \
-	    --classpath bin:$(FUZZ_CP)
+	@if [ -n "$(JARZER_SEL)" ]; then \
+	    echo "=== Jazzer: $(JARZER_SEL) ==="; \
+	    JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	        -jar $(JUNIT5_STANDALONE) execute \
+	        --select-class=$(JARZER_SEL) --details=tree \
+	        --classpath bin:$(FUZZ_CP); \
+	else \
+	    for h in fuzz.herramienta.Rfc4180FuzzTest \
+	             fuzz.herramienta.CsvUtilsFuzzTest \
+	             fuzz.domini.LlibreFilterBuilderFuzzTest \
+	             fuzz.domini.SortSpecFuzzTest \
+	             fuzz.domini.ShelfParserFuzzTest; do \
+	        echo "=== Jazzer: $$h ==="; \
+	        JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	            -jar $(JUNIT5_STANDALONE) execute \
+	            --select-class=$$h --details=tree \
+	            --classpath bin:$(FUZZ_CP) || exit $$?; \
+	    done; \
+	fi
 
 # Compile test sources (including fuzz tests) into bin/. Used by the
 # fuzz targets so they don't depend on `make test` having run first.
 fuzz-test-compile:
 	@find ./test/ -name '*.java' > test_classes.txt
 	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
-	@rm test_classes.txt
+	@rm -f test_classes.txt
 
 fuzz: fuzz-property fuzz-jazzer
 
