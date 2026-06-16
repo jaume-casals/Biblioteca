@@ -77,7 +77,7 @@ public class BookImporter {
 
     public static ImportResult importCalibre(java.io.File dbFile, String sqlite3, BibliotecaWriter cd) throws Exception {
         String sql = "SELECT b.id, b.title, GROUP_CONCAT(a.name, ', '), i.val, p.name, b.pubdate, b.rating, b.comment, b.series_index, s.name FROM books b LEFT JOIN books_authors_link ba ON b.id=ba.book LEFT JOIN authors a ON ba.author=a.id LEFT JOIN identifiers i ON b.id=i.book AND i.type='isbn' LEFT JOIN publishers p ON b.id=(SELECT book FROM books_publishers_link WHERE book=b.id LIMIT 1) LEFT JOIN books_series_link bs ON b.id=bs.book LEFT JOIN series s ON bs.series=s.id GROUP BY b.id;";
-        Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, dbFile.getAbsolutePath(), sql});
+        Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, "-separator", "\t", dbFile.getAbsolutePath(), sql});
         Thread stderrDrain = new Thread(() -> {
             try { proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream()); }
             catch (Exception ignored) {}
@@ -92,7 +92,13 @@ public class BookImporter {
             while ((line = br.readLine()) != null) {
                 if (line.isBlank()) continue;
                 try {
-                    String[] c = line.split("\\|", -1);
+                    String[] c = line.split("\t", -1);
+                    if (c.length < 10) {
+                        throw new IllegalArgumentException("Calibre row has " + c.length
+                            + " tab-separated field(s) (expected 10). The book title or a "
+                            + "GROUP_CONCAT field likely contains an embedded tab — "
+                            + "row cannot be parsed safely.");
+                    }
                     String isbnRaw = c.length > 3 ? c[3].replaceAll("[^0-9]", "") : "";
                     if (isbnRaw.isEmpty() || isbnRaw.length() < 10) { skipped++; continue; }
                     long isbn = Long.parseLong(isbnRaw);

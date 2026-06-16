@@ -44,3 +44,12 @@ classes.txt
 test_classes.txt
 test/_test_classes.txt
 
+# Fuzzing artifacts
+fuzz-corpus/
+.cifuzz-corpus/
+crash-*
+fuzz-shim/
+lib/jqwik-*.jar
+lib/jazzer-*.jar
+
+.jqwik-database

@@ -64,11 +64,7 @@ public final class JsonImporter {
                 try {
                     JsonObject bo = be.getAsJsonObject();
                     long isbn = bo.get("isbn").getAsLong();
-                    try { cd.getLlibre(isbn); skipped++; continue; }
-                    catch (Exception e) {
-                        Logger.getLogger(JsonImporter.class.getName())
-                            .log(Level.WARNING, "Skipped book with unparseable ISBN " + isbn, e);
-                    }
+                    if (cd.existsLlibre(isbn)) { skipped++; continue; }
                     String nom = bo.has("nom") && !bo.get("nom").isJsonNull() ? bo.get("nom").getAsString() : "";
                     String autor = bo.has("autor") && !bo.get("autor").isJsonNull() ? bo.get("autor").getAsString() : "";
                     int any = bo.has("any") ? bo.get("any").getAsInt() : 0;

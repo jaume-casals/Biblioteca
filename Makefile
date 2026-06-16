@@ -1,5 +1,10 @@
 # ---------- RUN & COMPILE ---------- #
 
+# Multiple targets share the same `bin/` output (compile, fuzz-test-compile,
+# populate, test). They must run serially to avoid javac-on-bin races and
+# the resulting "rm: cannot remove classes.txt" / corrupted class files.
+.NOTPARALLEL:
+
 JAVAC := $(shell which javac 2>/dev/null || find /usr/lib/jvm -name javac 2>/dev/null | head -1)
 ifeq ($(JAVAC),)
     JAVAC := /usr/lib/jvm/java-21-openjdk/bin/javac
@@ -40,6 +45,41 @@ run-only:
 
 JUNIT5_STANDALONE := lib/junit-platform-console-standalone-1.11.4.jar
 
+# ---------- FUZZ DEPS ----------
+
+# jqwik 1.9.0 (property-based, JUnit 5)
+JQWIK_API := lib/jqwik-api-1.9.0.jar
+JQWIK_ENGINE := lib/jqwik-engine-1.9.0.jar
+# Jazzer 0.24.0 (coverage-guided libFuzzer for the JVM)
+# jazzer-junit-launcher was renamed to jazzer in 0.x — Maven Central
+# only ships jazzer, jazzer-api, and jazzer-junit. The agent attaches
+# dynamically via ByteBuddyAgent when JAZZER_FUZZ=1 is set.
+JAZZER := lib/jazzer-0.24.0.jar
+JAZZER_API := lib/jazzer-api-0.24.0.jar
+JAZZER_JUNIT := lib/jazzer-junit-0.24.0.jar
+
+# Fuzz jars are added to the test classpath so `make test` compiles the
+# jqwik fuzz tests. The Jazzer @FuzzTest tests are excluded from
+# `make test` (see the per-class JUnit 5 loop below) because Jazzer
+# 0.24.0's agent install requires a working native-lib setup that
+# conflicts with the regression-mode JUnit 5 run; they are run via
+# `make fuzz-jazzer` instead.
+TEST_CP := $(TEST_CP):$(JQWIK_API):$(JQWIK_ENGINE):$(JAZZER_API):$(JAZZER_JUNIT)
+FUZZ_CP := $(TEST_CP):$(JAZZER):$(JAZZER_API):$(JAZZER_JUNIT)
+# Jazzer 0.24.0 has a packaging inconsistency: the native libs in
+# jazzer-0.24.0.jar live at com/.../driver/jazzer_driver_<os>_<arch>/
+# but the bootstrap jar's RulesJni searches at
+# com/.../driver/libjazzer_driver_<os>_<arch>/. The shim jar
+# $(FUZZ_SHIM_JAR) duplicates the .so files at the expected path and
+# must be added to the bootstrap classpath via -Xbootclasspath/a: at
+# JVM startup (the bootstrap RulesJni is loaded by the bootstrap
+# classloader at runtime, and on Java 21 Class.getResource on an
+# unnamed-module bootstrap class delegates to
+# ClassLoader.getBootstrapResource, which only searches the
+# bootclasspath — NOT the application classpath).
+FUZZ_SHIM_JAR := fuzz-shim/jazzer-native-shim.jar
+BOOTCP := -Xbootclasspath/a:$(FUZZ_SHIM_JAR)
+
 test-deps:
 	@if [ ! -f "$(APIGUARDIAN_JAR)" ]; then \
 		echo "Fetching $(APIGUARDIAN_JAR)..."; \
@@ -48,7 +88,7 @@ test-deps:
 		|| wget -q -O "$(APIGUARDIAN_JAR)" "$(APIGUARDIAN_URL)"; \
 	fi
 
-test: compile test-deps
+test: compile test-deps fuzz-deps
 	@if [ -f scripts/patch_tests_after_web_removal.py ]; then \
 		python3 scripts/patch_tests_after_web_removal.py 2>/dev/null \
 		|| python scripts/patch_tests_after_web_removal.py; \
@@ -59,10 +99,11 @@ test: compile test-deps
 	@java -cp bin:$(TEST_CP) BibliotecaTest
 	@DB_COUNTER=0; for cls in $$(find ./test/ -name '*Test.java' \
 	    | grep -v '/BibliotecaTest\.java$$' \
+	    | grep -v '/fuzz/' \
 	    | sed -e 's|^\./test/||' -e 's|\.java$$||' -e 's|/|.|g'); do \
 	    DB_COUNTER=$$((DB_COUNTER+1)); \
 	    echo "=== Running $$cls (JUnit 5) ==="; \
-	    java -Dbiblioteca.test=true \
+	    java $(BOOTCP) -Dbiblioteca.test=true \
 	        -Dbiblioteca.h2.url="jdbc:h2:mem:dyn_$$DB_COUNTER;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
 	        -jar $(JUNIT5_STANDALONE) execute \
 	        --select-class=$$cls --details=summary \
@@ -295,6 +336,88 @@ installer-linux: fat-jar icon
 
 strings:
 	@python3 scripts/gen_strings.py
+
+# ---------- FUZZ ------------ #
+
+# Downloads the 5 fuzz jars from Maven Central. Idempotent — skips
+# jars already on disk. The fuzz jars are .gitignored.
+# Also rebuilds the $(FUZZ_SHIM_JAR) jar containing the Jazzer
+# native libs at the resource path RulesJni expects (see the FUZZ_SHIM
+# note above). The shim jar is added to the bootstrap classpath via
+# -Xbootclasspath/a:.
+fuzz-deps: $(FUZZ_SHIM_JAR)
+	@mkdir -p lib
+	@for entry in \
+	    jqwik-api:1.9.0:net/jqwik \
+	    jqwik-engine:1.9.0:net/jqwik \
+	    jazzer:0.24.0:com/code-intelligence \
+	    jazzer-api:0.24.0:com/code-intelligence \
+	    jazzer-junit:0.24.0:com/code-intelligence ; do \
+	    art=$$(echo $$entry | cut -d: -f1); ver=$$(echo $$entry | cut -d: -f2); gp=$$(echo $$entry | cut -d: -f3); \
+	    jar=lib/$$art-$$ver.jar; \
+	    if [ ! -f $$jar ]; then \
+	        curl -fsSL -o $$jar https://repo1.maven.org/maven2/$$gp/$$art/$$ver/$$art-$$ver.jar \
+	        || wget -q -O $$jar https://repo1.maven.org/maven2/$$gp/$$art/$$ver/$$art-$$ver.jar; \
+	        echo "  fetched $$jar"; \
+	    fi; \
+	done
+
+$(FUZZ_SHIM_JAR):
+	@mkdir -p fuzz-shim
+	@cd fuzz-shim && rm -rf META-INF com && \
+	    for pair in \
+	        jazzer_driver_linux_x86_64:libjazzer_driver.so \
+	        jazzer_fuzzed_data_provider_linux_x86_64:libjazzer_fuzzed_data_provider.so \
+	        jazzer_signal_handler_linux_x86_64:libjazzer_signal_handler.so ; do \
+	        src=$$(echo $$pair | cut -d: -f1); dst=$$(echo $$pair | cut -d: -f2); \
+	        target=com/code_intelligence/jazzer/driver/$$src; \
+	        mkdir -p $$target; \
+	        unzip -j -oq ../$(JAZZER) "com/code_intelligence/jazzer/driver/$$src/$$dst" -d $$target 2>/dev/null \
+	            || echo "  WARN: $$src/$$dst not in $(JAZZER) (build/arch mismatch?)"; \
+	    done && \
+	    mkdir -p com/code_intelligence/jazzer/utils && \
+	    unzip -j -oq ../$(JAZZER) 'com/code_intelligence/jazzer/utils/Log.class' \
+	        -d com/code_intelligence/jazzer/utils 2>/dev/null \
+	        || echo "  WARN: Log.class not in $(JAZZER)"; \
+	    jar cf ../$(FUZZ_SHIM_JAR) .
+
+# Run the jqwik property tests for the domini layer. Per-test try counts
+# are encoded in the test class; `make test` also runs them but in
+# regression-only mode (one try per property). This target uses the
+# dedicated H2 instance name `fuzz_prop` so the in-memory DB is shared
+# across all 5 properties within this run.
+fuzz-property: compile fuzz-deps fuzz-test-compile
+	@echo "=== jqwik: fuzz.domini.LlibreInvariantPropertiesTest ==="
+	@java $(BOOTCP) -Dbiblioteca.test=true \
+	    -Dbiblioteca.h2.url="jdbc:h2:mem:fuzz_prop;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    --select-class=fuzz.domini.LlibreInvariantPropertiesTest --details=tree \
+	    --classpath bin:$(FUZZ_CP)
+
+# Run the Jazzer harnesses. JAZZER_FUZZ=1 switches Jazzer from regression
+# mode (one run with a seed) to coverage-guided fuzzing. The @FuzzTest
+# annotation's maxDuration caps each harness; FUZZ_TIME is exposed for
+# callers who want to bump it via the env var.
+fuzz-jazzer: compile fuzz-deps fuzz-test-compile
+	@echo "=== Jazzer: fuzz.herramienta.Rfc4180FuzzTest ==="
+	@JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    --select-class=fuzz.herramienta.Rfc4180FuzzTest --details=tree \
+	    --classpath bin:$(FUZZ_CP)
+	@echo "=== Jazzer: fuzz.herramienta.CsvUtilsFuzzTest ==="
+	@JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    --select-class=fuzz.herramienta.CsvUtilsFuzzTest --details=tree \
+	    --classpath bin:$(FUZZ_CP)
+
+# Compile test sources (including fuzz tests) into bin/. Used by the
+# fuzz targets so they don't depend on `make test` having run first.
+fuzz-test-compile:
+	@find ./test/ -name '*.java' > test_classes.txt
+	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
+	@rm test_classes.txt
+
+fuzz: fuzz-property fuzz-jazzer
 
 # ---------- CLEAN ---------- #
 

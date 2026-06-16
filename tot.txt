@@ -546,3 +546,21 @@ smaller drift / dead-code / performance findings.
    added the same smell (DetallesLlibrePanel
    hand-declared fields is a direct parallel to the
    2026-06-13 FilterDrawerPanel finding).
+
+---
+
+## Cross-cutting / Fuzzing
+
+**OPEN: Set up property-based + coverage-guided fuzzing infrastructure**
+(no regression suite for CSV/JSON parsing or domini round-trips beyond
+hand-written unit tests; the import path is a high-risk attack surface).
+
+**DONE: jqwik 1.9.0 (property) + Jazzer 0.24.0 (coverage) fuzzing**
+wired into `make test`, `make fuzz-property`, `make fuzz-jazzer`. 5
+jqwik properties on `ControladorDomini` (add/delete round-trip, loan
+cleared, shelf add/remove, tag add/remove, case-insensitive author
+filter); 2 Jazzer harnesses for `Rfc4180Reader` and `CsvUtils.parseLine`.
+Lib jars are downloaded to `lib/` by `make fuzz-deps` and gitignored.
+`docs/fuzzing.md` covers the playbook. Negative smoke test
+(RuntimeException injected into the Rfc4180 harness) confirmed Jazzer
+finds the crash within seconds — proof the toolchain is real.
