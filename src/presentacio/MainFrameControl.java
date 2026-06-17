@@ -199,8 +199,10 @@ public class MainFrameControl implements presentacio.listener.EnActualizarBBDD {
 	}
 
 	public static MainFrameControl getInstance(MainFramePanel panel, BibliotecaWriter cd) {
-		if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
-		else if (instance != null && panel != null) throw new IllegalStateException("MainFrameControl already initialized");
+		synchronized (MainFrameControl.class) {
+			if (instance == null && panel != null) instance = new MainFrameControl(panel, cd);
+			else if (instance != null && panel != null) throw new IllegalStateException("MainFrameControl already initialized");
+		}
 		return instance;
 	}
 

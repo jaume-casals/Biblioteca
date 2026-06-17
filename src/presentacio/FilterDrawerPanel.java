@@ -56,14 +56,14 @@ public class FilterDrawerPanel extends JPanel {
 		registry.add(Field.check("chckbxNoLlegit",      "filter_no_llegit_chk",  "tip_filter_no_llegit"));
 
 		registry.add(Field.text("textISBN",             "filter_isbn_lbl",       10));
-		registry.add(Field.text("textNom",              "filter_nom_lbl",        14));
-		registry.add(Field.text("textAutor",            "filter_autor_lbl",      14));
+		registry.add(Field.text("textNom",              "filter_nom_lbl",        "tip_filter_substring", 14));
+		registry.add(Field.text("textAutor",            "filter_autor_lbl",      "tip_filter_substring", 14));
 
 		registry.add(Field.combo("comboTagFilter",      "filter_etiqueta_lbl",   "tip_filter_tag", 140));
 
-		registry.add(Field.text("filterEditorial",      "filter_editorial_lbl",  14));
-		registry.add(Field.text("filterSerie",          "filter_serie_lbl",      12));
-		registry.add(Field.text("filterIdioma",         "filter_idioma_lbl",     10));
+		registry.add(Field.text("filterEditorial",      "filter_editorial_lbl",  "tip_filter_substring", 14));
+		registry.add(Field.text("filterSerie",          "filter_serie_lbl",      "tip_filter_substring", 12));
+		registry.add(Field.text("filterIdioma",         "filter_idioma_lbl",     "tip_filter_substring", 10));
 		registry.add(Field.combo("filterFormat",        "filter_format_lbl",     null,           130));
 
 		registry.add(Field.text("anyMin",               "filter_any_lbl",        5));

@@ -141,12 +141,12 @@ public class ServerConect {
 			String profile = sanitizeH2Profile(props.getProperty("dbProfile", "biblioteca"));
 			String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "")
 				+ "/" + profile + ";MODE=MySQL;NON_KEYWORDS=VALUE";
-			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
+			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", new char[0]);
 		} else {
 			String host = props.getProperty("dbHost", "localhost");
 			String url = "jdbc:mariadb://" + host + "/?characterEncoding=UTF-8&useUnicode=true";
 			return sc.connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
-				url, props.getProperty("dbUser", ""), new String(password));
+				url, props.getProperty("dbUser", ""), password);
 		}
 	}
 
@@ -164,17 +164,19 @@ public class ServerConect {
 	public void createDatabase(ConnectionConfig cfg) {
 		try {
 			if (cfg.testUrl() != null) {
-				con = connectViaDriver("org.h2.Driver", "h2", cfg.testUrl(), "sa", "");
+				con = connectViaDriver("org.h2.Driver", "h2", cfg.testUrl(), "sa", new char[0]);
 			} else if ("h2".equals(cfg.dbType())) {
 				String dir = System.getProperty("user.home") + "/.biblioteca";
 				new File(dir).mkdirs();
 				String url = "jdbc:h2:" + dir.strip().replaceAll("/+$", "")
 					+ "/" + sanitizeH2Profile(cfg.profile()) + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
-				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", "");
+				con = connectViaDriver("org.h2.Driver", "h2", url, "sa", new char[0]);
 			} else if ("mariadb".equals(cfg.dbType())) {
 				String url = "jdbc:mariadb://" + cfg.host() + "/?characterEncoding=UTF-8&useUnicode=true";
+				String cfgPwd = cfg.password();
+				char[] pwd = (cfgPwd == null || cfgPwd.isEmpty()) ? new char[0] : cfgPwd.toCharArray();
 				con = connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
-					url, cfg.user(), cfg.password());
+					url, cfg.user(), pwd);
 				try (Statement s = con.createStatement()) {
 					s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
 					s.executeUpdate("USE BIBLIOTECA;");
@@ -375,7 +377,7 @@ public class ServerConect {
 	}
 
 	private Connection connectViaDriver(String driverClass, String jarNameHint,
-			String url, String user, String password) throws Exception {
+			String url, String user, char[] password) throws Exception {
 		java.sql.Driver driver;
 		try {
 			driver = (java.sql.Driver) Class.forName(driverClass).getDeclaredConstructor().newInstance();
@@ -383,8 +385,8 @@ public class ServerConect {
 			driver = loadDriverFromLib(driverClass, jarNameHint);
 		}
 		java.util.Properties props = new java.util.Properties();
-		if (user     != null) props.setProperty("user",     user);
-		if (password != null) props.setProperty("password", password);
+		if (user != null) props.setProperty("user", user);
+		if (password != null) props.setProperty("password", new String(password));
 		Connection c = driver.connect(url, props);
 		if (c == null) throw new Exception("Driver " + driverClass + " did not accept URL: " + url);
 		return c;

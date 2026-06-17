@@ -128,3 +128,4 @@ All runtime config in `~/.biblioteca/config.properties` (dbType, darkMode, fontS
 - Language: Catalan/Spanish mixed
 - `lib/junit-platform-console-standalone-1.11.4.jar` used for JUnit 5 console launch
 - `opencode.json` sets `instructions: ["AGENTS.md"]`, `lsp`, and bash `rm` permissions — most config is in Makefile
+- **Scripts**: keep them simple and to the point. Upgrade later if needed — don't pre-build flexibility.

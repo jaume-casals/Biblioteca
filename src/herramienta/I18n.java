@@ -362,6 +362,7 @@ public class I18n {
         T("filter_editorial_lbl", "Editorial", "Editorial", "Publisher");
         T("filter_serie_lbl", "Sèrie", "Serie", "Series");
         T("filter_idioma_lbl", "Idioma", "Idioma", "Language");
+        T("tip_filter_substring", "Coincidència parcial: cerca qualsevol llibre que contengui el text introduït", "Coincidencia parcial: busca cualquier libro que contenga el texto introducido", "Substring match: finds any book that contains the typed text");
         T("filter_format_lbl", "Format", "Formato", "Format");
         T("filter_etiqueta_lbl", "Etiqueta:", "Etiqueta:", "Tag:");
         T("tip_filter_tag", "Filtrar per etiqueta/gènere", "Filtrar por etiqueta/género", "Filter by tag/genre");
@@ -502,6 +503,8 @@ public class I18n {
         T("dlg_rename_llista_prompt", "Nou nom per a la llista \\\"{0}\\\":", "Nuevo nombre para la lista \\\"{0}\\\":", "New name for list \\\"{0}\\\":");
         T("dlg_perfil_confirmar", "Canviar al perfil \\\"{0}\\\"? Els canvis s'aplicaran al proper reinici.", "¿Cambiar al perfil \\\"{0}\\\"? Los cambios se aplicarán al próximo reinicio.", "Switch to profile \\\"{0}\\\"? Changes take effect on next restart.");
         T("dlg_perfil_confirmar_title", "Confirmar canvi de perfil", "Confirmar cambio de perfil", "Confirm Profile Switch");
+        T("dlg_perfil_nom_invalid", "El nom del perfil conté caràcters no permesos. Es desarà com a \\\"{0}\\\". Vols continuar?", "El nombre del perfil contiene caracteres no permitidos. Se guardará como \\\"{0}\\\". ¿Quieres continuar?", "The profile name contains characters that will be replaced. It will be saved as \\\"{0}\\\". Continue?");
+        T("dlg_perfil_nom_invalid_title", "Nom de perfil no vàlid", "Nombre de perfil no válido", "Invalid profile name");
         T("splash_loading", "Carregant biblioteca...", "Cargando biblioteca...", "Loading library...");
         T("csv_row_too_short", "La fila CSV té menys de 4 columnes requerides.", "La fila CSV tiene menos de 4 columnas requeridas.", "CSV row has fewer than 4 required columns.");
         T("no_lbl", "No", "No", "No");

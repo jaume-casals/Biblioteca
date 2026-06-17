@@ -175,9 +175,6 @@ public final class BookDelegate {
     public void loadHeavyFields(Llibre book) {
         if (book == null || book.isHeavyFieldsLoaded()) return;
         state.withLock(() -> {
-            // Re-check under the lock: a concurrent updateLlibre may have already
-            // loaded heavy fields on the same row.
-            if (book.isHeavyFieldsLoaded()) return;
             try {
                 state.persistence().loadHeavyFields(book.getISBN(), book);
             } catch (RuntimeException e) {

@@ -18,14 +18,31 @@ import javax.imageio.ImageIO;
 public final class CoverService {
     private static final int MAX_PARALLEL = 6;
     private static final int L1_MAX = 200;
-    /** Shared cover-fetch pool. Visible to other consumers (e.g.
-     *  ExportController.fetchMissingCovers) so they don't spin
-     *  up a second pool for the same OL endpoint. */
-    public static final ExecutorService POOL = Executors.newFixedThreadPool(MAX_PARALLEL, r -> {
+    /** Single-thread OL fetcher. OpenLibraryClient's 300 ms
+     *  rate limiter naturally caps throughput at ≤3.3 calls/s, so
+     *  a single thread is enough — additional threads would just
+     *  block on the rate limiter. Multi-threading the JDBC writes
+     *  is the win; the OL fetches were the bottleneck only because
+     *  they were sharing a pool with the writes. */
+    public static final ExecutorService FETCHER = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "cover-fetch");
         t.setDaemon(true);
         return t;
     });
+    /** Pool for JDBC cover-blob writes — sized by cover count,
+     *  independent of the OL rate limit, so writes don't queue
+     *  behind the fetches. */
+    public static final ExecutorService WRITE_POOL = Executors.newFixedThreadPool(MAX_PARALLEL, r -> {
+        Thread t = new Thread(r, "cover-write");
+        t.setDaemon(true);
+        return t;
+    });
+    /** @deprecated Use {@link #FETCHER} for OL fetches and
+     *  {@link #WRITE_POOL} for JDBC writes. Kept as an alias of
+     *  WRITE_POOL for backward compatibility with callers that
+     *  used to submit a single combined fetch+write task. */
+    @Deprecated
+    public static final ExecutorService POOL = WRITE_POOL;
 
     private static final Object L1_LOCK = new Object();
     private static final Map<String, byte[]> L1 = new java.util.LinkedHashMap<>(L1_MAX, 0.75f, true) {
@@ -67,29 +84,74 @@ public final class CoverService {
     public static void fetchAsync(BookWriter cd, String isbn, Runnable onDone) {
         byte[] cached = getCachedBytes(isbn);
         if (cached != null) {
-            try {
-                long lIsbn = Long.parseLong(isbn);
-                cd.setLlibreBlob(lIsbn, cached);
-            } catch (Exception ignored) {}
-            if (onDone != null) onDone.run();
+            writeCoverAsync(cd, isbn, cached, onDone);
             return;
         }
-        POOL.submit(() -> {
-            try {
-                byte[] data = OpenLibraryClient.fetchCoverByISBN(isbn);
-                if (data != null && data.length > 0) {
-                    cacheBytes(isbn, data);
-                    long lIsbn = Long.parseLong(isbn);
-                    cd.setLlibreBlob(lIsbn, data);
-                }
-                if (onDone != null) onDone.run();
-            } catch (Exception ignored) {}
+        FETCHER.submit(() -> {
+            byte[] data = null;
+            try { data = OpenLibraryClient.fetchCoverByISBN(isbn); } catch (Exception ignored) {}
+            if (data != null && data.length > 0) {
+                cacheBytes(isbn, data);
+                writeCoverAsync(cd, isbn, data, onDone);
+            } else if (onDone != null) {
+                onDone.run();
+            }
+        });
+    }
+
+    /** Submit a cover fetch and DB write for {@code isbn} across
+     *  the two pools: the OL HTTP call goes to {@link #FETCHER}
+     *  (single-thread, rate-limited), the JDBC write goes to
+     *  {@link #WRITE_POOL} (multi-thread, sized by cover count).
+     *  {@code onComplete} is invoked on the WRITE_POOL thread
+     *  with {@code true} if a cover was stored, {@code false}
+     *  if OL had no cover or the write failed. */
+    public static void submitCoverFetch(interficie.BibliotecaWriter cd, String isbn, java.util.function.Consumer<Boolean> onComplete) {
+        byte[] cached = getCachedBytes(isbn);
+        if (cached != null) {
+            submitWrite(cd, isbn, cached, onComplete);
+            return;
+        }
+        FETCHER.submit(() -> {
+            byte[] data = null;
+            try { data = OpenLibraryClient.fetchCoverByISBN(isbn); } catch (Exception ignored) {}
+            if (data != null && data.length > 0) {
+                cacheBytes(isbn, data);
+                submitWrite(cd, isbn, data, onComplete);
+            } else {
+                onComplete.accept(false);
+            }
+        });
+    }
+
+    /** Schedule a JDBC write of {@code data} for {@code isbn} on
+     *  {@link #WRITE_POOL}, calling {@code onDone} (on the WRITE_POOL
+     *  thread) when finished. */
+    private static void writeCoverAsync(BookWriter cd, String isbn, byte[] data, Runnable onDone) {
+        long lIsbn;
+        try { lIsbn = Long.parseLong(isbn); }
+        catch (Exception e) { if (onDone != null) onDone.run(); return; }
+        WRITE_POOL.submit(() -> {
+            try { cd.setLlibreBlob(lIsbn, data); } catch (Exception ignored) {}
+            if (onDone != null) onDone.run();
+        });
+    }
+
+    private static void submitWrite(interficie.BibliotecaWriter cd, String isbn, byte[] data, java.util.function.Consumer<Boolean> onComplete) {
+        long lIsbn;
+        try { lIsbn = Long.parseLong(isbn); }
+        catch (Exception e) { onComplete.accept(false); return; }
+        WRITE_POOL.submit(() -> {
+            boolean ok = false;
+            try { cd.setLlibreBlob(lIsbn, data); ok = true; } catch (Exception ignored) {}
+            onComplete.accept(ok);
         });
     }
 
     /** Shutdown the cover-fetch pool. Called from a shutdown hook. */
     public static void shutdown() {
-        POOL.shutdownNow();
+        FETCHER.shutdownNow();
+        WRITE_POOL.shutdownNow();
     }
 
     public static void cacheBytes(String isbn, byte[] data) {

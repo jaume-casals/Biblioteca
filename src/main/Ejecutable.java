@@ -22,15 +22,6 @@ public class Ejecutable {
     private static SplashScreen splashRef;
 
     public static void main(String[] args) throws Exception {
-        if (args.length > 0 && "--web".equals(args[0])) {
-            System.err.println("Web mode was removed. Run the Swing desktop app instead.");
-            System.exit(1);
-        }
-        // Any other --flag is silently ignored: the absence of --web is
-        // the implicit "run the Swing app" branch (startSwingWithSplash
-        // below). This is the contract documented in scripts/README and
-        // in install.sh.
-
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             // Message first, then the throwable — the logger stamps
             // the throwable as the cause (its stack trace follows the

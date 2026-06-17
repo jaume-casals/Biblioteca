@@ -12,6 +12,7 @@ import herramienta.DialogoError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
 import herramienta.LlibreValidator;
+import herramienta.ParseHelpers;
 import presentacio.listener.EnActualizarBBDD;
 import presentacio.listener.OnLlibreDelete;
 import presentacio.detalles.vista.DetallesLlibrePanel;
@@ -25,6 +26,7 @@ public class DetallesLlibrePanelControl {
 	private final EnActualizarBBDD enActualizarBBDD;
 	private byte[] pendingBlob;
 	private javax.swing.SwingWorker<byte[], Void> imageWorker;
+	private javax.swing.SwingWorker<Void, Void> heavyFieldsWorker;
 	private static final java.util.concurrent.ExecutorService IMAGE_EXECUTOR =
 		java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
 			Thread t = new Thread(r, "image-loader");
@@ -33,51 +35,6 @@ public class DetallesLlibrePanelControl {
 		});
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
-
-	private static Integer parseIntOrNull(String s) {
-		if (s == null) return null;
-		String t = s.trim();
-		if (t.isEmpty()) return null;
-		try { return Integer.parseInt(t); } catch (NumberFormatException e) { return null; }
-	}
-
-	private static Double parseDoubleOrNull(String s) {
-		if (s == null) return null;
-		String t = s.trim();
-		if (t.isEmpty()) return null;
-		try { return Double.parseDouble(t); } catch (NumberFormatException e) { return null; }
-	}
-
-	/**
-	 * Strict integer parser used by the edit-save path. Empty / blank input
-	 * is treated as "use the default"; non-numeric input is reported via
-	 * {@code errors} so the caller can surface a field-specific message
-	 * before any save is attempted. Contrast with {@link #parseIntOrNull}
-	 * which silently swallows bad input — that helper is for
-	 * "best-effort" callers (e.g. a sort or display path) that prefer
-	 * a null to an error dialog.
-	 */
-	private static int parseIntStrict(String s, int defaultValue, String fieldKey, java.util.List<String> errors) {
-		if (s == null) return defaultValue;
-		String t = s.trim();
-		if (t.isEmpty()) return defaultValue;
-		try { return Integer.parseInt(t); }
-		catch (NumberFormatException e) {
-			errors.add(I18n.t("val_must_be_int", I18n.t(fieldKey)));
-			return defaultValue;
-		}
-	}
-
-	private static double parseDoubleStrict(String s, double defaultValue, String fieldKey, java.util.List<String> errors) {
-		if (s == null) return defaultValue;
-		String t = s.trim();
-		if (t.isEmpty()) return defaultValue;
-		try { return Double.parseDouble(t); }
-		catch (NumberFormatException e) {
-			errors.add(I18n.t("val_must_be_number", I18n.t(fieldKey)));
-			return defaultValue;
-		}
-	}
 
 	private static final int IMG_W = 200;
 	private static final int MAX_DESCRIPTION_CHARS = 120;
@@ -98,6 +55,7 @@ public class DetallesLlibrePanelControl {
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
 				if (imageWorker != null) imageWorker.cancel(true);
+				if (heavyFieldsWorker != null) heavyFieldsWorker.cancel(true);
 			}
 		});
 
@@ -105,7 +63,7 @@ public class DetallesLlibrePanelControl {
 		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
 				if (l != null && !l.isHeavyFieldsLoaded()) {
 					final Llibre book = l;
-					new javax.swing.SwingWorker<Void, Void>() {
+					heavyFieldsWorker = new javax.swing.SwingWorker<Void, Void>() {
 						@Override protected Void doInBackground() {
 							try { cLlibres.loadHeavyFields(book); }
 							catch (Exception e) {
@@ -116,10 +74,12 @@ public class DetallesLlibrePanelControl {
 							return null;
 						}
 						@Override protected void done() {
+							if (isCancelled() || !vista.isDisplayable()) return;
 							vista.getTextDescripcio().setText(java.util.Objects.toString(book.getDescripcio(), ""));
 							vista.getTextNotes().setText(book.getNotes() != null ? book.getNotes() : "");
 						}
-					}.execute();
+					};
+					heavyFieldsWorker.execute();
 				}
 
 		pendingBlob = l.getImatgeBlob();
@@ -393,13 +353,13 @@ public class DetallesLlibrePanelControl {
 					// in memory. Any non-numeric entry in a numeric field is
 					// collected and shown to the user; the save is aborted.
 					java.util.List<String> errors = new java.util.ArrayList<>();
-					Integer any = parseIntOrNull(vista.getTextAny().getText());
-					Double valoracio = parseDoubleOrNull(vista.getTextValoracio().getText());
-					Double preu = parseDoubleOrNull(vista.getTextPreu().getText());
-					int volum = parseIntStrict(vista.getTextVolum().getText(), 0, "field_volume", errors);
-					int exemplars = parseIntStrict(vista.getTextExemplars().getText(), 1, "field_exemplars", errors);
-					int pagines = parseIntStrict(vista.getTextPagines().getText(), 0, "field_pages", errors);
-					int paginesLlegides = parseIntStrict(vista.getTextPaginesLlegides().getText(), 0, "field_pages_read", errors);
+					Integer any = ParseHelpers.parseIntOrNull(vista.getTextAny().getText());
+					Double valoracio = ParseHelpers.parseDoubleOrNull(vista.getTextValoracio().getText());
+					Double preu = ParseHelpers.parseDoubleOrNull(vista.getTextPreu().getText());
+					int volum = ParseHelpers.parseInt(vista.getTextVolum().getText(), 0, "field_volume", errors);
+					int exemplars = ParseHelpers.parseInt(vista.getTextExemplars().getText(), 1, "field_exemplars", errors);
+					int pagines = ParseHelpers.parseInt(vista.getTextPagines().getText(), 0, "field_pages", errors);
+					int paginesLlegides = ParseHelpers.parseInt(vista.getTextPaginesLlegides().getText(), 0, "field_pages_read", errors);
 
 					if (!errors.isEmpty()) {
 						new DialogoError(new IllegalArgumentException(String.join("\n", errors))).showErrorMessage();

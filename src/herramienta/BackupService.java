@@ -128,7 +128,17 @@ public class BackupService {
         File[] backups = dir.listFiles((d, n) -> n.startsWith("biblioteca_") && n.endsWith(".sql"));
         if (backups != null && backups.length > 5) {
             java.util.Arrays.sort(backups, java.util.Comparator.comparingLong(File::lastModified));
-            for (int i = 0; i < backups.length - 5; i++) backups[i].delete();
+            // Skip files written in the last minute: a concurrent backup
+            // (e.g. a manual BackupController.backupBD from a second JVM)
+            // may have just completed its rename and is now visible to
+            // listFiles(), so a naive "delete the oldest backups" pass
+            // would race against the just-finished writer. The 1-minute
+            // grace period covers the typical backup window without
+            // unbounded retention growth.
+            long cutoff = System.currentTimeMillis() - 60_000L;
+            for (int i = 0; i < backups.length - 5; i++) {
+                if (backups[i].lastModified() < cutoff) backups[i].delete();
+            }
         }
     }
 

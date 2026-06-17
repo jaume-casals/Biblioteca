@@ -161,7 +161,7 @@ public class Llibre {
 
 	public void setAutors(java.util.List<String> autors) {
 		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
-		this.autor = this.autors.isEmpty() ? this.autor : String.join(", ", this.autors);
+		this.autor = this.autors.isEmpty() ? "" : String.join(", ", this.autors);
 	}
 
 	public Integer getAny() {

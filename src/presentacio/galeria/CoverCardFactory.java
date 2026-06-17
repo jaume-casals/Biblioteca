@@ -1,7 +1,6 @@
 package presentacio.galeria;
 
 import domini.Llibre;
-import herramienta.Config;
 import herramienta.UITheme;
 
 import java.awt.BasicStroke;
@@ -104,7 +103,7 @@ public final class CoverCardFactory {
         this.footH = footH;
     }
 
-    public JPanel build(Llibre l, int cardIdx, CardHost host) {
+    public JPanel build(Llibre l, int cardIdx, CardHost host, String lang) {
         final int capW = cardW, capH = coverH, capCardH = cardH;
         final int hue = bookHue(l.getNom());
         final boolean llegit = Boolean.TRUE.equals(l.getLlegit());
@@ -120,7 +119,7 @@ public final class CoverCardFactory {
         // finding — extracting the inline paintComponent makes the image
         // paint logic testable in isolation).
         final CardState state = new CardState(
-            l, isbn, hue, llegit, imgRef, hov, capW, capH, capCardH);
+            l, isbn, hue, llegit, imgRef, hov, capW, capH, capCardH, lang);
 
         JPanel card = new JPanel(null) {
             @Override
@@ -137,7 +136,7 @@ public final class CoverCardFactory {
         int pagLleg = l.getPaginesLlegides();
         double pct = pagines > 0 ? (double) pagLleg / pagines : 0.0;
         boolean showProg = pagines > 0 && !llegit && pct > 0;
-        JPanel footer = buildFooter(l, val, showProg, pct, capW);
+        JPanel footer = buildFooter(l, val, showProg, pct, capW, lang);
         footer.setBounds(0, capH, capW, footH);
         card.add(footer);
 
@@ -166,7 +165,8 @@ public final class CoverCardFactory {
             boolean llegit,
             BufferedImage[] imgRef,
             boolean[] hov,
-            int capW, int capH, int capCardH) {}
+            int capW, int capH, int capCardH,
+            String lang) {}
 
     /**
      * Static card paint — extracted from the anonymous JPanel's
@@ -199,7 +199,7 @@ public final class CoverCardFactory {
         Shape oldClip = g2.getClip();
         g2.clip(new RoundRectangle2D.Float(0, 0, capW, capH + ARC, ARC, ARC));
         paintCover(g2, state.imgRef()[0], state.hue(),
-            state.l().getDisplayNom(Config.getLang()), state.l().getAutor(), capW, capH);
+            state.l().getDisplayNom(state.lang()), state.l().getAutor(), capW, capH);
         g2.setClip(oldClip);
 
         int dotD = 9, dotX = capW - dotD - 7, dotY = 7;
@@ -348,14 +348,14 @@ public final class CoverCardFactory {
 
     // ── Footer ────────────────────────────────────────────────────────────────
 
-    private static JPanel buildFooter(Llibre l, double val, boolean showProg, double pct, int cardW) {
+    private static JPanel buildFooter(Llibre l, double val, boolean showProg, double pct, int cardW, String lang) {
         JPanel f = new JPanel();
         f.setLayout(new BoxLayout(f, BoxLayout.Y_AXIS));
         f.setOpaque(false);
         f.setBorder(BorderFactory.createEmptyBorder(8, 10, 6, 10));
 
         JLabel lblT = new JLabel("<html><body style='width:" + (cardW - 22) + "px; margin:0; padding:0;'><b>"
-            + htmlEsc(l.getDisplayNom(Config.getLang())) + "</b></body></html>");
+            + htmlEsc(l.getDisplayNom(lang)) + "</b></body></html>");
         lblT.setFont(UITheme.FONT_SMALL.deriveFont(Font.BOLD));
         lblT.setForeground(UITheme.palette().textDark());
         lblT.setAlignmentX(0f);

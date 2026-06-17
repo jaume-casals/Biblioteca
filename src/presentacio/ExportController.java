@@ -16,15 +16,16 @@ import interficie.BibliotecaWriter;
 
 public class ExportController {
 
-    /** Reused cover-fetch executor — delegates to {@link herramienta.CoverService#POOL}
-     *  instead of a separate 8-thread pool. Both code paths call
-     *  {@code OpenLibraryClient.fetchCoverByISBN} and the 300ms rate
-     *  limiter enforces the throttle across both consumers. The
-     *  concurrent-invocation guard around
-     *  {@link #fetchMissingCovers(JButton)} still prevents the user
-     *  from double-clicking the button (per the tot.txt MEDIUM finding). */
+    /** Cover-fetch scheduling goes through {@link herramienta.CoverService#submitCoverFetch},
+     *  which splits OL reads (single-thread, rate-limited) from JDBC
+     *  writes (multi-thread, sized by cover count). The 300 ms OL rate
+     *  limiter still applies across consumers; the split removes the
+     *  "writes stuck behind reads" throughput hit (per the tot.txt
+     *  MEDIUM finding on CoverService). The concurrent-invocation
+     *  guard around {@link #fetchMissingCovers(JButton)} still prevents
+     *  the user from double-clicking the button. */
     private static final java.util.concurrent.ExecutorService COVER_POOL =
-        herramienta.CoverService.POOL;
+        herramienta.CoverService.WRITE_POOL;
     private static final java.util.concurrent.atomic.AtomicBoolean COVER_FETCH_RUNNING =
         new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -141,43 +142,35 @@ public class ExportController {
         java.util.concurrent.atomic.AtomicInteger missingCover = new java.util.concurrent.atomic.AtomicInteger(0);
         try {
             for (Llibre l : missing) {
-                COVER_POOL.submit(() -> {
-                    try {
-                        byte[] blob = OpenLibraryClient.fetchCoverByISBN(String.valueOf(l.getISBN()));
-                        if (blob != null && blob.length > 0) {
-                            cd.setLlibreBlob(l.getISBN(), blob);
-                            fetched.incrementAndGet();
-                        } else {
-                            missingCover.incrementAndGet();
-                        }
-                    } catch (Exception ignored) {} finally {
-                        int d = done.incrementAndGet();
-                        SwingUtilities.invokeLater(() -> {
-                            bar.setValue(d);
-                            lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
-                            if (d >= total) {
-                                dlg.dispose();
-                                if (fetchBtn != null) fetchBtn.setEnabled(true);
-                                // Distinguish "downloaded" from "had no
-                                // cover on OpenLibrary" — the old
-                                // message read "0 of 10" which the
-                                // user misread as a failure (per the
-                                // tot.txt MEDIUM finding).
-                                int noCover = missingCover.get();
-                                if (noCover == 0) {
-                                    JOptionPane.showMessageDialog(parent,
-                                        I18n.t("dlg_fetch_portades_done", fetched.get(), total),
-                                        I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
-                                } else {
-                                    JOptionPane.showMessageDialog(parent,
-                                        I18n.t("dlg_fetch_portades_done_partial", fetched.get(), total, noCover),
-                                        I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
-                                }
-                                onDataChanged.run();
-                                COVER_FETCH_RUNNING.set(false);
+                herramienta.CoverService.submitCoverFetch(cd, String.valueOf(l.getISBN()), stored -> {
+                    if (stored) fetched.incrementAndGet();
+                    else missingCover.incrementAndGet();
+                    int d = done.incrementAndGet();
+                    SwingUtilities.invokeLater(() -> {
+                        bar.setValue(d);
+                        lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
+                        if (d >= total) {
+                            dlg.dispose();
+                            if (fetchBtn != null) fetchBtn.setEnabled(true);
+                            // Distinguish "downloaded" from "had no
+                            // cover on OpenLibrary" — the old
+                            // message read "0 of 10" which the
+                            // user misread as a failure (per the
+                            // tot.txt MEDIUM finding).
+                            int noCover = missingCover.get();
+                            if (noCover == 0) {
+                                JOptionPane.showMessageDialog(parent,
+                                    I18n.t("dlg_fetch_portades_done", fetched.get(), total),
+                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(parent,
+                                    I18n.t("dlg_fetch_portades_done_partial", fetched.get(), total, noCover),
+                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
                             }
-                        });
-                    }
+                            onDataChanged.run();
+                            COVER_FETCH_RUNNING.set(false);
+                        }
+                    });
                 });
             }
         } catch (RuntimeException ex) {

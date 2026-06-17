@@ -134,6 +134,8 @@ class ShelfController {
                                boolean large) {}
 
     private static final class ShelfCellRenderer extends javax.swing.DefaultListCellRenderer {
+        private static final java.util.Map<java.awt.Color, javax.swing.Icon> COLOR_ICON_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
         private Map<Integer, Integer> counts;
         ShelfCellRenderer(Map<Integer, Integer> counts) { this.counts = counts; }
         void updateCounts(Map<Integer, Integer> c) { this.counts = c; }
@@ -145,17 +147,17 @@ class ShelfController {
             if (value instanceof Llista ll) {
                 if (ll.getColor() != null) {
                     try {
-                        java.awt.Color c = java.awt.Color.decode(ll.getColor());
-                        icon = new javax.swing.Icon() {
+                        final java.awt.Color c = java.awt.Color.decode(ll.getColor());
+                        icon = COLOR_ICON_CACHE.computeIfAbsent(c, color -> new javax.swing.Icon() {
                             public int getIconWidth()  { return 12; }
                             public int getIconHeight() { return 12; }
                             public void paintIcon(java.awt.Component cp, java.awt.Graphics g, int x, int y) {
-                                g.setColor(c);
+                                g.setColor(color);
                                 g.fillRoundRect(x, y + 1, 10, 10, 3, 3);
-                                g.setColor(c.darker());
+                                g.setColor(color.darker());
                                 g.drawRoundRect(x, y + 1, 10, 10, 3, 3);
                             }
-                        };
+                        });
                     } catch (Exception ignored) {}
                 }
                 value = ll.getNom() + " (" + counts.getOrDefault(ll.getId(), 0) + ")";

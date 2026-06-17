@@ -120,6 +120,20 @@ public class ControladorPersistencia {
 		tagDao.invalidateLlibreTagCache();
 	}
 	public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDaoCore.executeSQLFile(file); }
+	/**
+	 * Atomically restore the database from a SQL backup file: clears
+	 * all data and executes the file's statements inside a single JDBC
+	 * transaction. If any statement in the file fails, the entire
+	 * transaction is rolled back and the database is unchanged. Used by
+	 * {@link domini.facade.BackupDelegate#restoreFromSQL(java.io.File)} to
+	 * close the "kill the app between clearAllData() and executeSQLFile()"
+	 * window. The pre-restore snapshot to a temp file is the user-facing
+	 * undo path; this method is the in-process safety net.
+	 */
+	public synchronized void restoreFromSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+		libreDaoCore.restoreFromSQL(file);
+		tagDao.invalidateLlibreTagCache();
+	}
 	public synchronized void updateLlibre(Llibre llibre) throws java.sql.SQLException { libreDaoCore.update(llibre); }
 	public synchronized ArrayList<Llibre> getRecentlyAdded(int n) { return libreDaoCore.getRecentlyAdded(n); }
 	public synchronized byte[] getLlibreBlob(long isbn) { return libreBlobDao.getBlob(isbn); }
@@ -145,6 +159,17 @@ public class ControladorPersistencia {
 		libreBlobDao.loadHeavyFieldsBatched(isbns, targets);
 	}
 	public synchronized void setLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreBlobDao.setBlob(isbn, blob); }
+	/**
+	 * Exposes the underlying JDBC connection for callers that need to run
+	 * multi-statement transactions (e.g. {@link herramienta.BackupService}
+	 * takes a SERIALIZABLE snapshot of all tables). Callers MUST
+	 * synchronize on this {@code ControladorPersistencia} instance while
+	 * holding the connection so the DAOs do not observe a half-set
+	 * transaction state — every DAO method is {@code synchronized} on
+	 * this same monitor, so a {@code synchronized(cp)} block around the
+	 * transaction keeps the connection state consistent.
+	 */
+	public java.sql.Connection getConnection() { return sc.getConnection(); }
 	public synchronized void clearAllData() throws java.sql.SQLException {
 		libreDaoCore.clearAllData();
 		tagDao.invalidateLlibreTagCache();

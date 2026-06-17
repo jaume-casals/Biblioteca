@@ -31,12 +31,6 @@ public class ConfiguracioDialog extends JDialog {
     private final BibliotecaWriter cd;
     private final ConfiguracioDialogListener listener;
 
-    public ConfiguracioDialog(Frame parent) { this(parent, null, null); }
-
-    public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener) {
-        this(parent, listener, null);
-    }
-
     public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, BibliotecaWriter cd) {
         super(parent, herramienta.I18n.t("modal_settings"), true);
         if (cd == null) throw new IllegalArgumentException("ConfiguracioDialog requires non-null cd");

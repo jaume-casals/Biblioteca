@@ -21,8 +21,6 @@ public class LlibreFilter {
 
     public LlibreFilter() {}
 
-    /** @deprecated use {@code new LlibreFilter()} directly. */
-    @Deprecated
     public static LlibreFilter empty() { return new LlibreFilter(); }
 
     public String getAutor() { return autor; }

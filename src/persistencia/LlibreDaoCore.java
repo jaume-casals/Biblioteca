@@ -270,11 +270,16 @@ public class LlibreDaoCore {
     }
 
     public synchronized void clearAllData() throws SQLException {
-        withTransaction(() -> {
-            try (Statement s = con.createStatement()) {
-                for (String t : Schema.CLEAR_ORDER) s.executeUpdate("DELETE FROM " + t);
-            }
-        });
+        withTransaction(this::clearAllDataNoTx);
+    }
+
+    /** Body of {@link #clearAllData()} without a surrounding transaction.
+     *  Used by {@link #restoreFromSQL(java.io.File)} to compose the
+     *  clear + execute into a single transaction. */
+    private void clearAllDataNoTx() throws SQLException {
+        try (Statement s = con.createStatement()) {
+            for (String t : Schema.CLEAR_ORDER) s.executeUpdate("DELETE FROM " + t);
+        }
     }
 
     public synchronized long getDbSizeBytes() {
@@ -302,67 +307,94 @@ public class LlibreDaoCore {
      */
     public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
-            try (BufferedReader br = new BufferedReader(
-                    new FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
-                 Statement st = con.createStatement()) {
-                StringBuilder current = new StringBuilder(256);
-                int c;
-                boolean inQuote = false;
-                while ((c = br.read()) != -1) {
-                    char ch = (char) c;
-                    if (inQuote) {
-                        current.append(ch);
-                        if (ch == '\'') {
-                            // SQL '' escape: peek the next char and
-                            // consume it as part of the literal.
-                            int next = br.read();
-                            if (next == '\'') {
-                                current.append('\'');
-                            } else {
-                                inQuote = false;
-                                if (next != -1) processCharOrStatement((char) next, current, st);
-                            }
-                        }
-                    } else {
-                        if (ch == '\'') {
-                            inQuote = true;
-                            current.append(ch);
-                        } else if (ch == '-') {
-                            // Possible -- line comment. Read one more char
-                            // to confirm before consuming the rest of
-                            // the line.
-                            br.mark(1);
-                            int next = br.read();
-                            if (next == '-') {
-                                br.readLine(); // discard to EOL
-                                // the line break is whitespace; let the
-                                // outer loop resume scanning.
-                            } else {
-                                br.reset();
-                                current.append(ch);
-                                if (next != -1) processCharOrStatement((char) next, current, st);
-                            }
-                        } else {
-                            processCharOrStatement(ch, current, st);
-                        }
-                    }
-                }
-                String remaining = current.toString().trim();
-                if (!remaining.isEmpty() && isAllowed(remaining)) st.execute(remaining);
-            } catch (java.io.IOException e) {
-                throw new RuntimeException(e);
-            }
+            try { executeSQLFileNoTx(file); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
         });
     }
 
-    private void processCharOrStatement(char ch, StringBuilder current, Statement st) throws SQLException {
-        if (ch == ';') {
-            String stmt = current.toString().trim();
-            current.setLength(0);
-            if (!stmt.isEmpty() && isAllowed(stmt)) st.execute(stmt);
-        } else {
-            current.append(ch);
+    /** Body of {@link #executeSQLFile(java.io.File)} without a surrounding
+     *  transaction. Lets {@link #restoreFromSQL(java.io.File)} compose the
+     *  clear + file-execute into a single transaction so a mid-stream
+     *  {@link SQLException} rolls back both.
+     *  <p>Reads line-by-line via {@code br.lines().forEach(...)} so the
+     *  parser sees full Unicode strings (including non-BMP code points
+     *  encoded as 4-byte UTF-8). The earlier per-code-unit read broke
+     *  surrogate-pair handling for emoji and CJK ideographs: a 4-byte
+     *  UTF-8 character is two UTF-16 code units, and the comment/quote
+     *  state machine split the pair between iterations. Streaming by
+     *  line keeps multi-line string literals and their content as a
+     *  single String, and lets {@code Statement.execute} receive the
+     *  exact bytes the JDBC driver will encode. */
+    private void executeSQLFileNoTx(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+        try (BufferedReader br = new BufferedReader(
+                new FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
+             Statement st = con.createStatement()) {
+            StringBuilder current = new StringBuilder(256);
+            boolean[] inQuote = { false };
+            br.lines().forEach(line -> processLine(line, current, inQuote, st));
+            String remaining = current.toString().trim();
+            if (!remaining.isEmpty() && isAllowed(remaining)) st.execute(remaining);
         }
+    }
+
+    private void processLine(String line, StringBuilder current, boolean[] inQuote, Statement st) {
+        int i = 0;
+        int len = line.length();
+        while (i < len) {
+            char ch = line.charAt(i);
+            if (inQuote[0]) {
+                if (ch == '\'') {
+                    if (i + 1 < len && line.charAt(i + 1) == '\'') {
+                        // SQL '' escape: keep both quotes in the statement.
+                        current.append("''");
+                        i += 2;
+                        continue;
+                    }
+                    // Closing quote: keep the single quote and exit the literal.
+                    current.append(ch);
+                    inQuote[0] = false;
+                    i++;
+                } else {
+                    current.append(ch);
+                    i++;
+                }
+            } else if (ch == '\'') {
+                inQuote[0] = true;
+                current.append(ch);
+                i++;
+            } else if (ch == '-' && i + 1 < len && line.charAt(i + 1) == '-') {
+                // -- line comment: drop the rest of the line.
+                return;
+            } else if (ch == ';') {
+                String stmt = current.toString().trim();
+                current.setLength(0);
+                if (!stmt.isEmpty() && isAllowed(stmt)) {
+                    try { st.execute(stmt); }
+                    catch (SQLException e) { throw new RuntimeException(e); }
+                }
+                i++;
+            } else {
+                current.append(ch);
+                i++;
+            }
+        }
+    }
+
+    /**
+     * Restore the database from a SQL backup file: clears all data and
+     * executes the file's statements inside a single JDBC transaction.
+     * If the file execution fails partway through, the {@code DELETE}
+     * statements are rolled back along with the partial restore, and
+     * the database is left unchanged. The caller (BackupDelegate) is
+     * still responsible for taking a pre-restore snapshot for the
+     * user-initiated undo path; this method is the safety net.
+     */
+    public synchronized void restoreFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+        withTransaction(() -> {
+            clearAllDataNoTx();
+            try { executeSQLFileNoTx(file); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        });
     }
 
     /** Allow-list of SQL statement types acceptable in a backup file. {@code SET}
@@ -388,7 +420,7 @@ public class LlibreDaoCore {
         return sb.toString();
     }
 
-    @FunctionalInterface private interface SqlWork { void run() throws SQLException; }
+    @FunctionalInterface private interface SqlWork { void run() throws Exception; }
 
     private void withTransaction(SqlWork work) throws SQLException {
         boolean prev = con.getAutoCommit();
@@ -396,11 +428,15 @@ public class LlibreDaoCore {
         try {
             work.run();
             con.commit();
-        } catch (SQLException e) {
-            con.rollback();
-            throw e;
+        } catch (Exception e) {
+            try { con.rollback(); }
+            catch (SQLException re) { /* original exception is what matters */ }
+            if (e instanceof SQLException) throw (SQLException) e;
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
+            throw new SQLException(e);
         } finally {
-            con.setAutoCommit(prev);
+            try { con.setAutoCommit(prev); }
+            catch (SQLException ae) { /* ignore */ }
         }
     }
 

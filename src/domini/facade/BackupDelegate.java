@@ -115,8 +115,14 @@ public final class BackupDelegate {
             }
             backupService.backupToSQL(backup, preBib, preLlistes, preTags);
             try {
-                state.persistence().clearAllData();
-                state.persistence().executeSQLFile(file);
+                // Single JDBC transaction wraps both clearAllData and
+                // executeSQLFile. A failure in the file execution rolls
+                // back the DELETE statements too, so the database is
+                // left unchanged. The pre-restore SQL file is retained
+                // as a user-facing undo path; if the JDBC rollback
+                // itself fails (driver / connection dead), the file is
+                // the last resort.
+                state.persistence().restoreFromSQLFile(file);
             } catch (Exception e) {
                 try { state.persistence().executeSQLFile(backup); }
                 catch (Exception ex) { throw new BibliotecaException(

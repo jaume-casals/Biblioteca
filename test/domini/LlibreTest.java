@@ -93,11 +93,12 @@ class LlibreTest {
     }
 
     @Test
-    @DisplayName("setAutors(null) yields empty autors list and preserves prior autor")
+    @DisplayName("setAutors(null) yields empty autors list and clears autor")
     void setAutorsNull() {
         Llibre l = newBook();
         l.setAutors(null);
         assertThat(l.getAutors()).isEmpty();
+        assertThat(l.getAutor()).isEmpty();
     }
 
     // ── Numeric clamping ─────────────────────────────────────────────────

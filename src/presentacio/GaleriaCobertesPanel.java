@@ -248,9 +248,10 @@ public class GaleriaCobertesPanel extends JPanel {
         wrap.setBackground(UITheme.palette().bgMain());
         wrap.removeAll();
         if (llibres != null) {
+            final String lang = Config.getLang();
             for (int i = 0; i < llibres.size(); i++) {
                 Llibre l = llibres.get(i);
-                JPanel card = cardFactory.build(l, i, cardHost);
+                JPanel card = cardFactory.build(l, i, cardHost, lang);
                 cardMap.put(l.getISBN(), card);
                 wrap.add(card);
             }

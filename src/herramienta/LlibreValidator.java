@@ -62,13 +62,7 @@ public class LlibreValidator {
 		if (isbn == null)
 			throw new IllegalArgumentException(I18n.t("toast_isbn_required"));
 
-		if (isbn != null) {
-			String normalized = normalizeIsbn13(String.valueOf(isbn));
-			if (normalized != null && normalized.length() == 13) {
-				try { isbn = Long.parseLong(normalized); } catch (NumberFormatException ignored) {}
-			}
-		}
-		int digits = isbn == null ? 0 : countDig(isbn);
+		int digits = countDig(isbn);
 		if (digits != 13 && digits != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 

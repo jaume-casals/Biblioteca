@@ -12,9 +12,12 @@ import domini.Tag;
 import interficie.BibliotecaWriter;
 import herramienta.BookImporter.ImportResult;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,8 +33,10 @@ public final class JsonImporter {
     private JsonImporter() {}
 
     public static ImportResult run(File f, BibliotecaWriter cd) throws Exception {
-        String json = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
-        return run(JsonParser.parseString(json).getAsJsonObject(), cd);
+        try (Reader reader = new InputStreamReader(
+                new BufferedInputStream(new FileInputStream(f)), StandardCharsets.UTF_8)) {
+            return run(JsonParser.parseReader(reader).getAsJsonObject(), cd);
+        }
     }
 
     public static ImportResult run(JsonObject root, BibliotecaWriter cd) throws Exception {

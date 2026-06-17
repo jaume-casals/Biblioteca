@@ -42,6 +42,10 @@ public class Config {
     private static final ConcurrentHashMap<String, String> WINDOW_STORE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> FILTER_STORE = new ConcurrentHashMap<>();
 
+    /** Transient password storage held as {@code char[]} (not in {@code props})
+     *  so the in-heap representation is never an immortal {@code String} copy. */
+    private static volatile char[] dbPasswordChars = null;
+
     /** Domain tag used to route a key to the right sub-store on read/write. */
     public enum Domain { UI, DB, WINDOW, FILTER }
 
@@ -104,7 +108,7 @@ public class Config {
             return prev;
         }
         @Override public java.util.Set<java.util.Map.Entry<String, String>> entrySet() {
-            java.util.Set<java.util.Map.Entry<String, String>> all = new java.util.HashSet<>();
+            java.util.Set<java.util.Map.Entry<String, String>> all = new java.util.LinkedHashSet<>();
             all.addAll(UI_STORE.entrySet());
             all.addAll(DB_STORE.entrySet());
             all.addAll(WINDOW_STORE.entrySet());
@@ -153,7 +157,15 @@ public class Config {
         try (FileInputStream in = new FileInputStream(f)) {
             java.util.Properties tmp = new java.util.Properties();
             tmp.load(in);
-            tmp.forEach((k, v) -> props.put((String) k, (String) v));
+            tmp.forEach((k, v) -> {
+                String key = (String) k;
+                String val = (String) v;
+                if ("dbPassword".equals(key)) {
+                    dbPasswordChars = val.toCharArray();
+                } else {
+                    props.put(key, val);
+                }
+            });
         } catch (IOException e) {
             LOG.log(java.util.logging.Level.WARNING, "Config load failed", e);
         }
@@ -211,21 +223,36 @@ public class Config {
      *       (MySQL {@code --skip-grant-tables}, MariaDB {@code unix_socket}).</li>
      * </ul>
      */
-    public static String getDbPassword() { return props.getOrDefault("dbPassword", ""); }
+    public static String getDbPassword() {
+        if (dbPasswordChars != null) return new String(dbPasswordChars);
+        return "";
+    }
 
     /** Distingeix "no configurat" (retorna false) de "password buit" (true). */
-    public static boolean hasDbPassword() { return props.containsKey("dbPassword"); }
-    public static void setDbPassword(String pw) { props.put("dbPassword", pw); save(); }
+    public static boolean hasDbPassword() { return dbPasswordChars != null; }
+    public static void setDbPassword(String pw) {
+        if (pw == null || pw.isEmpty()) {
+            dbPasswordChars = null;
+        } else {
+            dbPasswordChars = pw.toCharArray();
+        }
+        save();
+    }
 
     /** Variant that takes the password as a {@code char[]} so the caller can
      *  zero it after the call instead of leaving a {@code String} in the heap.
-     *  The {@code char[]} is zeroed here as soon as the {@code String} copy is
-     *  created — the caller's array is wiped for them. The on-disk plaintext
+     *  The {@code char[]} is cloned into a private field and the caller's
+     *  array is zeroed before the method returns. The on-disk plaintext
      *  is unaffected (this is in-heap protection only). */
     public static void setDbPassword(char[] pw) {
-        String s = new String(pw);
-        java.util.Arrays.fill(pw, '\0');
-        setDbPassword(s);
+        if (pw == null) {
+            dbPasswordChars = null;
+        } else {
+            char[] copy = pw.clone();
+            java.util.Arrays.fill(pw, '\0');
+            dbPasswordChars = copy;
+        }
+        save();
     }
 
     private static final java.util.Set<String> VALID_FONT_SIZES = java.util.Set.of("small", "medium", "large");
@@ -454,6 +481,9 @@ public class Config {
             f.getParentFile().mkdirs();
             java.util.Properties tmp = new java.util.Properties();
             props.forEach((k, v) -> tmp.put(k, v));
+            if (dbPasswordChars != null) {
+                tmp.put("dbPassword", new String(dbPasswordChars));
+            }
             File tmpFile = new File(f.getParentFile(), f.getName() + ".tmp");
             try (FileOutputStream out = new FileOutputStream(tmpFile)) {
                 tmp.store(out, "Biblioteca configuration");

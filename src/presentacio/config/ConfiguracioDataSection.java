@@ -102,8 +102,15 @@ public final class ConfiguracioDataSection {
                 t("dlg_perfil_actiu", current),
                 t("dlg_canviar_perfil_title"), JOptionPane.PLAIN_MESSAGE, null, opts, current);
             if (chosen == null) return;
-            chosen = sanitizeProfileName(chosen);
-            if (chosen.isEmpty() || chosen.equals(current)) return;
+            String sanitized = sanitizeProfileName(chosen);
+            if (sanitized.isEmpty() || sanitized.equals(current)) return;
+            if (!sanitized.equals(chosen)) {
+                int warn = JOptionPane.showConfirmDialog(owner,
+                    t("dlg_perfil_nom_invalid", sanitized), t("dlg_perfil_nom_invalid_title"),
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (warn != JOptionPane.YES_OPTION) return;
+            }
+            chosen = sanitized;
             int confirm = JOptionPane.showConfirmDialog(owner,
                 t("dlg_perfil_confirmar", chosen), t("dlg_perfil_confirmar_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
