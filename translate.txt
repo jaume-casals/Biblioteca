@@ -1,0 +1,550 @@
+# translate.txt — non-Catalan text in the Biblioteca codebase
+#
+# Auto-extracted; translate these entries into Catalan, then re-run the project tests.
+#
+# Columns: TYPE  LINE  FILE  LANG  TEXT
+#   LINE   = `//` line comment (incl. section headers like `// ── UI ──`)
+#   BLOCK  = `/* ... */` or `/** ... */` block (incl. most Javadoc)
+#   STRING = a `String` literal in the source (error / log text)
+#
+# LANG:
+#   en              = predominantly English
+#   mixed           = mostly English with some Catalan words
+#   section-header  = a short `// ── X ──` label, fully English
+#
+# EXCLUDED on purpose:
+#   - The i18n catalog (I18n.java, src/herramienta/strings_*.properties,
+#     strings/*.csv) — it carries ca/es/en columns by design.
+#   - Java identifiers (variable, method, class names).
+#   - Pure technical content: SQL, URLs, file paths, hex colors,
+#     MIME types, date/time format patterns, JSON keys, i18n keys,
+#     HTML/CSS, external CSV column headers (Goodreads / LibraryThing).
+#
+# Use `rg <text>` from the repo root to locate any entry quickly.
+
+
+## src/domini/ControladorDomini.java
+BLOCK   L27     [en            ]  /** * Singleton facade over the library's in-memory state + persistence. * * <p>Responsibilities: * <ul> * <li>Singleton lifecycle ({@link #getInstance()}, {@link #resetForTest()}, * {@link #resetForProfileSwitch()}, {@link #create(ControladorPersistencia)}).</li> * <li>Owns the {@link StateContext}: the three backing lists * ({@code bib}, {@code llistes}, {@code tags}), the in-memory lock * ({@code BIB_LOCK}), and the id-index maps.</li> * <li>Delegates every business operation to one of six focused * collaborator classes in {@code domini.facade} — Shelf, Tag, * Loan, Book, Stats, Backup.</li> * </ul> * * <p>The public API of this class is unchanged: every method that existed * before the split still exists, with the same signature, same * exceptions, and same side effects. The only externally observable * change is the file's line count (637 → ~150). */
+LINE    L100    [mixed         ]  ── Book / search / blob ──────────────────────────────────────────────────
+LINE    L144    [section-header]  ── Tag ───────────────────────────────────────────────────────────────────
+
+## src/domini/EspecificacioOrdenacio.java
+BLOCK   L6      [en            ]  /** * Pagination-aware sort specification, extracted from LlibreFilter so that * filter criteria stay pure data while sort is a separate pagination concern. * * <p>Single source of truth for both SQL fragment and in-memory comparator * per sortable column. The {@link #COLUMNS} map is the canonical registry — * adding a new column is a one-line edit (per the tot.txt LOW finding on * the parallel {@code SQL_COLS} / {@code COMPARATORS} maps). */
+BLOCK   L22     [en            ]  /** Canonical registry: one entry per sortable column. */
+BLOCK   L25     [en            ]  /** ISBN-ascending comparator; nulls sort first to match binarySearch behavior. */
+BLOCK   L45     [en            ]  /** * Unknown / null column names are tolerated and silently coerced to * {@link #COL_ISBN}. The fallback lives here (not in the call site) * so the policy of "unknown → ISBN" is in one place. toSql() and * {@link #comparator(String)} both honour the fallback. */
+STRING  L48     [en            ]  unknown → ISBN
+BLOCK   L61     [en            ]  /** SQL ORDER BY expression fragment, e.g. "l.`ISBN` ASC" */
+BLOCK   L67     [en            ]  /** * In-memory comparator for the column. Falls back to * {@link #ISBN_COMPARATOR} for unknown columns so callers don't * have to repeat the null-coalesce. Null column is treated as * unknown (same coercion the constructor applies). */
+BLOCK   L79     [en            ]  /** Read-only view of all in-memory comparators keyed by SortSpec column name. */
+BLOCK   L86     [en            ]  /** Read-only view of the canonical column registry. */
+
+## src/domini/Llibre.java
+BLOCK   L52     [en            ]  /** * Copy the canonical "updateable" fields (everything except the * per-language title, cover blob, autors list, notes, pages, etc.) * into {@code target}. The {@code autor} parameter is the joined * string from the validator / form; callers that have the parsed * list should call {@link #setAutors(java.util.List)} afterwards, * which OVERWRITES the joined string. The two-step order * (bind → setAutors) is intentional: bindUpdateableFields first * seeds the joined string so {@link #getAutors()} is consistent * immediately, then the list override lets the caller replace it * with the parsed result without the field-level split logic. */
+BLOCK   L134    [en            ]  /** Returns {@code s.trim()} if {@code s} is non-null and not blank, else {@code null}. */
+BLOCK   L139    [en            ]  /** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
+BLOCK   L155    [en            ]  /** Used when loading multiple author rows from SQL (see {@link persistencia.LlibreDao#getAll}). */
+
+## src/domini/LlibreCore.java
+BLOCK   L6      [en            ]  /** * Immutable value-object view of a book's identifying/business data. * Carries a 16-field subset of {@link Llibre} (identity, authors, title, * year, descripcio, valoracio, preu, llegit, imatge, pagines, editorial, * serie, volum, idioma, format, paisOrigen). The remaining Llibre state * (notes, paginesLlegides, dataCompra, dataLectura, estat, desitjat, * nomCa/Es/En, exemplars, llenguaOriginal, cover blob) is consumed in * place from the mutable Llibre. Future refactor: Llibre composes a * LlibreCore + extension state. */
+BLOCK   L34     [mixed         ]  /** Project a {@link Llibre} into its immutable core. */
+BLOCK   L44     [en            ]  /** Bulk projection — equivalent to {@code source.stream().map(LlibreCore::from).toList()} * but avoids the stream lambda allocation. */
+
+## src/domini/LlibreLlistaContext.java
+BLOCK   L3      [en            ]  /** * Per-book context for a shelf membership: which shelf, which book, and the * shelf-local values (rating, read flag) that only make sense in the context * of that specific (book, shelf) pair. Use this instead of putting the * per-book fields on {@link Llista} directly — the shelf itself has no * rating, only the (book, shelf) join does. */
+
+## src/domini/SqlOp.java
+BLOCK   L5      [en            ]  /** * Lambda body that may throw {@link SQLException}. Used by domain-layer try/catch wrappers * to convert SQL errors into {@link BibliotecaException} without boilerplate at each call site. */
+BLOCK   L13     [en            ]  /** Run {@code op}; rethrow any SQLException as a {@link BibliotecaException} with the cause preserved. */
+
+## src/domini/facade/DelegatCopiaSeguretat.java
+BLOCK   L13     [en            ]  /** * Backup, restore, and clear-all. Touches all three state lists; the * snapshot is taken atomically under the state lock; the file I/O runs * outside the lock (the original code did the same — I/O is not held * against concurrent state reads). */
+
+## src/domini/facade/DelegatLlibre.java
+LINE    L98     [section-header]  ── CRUD ──────────────────────────────────────────────────────────────────
+
+## src/domini/facade/DelegatPrestatgeria.java
+BLOCK   L16     [en            ]  /** * Shelf ({@link Llista}) management and book↔shelf relation operations. * * <p>All single-DB mutations follow an atomic contract: the state * lock is held for the entire {@code pre-check → persistence → * in-memory mutate} sequence. This closes the race that existed * in the pre-facade {@code ControladorDomini}, where two threads * renaming the same shelf could both pass the pre-check, race the * DB (last-writer-wins), and then both mutate the in-memory map — * the second mutation was silently lost or the in-memory state * diverged from the DB. * * <p>For the move-up / move-down helpers the lock is also held * across the two single-row updates * ({@link #swapLlistesOrdreLocked}); both writes are brief and the * caller already holds the lock, so a release-and-reacquire dance * would add complexity for negligible throughput gain. */
+BLOCK   L134    [en            ]  /** Caller MUST hold the state lock. */
+BLOCK   L141    [en            ]  /** * Caller MUST hold the state lock. Holds it across the two DB * updates as well — both are single-row writes so the lock is * only held for milliseconds. The original code already * followed this pattern; it is preserved here for consistency * with the rest of the delegate and because the caller * ({@link #moveLlistaUp} / {@link #moveLlistaDown}) is itself * already inside a {@code withLock} block, making a * release-and-reacquire dance unnecessarily complex. */
+
+## src/domini/facade/DelegatPrestec.java
+BLOCK   L10     [en            ]  /** * Loan ({@link PrestecRow}) management and loan queries. * * <p>All operations delegate to the persistence layer; loan state is * not held in memory (it lives entirely in the DB). Operations translate * {@link SQLException} into {@link BibliotecaException} for callers. */
+
+## src/domini/facade/StateContext.java
+BLOCK   L12     [en            ]  /** * Shared in-memory state for the {@link domini.ControladorDomini} facade. * * <p>Package-private to {@code domini.facade}; only the delegates and the * facade itself touch this. Exposes the lock, the three backing lists * ({@code bib}, {@code llistes}, {@code tags}), the id-index maps * ({@code llistesById}, {@code tagsById}), and the persistence reference. * * <p>All reads and writes of the backing lists MUST go through the * {@link #lock} so the lists and the id-index maps stay in sync. The * {@link #withLock} and {@link #withLockReturning} helpers are the * canonical way to do that. */
+BLOCK   L49     [en            ]  /** The monitor used by {@link #withLock} / {@link #withLockReturning}. * Package-private (no public accessor): every delegate in * {@code domini.facade} goes through {@code withLock(...)} so * there is no reason for a caller to acquire the lock directly. * The package-private access is preserved for the facade * package (e.g. tests that need a raw {@code synchronized * (state.lock) { ... }}) but the public surface stays * clean. */
+BLOCK   L59     [en            ]  /** Returns the live backing list. Callers MUST hold {@link #lock()} before * reading or mutating; iterating without the lock risks * {@link java.util.ConcurrentModificationException} and mutating without * the lock can desync the list from the id-index maps. Prefer * {@link #withLock} / {@link #withLockReturning} for read+copy patterns. */
+BLOCK   L65     [mixed         ]  /** See {@link #bib()} for the locking contract. */
+BLOCK   L67     [mixed         ]  /** See {@link #bib()} for the locking contract. */
+BLOCK   L72     [en            ]  /** Replace all three backing lists atomically (used by restoreFromSQL). */
+BLOCK   L84     [en            ]  /** Clear all three backing lists and the id-index maps (used by clearAll). * Mirrors {@link #replaceAll(ArrayList, ArrayList, ArrayList)}'s contract * by going through {@link #rebuildIdIndexesLocked()} for consistency * (today the two paths clear the maps directly, but the centralised * call makes future additions — e.g. a new id-index map — a single * line change rather than a two-line search). */
+BLOCK   L99     [en            ]  /** Rebuild id-index maps from the current backing lists. Must be called under lock. */
+BLOCK   L107    [en            ]  /** Run {@code action} while holding the state lock. */
+BLOCK   L112    [en            ]  /** Run {@code action} while holding the state lock; return its result. */
+
+## src/domini/facade/TagDelegate.java
+BLOCK   L12     [en            ]  /** * Tag ({@link Tag}) management and book↔tag relation operations. * * <p>All methods follow the same contract: mutate the persistence layer * first, then update the in-memory tag list + id-index map atomically * under the {@link StateContext#lock() state lock}. */
+STRING  L31     [en            ]  Tag not found:
+
+## src/herramienta/AnalitzadorOpenLibrary.java
+BLOCK   L13     [en            ]  /** * Pure-JSON parsing for OpenLibrary responses. Extracted from {@link OpenLibraryClient} so the * network path and the parsing logic can be tested independently. */
+BLOCK   L20     [en            ]  /** Parse an {@code /api/books?bibkeys=ISBN:...&format=json&jscmd=data} response body. */
+
+## src/herramienta/AutoCompletion.java
+BLOCK   L18     [en            ]  /* This work is hereby released into the Public Domain. * To view a copy of the public domain dedication, visit * http://creativecommons.org/licenses/publicdomain/ */
+
+## src/herramienta/ClientOpenLibrary.java
+STRING  L163    [en            ]  User-Agent
+STRING  L235    [en            ]  Interrupted during retry backoff
+STRING  L240    [en            ]  No retries performed for
+
+## src/herramienta/ConfigDTO.java
+BLOCK   L3      [en            ]  /** * DTO for the Swing settings dialog. Mirrors fields exposed in configuration UI; * persistent state still lives in {@link Config}. */
+
+## src/herramienta/Configuracio.java
+BLOCK   L53     [en            ]  /** Internal: write a key into a specific domain store. */
+BLOCK   L63     [en            ]  /** Internal: read a key from a specific domain store. */
+LINE    L179    [section-header]  ── UI ────────────────────────────────────────────────────────────────────
+LINE    L201    [section-header]  ── DB ────────────────────────────────────────────────────────────────────
+LINE    L382    [section-header]  ── Window / geometry ────────────────────────────────────────────────────
+STRING  L450    [en            ]  config-save
+STRING  L562    [en            ]  config-shutdown
+
+## src/herramienta/ConfiguracioDb.java
+BLOCK   L3      [en            ]  /** Typed read/write view of database-related {@link Config} keys. */
+LINE    L7      [section-header]  Read API
+LINE    L15     [section-header]  Write API
+
+## src/herramienta/ConfiguracioFiltre.java
+BLOCK   L3      [en            ]  /** * Typed read/write view of the small "filter / defaults" sub-store of * {@link Config} (currently just {@code defaultImgDir}; the preset * save/delete APIs remain on {@link Config} directly because they span * 17 keys at once). */
+
+## src/herramienta/ConfiguracioFinestra.java
+BLOCK   L5      [en            ]  /** * Typed read/write view of window-geometry and table-column {@link Config} keys. * The column-width / column-visible keys live in the WINDOW sub-store * (see {@code Config.WINDOW_KEYS} plus the dynamic {@code colWidth_*} / * {@code colVisible_*} prefix rule). */
+
+## src/herramienta/ConfiguracioUi.java
+BLOCK   L5      [en            ]  /** * Typed read/write view of UI-related {@link Config} keys. * Internally backed by the UI sub-store introduced with the B1 god-class * split. Callers should prefer these typed setters over {@link Config}'s * generic ones — they group related configuration and make the * dependency from callers to a specific sub-domain explicit. */
+
+## src/herramienta/DialegError.java
+STRING  L95     [mixed         ]  OptionPane.warningIcon
+
+## src/herramienta/Escapers.java
+BLOCK   L3      [en            ]  /** Centralized string-escape utilities used by export/serialization paths. */
+BLOCK   L7      [mixed         ]  /** HTML-escape: handles & < > " '. */
+BLOCK   L17     [en            ]  /** SQL single-quote-string escape (doubles a {@code '} character). The caller adds outer quotes. */
+BLOCK   L22     [en            ]  /** JSON string escape (handles backslash, quote, control chars). */
+BLOCK   L45     [mixed         ]  /** CSV quoting per RFC-4180 (double internal {@code "}, wrap in {@code "}). */
+STRING  L45     [en            ]  }, wrap in {@code
+
+## src/herramienta/ExportadorLlibres.java
+BLOCK   L96     [en            ]  /** * Extended HTML export with an explicit cover-inclusion flag and * pre-loaded cover bytes. The simpler overload above omits covers * (renders a 📖 placeholder for every book) and is the safe default * for libraries with more than {@link #LARGE_LIBRARY_COVER_THRESHOLD} * books — base64-encoding a 50 KB cover per book produces ~50 MB * of HTML for 1 000 books, which most browsers handle poorly. * * <p>When {@code coverBlobs} is non-null it must contain one entry * per book in {@code view} (same order). A {@code null} entry means * "no cover available, render the placeholder". Callers that opt in * to covers must populate the array from a background thread (the * underlying {@code CoverService.getCachedBytes} and * {@code cd.getLlibreBlob} do disk + DB I/O). */
+BLOCK   L122    [en            ]  /** Above this many books, the caller should pre-load covers off the * EDT and pass them in, or skip covers entirely (the default * 3-arg overload does this). */
+BLOCK   L328    [en            ]  /** Wraps {@link Escapers#json(String)} in double quotes and renders * {@code null} as the JSON literal {@code null}. */
+
+## src/herramienta/FiltreUtils.java
+STRING  L24     [mixed         ]  The Lord of the Rings
+BLOCK   L42     [en            ]  /** * Single source of truth for the in-memory filter predicate. SQL path in * {@code LlibreDao.search} mirrors this — when adding a new field to * {@link LlibreFilter}, also extend the SQL builder there. * * <p>{@code tagISBNs} and {@code llistaISBNs} are pre-computed ISBN sets * supplied by the caller (they require DB lookups) so this method stays * pure and side-effect-free. */
+
+## src/herramienta/FormatOptions.java
+BLOCK   L3      [en            ]  /** * Shared format option lists for book format combos. * Used by New-Book Dialog, Details Panel, and Batch-Edit Dialog. * Single source of truth avoids I18n key drift. */
+BLOCK   L11     [en            ]  /** Returns format options with a blank first entry (for "no selection"). */
+BLOCK   L17     [en            ]  /** Returns format options with a "no change" first entry (for batch edit). */
+STRING  L17     [mixed         ]  no change
+
+## src/herramienta/ImportadorLlibres.java
+LINE    L58     [mixed         ]  per a CSV grans).
+
+## src/herramienta/ImpressorTaulaCopiaSeguretat.java
+BLOCK   L3      [en            ]  /** * Place-holder for per-table backup-printf builders. {@link BackupService#backupToSQL} * currently inlines a 26-arg printf for the llibre table; future refactor will move one * builder per table here (llibre, llista, llibre_llista, tag, llibre_tag, prestec, lectura, * autor, llibre_autor). * * <p>Today, callers should continue using {@code BackupService.backupToSQL}; this class is the * named seam where future per-table builders will live. */
+
+## src/herramienta/Lang.java
+BLOCK   L3      [en            ]  /** Supported UI languages. Ordinal matches the column index used by {@link I18n#TABLE} arrays. */
+
+## src/herramienta/ParseHelpers.java
+BLOCK   L5      [en            ]  /** * Shared text-to-number parsers for the presentacio layer. * * Two contracts coexist: * <ul> * <li><b>Best-effort</b> ({@code parseIntOrNull} / {@code parseLongOrNull} / * {@code parseDoubleOrNull}): silent on bad input. Returns a boxed type so * the caller can distinguish "empty" from "zero". Use in sort, display, * or default-aware paths where an error dialog is undesirable.</li> * <li><b>Strict</b> ({@code parseInt} / {@code parseLong} / {@code parseDouble}): * empty input is mapped to {@code defaultValue}; non-numeric input * appends a translated message to {@code errors} and returns * {@code defaultValue}. Use in save paths so a single bad field * aborts the save before the model is mutated.</li> * </ul> * * Replaces the parallel parsers that used to live in * {@code DetallesLlibrePanelControl} and {@code GuardarLlibresDialogoControl}. */
+
+## src/herramienta/PresetStore.java
+BLOCK   L5      [mixed         ]  /** Typed view of preset-related {@link Config} keys. */
+
+## src/herramienta/RelationRemapper.java
+BLOCK   L11     [en            ]  /** * Maps incoming external IDs (from CSV/JSON exports) to the locally-assigned IDs of shelves * and tags, creating new entries when no name match exists. Replaces duplicated remap loops in * {@code ImportExportRouter.importJson} and {@code BookImporter.importJSON}. */
+
+## src/herramienta/SelectorMostraColor.java
+BLOCK   L13     [en            ]  /** Compact shelf-color picker using a fixed palette (no full {@code JColorChooser}). */
+BLOCK   L16     [en            ]  /** * Default shelf color when none has been assigned. Shared by * {@link #chooseHex} (when the caller passes {@code null}) and * {@code GestioLlistesDialog.onColorLlista} (when the existing * shelf has no color). Lifting it to a single constant makes * the policy "new shelf starts blue" easy to change in one * place (per the tot.txt MEDIUM finding on the shared default). */
+BLOCK   L33     [en            ]  /** @return chosen color hex (#RRGGBB) or {@code null} if cancelled */
+
+## src/herramienta/ServeiCoberta.java
+BLOCK   L15     [en            ]  /** * Unified cover-fetching: bounded pool, L1 memory cache, L2 disk cache under ~/.biblioteca/covers/. */
+STRING  L28     [en            ]  cover-fetch
+STRING  L36     [en            ]  cover-write
+BLOCK   L83     [mixed         ]  /** Fetch cover bytes for {@code isbn}, save to DB blob, invoke callback on success. */
+BLOCK   L151    [en            ]  /** Shutdown the cover-fetch pool. Called from a shutdown hook. */
+
+## src/herramienta/ServeiCopiaSeguretat.java
+STRING  L24     [mixed         ]  Cerca a Internet
+STRING  L44     [mixed         ]  auto-backup
+STRING  L87     [mixed         ]  yyyy-MM-dd_HH-mm-ss
+LINE    L236    [section-header]  String
+
+## src/herramienta/UITheme.java
+BLOCK   L22     [en            ]  /** Typed read-only view of the runtime theme palette. A fresh snapshot * is returned by {@link #palette()} on every call so the record reflects * the current state of the mutable Color statics (which are still the * single source of truth — they get re-assigned by {@link #setTheme} * and the theme appliers). Migration target: callers do * {@code UITheme.palette().bgMain} instead of {@code UITheme.palette().bgMain()}. */
+BLOCK   L54     [en            ]  /** Snapshot the current Color state into an immutable Palette record. * Callers should prefer {@code UITheme.palette().xxx} over the raw * {@code UITheme.XXX} field accesses. */
+LINE    L108    [mixed         ]  ── Fixed colors (theme-independent) ─────────────────────────────────────
+BLOCK   L112    [en            ]  /** Search-highlight palette entries — used by the SearchHighlightRenderer. * Theme-independent: the highlight should pop on any background, so the * amber bg / black fg combo is shared across all themes. */
+LINE    L126    [mixed         ]  ── Light palette (warm library theme) ───────────────────────────────────
+BLOCK   L195    [en            ]  /** * Base font, rebuilt by {@link #rebuildFonts(String)} when the configured * font size changes. Held as {@code private static volatile} so external * code must go through {@link #fontBase()} to read the current value, * preventing races with {@code rebuildFonts} on the EDT. */
+BLOCK   L203    [en            ]  /** * Bold base font, rebuilt by {@link #rebuildFonts(String)} when the * configured font size changes. Held as {@code private static volatile} * so external code must go through {@link #fontBold()} to read the * current value, preventing races with {@code rebuildFonts} on the EDT. */
+BLOCK   L216    [en            ]  /** Pair with {@link Config}'s shutdown hook to release the cached Font * instances at JVM exit (belt-and-suspenders for the static-state pattern). */
+LINE    L226    [section-header]  ── Theme switching ───────────────────────────────────────────────────────
+BLOCK   L301    [mixed         ]  /** Compat — maps to LIGHT or DARK. */
+BLOCK   L319    [en            ]  /** Backwards-compat overload — accepts the legacy "small"/"medium"/"large" key. */
+BLOCK   L366    [en            ]  /** * Release the cached Font instances so the JVM can reclaim them * sooner at shutdown. Called automatically once via a JVM shutdown * hook (paired with {@link Config}'s) and safe to call manually * (idempotent, no-op if already cleared). */
+
+## src/herramienta/UtilitatsColor.java
+BLOCK   L8      [en            ]  /** Color helpers (hex format/parse, swatch icon) used by shelf-color dialogs and theme code. */
+LINE    L21     [mixed         ]  Expand #rgb → #rrggbb
+BLOCK   L32     [en            ]  /** Small rounded-rectangle swatch icon for shelf-color display. */
+
+## src/herramienta/ValidadorLlibre.java
+BLOCK   L54     [en            ]  /** * Validates and builds a Llibre. * Only isbn and nom are mandatory. All other fields accept null/blank and get * safe defaults (valoracio=0, preu=0, llegit=false, rest empty strings). */
+
+## src/herramienta/csv/AbstractMappingCsvStrategy.java
+BLOCK   L26     [en            ]  /** * Generic "find or create by name" lookup. Caches the full table on * first call so subsequent lookups are O(1) hash hits. The cache is * held in the strategy so the same map is reused across rows. */
+STRING  L27     [en            ]  find or create by name
+
+## src/herramienta/csv/AnalitzadorPertinençaPrestatgeria.java
+BLOCK   L6      [en            ]  /** * Parses the native CSV "shelves" column: a string like * <pre>NameA|7.5|true;NameB|0|false</pre> * into {@link Entry} records. */
+
+## src/herramienta/csv/CsvImportStrategy.java
+BLOCK   L10     [en            ]  /** Returns true if the row was imported, false if skipped (e.g. duplicate). Throws on parse error. */
+
+## src/herramienta/csv/GoodreadsCsvStrategy.java
+STRING  L35     [mixed         ]  ISBN buit
+
+## src/herramienta/csv/LibraryThingCsvStrategy.java
+STRING  L43     [mixed         ]  Cognom, Nom
+STRING  L43     [mixed         ]  Nom Cognom
+
+## src/herramienta/csv/Rfc4180Reader.java
+BLOCK   L8      [en            ]  /** * Streaming RFC-4180 CSV reader. Replaces whole-file loading in {@link CsvUtils#parseLine} * for large imports. Returns one row at a time as a {@code String[]}. * * <p>Contract: {@link #hasNext()} is the only probe; {@link #next()} is * guaranteed to return non-null when {@code hasNext()} is true (and throw * {@link NoSuchElementException} otherwise). The previous API returned * {@code null} for a trailing empty input, forcing callers to null-check * {@code next()}; per the tot.txt LOW finding, the contract is now * "hasNext is the only probe". * * <p>Caller-supplied {@link Reader} must be {@code BufferedReader} for line-buffered reads. */
+BLOCK   L30     [en            ]  /** Returns true if there is another row to read. The next call to * {@link #next()} will return a non-null {@code String[]}. */
+BLOCK   L38     [en            ]  /** Reads the next logical row, joining continuation lines inside quotes. */
+BLOCK   L47     [en            ]  /** Reads one logical row (or null at EOF) into a flat string. */
+
+## src/herramienta/csv/UtilitatsCsv.java
+BLOCK   L41     [en            ]  /** Returns the trimmed value for the given column name, or "" if the column is absent * or its index exceeds the row length. Note: callers cannot distinguish a missing column * from a column whose value is actually empty — both yield "". For column-presence checks, * use hMap.containsKey(col) first. */
+BLOCK   L62     [en            ]  /** Returns the trimmed value parsed as a double, or 0.0 on null/blank/parse failure. */
+BLOCK   L79     [en            ]  /** Parses an ISBN string, converting any valid ISBN-10 to ISBN-13. * Delegates to {@link herramienta.Isbn13Normalizer#toIsbn13(String)} * (the canonical implementation) so the ISBN-10→13 checksum and * the lowercase-X tolerance are in one place — per the tot.txt LOW * finding on the three near-duplicate parseIsbn / normalizeIsbn13 * / toIsbn13 implementations. Falls back to a digit-only pass-through * for inputs that don't match the normalizer's strict shape, so the * CSV import path can still recover from unusual exports (the * normalizer returns null for those, but the CSV path wants a best * effort rather than a failed row). */
+BLOCK   L97     [en            ]  /** Returns true if a book with the given ISBN already exists in the library (skip on import). */
+
+## src/herramienta/export/ExportadorCsv.java
+BLOCK   L10     [mixed         ]  /** Delegating thin entry point; CSV export logic lives in {@link BookExporter#exportCSV}. */
+
+## src/herramienta/export/GoodreadsExportService.java
+BLOCK   L17     [en            ]  /** Shared Goodreads-compatible CSV export used by API and Swing. */
+STRING  L46     [mixed         ]  Condition,Condition Description,BCID
+
+## src/interficie/BibliotecaAdmin.java
+BLOCK   L5      [en            ]  /** * Danger-zone administrative operations. * Separate sub-interface so consumers that only need reads/writes (UI, API) need not depend * on backup/restore/clear capabilities. */
+
+## src/interficie/BibliotecaReader.java
+BLOCK   L15     [en            ]  /** Loads notes/descripcio for a book returned by a light table query. */
+
+## src/interficie/BibliotecaWriter.java
+BLOCK   L7      [en            ]  /** * CRUD surface of the library. The three danger-zone admin operations * (backup / restore / clearAll) are declared on the * {@link BibliotecaAdmin} sub-interface; this interface extends it for * backward-compatibility (per the tot.txt MEDIUM finding) but the * canonical way to obtain an admin handle is to require * {@code BibliotecaAdmin} in the constructor — most consumers do not * need those operations and should not have them in scope. * * <p>The "extending BibliotecaAdmin" half of the split is the * compatibility fix: legacy code that calls * {@code cd.backupToSQL(f)} on a {@code BibliotecaWriter} continues to * compile. New code that needs the admin operations should declare the * field as {@code BibliotecaAdmin} (the narrower type) so the type * system flags any caller that does not need to be trusted with * danger-zone operations. */
+
+## src/interficie/BookReader.java
+BLOCK   L32     [en            ]  /** * Lean variant of {@link #getAllLlibres()}: same result, but explicitly * documented to skip heavy text/blob columns (descripcio, notes, cover). * Default delegates to {@code getAllLlibres} for backends that already * return a light view (in-memory tests) or where the cost is acceptable. */
+
+## src/interficie/BookWriter.java
+BLOCK   L7      [en            ]  /** @deprecated prefer {@link #deleteLlibre(Long)} so callers carry only the key, not the full record. */
+
+## src/interficie/InMemoryBibliotecaReader.java
+BLOCK   L13     [en            ]  /** * Pure-in-memory {@link BibliotecaReader} for fast UI / pure-logic tests that don't need JDBC. * Read-only; mutate the supplied lists between operations. * * <p>Note: {@link #aplicarFiltres} returns the full list unchanged — this * class does NOT honour filter criteria. Tests of filter logic must use a * real {@link BibliotecaReader} (e.g. via {@code ControladorDomini}). */
+STRING  L34     [en            ]  Not found:
+BLOCK   L38     [en            ]  /** Rebuilds the ISBN→Llibre index. Callers that mutate {@link #books} should * treat the index as dirty (handled by the dirty flag). */
+
+## src/main/ShutdownHooks.java
+STRING  L13     [mixed         ]  shutdown-hook-
+
+## src/persistencia/AutorDao.java
+STRING  L45     [en            ]  Error creant autor:
+
+## src/persistencia/AutorRow.java
+BLOCK   L3      [en            ]  /** JDBC row for {@code autor}; used by {@link AutorDao} and backup export. */
+
+## src/persistencia/ControladorPersistencia.java
+BLOCK   L12     [en            ]  /** * Singleton facade over all DAOs. All public methods are {@code synchronized} so that * callers (ControladorDomini and the API layer) get thread-safe access without needing * to lock individual DAOs. * * <p>This wrapper exists to centralise lifecycle (singleton, test reset, profile * switch, shutdown hook) and to give {@code ControladorDomini} a single dependency. * DAOs are not individually synchronised — every call path goes through a * {@code synchronized} method here, so DAO-level {@code synchronized} would be * redundant double-locking. * * <p>Lifecycle: {@link #getInstance()} opens a JDBC connection and initialises DAOs; * {@link #resetForTest()} clears data and discards the instance (between test groups); * {@link #resetForProfileSwitch()} closes the connection (H2 ↔ MariaDB profile switch). * * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un * {@link java.util.concurrent.locks.ReadWriteLock} (lectures concurrents, escriptures * exclusives). Conversió mecànica però tediosa. */
+BLOCK   L106    [en            ]  /** * Alias for {@link #getAllLlibres()} retained for caller compatibility. * The DAO already returns the light view (no descripcio/notes); heavy * fields must be loaded per-book via {@link #loadHeavyFields}. */
+BLOCK   L123    [en            ]  /** * Atomically restore the database from a SQL backup file: clears * all data and executes the file's statements inside a single JDBC * transaction. If any statement in the file fails, the entire * transaction is rolled back and the database is unchanged. Used by * {@link domini.facade.BackupDelegate#restoreFromSQL(java.io.File)} to * close the "kill the app between clearAllData() and executeSQLFile()" * window. The pre-restore snapshot to a temp file is the user-facing * undo path; this method is the in-process safety net. */
+BLOCK   L144    [en            ]  /** * Batched counterpart to {@link #loadHeavyFields(long, Llibre)}: one * round-trip for N books instead of N. The caller supplies an ISBN * list AND a lookup function that maps each ISBN to the in-memory * {@link Llibre} to mutate. The DAO does not depend on the * in-memory state; this is the only path that closes the N+1 * pre-load in {@link domini.facade.BackupDelegate}. */
+BLOCK   L162    [en            ]  /** * Exposes the underlying JDBC connection for callers that need to run * multi-statement transactions (e.g. {@link herramienta.BackupService} * takes a SERIALIZABLE snapshot of all tables). Callers MUST * synchronize on this {@code ControladorPersistencia} instance while * holding the connection so the DAOs do not observe a half-set * transaction state — every DAO method is {@code synchronized} on * this same monitor, so a {@code synchronized(cp)} block around the * transaction keeps the connection state consistent. */
+BLOCK   L223    [en            ]  /** @deprecated use {@link #getAllAutorRows()} — kept for callers that need the Object[] shape. */
+BLOCK   L230    [en            ]  /** @deprecated use {@link #getAllLlibreAutorRows()} — kept for callers that need the Object[] shape. */
+BLOCK   L241    [mixed         ]  /** For backup/export only — no UI consumer yet. */
+
+## src/persistencia/JarLocator.java
+STRING  L133    [mixed         ]  no-jars
+
+## src/persistencia/LecturaRow.java
+BLOCK   L6      [en            ]  /** Reading-session row for backup/export. Not wired in the Swing UI yet. */
+BLOCK   L12     [en            ]  /** Parse a DATE column ({@code YYYY-MM-DD}) into a {@code LocalDate}; null/empty → null. */
+
+## src/persistencia/LlibreAutorRow.java
+BLOCK   L3      [en            ]  /** Join row {@code llibre_autor}; used by {@link AutorDao} and backup export. */
+
+## src/persistencia/LlibreBlobDao.java
+BLOCK   L10     [en            ]  /** Read/write of the {@code imatge_blob} and lazy {@code descripcio}/{@code notes} load. */
+STRING  L51     [en            ]  Error carregant camps pesats:
+BLOCK   L55     [en            ]  /** * Batched counterpart to {@link #loadHeavyFields(long, Llibre)}: one * round-trip for N books instead of N. Books not found in the DB * (e.g. deleted between the caller computing the ISBN list and this * SELECT running) are silently skipped — the in-memory instance * keeps its stale "not loaded" state. Books that are already * {@code isHeavyFieldsLoaded()} should be filtered out by the caller * (it has the in-memory reference) to avoid an unnecessary * {@code target.set*} no-op. */
+STRING  L94     [en            ]  Error carregant camps pesats (batch):
+
+## src/persistencia/LlibreFieldBindings.java
+BLOCK   L9      [en            ]  /** * Single source of truth for the 25+ shared fields between {@code Llibre} * {@code INSERT} and {@code UPDATE} statements. The DAO used to spell * out the same 25 line set of {@code ps.setXxx(N, ll.getYyy())} calls in * three places (insert, update, plus a slightly-different shape in * {@code BackupService.writeLlibreINSERT}). This class centralises the * <i>value list</i> per SQL so all callers stay in lockstep when a new * column is added. * * <p>Each value can be: * <ul> * <li>A boxed primitive / String / byte[] / java.sql.Date — bound as-is.</li> * <li>{@code null} — bound as SQL NULL of the inferred type.</li> * <li>{@link Null} with a specific SQL type — bound as typed NULL.</li> * </ul> * Type coercion mirrors the previous inline behaviour (empty string * instead of NULL for short text fields; boxed-default for null * numerics). */
+BLOCK   L32     [en            ]  /** Marker for a SQL NULL of a specific JDBC type. */
+BLOCK   L43     [en            ]  /** * Single value-list builder used by both {@link #forInsert(Llibre)} * and {@link #forUpdate(Llibre)}. The two SQLs differ only in: * <ul> * <li>Whether the {@code ISBN} column is included (INSERT only).</li> * <li>Whether the {@code imatge_blob} column is included * (INSERT only).</li> * </ul> * This is the entire delta — same order, same value coercion * helpers, same bind contract. The previous implementation had * two near-identical 25/27-line arrays that drifted out of sync * the moment a column was added (the tot.txt HIGH finding on * {@code LlibreDaoCore}). */
+BLOCK   L89     [en            ]  /** 27-value list for the INSERT (includes {@code ISBN} and * {@code imatge_blob}). */
+BLOCK   L93     [en            ]  /** 25-value list for the UPDATE (no {@code imatge_blob}, no * {@code ISBN}). The caller appends the WHERE-clause ISBN. */
+BLOCK   L97     [en            ]  /** 27-column list for the INSERT, in the same order as * {@link #forInsert(Llibre)}. Used by {@code BackupService} * to generate the SQL column list without re-typing the names * (per the tot.txt MEDIUM finding on INSERT column-list drift). */
+BLOCK   L108    [en            ]  /** Render the column list as a single comma-separated SQL fragment * (e.g. {@code "`ISBN`,`nom`,`any`,..."}) for use in an INSERT. */
+BLOCK   L119    [en            ]  /** Render the placeholder list for a 27-value INSERT * (e.g. {@code "?,?,?,...,?"}). */
+BLOCK   L136    [en            ]  /** Binds a single value to the PreparedStatement, with the type-aware * null handling the old inline code used to do per call. */
+
+## src/persistencia/LlibreLecturaDao.java
+BLOCK   L10     [en            ]  /** Reads from the {@code lectura} table (one row per reading session). */
+
+## src/persistencia/LlibreLlistaRow.java
+BLOCK   L3      [en            ]  /** Membership row joining a book (isbn) to a shelf (llistaId), with per-shelf rating and read flag. */
+
+## src/persistencia/LlibreMapper.java
+BLOCK   L8      [en            ]  /** * Static mappers from {@link ResultSet} rows to {@link Llibre} domain objects. * Shared between {@link LlibreDaoCore} (own SELECTs) and {@link LlistaDao} * (cross-table SELECTs that read llibre rows). Column names must match * the canonical SELECT lists in {@link LlibreDaoCore}. */
+BLOCK   L46     [en            ]  /** @param includeNotes if true, read the {@code notes} column from the result set */
+
+## src/persistencia/LlibreSearchDao.java
+BLOCK   L15     [en            ]  /** Unified-filter search for the main library table. */
+LINE    L44     [en            ]  "if (f.getX() != null) { sql.append(" AND ..."); params.add(...); }"
+BLOCK   L88     [en            ]  /** * Append {@code clause} to {@code sql} and {@code value} to {@code params} * if {@code value} is non-null. No-op when {@code value} is null — the * caller can pass a pre-computed value (e.g. {@code "%foo%"}) and let the * helper decide whether to bind it. Reduces the search() body from * ~20 branches of {@code if (f.getX() != null) { sql.append(...); params.add(...); }} * to single-line per-condition calls. */
+
+## src/persistencia/LlibreTagRow.java
+BLOCK   L3      [en            ]  /** Membership row joining a book (isbn) to a tag (tagId). */
+
+## src/persistencia/LlistaDao.java
+BLOCK   L210    [en            ]  /** * Single SQL query shared by {@link #getLlistesForLlibre} and * {@link #getLlistesForLlibreContext}. Columns in the result row: * 0=id, 1=nom, 2=valoracio, 3=llegit, 4=ordre, 5=color. */
+
+## src/persistencia/MapejadorsFiles.java
+BLOCK   L11     [en            ]  /** Shared DAO helpers for read-only queries. */
+
+## src/persistencia/OverdueLoan.java
+BLOCK   L5      [en            ]  /** * Row returned by {@link PrestecDao#getOverdue}: a currently-loaned book * whose loan is older than the threshold (and not yet returned). * * <p>Replaces the previous {@code List<Object[]>} three-element row * (nomPersona, nomLlibre, dataPrestec) with a typed record so callers * get compile-time field access and don't have to cast {@code row[0..2]}. */
+
+## src/persistencia/PrestecDao.java
+STRING  L38     [en            ]  Book with ISBN
+
+## src/persistencia/PrestecRow.java
+BLOCK   L8      [en            ]  /** Loan row. isbn is a primitive long (always present FK). */
+
+## src/persistencia/RelationRow.java
+BLOCK   L3      [en            ]  /** * Marker for book-relation row records: {@link LlibreLlistaRow}, {@link LlibreTagRow}, * {@link LlibreAutorRow}. Permits cross-cutting handlers (export/import, audit dumps) * to dispatch generically. */
+
+## src/persistencia/Schema.java
+BLOCK   L3      [en            ]  /** * Schema constants shared across DAOs and the backup path. */
+BLOCK   L9      [en            ]  /** * Correct DELETE order to satisfy foreign keys: child tables first * (those with FKs to others), parent tables last. Shared between * {@link LlibreDaoCore#clearAllData()}, {@link herramienta.BackupService#backupToSQL} * and any bulk reset — the order must stay in sync or the FOREIGN KEY * constraints will fail in strict mode. */
+
+## src/persistencia/ServerConect.java
+BLOCK   L113    [en            ]  /** Set once inside {@link #createDatabase(ConnectionConfig)} or * {@link #createDatabase()} and never reassigned; {@link #closeConnection()} * nulls the field after closing. Do not assign a new Connection elsewhere. */
+BLOCK   L126    [en            ]  /** Variant that takes the password as a {@code char[]} so the caller can * zero it after the call instead of leaving a {@code String} in the heap. * <p>The JDBC {@link java.sql.Driver#connect(String, java.util.Properties)} * contract requires the password as a {@code String} in the * {@code Properties} bag, so a single {@code String} copy of the password * is unavoidable for MariaDB; the copy lives inside the * {@link Connection}'s {@code Properties} until the driver releases it. * The caller's {@code char[]} is the only chunk this method can keep * short-lived: zero it as soon as the connection succeeds or fails. */
+STRING  L173    [mixed         ]  ;MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192
+STRING  L191    [mixed         ]  Unknown dbType:
+STRING  L192    [en            ]  (expected 'h2' or 'mariadb')
+BLOCK   L203    [en            ]  /** Map a known dbType to the matching {@code err_db_init_*} i18n key. * Throws for unknown types so the caller never falls through to * {@code I18n.t("err_db_init_" + dbType)} (which would return the * key itself for unknown types, masking the real error). */
+BLOCK   L215    [en            ]  /** Rejects path separators in H2 file profile names (jdbc:h2:dir/profile). */
+BLOCK   L224    [en            ]  /** * Applies pending schema migrations and records each completed version in * {@code schema_version}. The transaction strategy depends on the connected * engine, detected via {@link java.sql.DatabaseMetaData#getDatabaseProductName()}. * * <p><b>H2</b> supports transactional DDL. The DDL statement and the matching * {@code schema_version} INSERT run inside a single JDBC transaction * ({@code setAutoCommit(false)} → execute → {@code commit}, or * {@code rollback} on failure). A mid-sequence failure on H2 leaves the * schema unchanged and the migration is re-attempted on the next startup. * * <p><b>MariaDB / MySQL</b> do not support transactional DDL: every DDL * statement implicitly commits and cannot be rolled back. On these engines * the {@code setAutoCommit(false)} wrapper is intentionally skipped and * each migration is applied as two independent atomic operations: the DDL * (auto-committed) followed by the {@code schema_version} INSERT (its own * auto-commit transaction). If the INSERT fails it is logged and the * migration is left unrecorded so the next startup will retry it. If the * DDL itself fails, the connection may have partially-migrated state: * operators must inspect {@code schema_version} (which lists the * migrations recorded as applied) and the live schema to determine which * statements completed and finish the migration manually. All DDL in * {@link #MIGRATIONS} is written to be idempotent (guards such as * {@code IF NOT EXISTS}), so a retry against a partially-migrated schema * is safe. */
+BLOCK   L303    [en            ]  /** * Stub kept for clarity — the original 32 → 33 → 34 atomicity plan * (see tot.txt F6) was rejected because the H2 32→33→34 sequence * runs into "Column AUTOR not found" when 32 is re-executed after * a previous partial commit (a real edge case the existing per- * migration transaction model tolerates but the merged * runMigrations3234H2 did not). The original three-transaction * model is preserved; the tot.txt finding is documented but the * fix is not applied here to keep the migration behaviour * identical to the long-shipped version. */
+STRING  L316    [en            ]  see comment
+BLOCK   L335    [en            ]  /** * Drops {@code llibre.autor} only when every non-empty legacy author row has a * matching {@code llibre_autor} link. Skips (returns false) if unmigrated rows remain. */
+STRING  L349    [mixed         ]  Migration 34: skipping DROP COLUMN autor —
+STRING  L393    [en            ]  did not accept URL:
+STRING  L407    [mixed         ]  Driver JAR '
+
+## src/persistencia/TagDao.java
+BLOCK   L26     [en            ]  /** * Startup assertion: every column the in-memory path in * {@code StatsDelegate.IN_MEMORY_EXTRACTORS} knows about must also be * in the SQL whitelist. Without this check the two paths drift * silently — a column added to the in-memory extractors but not the * SQL whitelist would yield a smaller result set when the SQL path * is exercised (e.g. for a column that doesn't have an in-memory * extractor at all). Reference is by string to keep this DAO * ignorant of the facade layer (which would create a cycle). */
+STRING  L48     [mixed         ]  TagDao.AUTOCOMPLETE_COLUMNS is missing the in-memory extractors:
+STRING  L83     [en            ]  createTag: no generated key returned
+
+## src/presentacio/AjudaEstadistiques.java
+BLOCK   L221    [en            ]  /** * Builds the "General" stats tab: goal progress + text summary + per-shelf table. * All view construction lives here so the controller stays slim. */
+
+## src/presentacio/AjudaVisualitzacioCoberta.java
+BLOCK   L9      [en            ]  /** * Shared cover-image loading: BLOB → URL → default fallback. Lifted from inline logic in * detail panels so all four cover surfaces use the same precedence. * * <p>Per the tot.txt LOW finding: the load runs on a {@link SwingWorker} so a * 500 KB cover decode no longer stutters the EDT. The {@code target} is * captured by reference; the {@code done()} callback checks the JLabel is * still showing the same target (its component identity, not its contents) * via the captured `this` reference. */
+
+## src/presentacio/BibliotecaTableModel.java
+BLOCK   L12     [en            ]  /** Table model for the main library book table. */
+BLOCK   L87     [en            ]  /** Mutable backing list (package-private use by {@link TableController} only). */
+
+## src/presentacio/ConfiguracioDialog.java
+BLOCK   L23     [en            ]  /** * Settings dialog. Each visual section lives in its own class under * {@code presentacio.config.*}; this class wires them into a single * vertical column and exposes the public ctor / {@link #reloadFromConfig} * API that callers depend on. */
+
+## src/presentacio/ControladorAccionsLlibre.java
+BLOCK   L24     [mixed         ]  /** Book CRUD, details dialogs, stats, quick views, and undo. */
+
+## src/presentacio/ControladorExportacio.java
+STRING  L157    [mixed         ]  no tenia
+
+## src/presentacio/ControladorFiltre.java
+BLOCK   L20     [en            ]  /** Filter drawer, search bar, and preset management. */
+
+## src/presentacio/ControladorGaleria.java
+BLOCK   L8      [en            ]  /** Thin coordinator for {@link GaleriaCobertesPanel} book list updates. */
+
+## src/presentacio/ControladorMarcPrincipal.java
+BLOCK   L25     [en            ]  /** * Facade over the 6 sub-controllers (bookActions, bookIO, contextMenu, filter, * shelf, tablePage) for the main screen. MostrarBibliotecaControl owns the * table/list rendering; this class owns the top-level frame, menubar, and * orchestration. */
+BLOCK   L302    [en            ]  /** * If the user is currently viewing a specific shelf, add a newly created * book to that shelf so it shows up immediately. No-op when: * - the book is not new (this helper is for {@code isNew} only), * - the user is on "All books" (no shelf filter), * - the add fails (caller already handled the user-facing error). */
+
+## src/presentacio/ControladorMenuContextual.java
+BLOCK   L24     [en            ]  /** Table and gallery context menus, batch edit, duplicate, loan. */
+
+## src/presentacio/ControladorModeVista.java
+BLOCK   L16     [en            ]  /** Gallery vs table view, series grouping, and title bar. */
+
+## src/presentacio/ControladorMostrarBiblioteca.java
+BLOCK   L15     [en            ]  /** Slim coordinator for the main library screen; delegates to sub-controllers. */
+
+## src/presentacio/ControladorPaginaTaula.java
+BLOCK   L10     [en            ]  /** * Manages pagination state for the book table. * <p>Two pagination modes exist: * <ul> * <li><b>In-memory</b> ({@code useDBPagination=false}): the full library is held in a * list and sliced by {@link #PAGE_SIZE}.</li> * <li><b>DB-level</b> ({@code useDBPagination=true}): pages are fetched from the database * via {@code getLlibresPage(offset, limit)}; this activates when the library exceeds * {@code ControladorDomini.isLargeLibrary()}.</li> * </ul> * <p>The pagination model ({@code currentPage}, {@code paginatedMode}, * {@code useDBPagination}) is read by the enclosing * {@link MostrarBibliotecaControl} via getter methods; direct field access by * other classes is discouraged. */
+LINE    L27     [en            ]  PAGE_SIZE is unrelated to ControladorDomini.SQL_FILTER_THRESHOLD (2000); pagination kicks in at 100 rows, SQL-filter at 2000 books.
+
+## src/presentacio/ControladorPrestatgeria.java
+BLOCK   L15     [en            ]  /** Shelf (llista) combo, drag-to-shelf, and list membership actions. */
+
+## src/presentacio/ControladorTaula.java
+BLOCK   L26     [en            ]  /** Table view: model, renderers, column visibility, table UX listeners. */
+
+## src/presentacio/FormFieldRegistry.java
+BLOCK   L18     [en            ]  /** * Declarative registry for the filter-drawer form. * * <p>The drawer's 32 hand-declared components (text fields, checkboxes, * combo boxes, buttons) are described by a list of {@link Field} specs. * {@link #build()} instantiates the right {@link JComponent} subclass * for each spec and stores it in a name -> component map. Public * getters on {@link FilterDrawerPanel} continue to expose the same * component instances (e.g. {@code getTextISBN()}) so all 217 external * call sites keep working unchanged. */
+BLOCK   L33     [en            ]  /** * Declarative spec for a single field. * * @param key logical name used by the registry (e.g. "textISBN") * @param labelKey i18n key for the field's label * @param kind component kind (text / check / combo / button) * @param tooltipKey i18n key for the tooltip, or {@code null} * @param width preferred width in characters (text/combo only) * @param defaultText initial text (text fields only) */
+BLOCK   L72     [en            ]  /** Append a spec to the registry. Order is preserved. */
+BLOCK   L78     [en            ]  /** * Instantiate one {@link JComponent} per spec and register it under * {@link Field#key()}. Subsequent {@link #get(String)} calls return * the live component. * * <p>Each spec is responsible for one component; the per-component * styling (font, palette colour, tool tip) is applied in the panel * once the components are wired into the layout — this method only * creates instances and sets the bare-minimum defaults (text, * tool tip text). */
+BLOCK   L116    [en            ]  /** * Raw-typed accessor kept for the 60+ existing callers that * declared {@code JComboBox<String>} or {@code JComboBox<Object>} * locally. A typed variant would require per-component knowledge * (T from the spec) — not worth the migration given the * existing call sites work as-is. Documented in the tot.txt * LOW finding; kept raw for backward compatibility. */
+BLOCK   L140    [en            ]  /** * Legacy API for the 25-line skeleton callers that wired * components by hand before the declarative spec existed. * Currently only {@code DetallesLlibrePanel.addFieldEntry} * still uses this (line 295 of that file); the registry-based * spec system is the supported path. Marked {@link Deprecated} * for removal once the last external caller migrates. */
+
+## src/presentacio/FormGridBuilder.java
+BLOCK   L11     [en            ]  /** * Shared row-builder for the new-book and edit-book dialogs. Each {@code addX} call appends a * (label, control) pair to a host {@link JPanel} configured with {@link GridLayout}. * * NOTE: DetallesLlibrePanel and GuardarLlibresDialogo still use their own private * addFieldEntry/addComboEntry/addCheckEntry methods instead of this class. Migrating them * to use FormGridBuilder (plus a registry for field binding) would eliminate the duplication * tracked in todo1.txt [un] items for those two classes. */
+
+## src/presentacio/GestioLlistesListener.java
+BLOCK   L3      [en            ]  /** Explicit callback interface for shelf-management actions (replaces raw Runnable). */
+
+## src/presentacio/GestorArrossegarSoltarPrestatgeria.java
+BLOCK   L14     [en            ]  /** Attaches drag-to-shelf drop targets; keeps DnD logic out of {@link LeftSidebarPanel}. */
+
+## src/presentacio/KeyboardShortcuts.java
+BLOCK   L10     [en            ]  /** * Keyboard shortcut wiring extracted from {@link MainFrameControl}. * Use {@link #bind} to register a key combination with a no-arg action. */
+
+## src/presentacio/LibraryScreenHost.java
+BLOCK   L7      [en            ]  /** * Callbacks from sub-controllers back to {@link MostrarBibliotecaControl}. * * <p>Acts as a thin controller registry: every sub-controller can be * obtained through a typed accessor instead of via a direct field * reference on the coordinator. The "single injection point" the * tot.txt MEDIUM finding called for is the constructor of * {@link MostrarBibliotecaControl} — controllers are constructed there * and wired via the accessors below, so adding a 7th controller means * editing only the constructor (and adding a one-line accessor here). */
+
+## src/presentacio/LibraryViewState.java
+BLOCK   L13     [en            ]  /** Shared mutable state for the main library screen sub-controllers. */
+
+## src/presentacio/LlibreFormBinder.java
+BLOCK   L7      [en            ]  /** * Shared field-binding for the new-book ({@code GuardarLlibresDialogo}) and edit * ({@code DetallesLlibrePanel}) dialogs. Currently a thin helper exposing getText/setText * mappings; future refactor will host the full 27-field bind code. */
+
+## src/presentacio/LlistaTableModel.java
+BLOCK   L10     [en            ]  /** * Table model for shelf data (id, name, count, color). * Extracted from GestioLlistesDialog so it can be reused * by the stats dialog or any future shelf list view. */
+
+## src/presentacio/MemoriaImatgesCoberta.java
+BLOCK   L10     [en            ]  /** LRU cover icons for table + gallery (shared across main screen). */
+BLOCK   L12     [mixed         ]  /** Cached marker: no cover available (avoids re-fetch on every repaint). */
+
+## src/presentacio/PaginationModel.java
+BLOCK   L3      [en            ]  /** Pagination state extracted from {@link TablePageController}. */
+
+## src/presentacio/PaginationView.java
+BLOCK   L14     [en            ]  /** @param page zero-based page index */
+
+## src/presentacio/PanelCalaixFiltre.java
+BLOCK   L28     [en            ]  /** * Sidebar drawer that holds the filter inputs (text fields, checkboxes, * combo boxes), the preset bar, the apply/clear buttons, and the * export/import/backup buttons. * * <p>As of R1, the 32 hand-declared component fields are replaced by a * single {@link FormFieldRegistry} of declarative specs. The 32 public * getters are kept as 1-line shims that delegate to the registry, so * the 217 external call sites (most prominently * {@link MostrarBibliotecaPanel}) keep compiling without changes. */
+BLOCK   L274    [en            ]  /** * Single source of truth for the 11 button styles shared by * {@link #applyTheme()} and {@link #applyThemePostLaf()}. The * tot.txt MEDIUM finding flagged the duplicated block; the * helper keeps the two entry points in lockstep when a new * button is added to the registry. */
+BLOCK   L399    [en            ]  /** * Declarative triple for a single labelled text-field filter row. * Used by {@link #buildFilterDrawer()} to declare the three "row1b" * text fields (editorial / serie / idioma) without repeating the * label-key + new-JTextField boilerplate three times. */
+BLOCK   L407    [en            ]  /** * Declarative triple for a single numeric-range filter row. * Used by {@link #buildFilterDrawer()} to declare the three "row2" * range fields (any / valoracio / preu) without repeating the * label-key + two new-JTextFields boilerplate three times. */
+
+## src/presentacio/PanelGaleriaCobertes.java
+BLOCK   L42     [en            ]  /** * Grid of book covers, the gallery view of the library. * * <p>Composition: * <ul> * <li>{@link CoverImageService} — async LRU image cache + crop-scale.</li> * <li>{@link CoverCardFactory} — paints each card, wires mouse + selection * events back through a {@link CoverCardFactory.CardHost}.</li> * <li>{@link CoverZoomPopup} — hover-zoom overlay shown next to a card.</li> * </ul> * * <p>This class owns the scroll pane, the wrap layout, the selection / * focus state, the keyboard bindings, and the theme application. The * actual visual + image work lives in the three collaborators above. */
+
+## src/presentacio/PanelMarcPrincipal.java
+BLOCK   L13     [en            ]  /** Main window content (library table + status bar). Frame chrome lives in {@link MainFrameControl}. */
+
+## src/presentacio/PanelMostrarBiblioteca.java
+BLOCK   L81     [en            ]  /** * Order matters: (1) update palette-derived fields first, (2) sub-panel * pre-LaF overrides, (3) install L&F (resets all defaults), (4) re-apply * UIManager overrides on top of L&F, (5) updateComponentTreeUI, (6) * sub-panel post-LaF overrides for things the L&F reset. */
+
+## src/presentacio/SplashScreen.java
+BLOCK   L72     [mixed         ]  /** Emergency cleanup: dispose the dialog regardless of timing. */
+
+## src/presentacio/UIComponents.java
+BLOCK   L18     [en            ]  /** * presentacio-layer factory for theme-aware Swing components. * * <p>All presentacio code should call into this class instead of touching * {@link UITheme} styling fields directly, so that swapping to a different * look-and-feel does not require touching every panel/control. * * <p>The styling bodies (button / label / panel / field / cardBorder) were * moved here from {@code herramienta.UITheme} during the session-11 build * fix so {@code UITheme} only owns the theme state (colors, fonts, * UIManager keys) and {@code UIComponents} owns the panel-layer style * application. Field/colors that drive the look still come from * {@link UITheme}; the methods here just apply them. */
+
+## src/presentacio/config/BarraBotonsConfiguracio.java
+BLOCK   L22     [en            ]  /** * Save / cancel button bar. Pulls field values from the tagged input * children of the section panels and persists them through * {@link Config} in a single batch. */
+
+## src/presentacio/config/ConfiguracioDataSection.java
+BLOCK   L19     [en            ]  /** Data section: DB size display, clear-library button, profile picker. */
+
+## src/presentacio/config/ConfiguracioDialogListener.java
+BLOCK   L3      [en            ]  /** Callbacks fired by the settings dialog. Replaces raw Runnable parameters. */
+
+## src/presentacio/config/SeccioAparençaConfiguracio.java
+BLOCK   L17     [mixed         ]  /** Appearance section: theme, font size, currency symbol, default rating. */
+
+## src/presentacio/config/SeccioDbConfiguracio.java
+BLOCK   L21     [en            ]  /** Database section: type / host / user / password + test-connection button. */
+
+## src/presentacio/config/SeccionsConfiguracio.java
+BLOCK   L6      [en            ]  /** * Shared utilities for {@code presentacio.config.*} sections. * Each section panel tags its input children with a {@code ClientProperty * ("id", ...)} so the dialog can look them up by name in * {@link #reloadFromConfig(Container, String)}. */
+BLOCK   L15     [en            ]  /** Locate a tagged child by id. Recurses into nested containers. */
+
+## src/presentacio/detalles/vista/DialegEtiquetesLlibre.java
+BLOCK   L31     [en            ]  /** * Dialog for managing the tags assigned to a single book. * <p> * Unlike {@link presentacio.detalles.vista.LlistesDelLlibreDialog}, which defers * shelf-membership changes until the user clicks OK/Save, this dialog applies every * tag add/remove operation immediately (via {@link presentacio.detalles.control.TagsDelLlibreControl}). * The immediate-persist model is chosen because tag operations are lightweight single * many-to-many rows, whereas shelf membership also carries per-book rating and read-state * that benefit from batch editing. */
+
+## src/presentacio/detalles/vista/GuardarLlibresDialogo.java
+STRING  L162    [mixed         ]  YYYY-MM-DD
+
+## src/presentacio/detalles/vista/UtilitatsComboEntitat.java
+BLOCK   L7      [en            ]  /** * Shared combo-reload logic for entity selection dialogs (shelves, tags, etc.). * Preserves the previously selected item by id after reloading the model. */
+BLOCK   L15     [en            ]  /** * Reloads a JComboBox from a fresh entity list, restoring the previously * selected item by its id. * * @param <E> entity type displayed in the combo * @param combo the combo to reload * @param items the full list of entities (fresh from domain) * @param idExtractor function returning the entity's numeric id */
+
+## src/presentacio/galeria/FabricantTargetesCoberta.java
+BLOCK   L35     [en            ]  /** * Builds the visual card panels that fill the gallery. * * <p>Each card owns its own paint path (card body, footer, progress bar, * stars) and is wired to a {@link Listener} so the host panel can stay * in sync with selection / focus / open events. * * <p>The card receives the {@link CoverImageService} so async image loads * update the card's paint reference on the EDT. */
+BLOCK   L62     [en            ]  /** * Host-side state + callbacks shared by every card built by this factory. * * <p>Replaces the former 7-method {@code Listener} interface (tot.txt MEDIUM * finding): the host ({@code GaleriaCobertesPanel}) builds a single * {@code CardHost} that captures its live selection / focus state plus * three callback consumers, and passes it to every card. The card's * mouse adapter reads {@link #selectedISBNs()} / {@link #focusedIdx()} / * {@link #currentLlibres()} for read-only access, mutates * {@link #focusedIdx()} via the int[] wrapper, and dispatches * {@link #onCardClicked}, {@link #onCardRightClicked}, and * {@link #onSelectionMutated} on user input. * * <p>The {@code int[]} wrapper for {@code focusedIdx} is the simplest * mutable-int carrier that survives both lambda capture and per-card * mouse-adapter mutation without resorting to {@code AtomicInteger}. */
+BLOCK   L156    [en            ]  /** * Read-only snapshot of everything {@link #paintCard} needs to draw a * card. Carries the live references to {@code imgRef} and {@code hov} * so the image-loader / mouse-Entered mutations are visible on the * next paint. */
+BLOCK   L172    [en            ]  /** * Static card paint — extracted from the anonymous JPanel's * paintComponent (per the tot.txt MEDIUM finding). All drawing * parameters come from the {@link CardState} record; the only * host interaction is the selection check. Testable in * isolation by constructing a CardState and a mock CardHost. */
+BLOCK   L230    [en            ]  /** * Static mouse adapter — extracted from the inline MouseAdapter * (per the tot.txt MEDIUM finding). Handles hover repaints and * selection / right-click / double-click. The adapter is stateless * beyond the references it captures at construction. */
+LINE    L313    [section-header]  ── Cover painting ────────────────────────────────────────────────────────
+LINE    L350    [section-header]  ── Footer ────────────────────────────────────────────────────────────────
+
+## src/presentacio/galeria/PopupZoomCoberta.java
+BLOCK   L20     [en            ]  /** * Hover-zoom popup shown next to a gallery card after a short delay. * * <p>The popup is a small JPanel added to the root pane's {@link JLayeredPane#POPUP_LAYER}. * It is owned by the gallery: only one popup can be visible at a time, and * it is removed when the host hides it (mouse exit, theme switch, list update, * shutdown). */
+BLOCK   L40     [en            ]  /** * Schedule a zoom popup for {@code card}. The popup is shown * {@value #DELAY_MS} ms after the call (debounced — repeated calls reset * the timer). The image must already be in the {@link CoverImageService} * cache; if not, this call is a no-op. */
+BLOCK   L53     [en            ]  /** Cancel any pending show; remove the overlay if visible. */
+
+## src/presentacio/galeria/ServeiImatgesCoberta.java
+BLOCK   L21     [en            ]  /** * Async loader + LRU cache of pre-scaled cover images. * * <p>Keyed by {@link Llibre#getISBN()}. The cache value is the image already * scaled to the requested card dimensions, so the paint path can blit 1:1 * without per-frame scaling work. * * <p>Owns the single-threaded loader pool, the in-flight set, and the * crop-scale math. All access from the EDT is via {@link #submit(Llibre, int, int, Runnable)}; * background loading and cache mutation run on the executor, with the * repaint callback marshalled back to the EDT. * * <p>The LRU is protected by a {@link ReentrantReadWriteLock} so EDT reads * (the paint path, dominant) run concurrently while writes (cache miss → * load) take an exclusive lock. The previous {@code Collections.synchronizedMap} * wrapper serialised every {@code get()} against every other {@code get()}, * which stalled the EDT on a 200-card repaint (per the tot.txt LOW finding). */
+BLOCK   L73     [en            ]  /** * Return the cached image for {@code isbn} at the current zoom, or {@code null} * if not yet loaded. The caller (card paint) must tolerate a {@code null} * return — the loader's onLoaded callback will repaint. Read-locked so * concurrent EDT repaints on a 200-card gallery do not serialise. */
+BLOCK   L88     [en            ]  /** * Invalidate all cached images. Called when the zoom level changes * (pre-scaled images are now the wrong size) or on theme switch * if the gradient palette needs to be re-applied. */
+BLOCK   L103    [en            ]  /** * Schedule background load + crop-scale for {@code l}. The {@code onLoaded} * callback runs on the EDT after the image lands in the cache (or the * load fails). The callback is also fired immediately if the image is * already cached, so callers can treat it as "image is ready, please repaint". */
+BLOCK   L138    [en            ]  /** Read-locked containment check (used by submit() before scheduling). */
+
+## src/presentacio/listener/EnActualizarBBDD.java
+BLOCK   L5      [en            ]  /** * Composite listener for book insert/update/delete events. * * <p>Merges the two parent contracts ({@link OnLlibreUpdate}, * {@link OnLlibreDelete}) so a presenter can subscribe to both * with a single field. Implementers must override * {@link OnLlibreUpdate#onBookUpdated} and * {@link OnLlibreDelete#onBookDeleted} (or use a default * implementation through a subclass). * * <p>Previously this interface also exposed a Catalan-named * alias ({@code actualitzarLlibre} / {@code eliminarLlibre}) * whose defaults delegated back to the English names, forming * a self-referential cycle that would loop forever if a * subclass overrode neither side. The alias has been removed: * the English names are the only contract, and the only * implementer in the codebase ({@code MainFrameControl}) * already overrides them. */
+
+## src/presentacio/listener/OnLlibreDelete.java
+BLOCK   L5      [en            ]  /** UI callback when a book is deleted. */
+BLOCK   L16     [en            ]  /** Cancellable/vetoed wrapper used by presenters that want to ask * listeners whether a delete should proceed. Created speculatively; * exercised by the test suite ({@code deleteEventCancellableVeto}, * {@code deleteEventNonCancellable}). */
+
+## src/presentacio/listener/OnLlibreUpdate.java
+BLOCK   L5      [en            ]  /** UI callback after a book is created or updated. */
+
+## src/presentacio/renderers/LlegitCheckBoxEditor.java
+BLOCK   L16     [en            ]  /** * Cell editor for the "llegit" column. Only persists the {@code llegit} * flag — all other fields on the loaded {@code Llibre} are stale * (the table model only loads the light row, not descripcio/notes). * The user is expected to open the details dialog (which calls * {@code loadHeavyFields}) before editing the read flag if they want * the other fields refreshed (per the tot.txt MEDIUM finding). */
+
+## src/presentacio/renderers/SearchHighlightRenderer.java
+BLOCK   L15     [en            ]  /** Cached set reference — refreshed via {@link #setLoanedISBNs(Set)} from * {@link presentacio.TableController} whenever the host's * {@code state.loanedISBNs} is reassigned. Avoids the per-cell * {@code Supplier.get()} dispatch the previous API required (the * tot.txt MEDIUM finding flagged 10 000 lambda calls per repaint). */
