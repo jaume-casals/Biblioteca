@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
 
-import herramienta.Config;
+import herramienta.Configuracio;
 import herramienta.I18n;
 
 public class ServerConect {
@@ -32,65 +32,65 @@ public class ServerConect {
 	private static final String CREATE_SCHEMA_VERSION =
 		"CREATE TABLE IF NOT EXISTS schema_version (version INT NOT NULL);";
 
-	private record Migration(int version, String sql) {}
+	private record Migracio(int version, String sql) {}
 
-	private static final Migration[] MIGRATIONS = {
-		new Migration(1,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS imatge_blob BLOB"),
-		new Migration(2,  "CREATE TABLE IF NOT EXISTS llista (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL)"),
-		new Migration(3,  "CREATE TABLE IF NOT EXISTS llibre_llista (" +
+	private static final Migracio[] MIGRATIONS = {
+		new Migracio(1,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS imatge_blob BLOB"),
+		new Migracio(2,  "CREATE TABLE IF NOT EXISTS llista (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL)"),
+		new Migracio(3,  "CREATE TABLE IF NOT EXISTS llibre_llista (" +
 			"isbn BIGINT NOT NULL, llista_id INT NOT NULL, " +
 			"valoracio FLOAT DEFAULT 0.0, llegit BOOLEAN DEFAULT FALSE, " +
 			"PRIMARY KEY (isbn, llista_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
 			"FOREIGN KEY (llista_id) REFERENCES llista(id) ON DELETE CASCADE)"),
-		new Migration(4,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS notes VARCHAR(2048) DEFAULT ''"),
-		new Migration(5,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS ordre INT DEFAULT 0"),
-		new Migration(6,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_afegit TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
-		new Migration(7,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT NULL"),
-		new Migration(8,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines INT DEFAULT 0"),
-		new Migration(9,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines_llegides INT DEFAULT 0"),
-		new Migration(10, "CREATE TABLE IF NOT EXISTS prestec (" +
+		new Migracio(4,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS notes VARCHAR(2048) DEFAULT ''"),
+		new Migracio(5,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS ordre INT DEFAULT 0"),
+		new Migracio(6,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_afegit TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+		new Migracio(7,  "ALTER TABLE llista ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT NULL"),
+		new Migracio(8,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines INT DEFAULT 0"),
+		new Migracio(9,  "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pagines_llegides INT DEFAULT 0"),
+		new Migracio(10, "CREATE TABLE IF NOT EXISTS prestec (" +
 			"id INT AUTO_INCREMENT PRIMARY KEY, " +
 			"isbn BIGINT NOT NULL, " +
 			"nom_persona VARCHAR(255) NOT NULL, " +
 			"data_prestec DATE NOT NULL, " +
 			"retornat BOOLEAN DEFAULT FALSE, " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"),
-		new Migration(11, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS editorial VARCHAR(255) DEFAULT ''"),
-		new Migration(12, "CREATE TABLE IF NOT EXISTS tag (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)"),
-		new Migration(13, "CREATE TABLE IF NOT EXISTS llibre_tag (" +
+		new Migracio(11, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS editorial VARCHAR(255) DEFAULT ''"),
+		new Migracio(12, "CREATE TABLE IF NOT EXISTS tag (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)"),
+		new Migracio(13, "CREATE TABLE IF NOT EXISTS llibre_tag (" +
 			"isbn BIGINT NOT NULL, tag_id INT NOT NULL, " +
 			"PRIMARY KEY (isbn, tag_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
 			"FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE)"),
-		new Migration(14, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS serie VARCHAR(255) DEFAULT ''"),
-		new Migration(15, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS volum INT DEFAULT 0"),
-		new Migration(16, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_compra DATE DEFAULT NULL"),
-		new Migration(17, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_lectura DATE DEFAULT NULL"),
-		new Migration(18, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS idioma VARCHAR(100) DEFAULT NULL"),
-		new Migration(19, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS format VARCHAR(50) DEFAULT NULL"),
-		new Migration(20, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS desitjat BOOLEAN DEFAULT FALSE"),
-		new Migration(21, "CREATE TABLE IF NOT EXISTS autor (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(500) NOT NULL UNIQUE)"),
-		new Migration(22, "CREATE TABLE IF NOT EXISTS llibre_autor (" +
+		new Migracio(14, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS serie VARCHAR(255) DEFAULT ''"),
+		new Migracio(15, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS volum INT DEFAULT 0"),
+		new Migracio(16, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_compra DATE DEFAULT NULL"),
+		new Migracio(17, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS data_lectura DATE DEFAULT NULL"),
+		new Migracio(18, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS idioma VARCHAR(100) DEFAULT NULL"),
+		new Migracio(19, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS format VARCHAR(50) DEFAULT NULL"),
+		new Migracio(20, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS desitjat BOOLEAN DEFAULT FALSE"),
+		new Migracio(21, "CREATE TABLE IF NOT EXISTS autor (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(500) NOT NULL UNIQUE)"),
+		new Migracio(22, "CREATE TABLE IF NOT EXISTS llibre_autor (" +
 			"isbn BIGINT NOT NULL, autor_id INT NOT NULL, " +
 			"PRIMARY KEY (isbn, autor_id), " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE, " +
 			"FOREIGN KEY (autor_id) REFERENCES autor(id))"),
-		new Migration(23, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pais_origen VARCHAR(100) DEFAULT NULL"),
-		new Migration(24, "ALTER TABLE llibre MODIFY COLUMN notes TEXT"),
-		new Migration(25, "CREATE TABLE IF NOT EXISTS lectura (" +
+		new Migracio(23, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS pais_origen VARCHAR(100) DEFAULT NULL"),
+		new Migracio(24, "ALTER TABLE llibre MODIFY COLUMN notes TEXT"),
+		new Migracio(25, "CREATE TABLE IF NOT EXISTS lectura (" +
 			"id INT AUTO_INCREMENT PRIMARY KEY, " +
 			"isbn BIGINT NOT NULL, " +
 			"data_inici DATE DEFAULT NULL, " +
 			"data_fi DATE DEFAULT NULL, " +
 			"pagines_llegides INT DEFAULT 0, " +
 			"FOREIGN KEY (isbn) REFERENCES llibre(ISBN) ON DELETE CASCADE)"),
-		new Migration(26, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS estat VARCHAR(20) DEFAULT NULL"),
-		new Migration(27, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS exemplars INT DEFAULT 1"),
-		new Migration(28, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS llengua_original VARCHAR(100) DEFAULT NULL"),
-		new Migration(29, "ALTER TABLE llibre MODIFY COLUMN valoracio DOUBLE"),
-		new Migration(30, "ALTER TABLE llibre MODIFY COLUMN preu DOUBLE"),
-		new Migration(31, "ALTER TABLE llibre_llista MODIFY COLUMN valoracio DOUBLE"),
+		new Migracio(26, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS estat VARCHAR(20) DEFAULT NULL"),
+		new Migracio(27, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS exemplars INT DEFAULT 1"),
+		new Migracio(28, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS llengua_original VARCHAR(100) DEFAULT NULL"),
+		new Migracio(29, "ALTER TABLE llibre MODIFY COLUMN valoracio DOUBLE"),
+		new Migracio(30, "ALTER TABLE llibre MODIFY COLUMN preu DOUBLE"),
+		new Migracio(31, "ALTER TABLE llibre_llista MODIFY COLUMN valoracio DOUBLE"),
 		// Migració 32-34: passa els autors de la columna `llibre.autor` (string)
 		// a la taula `llibre_autor` (relació N:M). Risc: si 33 falla parcialment
 		// en una BBDD gran (OOM, FK violada, etc.) i 34 corre igual, es perd
@@ -100,14 +100,14 @@ public class ServerConect {
 		// `todo.txt` [1] Migration 34. Abans de re-córrer, comprova que
 		// `SELECT COUNT(*) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != ''`
 		// coincideix amb `SELECT COUNT(*) FROM llibre_autor`.
-		new Migration(32, "INSERT IGNORE INTO autor (nom) SELECT DISTINCT TRIM(autor) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != '' AND ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
-		new Migration(33, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT l.ISBN, a.id FROM llibre l JOIN autor a ON a.nom = TRIM(l.autor) WHERE TRIM(l.autor) IS NOT NULL AND TRIM(l.autor) != '' AND l.ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
-		new Migration(34, "ALTER TABLE llibre DROP COLUMN autor"),
-		new Migration(35, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_ca VARCHAR(500) DEFAULT NULL"),
-		new Migration(36, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_es VARCHAR(500) DEFAULT NULL"),
-		new Migration(37, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_en VARCHAR(500) DEFAULT NULL"),
-		new Migration(38, "CREATE INDEX IF NOT EXISTS idx_llibre_nom ON llibre(nom)"),
-		new Migration(39, "CREATE INDEX IF NOT EXISTS idx_llibre_editorial_serie ON llibre(editorial, serie)"),
+		new Migracio(32, "INSERT IGNORE INTO autor (nom) SELECT DISTINCT TRIM(autor) FROM llibre WHERE TRIM(autor) IS NOT NULL AND TRIM(autor) != '' AND ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
+		new Migracio(33, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT l.ISBN, a.id FROM llibre l JOIN autor a ON a.nom = TRIM(l.autor) WHERE TRIM(l.autor) IS NOT NULL AND TRIM(l.autor) != '' AND l.ISBN NOT IN (SELECT isbn FROM llibre_autor)"),
+		new Migracio(34, "ALTER TABLE llibre DROP COLUMN autor"),
+		new Migracio(35, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_ca VARCHAR(500) DEFAULT NULL"),
+		new Migracio(36, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_es VARCHAR(500) DEFAULT NULL"),
+		new Migracio(37, "ALTER TABLE llibre ADD COLUMN IF NOT EXISTS nom_en VARCHAR(500) DEFAULT NULL"),
+		new Migracio(38, "CREATE INDEX IF NOT EXISTS idx_llibre_nom ON llibre(nom)"),
+		new Migracio(39, "CREATE INDEX IF NOT EXISTS idx_llibre_editorial_serie ON llibre(editorial, serie)"),
 	};
 
 	/** Set once inside {@link #createDatabase(ConnectionConfig)} or
@@ -150,18 +150,19 @@ public class ServerConect {
 		}
 	}
 
-	public void createDatabase() {
+	public void crearDatabase() {
 		String testUrl = System.getProperty("biblioteca.h2.url");
-		// The ConnectionFactory.withConfig() factory was a 14-line indirection
-		// with no policy — inlined here per the tot.txt LOW finding.
+		// La fàbrica ConnectionFactory.withConfig() era una indirecta de
+		// 14 línies sense política — s'ha inlineat aquí segons el finding
+		// LOW de tot.txt.
 		ConnectionConfig cfg = new ConnectionConfig(
-			testUrl != null ? "h2" : Config.getDbType(),
-			Config.getDbHost(), Config.getDbUser(), Config.getDbPassword(),
-			Config.getDbProfile(), testUrl);
-		createDatabase(cfg);
+			testUrl != null ? "h2" : Configuracio.obtenirDbType(),
+			Configuracio.obtenirDbHost(), Configuracio.obtenirDbUser(), Configuracio.obtenirDbPassword(),
+			Configuracio.obtenirDbProfile(), testUrl);
+		crearDatabase(cfg);
 	}
 
-	public void createDatabase(ConnectionConfig cfg) {
+	public void crearDatabase(ConnectionConfig cfg) {
 		try {
 			if (cfg.testUrl() != null) {
 				con = connectViaDriver("org.h2.Driver", "h2", cfg.testUrl(), "sa", new char[0]);
@@ -182,11 +183,11 @@ public class ServerConect {
 					s.executeUpdate("USE BIBLIOTECA;");
 				}
 			} else {
-				// Unknown / future dbType. Throw with a precise message
-				// instead of falling through to I18n.t("err_db_init_" + dbType)
-				// which would return the key itself for an unknown type and
-				// show the user a misleading "err_db_init_h2" error (see
-				// the tot.txt HIGH finding on this file).
+				// dbType desconegut / futur. Llança un missatge precís
+				// en lloc de caure a I18n.t("err_db_init_" + dbType), que
+				// retornaria la clau mateixa per a un tipus desconegut i
+				// mostraria a l'usuari un error enganyós "err_db_init_h2"
+				// (veure el finding HIGH de tot.txt sobre aquest fitxer).
 				throw new IllegalArgumentException("Unknown dbType: " + cfg.dbType()
 					+ " (expected 'h2' or 'mariadb')");
 			}
@@ -195,7 +196,7 @@ public class ServerConect {
 			}
 			runMigrations();
 		} catch (Exception e) {
-			throw new RuntimeException(I18n.t("err_db_connect") + " " + initErrorKey(cfg.dbType()), e);
+			throw new RuntimeException(I18n.t("err_db_connect") + " " + inicialitzarErrorKey(cfg.dbType()), e);
 		}
 	}
 
@@ -203,7 +204,7 @@ public class ServerConect {
 	 *  Throws for unknown types so the caller never falls through to
 	 *  {@code I18n.t("err_db_init_" + dbType)} (which would return the
 	 *  key itself for unknown types, masking the real error). */
-	private static String initErrorKey(String dbType) {
+	private static String inicialitzarErrorKey(String dbType) {
 		switch (dbType) {
 			case "h2":     return I18n.t("err_db_init_h2");
 			case "mariadb": return I18n.t("err_db_init_mariadb");
@@ -247,8 +248,8 @@ public class ServerConect {
 	 * is safe.
 	 */
 	private void runMigrations() throws SQLException {
-		boolean isH2 = isH2Connection();
-		boolean prevAutoCommit = con.getAutoCommit();
+		boolean esH2 = esH2Connection();
+		boolean anteriorAutoCommit = con.getAutoCommit();
 		try (Statement st = con.createStatement()) {
 			st.executeUpdate(CREATE_SCHEMA_VERSION);
 			java.util.Set<Integer> applied = new java.util.HashSet<>();
@@ -256,29 +257,29 @@ public class ServerConect {
 				while (rs.next()) applied.add(rs.getInt(1));
 			}
 			try (PreparedStatement ins = con.prepareStatement("INSERT INTO schema_version VALUES (?)")) {
-				for (Migration m : MIGRATIONS) {
+				for (Migracio m : MIGRATIONS) {
 					if (applied.contains(m.version())) continue;
-					boolean recorded = isH2
+					boolean recorded = esH2
 						? runMigrationH2(st, ins, m)
 						: runMigrationNonTransactional(st, ins, m);
 					if (recorded) applied.add(m.version());
 				}
 			}
 		} finally {
-			try { con.setAutoCommit(prevAutoCommit); } catch (SQLException ignored) {}
+			try { con.setAutoCommit(anteriorAutoCommit); } catch (SQLException ignored) {}
 		}
 	}
 
-	private boolean isH2Connection() throws SQLException {
+	private boolean esH2Connection() throws SQLException {
 		String productName = con.getMetaData().getDatabaseProductName();
 		return productName != null && productName.toLowerCase(java.util.Locale.ROOT).startsWith("h2");
 	}
 
-	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migration m) throws SQLException {
+	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migracio m) throws SQLException {
 		con.setAutoCommit(false);
 		try {
 			if (m.version() == 34) {
-				if (!applyMigration34DropAutor(st)) {
+				if (!aplicarMigration34DropAutor(st)) {
 					con.rollback();
 					return false;
 				}
@@ -315,9 +316,9 @@ public class ServerConect {
 		throw new UnsupportedOperationException("see comment");
 	}
 
-	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migration m) throws SQLException {
+	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migracio m) throws SQLException {
 		if (m.version() == 34) {
-			applyMigration34DropAutor(st);
+			aplicarMigration34DropAutor(st);
 		} else {
 			st.executeUpdate(m.sql());
 		}
@@ -335,7 +336,7 @@ public class ServerConect {
 	 * Drops {@code llibre.autor} only when every non-empty legacy author row has a
 	 * matching {@code llibre_autor} link. Skips (returns false) if unmigrated rows remain.
 	 */
-	private boolean applyMigration34DropAutor(Statement st) throws SQLException {
+	private boolean aplicarMigration34DropAutor(Statement st) throws SQLException {
 		if (!columnExists("llibre", "autor")) return true;
 		int unmigrated;
 		try (ResultSet rs = st.executeQuery(
@@ -354,12 +355,13 @@ public class ServerConect {
 	}
 
 	private boolean columnExists(String table, String column) throws SQLException {
-		// Use the JDBC-reported identifier case (H2 lowercases, MariaDB
-		// preserves mixed case) so we don't need a hand-typed
-		// toUpperCase / mixed fallback. Looking up the column with the
-		// case the engine actually stores avoids the false-negative
-		// "column not found" on a case-sensitive MariaDB where the
-		// catalog lookup used the wrong case.
+		// Fa servir la casing de l'identificador que reporta el JDBC (H2
+		// posa en minúscules, MariaDB conserva la mescla) per no haver de
+		// fer servir un fallback toUpperCase / mescla escrit a mà. Cercar
+		// la columna amb la casing que el motor realment emmagatzema
+		// evita el fals negatiu "column not found" en un MariaDB
+		// case-sensitive on la consulta de catàleg ha usat la casing
+		// incorrecta.
 		java.sql.DatabaseMetaData meta = con.getMetaData();
 		String catalog = con.getCatalog();
 		String lookupTable = table;
@@ -382,7 +384,7 @@ public class ServerConect {
 		try {
 			driver = (java.sql.Driver) Class.forName(driverClass).getDeclaredConstructor().newInstance();
 		} catch (ClassNotFoundException e) {
-			driver = loadDriverFromLib(driverClass, jarNameHint);
+			driver = carregarDriverFromLib(driverClass, jarNameHint);
 		}
 		java.util.Properties props = new java.util.Properties();
 		if (user != null) props.setProperty("user", user);
@@ -392,9 +394,9 @@ public class ServerConect {
 		return c;
 	}
 
-	private java.sql.Driver loadDriverFromLib(String driverClass, String jarNameHint) throws Exception {
+	private java.sql.Driver carregarDriverFromLib(String driverClass, String jarNameHint) throws Exception {
 		StringBuilder diag = new StringBuilder();
-		File libDir = findLibDir(diag);
+		File libDir = cercarLibDir(diag);
 		if (libDir == null) {
 			diag.insert(0, "lib/ directory not found. Search log:\n");
 			throw new ClassNotFoundException(diag.toString());
@@ -411,17 +413,17 @@ public class ServerConect {
 		return (java.sql.Driver) Class.forName(driverClass, true, cl).getDeclaredConstructor().newInstance();
 	}
 
-	private File findLibDir(StringBuilder diag) {
-		return JarLocator.locate(diag, this::hasJars);
+	private File cercarLibDir(StringBuilder diag) {
+		return JarLocator.locate(diag, this::teJars);
 	}
 
-	private boolean hasJars(File dir) {
+	private boolean teJars(File dir) {
 		if (!dir.isDirectory()) return false;
 		String[] files = dir.list((d, n) -> n.endsWith(".jar"));
 		return files != null && files.length > 0;
 	}
 
-	public void closeConnection() {
+	public void tancarConnection() {
 		if (con == null) return;
 		try { con.close(); }
 		catch (SQLException e) {

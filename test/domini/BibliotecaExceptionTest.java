@@ -29,28 +29,28 @@ class BibliotecaExceptionTest {
     @Test
     @DisplayName("NotFound uses NOT_FOUND code")
     void notFoundCode() {
-        assertThat(new BibliotecaException.NotFound("missing").code())
+        assertThat(new BibliotecaException.NoTrobat("missing").code())
             .isEqualTo(BibliotecaException.Code.NOT_FOUND);
     }
 
     @Test
     @DisplayName("Duplicate uses DUPLICATE code")
     void duplicateCode() {
-        assertThat(new BibliotecaException.Duplicate("dup").code())
+        assertThat(new BibliotecaException.Duplicat("dup").code())
             .isEqualTo(BibliotecaException.Code.DUPLICATE);
     }
 
     @Test
     @DisplayName("Validation uses VALIDATION code")
     void validationCode() {
-        assertThat(new BibliotecaException.Validation("bad").code())
+        assertThat(new BibliotecaException.Validacio("bad").code())
             .isEqualTo(BibliotecaException.Code.VALIDATION);
     }
 
     @Test
     @DisplayName("subclass exception is also a BibliotecaException (polymorphism)")
     void subclassPolymorphism() {
-        BibliotecaException e = new BibliotecaException.NotFound("x");
+        BibliotecaException e = new BibliotecaException.NoTrobat("x");
         assertThat(e).isInstanceOf(BibliotecaException.class);
         assertThat(e).isInstanceOf(RuntimeException.class);
     }

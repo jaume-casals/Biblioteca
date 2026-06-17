@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-REM Run both fuzz suites — jqwik properties + Jazzer harnesses.
-REM Mirrors `make fuzz` on Linux.
+REM Executa les dues suites de fuzz — propietats de jqwik + harnesses de Jazzer.
+REM Mirror de `make fuzz` a Linux.
 
 call scripts\fuzz-property.bat
 set "PROP_RC=%ERRORLEVEL%"

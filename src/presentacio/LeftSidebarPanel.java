@@ -27,7 +27,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 import domini.Llista;
-import herramienta.ColorUtils;
+import herramienta.UtilitatsColor;
 import herramienta.I18n;
 import herramienta.UITheme;
 
@@ -38,19 +38,20 @@ public class LeftSidebarPanel extends JPanel {
 
 	private JScrollPane shelvesScroll;
 	private JPanel sidebarShelvesPanel;
-	// Capacity 64 — covers 20+-shelf libraries without resize. The
-	// default 16 triggers a rehash at ~13 entries; tot.txt MEDIUM
-	// finding flagged this as an unnecessary spike during initial
-	// sidebar build for medium libraries.
+	// Capacitat 64 — cobreix biblioteques amb 20+ prestatgeries sense redimensionar.
+	// El valor per defecte 16 provoca un rehash cap a ~13 entrades; el finding
+	// MEDIUM de tot.txt ho va assenyalar com un pic innecessari durant la
+	// construcció inicial de la barra lateral per a biblioteques mitjanes.
 	private final Map<Integer, JButton> sidebarShelfBtnMap = new HashMap<>(64);
-	// The button fields cannot be `final` because they are assigned in
-	// {@link #buildSidebar()}, which the constructor calls as a helper.
-	// Java's definite-assignment analysis does not track assignments in
-	// helper methods, so the `final` keyword would require either
-	// inlining the entire sidebar build into the constructor (large
-	// refactor) or moving the button creation to field initializers
-	// (the panel hierarchy must be set up first — out of order).
-	// Tracked in tot.txt MEDIUM as a known minor smell.
+	// Els camps dels botons no poden ser `final` perquè s'assignen a
+	// {@link #buildSidebar()}, que el constructor crida com a helper.
+	// L'anàlisi d'assignació definida de Java no segueix les assignacions
+	// dins de mètodes auxiliars, de manera que la paraula clau `final`
+	// obligaria a inline la construcció sencera de la barra lateral dins
+	// del constructor (refactor gran) o bé a moure la creació dels botons
+	// als inicialitzadors de camp (la jerarquia del panell s'ha de muntar
+	// primer — fora d'ordre). Registrat a tot.txt MEDIUM com una petita
+	// olor coneguda.
 	private JButton btnTotsElsLlibres;
 	private final List<JButton> sidebarBtns = new ArrayList<>();
 
@@ -168,9 +169,9 @@ public class LeftSidebarPanel extends JPanel {
 		btnThemeToggle = makeSidebarBtn(I18n.t("btn_theme"));
 		btnThemeToggle.setToolTipText(I18n.t("tip_mode_fosc"));
 		btnThemeToggle.addActionListener(e -> {
-			herramienta.UITheme.Theme[] themes = herramienta.UITheme.Theme.values();
-			herramienta.UITheme.Theme next = themes[(UITheme.getTheme().ordinal() + 1) % themes.length];
-			UITheme.setTheme(next);
+			herramienta.UITheme.Tema[] themes = herramienta.UITheme.Tema.values();
+			herramienta.UITheme.Tema next = themes[(UITheme.obtenirTheme().ordinal() + 1) % themes.length];
+			UITheme.posarTheme(next);
 			onThemeChange.run();
 		});
 		sidebarBtns.add(btnThemeToggle);
@@ -209,7 +210,7 @@ public class LeftSidebarPanel extends JPanel {
 			java.util.function.BiConsumer<Integer, List<Long>> onDragToShelf,
 			java.util.function.Consumer<Llista> onShelfRename) {
 		Set<Integer> activeIds = new HashSet<>();
-		for (Llista l : llistes) activeIds.add(l.getId());
+		for (Llista l : llistes) activeIds.add(l.obtenirId());
 		for (Iterator<Integer> it = sidebarShelfBtnMap.keySet().iterator(); it.hasNext(); ) {
 			int id = it.next();
 			if (!activeIds.contains(id)) {
@@ -220,15 +221,15 @@ public class LeftSidebarPanel extends JPanel {
 			}
 		}
 		for (Llista l : llistes) {
-			String label = l.getNom() + " (" + counts.getOrDefault(l.getId(), 0) + ")";
-			JButton btn = sidebarShelfBtnMap.get(l.getId());
+			String label = l.obtenirNom() + " (" + counts.getOrDefault(l.obtenirId(), 0) + ")";
+			JButton btn = sidebarShelfBtnMap.get(l.obtenirId());
 			if (btn != null) {
 				btn.setText("  " + label);
 				btn.getAccessibleContext().setAccessibleName(label);
 				if (l.getColor() != null) {
 					try {
 						Color c = Color.decode(l.getColor());
-						btn.setIcon(ColorUtils.colorSwatch(c));
+						btn.setIcon(UtilitatsColor.colorSwatch(c));
 						btn.setHorizontalTextPosition(JButton.RIGHT);
 					} catch (Exception ignored) { btn.setIcon(null); }
 				} else {
@@ -240,15 +241,15 @@ public class LeftSidebarPanel extends JPanel {
 				if (l.getColor() != null) {
 					try {
 						Color c = Color.decode(l.getColor());
-						btn.setIcon(ColorUtils.colorSwatch(c));
+						btn.setIcon(UtilitatsColor.colorSwatch(c));
 						btn.setHorizontalTextPosition(JButton.RIGHT);
 					} catch (Exception ignored) {}
 				}
-				final int id = l.getId();
+				final int id = l.obtenirId();
 				btn.addActionListener(e -> {
 					for (int i = 0; i < comboLlistes.getItemCount(); i++) {
 						Object item = comboLlistes.getItemAt(i);
-						if (item instanceof Llista && ((Llista) item).getId() == id) {
+						if (item instanceof Llista && ((Llista) item).obtenirId() == id) {
 							comboLlistes.setSelectedIndex(i);
 							break;
 						}
@@ -261,17 +262,17 @@ public class LeftSidebarPanel extends JPanel {
 						}
 					});
 				}
-				sidebarShelfBtnMap.put(l.getId(), btn);
+				sidebarShelfBtnMap.put(l.obtenirId(), btn);
 				sidebarShelvesPanel.add(btn);
-				ShelfDragDropHandler.attach(btn, l.getId(), onDragToShelf);
+				GestorArrossegarSoltarPrestatgeria.attach(btn, l.obtenirId(), onDragToShelf);
 			}
 		}
 		sidebarShelvesPanel.revalidate();
 		sidebarShelvesPanel.repaint();
 	}
 
-	public void applyTheme() {
-		applyBgToNonButtons(this, UITheme.palette().sidebarBg());
+	public void aplicarTheme() {
+		aplicarBgToNonButtons(this, UITheme.palette().sidebarBg());
 		for (JButton btn : sidebarBtns) {
 			UIComponents.styleSidebarButton(btn);
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
@@ -332,7 +333,7 @@ public class LeftSidebarPanel extends JPanel {
 		return p;
 	}
 
-	private void applyBgToNonButtons(Component comp, Color bg) {
+	private void aplicarBgToNonButtons(Component comp, Color bg) {
 		if (comp instanceof JButton) return;
 		comp.setBackground(bg);
 		if (comp instanceof JScrollPane) {
@@ -340,7 +341,7 @@ public class LeftSidebarPanel extends JPanel {
 		}
 		if (comp instanceof java.awt.Container) {
 			for (Component child : ((java.awt.Container) comp).getComponents()) {
-				if (!(child instanceof javax.swing.JTable)) applyBgToNonButtons(child, bg);
+				if (!(child instanceof javax.swing.JTable)) aplicarBgToNonButtons(child, bg);
 			}
 		}
 	}
@@ -353,13 +354,13 @@ public class LeftSidebarPanel extends JPanel {
 		}
 	}
 
-	public JButton getBtnAfegitsRecentment()  { return btnAfegitsRecentment; }
-	public JButton getBtnLlegitsRecentment()  { return btnLlegitsRecentment; }
-	public JButton getBtnDesitjats()          { return btnDesitjats; }
-	public JButton getBtnEnCurs()             { return btnEnCurs; }
-	public JButton getBtnEstadistiques()      { return btnEstadistiques; }
-	public JButton getBtnLlibreAleatori()     { return btnLlibreAleatori; }
-	public JButton getBtnGestioLlistes()      { return btnGestioLlistes; }
-	public JButton getBtnConfiguracio()       { return btnConfiguracio; }
-	public JButton getBtnSobre()              { return btnSobre; }
+	public JButton obtenirBtnAfegitsRecentment()  { return btnAfegitsRecentment; }
+	public JButton obtenirBtnLlegitsRecentment()  { return btnLlegitsRecentment; }
+	public JButton obtenirBtnDesitjats()          { return btnDesitjats; }
+	public JButton obtenirBtnEnCurs()             { return btnEnCurs; }
+	public JButton obtenirBtnEstadistiques()      { return btnEstadistiques; }
+	public JButton obtenirBtnLlibreAleatori()     { return btnLlibreAleatori; }
+	public JButton obtenirBtnGestioLlistes()      { return btnGestioLlistes; }
+	public JButton obtenirBtnConfiguracio()       { return btnConfiguracio; }
+	public JButton obtenirBtnSobre()              { return btnSobre; }
 }

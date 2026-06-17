@@ -17,29 +17,29 @@ public class LlibreFilter {
     private String format;
     private String idioma;
     private Integer llistaId;
-    private SortSpec sort = SortSpec.defaultAsc();
+    private EspecificacioOrdenacio sort = EspecificacioOrdenacio.defaultAsc();
 
     public LlibreFilter() {}
 
     public static LlibreFilter empty() { return new LlibreFilter(); }
 
-    public String getAutor() { return autor; }
-    public String getNom() { return nom; }
-    public Long getIsbn() { return isbn; }
-    public Integer getAnyMin() { return anyMin; }
-    public Integer getAnyMax() { return anyMax; }
-    public Double getValoracioMin() { return valoracioMin; }
-    public Double getValoracioMax() { return valoracioMax; }
-    public Double getPreuMin() { return preuMin; }
-    public Double getPreuMax() { return preuMax; }
-    public Boolean getLlegit() { return llegit; }
-    public Integer getTagId() { return tagId; }
-    public String getEditorial() { return editorial; }
-    public String getSerie() { return serie; }
+    public String obtenirAutor() { return autor; }
+    public String obtenirNom() { return nom; }
+    public Long obtenirIsbn() { return isbn; }
+    public Integer obtenirAnyMin() { return anyMin; }
+    public Integer obtenirAnyMax() { return anyMax; }
+    public Double obtenirValoracioMin() { return valoracioMin; }
+    public Double obtenirValoracioMax() { return valoracioMax; }
+    public Double obtenirPreuMin() { return preuMin; }
+    public Double obtenirPreuMax() { return preuMax; }
+    public Boolean obtenirLlegit() { return llegit; }
+    public Integer obtenirTagId() { return tagId; }
+    public String obtenirEditorial() { return editorial; }
+    public String obtenirSerie() { return serie; }
     public String getFormat() { return format; }
-    public String getIdioma() { return idioma; }
-    public Integer getLlistaId() { return llistaId; }
-    public SortSpec getSort() { return sort; }
+    public String obtenirIdioma() { return idioma; }
+    public Integer obtenirLlistaId() { return llistaId; }
+    public EspecificacioOrdenacio obtenirSort() { return sort; }
 
     public LlibreFilter withAutor(String v) { this.autor = v; return this; }
     public LlibreFilter withNom(String v) { this.nom = v; return this; }
@@ -57,8 +57,8 @@ public class LlibreFilter {
     public LlibreFilter withFormat(String v) { this.format = v; return this; }
     public LlibreFilter withIdioma(String v) { this.idioma = v; return this; }
     public LlibreFilter withLlistaId(Integer v) { this.llistaId = v; return this; }
-    public LlibreFilter withSort(SortSpec sort) {
-        this.sort = (sort != null) ? sort : SortSpec.defaultAsc();
+    public LlibreFilter withSort(EspecificacioOrdenacio sort) {
+        this.sort = (sort != null) ? sort : EspecificacioOrdenacio.defaultAsc();
         return this;
     }
 
@@ -72,11 +72,11 @@ public class LlibreFilter {
         f.editorial = this.editorial; f.serie = this.serie;
         f.format = this.format; f.idioma = this.idioma;
         f.llistaId = this.llistaId;
-        f.sort = (this.sort != null) ? this.sort : SortSpec.defaultAsc();
+        f.sort = (this.sort != null) ? this.sort : EspecificacioOrdenacio.defaultAsc();
         return f;
     }
 
-    public boolean hasAnyFilter() {
+    public boolean teAnyFilter() {
         return autor != null || nom != null || isbn != null
             || anyMin != null || anyMax != null
             || valoracioMin != null || valoracioMax != null

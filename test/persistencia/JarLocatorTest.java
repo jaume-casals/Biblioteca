@@ -26,26 +26,26 @@ class JarLocatorTest {
         savedUserDir = System.getProperty("user.dir");
     }
 
-    private static void clearRoot() {
+    private static void netejarRoot() {
         System.clearProperty("biblioteca.root");
     }
 
-    private static void setRoot(String path) {
-        if (path == null) clearRoot(); else System.setProperty("biblioteca.root", path);
+    private static void posarRoot(String path) {
+        if (path == null) netejarRoot(); else System.setProperty("biblioteca.root", path);
     }
 
     private static Predicate<File> alwaysNo() {
         return f -> false;
     }
 
-    private static Predicate<File> hasJarNamed(String name) {
+    private static Predicate<File> teJarNamed(String name) {
         return f -> f.isDirectory() && new File(f, name).exists();
     }
 
     @Test
     @DisplayName("locate: returns null when no strategy matches (caller must surface the diag log)")
     void locateFallsBack(@TempDir File tmp) {
-        setRoot(null);
+        posarRoot(null);
         System.setProperty("user.dir", tmp.getAbsolutePath());
         File result = JarLocator.locate(new StringBuilder(), alwaysNo());
         assertThat(result).isNull();
@@ -57,8 +57,8 @@ class JarLocatorTest {
         File lib = new File(root, "lib");
         lib.mkdirs();
         new File(lib, "h2-2.3.232.jar").createNewFile();
-        setRoot(root.getAbsolutePath());
-        File result = JarLocator.locate(new StringBuilder(), hasJarNamed("h2-2.3.232.jar"));
+        posarRoot(root.getAbsolutePath());
+        File result = JarLocator.locate(new StringBuilder(), teJarNamed("h2-2.3.232.jar"));
         assertThat(result).isEqualTo(lib);
     }
 
@@ -73,11 +73,11 @@ class JarLocatorTest {
         userLib.mkdirs();
         new File(userLib, "h2-2.3.232.jar").createNewFile();
 
-        setRoot(root.getAbsolutePath());
+        posarRoot(root.getAbsolutePath());
         System.setProperty("user.dir", work.getAbsolutePath());
 
         // biblioteca.root has higher priority than user.dir when both match
-        File result = JarLocator.locate(new StringBuilder(), hasJarNamed("h2-2.3.232.jar"));
+        File result = JarLocator.locate(new StringBuilder(), teJarNamed("h2-2.3.232.jar"));
         assertThat(result).isEqualTo(rootLib);
     }
 
@@ -87,16 +87,16 @@ class JarLocatorTest {
         File lib = new File(work, "lib");
         lib.mkdirs();
         new File(lib, "h2-2.3.232.jar").createNewFile();
-        setRoot("   ");
+        posarRoot("   ");
         System.setProperty("user.dir", work.getAbsolutePath());
-        File result = JarLocator.locate(new StringBuilder(), hasJarNamed("h2-2.3.232.jar"));
+        File result = JarLocator.locate(new StringBuilder(), teJarNamed("h2-2.3.232.jar"));
         assertThat(result).isEqualTo(lib);
     }
 
     @Test
     @DisplayName("locate: diagnostic stringBuilder receives one line per strategy attempt")
     void diagnosticRecordsAllStrategies(@TempDir File work) {
-        setRoot(null);
+        posarRoot(null);
         System.setProperty("user.dir", work.getAbsolutePath());
         StringBuilder diag = new StringBuilder();
         JarLocator.locate(diag, alwaysNo());
@@ -110,9 +110,9 @@ class JarLocatorTest {
         File lib = new File(work, "lib");
         lib.mkdirs();
         new File(lib, "h2-2.3.232.jar").createNewFile();
-        setRoot(null);
+        posarRoot(null);
         System.setProperty("user.dir", work.getAbsolutePath());
-        File result = JarLocator.locate(new StringBuilder(), hasJarNamed("h2-2.3.232.jar"));
+        File result = JarLocator.locate(new StringBuilder(), teJarNamed("h2-2.3.232.jar"));
         assertThat(result).isEqualTo(lib);
     }
 }

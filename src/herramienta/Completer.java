@@ -9,7 +9,7 @@ public final class Completer {
     private Completer() {}
 
     public static void attach(JComboBox<String> combo) { AutoCompletion.enable(combo); }
-    public static FieldAutoComplete.Attachment attach(JTextField field, List<String> suggestions) {
-        return FieldAutoComplete.attachReturning(field, suggestions);
+    public static FieldAutoComplete.Adjunts attach(JTextField field, List<String> suggestions) {
+        return FieldAutoComplete.adjuntarReturning(field, suggestions);
     }
 }

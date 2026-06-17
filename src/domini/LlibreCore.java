@@ -34,10 +34,10 @@ public record LlibreCore(
     /** Project a {@link Llibre} into its immutable core. */
     public static LlibreCore from(Llibre l) {
         return new LlibreCore(
-            l.getISBN(), l.getNom(), l.getAutors(), l.getAny(), l.getDescripcio(),
-            l.getValoracio(), l.getPreu(), l.getLlegit(), l.getImatge(),
-            l.getPagines(), l.getEditorial(), l.getSerie(), l.getVolum(),
-            l.getIdioma(), l.getFormat(), l.getPaisOrigen()
+            l.obtenirISBN(), l.obtenirNom(), l.obtenirAutors(), l.obtenirAny(), l.obtenirDescripcio(),
+            l.obtenirValoracio(), l.obtenirPreu(), l.obtenirLlegit(), l.obtenirImatge(),
+            l.obtenirPagines(), l.obtenirEditorial(), l.obtenirSerie(), l.obtenirVolum(),
+            l.obtenirIdioma(), l.getFormat(), l.obtenirPaisOrigen()
         );
     }
 

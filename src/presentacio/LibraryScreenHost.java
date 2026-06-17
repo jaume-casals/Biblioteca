@@ -16,22 +16,22 @@ import javax.swing.JButton;
  * editing only the constructor (and adding a one-line accessor here).
  */
 interface LibraryScreenHost {
-    void setTable(java.util.List<Llibre> llibres);
-    void showPage(int page);
-    void refreshAll();
-    void updateTitleBar();
-    void refreshComboLlistes();
-    void refreshComboTags();
+    void posarTable(java.util.List<Llibre> llibres);
+    void mostrarPage(int page);
+    void refrescarAll();
+    void actualitzarTitleBar();
+    void refrescarComboLlistes();
+    void refrescarComboTags();
     void refreshRow(Llibre l);
     void removeRow(Llibre l);
-    void appendRow(Llibre l);
-    TablePageController pageCtrl();
-    TableController tableCtrl();
-    FilterController filterCtrl();
-    ShelfController shelfCtrl();
-    BookActionsController bookActionsCtrl();
-    ContextMenuController contextMenuCtrl();
-    ViewModeController viewModeCtrl();
+    void afegirRow(Llibre l);
+    ControladorPaginaTaula pageCtrl();
+    ControladorTaula tableCtrl();
+    ControladorFiltre filtrarCtrl();
+    ControladorPrestatgeria shelfCtrl();
+    ControladorAccionsLlibre bookActionsCtrl();
+    ControladorMenuContextual contextMenuCtrl();
+    ControladorModeVista viewModeCtrl();
     JButton detallesBtn();
     LibraryViewState state();
 }

@@ -10,7 +10,7 @@ public record LecturaRow(long isbn, LocalDate dataInici, LocalDate dataFi, int p
     public static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
     /** Parse a DATE column ({@code YYYY-MM-DD}) into a {@code LocalDate}; null/empty → null. */
-    public static LocalDate parseDateOrNull(String s) {
+    public static LocalDate analitzarDateOrNull(String s) {
         if (s == null || s.isBlank()) return null;
         return LocalDate.parse(s.trim(), ISO);
     }

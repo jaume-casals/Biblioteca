@@ -3,7 +3,7 @@ package herramienta.export;
 import domini.ControladorDomini;
 import domini.Llibre;
 import domini.Llista;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,21 +26,21 @@ class GoodreadsExportServiceTest {
 
     @BeforeEach
     void reset() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     @AfterEach
     void tearDown() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     @Test
     @DisplayName("exportToCsv: header has all expected Goodreads columns")
     void header() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String header = csv.split("\n")[0];
         assertThat(header).contains("Book Id").contains("Title").contains("Author")
             .contains("ISBN13").contains("My Rating").contains("Publisher")
@@ -54,19 +54,19 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: empty library → just the header")
     void emptyLibrary() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         assertThat(csv.split("\n")).hasSize(1);
     }
 
     @Test
     @DisplayName("exportToCsv: one read book → Exclusive Shelf is 'read'")
-    void readBookShelf() throws Exception {
+    void llegirBookShelf() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 10.0, 19.99, true, "");
-        l.setEditorial("Chilton");
-        cd.addLlibre(l);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        l.posarEditorial("Chilton");
+        cd.afegirLlibre(l);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         assertThat(rows.length).isGreaterThanOrEqualTo(2);
         // Last quoted field of the data row = Exclusive Shelf
@@ -79,12 +79,12 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: unread book in a shelf → Exclusive Shelf is the shelf name")
     void unreadBookShelfName() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 0.0, 19.99, false, "");
-        cd.addLlibre(l);
-        Llista shelf = cd.addLlista("Wishlist");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 0.0, false);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        cd.afegirLlibre(l);
+        Llista shelf = cd.afegirLlista("Wishlist");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 0.0, false);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         assertThat(rows[1]).contains("\"Wishlist\"");
     }
@@ -93,10 +93,10 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: unread book in NO shelf → Exclusive Shelf is 'to-read'")
     void unreadBookToRead() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 0.0, 0.0, false, "");
-        cd.addLlibre(l);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        cd.afegirLlibre(l);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         assertThat(rows[1]).contains("\"to-read\"");
     }
@@ -105,14 +105,14 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: bookshelves column is the comma-joined shelf names")
     void bookshelvesColumn() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 0.0, 0.0, false, "");
-        cd.addLlibre(l);
-        Llista a = cd.addLlista("A");
-        Llista b = cd.addLlista("B");
-        cd.addLlibreToLlista(9780306406157L, a.getId(), 0.0, false);
-        cd.addLlibreToLlista(9780306406157L, b.getId(), 0.0, false);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        cd.afegirLlibre(l);
+        Llista a = cd.afegirLlista("A");
+        Llista b = cd.afegirLlista("B");
+        cd.afegirLlibreToLlista(9780306406157L, a.obtenirId(), 0.0, false);
+        cd.afegirLlibreToLlista(9780306406157L, b.obtenirId(), 0.0, false);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         // Look at the Bookshelves field — it must contain both A and B
         String row = rows[1];
@@ -123,10 +123,10 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: My Rating is integer Goodreads scale (valoracio/2 rounded)")
     void myRatingMapping() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 10.0, 0.0, true, ""); // 10/2 = 5 stars
-        cd.addLlibre(l);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        cd.afegirLlibre(l);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         // Field index 7 (0-based) = My Rating
         // row is: 1,"Dune","Herbert","Herbert",,"=\"9780306406157\"","=\"9780306406157\"",5,...
@@ -137,10 +137,10 @@ class GoodreadsExportServiceTest {
     @DisplayName("exportToCsv: valoracio=0 maps to My Rating 0 (not negative)")
     void zeroRatingMapsToZero() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Herbert", 1965,
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
             "desc", 0.0, 0.0, false, "");
-        cd.addLlibre(l);
-        String csv = GoodreadsExportService.exportToCsv(cd);
+        cd.afegirLlibre(l);
+        String csv = GoodreadsExportService.exportarToCsv(cd);
         String[] rows = csv.split("\n");
         // 0 → 0
         assertThat(rows[1]).contains(",0,");

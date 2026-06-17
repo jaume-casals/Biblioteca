@@ -26,15 +26,15 @@ public final class ShelvesHelper {
      * @param shelfName nom del prestatge; si és null o blank, retorna null
      * @return la {@link Llista} trobada o creada, o null si {@code shelfName} és buit
      */
-    public static Llista findOrCreateShelf(BibliotecaWriter cd, Map<String, Llista> cache, String shelfName) {
+    public static Llista cercarOrCreateShelf(BibliotecaWriter cd, Map<String, Llista> cache, String shelfName) {
         if (shelfName == null || shelfName.isBlank()) return null;
         if (cache == null) {
             cache = new HashMap<>();
-            for (Llista ll : cd.getAllLlistes()) cache.put(ll.getNom(), ll);
+            for (Llista ll : cd.obtenirAllLlistes()) cache.put(ll.obtenirNom(), ll);
         }
         Llista llista = cache.get(shelfName);
         if (llista == null) {
-            llista = cd.addLlista(shelfName);
+            llista = cd.afegirLlista(shelfName);
             cache.put(shelfName, llista);
         }
         return llista;
@@ -51,11 +51,11 @@ public final class ShelvesHelper {
      * @param valoracio valoració dins del prestatge
      * @param llegit    estat de lectura dins del prestatge
      */
-    public static void addBookToShelf(BibliotecaWriter cd, Map<String, Llista> cache,
+    public static void afegirBookToShelf(BibliotecaWriter cd, Map<String, Llista> cache,
                                       long isbn, String shelfName,
                                       double valoracio, boolean llegit) {
-        Llista llista = findOrCreateShelf(cd, cache, shelfName);
+        Llista llista = cercarOrCreateShelf(cd, cache, shelfName);
         if (llista == null) return;
-        cd.addLlibreToLlista(isbn, llista.getId(), valoracio, llegit);
+        cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);
     }
 }

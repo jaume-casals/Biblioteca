@@ -12,7 +12,7 @@ import javax.swing.JTextField;
 public final class LlibreFormBinder {
     private LlibreFormBinder() {}
 
-    public static void bindString(JTextField field, String value) {
+    public static void vincularString(JTextField field, String value) {
         field.setText(value == null ? "" : value);
     }
 
@@ -22,10 +22,10 @@ public final class LlibreFormBinder {
     }
 
     /** Populate the four core text fields from a Llibre. Reduces copy-paste in dialogs. */
-    public static void loadCore(Llibre l, JTextField isbn, JTextField nom, JTextField autor, JTextField any) {
-        bindString(isbn, String.valueOf(l.getISBN()));
-        bindString(nom, l.getNom());
-        bindString(autor, l.getAutor());
-        bindString(any, l.getAny() != null ? String.valueOf(l.getAny()) : "");
+    public static void carregarCore(Llibre l, JTextField isbn, JTextField nom, JTextField autor, JTextField any) {
+        vincularString(isbn, String.valueOf(l.obtenirISBN()));
+        vincularString(nom, l.obtenirNom());
+        vincularString(autor, l.obtenirAutor());
+        vincularString(any, l.obtenirAny() != null ? String.valueOf(l.obtenirAny()) : "");
     }
 }

@@ -11,7 +11,7 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.LlibreLlistaContext;
-import domini.SortSpec;
+import domini.EspecificacioOrdenacio;
 import persistencia.ConnectionConfig;
 import persistencia.ControladorPersistencia;
 import persistencia.ServerConect;
@@ -24,26 +24,26 @@ class DominiPersistenciaJUnit5Test {
     private static final long ISBN_13 = 9780262533455L;
 
     @BeforeEach
-    void resetSingletons() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+    void reinicialitzarSingletons() {
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     @AfterEach
     void tearDown() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     @Test
     void llibreLlistaContextPreservesIsbn13() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         Llibre l = new Llibre(ISBN_13, "Test", "Author", 2020, "", 0.0, 0.0, false, "");
-        cd.addLlibre(l);
-        var shelf = cd.addLlista("Shelf A");
-        cd.addLlibreToLlista(ISBN_13, shelf.getId(), 4.5, true);
+        cd.afegirLlibre(l);
+        var shelf = cd.afegirLlista("Shelf A");
+        cd.afegirLlibreToLlista(ISBN_13, shelf.obtenirId(), 4.5, true);
 
-        java.util.List<LlibreLlistaContext> ctx = cd.getLlistesForLlibreContext(ISBN_13);
+        java.util.List<LlibreLlistaContext> ctx = cd.obtenirLlistesForLlibreContext(ISBN_13);
         assertEquals(1, ctx.size());
         assertEquals(ISBN_13, ctx.get(0).isbn());
     }
@@ -53,28 +53,28 @@ class DominiPersistenciaJUnit5Test {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
         ControladorDomini cd = ControladorDomini.getInstance();
         long isbn = 9780134685991L;
-        cd.addLlibre(new Llibre(isbn, "Effective Java", "Bloch", 2018, "", 0.0, 0.0, false, ""));
-        var tag = cd.addTag("java");
-        cd.addLlibreToTag(isbn, tag.getId());
-        assertEquals(1, cp.getAllLlibreTag().size());
+        cd.afegirLlibre(new Llibre(isbn, "Effective Java", "Bloch", 2018, "", 0.0, 0.0, false, ""));
+        var tag = cd.afegirTag("java");
+        cd.afegirLlibreToTag(isbn, tag.obtenirId());
+        assertEquals(1, cp.obtenirAllLlibreTag().size());
 
-        cd.deleteLlibre(isbn);
-        assertEquals(0, cp.getAllLlibreTag().size());
+        cd.eliminarLlibre(isbn);
+        assertEquals(0, cp.obtenirAllLlibreTag().size());
     }
 
     @Test
-    void searchIgnoresBlankTitleFilter() throws Exception {
+    void cercarIgnoresBlankTitleFilter() throws Exception {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
         cp.afegirLlibre(new Llibre(9780132350884L, "Clean Code", "Martin", 2008, "", 0.0, 0.0, false, ""));
         cp.afegirLlibre(new Llibre(9781491950358L, "Fluent Python", "Ramalho", 2015, "", 0.0, 0.0, false, ""));
 
         LlibreFilter blankTitle = LlibreFilter.empty().withNom("   ");
-        assertEquals(2, cp.searchLlibres(blankTitle, 0, 0).size());
+        assertEquals(2, cp.cercarLlibres(blankTitle, 0, 0).size());
     }
 
     @Test
-    void sortSpecDefaultUsesTableAlias() {
-        assertTrue(new SortSpec("unknown-column", true).toSql().startsWith("l.`ISBN`"));
+    void ordenarSpecDefaultUsesTableAlias() {
+        assertTrue(new EspecificacioOrdenacio("unknown-column", true).toSql().startsWith("l.`ISBN`"));
     }
 
     @Test
@@ -84,33 +84,33 @@ class DominiPersistenciaJUnit5Test {
     }
 
     @Test
-    void searchShelfAndTagIsIntersection() throws Exception {
+    void cercarShelfAndTagIsIntersection() throws Exception {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
         ControladorDomini cd = ControladorDomini.getInstance();
         long isbn1 = 9780262533455L;
         long isbn2 = 9780132350884L;
-        cd.addLlibre(new Llibre(isbn1, "Book One", "Author A", 2020, "", 0.0, 0.0, false, ""));
-        cd.addLlibre(new Llibre(isbn2, "Book Two", "Author B", 2021, "", 0.0, 0.0, false, ""));
+        cd.afegirLlibre(new Llibre(isbn1, "Book One", "Author A", 2020, "", 0.0, 0.0, false, ""));
+        cd.afegirLlibre(new Llibre(isbn2, "Book Two", "Author B", 2021, "", 0.0, 0.0, false, ""));
 
-        var shelf = cd.addLlista("Favorites");
-        int shelfId = shelf.getId();
-        cd.addLlibreToLlista(isbn1, shelfId, 0.0, false);
-        cd.addLlibreToLlista(isbn2, shelfId, 0.0, false);
+        var shelf = cd.afegirLlista("Favorites");
+        int shelfId = shelf.obtenirId();
+        cd.afegirLlibreToLlista(isbn1, shelfId, 0.0, false);
+        cd.afegirLlibreToLlista(isbn2, shelfId, 0.0, false);
 
-        var tag = cd.addTag("science");
-        int tagId = tag.getId();
-        cd.addLlibreToTag(isbn1, tagId);
+        var tag = cd.afegirTag("science");
+        int tagId = tag.obtenirId();
+        cd.afegirLlibreToTag(isbn1, tagId);
 
         LlibreFilter onlyShelf = new LlibreFilter().withLlistaId(shelfId);
-        assertEquals(2, cp.searchLlibres(onlyShelf, 0, 0).size(), "shelf alone should match both books");
+        assertEquals(2, cp.cercarLlibres(onlyShelf, 0, 0).size(), "shelf alone should match both books");
 
         LlibreFilter onlyTag = new LlibreFilter().withTagId(tagId);
-        assertEquals(1, cp.searchLlibres(onlyTag, 0, 0).size(), "tag alone should match book 1");
+        assertEquals(1, cp.cercarLlibres(onlyTag, 0, 0).size(), "tag alone should match book 1");
 
         LlibreFilter intersection = new LlibreFilter().withLlistaId(shelfId).withTagId(tagId);
-        var result = cp.searchLlibres(intersection, 0, 0);
+        var result = cp.cercarLlibres(intersection, 0, 0);
         assertEquals(1, result.size(), "shelf AND tag should intersect to a single book");
-        assertEquals(isbn1, result.get(0).getISBN());
+        assertEquals(isbn1, result.get(0).obtenirISBN());
     }
 
     @Test

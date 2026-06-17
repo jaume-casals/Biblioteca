@@ -7,29 +7,29 @@ import domini.Llibre;
 public interface OnLlibreDelete {
     void onBookDeleted(Llibre l);
 
-    default void onBookDeleting(DeleteEvent e) {}
+    default void onBookDeleting(EsborrarEvent e) {}
 
-    static boolean shouldProceed(DeleteEvent e) {
-        return !(e.isCancellable() && e.isVetoed());
+    static boolean hauriaProceed(EsborrarEvent e) {
+        return !(e.esCancellable() && e.esVetoed());
     }
 
     /** Cancellable/vetoed wrapper used by presenters that want to ask
      *  listeners whether a delete should proceed. Created speculatively;
      *  exercised by the test suite ({@code deleteEventCancellableVeto},
      *  {@code deleteEventNonCancellable}). */
-    class DeleteEvent {
+    class EsborrarEvent {
         private final Llibre book;
         private final boolean cancellable;
         private boolean vetoed;
 
-        public DeleteEvent(Llibre book, boolean cancellable) {
+        public EsborrarEvent(Llibre book, boolean cancellable) {
             this.book = book;
             this.cancellable = cancellable;
         }
 
-        public Llibre getBook() { return book; }
-        public boolean isCancellable() { return cancellable; }
-        public boolean isVetoed() { return vetoed; }
+        public Llibre obtenirBook() { return book; }
+        public boolean esCancellable() { return cancellable; }
+        public boolean esVetoed() { return vetoed; }
         public void veto() { vetoed = true; }
     }
 }

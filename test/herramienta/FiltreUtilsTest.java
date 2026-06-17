@@ -2,7 +2,7 @@ package herramienta;
 
 import domini.Llibre;
 import domini.LlibreFilter;
-import domini.LlibreFilterBuilder;
+import domini.ConstructorFiltreLlibre;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -129,10 +129,10 @@ class FiltreUtilsTest {
     private Llibre makeBook() {
         Llibre l = new Llibre(9780306406157L, "Dune", "Frank Herbert", 1965,
             "desc", 9.0, 19.99, true, "/x");
-        l.setEditorial("Chilton");
-        l.setSerie("Dune");
-        l.setFormat("Tapa dura");
-        l.setIdioma("English");
+        l.posarEditorial("Chilton");
+        l.posarSerie("Dune");
+        l.posarFormat("Tapa dura");
+        l.posarIdioma("English");
         return l;
     }
 
@@ -147,7 +147,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: nom mismatch → false")
     void matchesNomFails() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().nom("Nonexistent").build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().nom("Nonexistent").build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isFalse();
     }
 
@@ -155,7 +155,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: anyMin > book.any → false")
     void matchesAnyMinFails() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().anyMin(2000).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().anyMin(2000).build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isFalse();
     }
 
@@ -163,7 +163,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: anyMax < book.any → false")
     void matchesAnyMaxFails() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().anyMax(1900).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().anyMax(1900).build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isFalse();
     }
 
@@ -171,7 +171,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: valoracioMin > book.valoracio → false")
     void matchesValoracioMinFails() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().valoracioMin(9.5).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().valoracioMin(9.5).build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isFalse();
     }
 
@@ -179,8 +179,8 @@ class FiltreUtilsTest {
     @DisplayName("matches: llegit mismatch → false")
     void matchesLlegitFails() {
         Llibre l = makeBook();
-        l.setLlegit(true);
-        LlibreFilter f = LlibreFilterBuilder.of().llegit(false).build();
+        l.posarLlegit(true);
+        LlibreFilter f = ConstructorFiltreLlibre.of().llegit(false).build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isFalse();
     }
 
@@ -188,7 +188,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: tagISBNs set + book isbn not in set → false")
     void matchesTagSetFails() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().tagId(1).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().tagId(1).build();
         assertThat(FiltreUtils.matches(l, f, Set.of(999L), null)).isFalse();
     }
 
@@ -196,7 +196,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: tagISBNs set + book isbn in set → true")
     void matchesTagSetPasses() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().tagId(1).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().tagId(1).build();
         assertThat(FiltreUtils.matches(l, f, Set.of(9780306406157L), null)).isTrue();
     }
 
@@ -204,7 +204,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: llistaISBNs set + book isbn in set → true")
     void matchesLlistaSetPasses() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().llistaId(1).build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().llistaId(1).build();
         assertThat(FiltreUtils.matches(l, f, null, Set.of(9780306406157L))).isTrue();
     }
 
@@ -212,9 +212,9 @@ class FiltreUtilsTest {
     @DisplayName("matches: format is exact (case-insensitive)")
     void matchesFormat() {
         Llibre l = makeBook();
-        LlibreFilter f1 = LlibreFilterBuilder.of().format("TAPA DURA").build();
+        LlibreFilter f1 = ConstructorFiltreLlibre.of().format("TAPA DURA").build();
         assertThat(FiltreUtils.matches(l, f1, null, null)).isTrue();
-        LlibreFilter f2 = LlibreFilterBuilder.of().format("ebook").build();
+        LlibreFilter f2 = ConstructorFiltreLlibre.of().format("ebook").build();
         assertThat(FiltreUtils.matches(l, f2, null, null)).isFalse();
     }
 
@@ -222,7 +222,7 @@ class FiltreUtilsTest {
     @DisplayName("matches: idioma is accent-insensitive contains")
     void matchesIdioma() {
         Llibre l = makeBook();
-        LlibreFilter f = LlibreFilterBuilder.of().idioma("english").build();
+        LlibreFilter f = ConstructorFiltreLlibre.of().idioma("english").build();
         assertThat(FiltreUtils.matches(l, f, null, null)).isTrue();
     }
 

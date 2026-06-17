@@ -6,7 +6,7 @@ import java.util.List;
 import javax.swing.table.AbstractTableModel;
 
 import domini.Llibre;
-import herramienta.Config;
+import herramienta.Configuracio;
 import herramienta.I18n;
 
 /** Table model for the main library book table. */
@@ -61,29 +61,29 @@ public class BibliotecaTableModel extends AbstractTableModel {
         Llibre l = books.get(row);
         return switch (column) {
             case COL_COVER -> "";
-            case COL_ISBN -> l.getISBN() != null ? String.valueOf(l.getISBN()) : "";
-            case COL_NOM -> l.getDisplayNom(Config.getLang());
-            case COL_AUTOR -> l.getAutor();
-            case COL_ANY -> l.getAny();
-            case COL_VALORACIO -> l.getValoracio();
-            case COL_PREU -> l.getPreu();
-            case COL_LLEGIT -> Boolean.TRUE.equals(l.getLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
-            case COL_PROGRES -> l.getPaginesLlegides() + "/" + l.getPagines();
+            case COL_ISBN -> l.obtenirISBN() != null ? String.valueOf(l.obtenirISBN()) : "";
+            case COL_NOM -> l.obtenirDisplayNom(Configuracio.obtenirLang());
+            case COL_AUTOR -> l.obtenirAutor();
+            case COL_ANY -> l.obtenirAny();
+            case COL_VALORACIO -> l.obtenirValoracio();
+            case COL_PREU -> l.obtenirPreu();
+            case COL_LLEGIT -> Boolean.TRUE.equals(l.obtenirLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
+            case COL_PROGRES -> l.obtenirPaginesLlegides() + "/" + l.obtenirPagines();
             case COL_DETALLS -> "";
             default -> null;
         };
     }
 
-    public void setBooks(List<Llibre> llibres) {
+    public void posarBooks(List<Llibre> llibres) {
         books.clear();
         if (llibres != null) books.addAll(llibres);
         fireTableDataChanged();
     }
 
-    public Llibre getBookAt(int row) {
+    public Llibre obtenirBookAt(int row) {
         return row >= 0 && row < books.size() ? books.get(row) : null;
     }
 
     /** Mutable backing list (package-private use by {@link TableController} only). */
-    List<Llibre> getBooks() { return books; }
+    List<Llibre> obtenirBooks() { return books; }
 }

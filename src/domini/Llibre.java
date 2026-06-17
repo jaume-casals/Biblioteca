@@ -15,7 +15,7 @@ public class Llibre {
 	private String notes = "";
 	private int pagines = 0;
 	private int paginesLlegides = 0;
-	private boolean hasBlob = false;
+	private boolean teBlob = false;
 	private String editorial = "";
 	private String serie = "";
 	private int volum = 0;
@@ -61,12 +61,12 @@ public class Llibre {
 	 * immediately, then the list override lets the caller replace it
 	 * with the parsed result without the field-level split logic.
 	 */
-	public static Llibre bindUpdateableFields(Llibre target, Long isbn, String nom, String autor,
+	public static Llibre vincularUpdateableFields(Llibre target, Long isbn, String nom, String autor,
 			Integer any, String descripcio, Double valoracio, Double preu, Boolean llegit, String imatge) {
 		target.isbn = isbn;
 		target.nom = nom;
 		target.autor = autor;
-		target.setAny(any);
+		target.posarAny(any);
 		target.descripcio = descripcio;
 		target.valoracio = valoracio;
 		target.preu = preu;
@@ -75,11 +75,11 @@ public class Llibre {
 		return target;
 	}
 
-	public static Builder builder() {
-		return new Builder();
+	public static Constructor builder() {
+		return new Constructor();
 	}
 
-	public static final class Builder {
+	public static final class Constructor {
 		private Long isbn;
 		private String nom;
 		private String autor;
@@ -90,46 +90,46 @@ public class Llibre {
 		private Boolean llegit;
 		private String imatge;
 
-		private Builder() {}
+		private Constructor() {}
 
-		public Builder isbn(Long v) { this.isbn = v; return this; }
-		public Builder nom(String v) { this.nom = v; return this; }
-		public Builder autor(String v) { this.autor = v; return this; }
-		public Builder any(Integer v) { this.any = v; return this; }
-		public Builder descripcio(String v) { this.descripcio = v; return this; }
-		public Builder valoracio(Double v) { this.valoracio = v; return this; }
-		public Builder preu(Double v) { this.preu = v; return this; }
-		public Builder llegit(Boolean v) { this.llegit = v; return this; }
-		public Builder imatge(String v) { this.imatge = v; return this; }
+		public Constructor isbn(Long v) { this.isbn = v; return this; }
+		public Constructor nom(String v) { this.nom = v; return this; }
+		public Constructor autor(String v) { this.autor = v; return this; }
+		public Constructor any(Integer v) { this.any = v; return this; }
+		public Constructor descripcio(String v) { this.descripcio = v; return this; }
+		public Constructor valoracio(Double v) { this.valoracio = v; return this; }
+		public Constructor preu(Double v) { this.preu = v; return this; }
+		public Constructor llegit(Boolean v) { this.llegit = v; return this; }
+		public Constructor imatge(String v) { this.imatge = v; return this; }
 
 		public Llibre build() {
-			return Llibre.bindUpdateableFields(new Llibre(), isbn, nom, autor, any, descripcio,
+			return Llibre.vincularUpdateableFields(new Llibre(), isbn, nom, autor, any, descripcio,
 				valoracio, preu, llegit, imatge);
 		}
 	}
 
-	public Long getISBN() {
+	public Long obtenirISBN() {
 		return isbn;
 	}
 
-	public void setISBN(Long isbn) {
+	public void posarISBN(Long isbn) {
 		this.isbn = isbn;
 	}
 
-	public String getNom() {
+	public String obtenirNom() {
 		return nom;
 	}
 
-	public void setNom(String nom) {
+	public void posarNom(String nom) {
 		this.nom = nom;
 	}
 
-	public String getNomCa() { return nomCa; }
-	public void setNomCa(String v) { this.nomCa = nullIfBlankTrim(v); }
-	public String getNomEs() { return nomEs; }
-	public void setNomEs(String v) { this.nomEs = nullIfBlankTrim(v); }
-	public String getNomEn() { return nomEn; }
-	public void setNomEn(String v) { this.nomEn = nullIfBlankTrim(v); }
+	public String obtenirNomCa() { return nomCa; }
+	public void posarNomCa(String v) { this.nomCa = nullIfBlankTrim(v); }
+	public String obtenirNomEs() { return nomEs; }
+	public void posarNomEs(String v) { this.nomEs = nullIfBlankTrim(v); }
+	public String obtenirNomEn() { return nomEn; }
+	public void posarNomEn(String v) { this.nomEn = nullIfBlankTrim(v); }
 
 	/** Returns {@code s.trim()} if {@code s} is non-null and not blank, else {@code null}. */
 	private static String nullIfBlankTrim(String s) {
@@ -137,7 +137,7 @@ public class Llibre {
 	}
 
 	/** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
-	public String getDisplayNom(String lang) {
+	public String obtenirDisplayNom(String lang) {
 		String alt = null;
 		if ("ca".equals(lang)) alt = nomCa;
 		else if ("es".equals(lang)) alt = nomEs;
@@ -145,113 +145,113 @@ public class Llibre {
 		return (alt != null && !alt.isBlank()) ? alt : nom;
 	}
 
-	public String getAutor() {
+	public String obtenirAutor() {
 		if (!autors.isEmpty()) return String.join(", ", autors);
 		return autor != null ? autor : "";
 	}
 
-	public java.util.List<String> getAutors() { return new java.util.ArrayList<>(autors); }
+	public java.util.List<String> obtenirAutors() { return new java.util.ArrayList<>(autors); }
 
 	/** Used when loading multiple author rows from SQL (see {@link persistencia.LlibreDao#getAll}). */
-	public void addAutorNom(String nom) {
+	public void afegirAutorNom(String nom) {
 		if (nom == null || nom.isBlank()) return;
 		autors.add(nom);
 		autor = String.join(", ", autors);
 	}
 
-	public void setAutors(java.util.List<String> autors) {
+	public void posarAutors(java.util.List<String> autors) {
 		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
 		this.autor = this.autors.isEmpty() ? "" : String.join(", ", this.autors);
 	}
 
-	public Integer getAny() {
+	public Integer obtenirAny() {
 		return any;
 	}
 
-	public void setAny(Integer any) {
+	public void posarAny(Integer any) {
 		if (any != null && any < 0)
-			throw new BibliotecaException.Validation(herramienta.I18n.t("val_any_negatiu", any));
+			throw new BibliotecaException.Validacio(herramienta.I18n.t("val_any_negatiu", any));
 		this.any = any;
 	}
 
-	public String getDescripcio() {
+	public String obtenirDescripcio() {
 		return descripcio;
 	}
 
-	public void setDescripcio(String descripcio) {
+	public void posarDescripcio(String descripcio) {
 		this.descripcio = descripcio != null ? descripcio : "";
 	}
 
-	public Double getValoracio() {
+	public Double obtenirValoracio() {
 		return valoracio;
 	}
 
-	public void setValoracio(Double valoracio) {
+	public void posarValoracio(Double valoracio) {
 		this.valoracio = valoracio;
 	}
 
-	public Double getPreu() {
+	public Double obtenirPreu() {
 		return preu;
 	}
 
-	public void setPreu(Double preu) {
+	public void posarPreu(Double preu) {
 		this.preu = preu;
 	}
 
-	public Boolean getLlegit() {
+	public Boolean obtenirLlegit() {
 		return llegit;
 	}
 
-	public void setLlegit(Boolean llegit) {
+	public void posarLlegit(Boolean llegit) {
 		this.llegit = llegit;
 	}
 
-	public String getImatge() {
+	public String obtenirImatge() {
 		return imatge;
 	}
 
-	public void setImatge(String imatge) {
+	public void posarImatge(String imatge) {
 		this.imatge = imatge;
 	}
 
-	public byte[] getImatgeBlob() { return imatgeBlob; }
-	public void setImatgeBlob(byte[] blob) { imatgeBlob = blob; }
-	public boolean hasBlob() { return hasBlob; }
-	public void setHasBlob(boolean hasBlob) { this.hasBlob = hasBlob; }
+	public byte[] obtenirImatgeBlob() { return imatgeBlob; }
+	public void posarImatgeBlob(byte[] blob) { imatgeBlob = blob; }
+	public boolean teBlob() { return teBlob; }
+	public void posarHasBlob(boolean teBlob) { this.teBlob = teBlob; }
 
-	public String getNotes() { return notes; }
-	public void setNotes(String notes) { this.notes = notes != null ? notes : ""; }
-	public int getPagines() { return pagines; }
-	public void setPagines(int pagines) { this.pagines = Math.max(0, pagines); }
-	public int getPaginesLlegides() { return paginesLlegides; }
-	public void setPaginesLlegides(int paginesLlegides) { this.paginesLlegides = Math.max(0, paginesLlegides); }
-	public String getEditorial() { return editorial; }
-	public void setEditorial(String editorial) { this.editorial = editorial != null ? editorial : ""; }
-	public String getSerie() { return serie; }
-	public void setSerie(String serie) { this.serie = serie != null ? serie : ""; }
-	public int getVolum() { return volum; }
-	public void setVolum(int volum) { this.volum = Math.max(0, volum); }
-	public String getDataCompra() { return dataCompra; }
-	public void setDataCompra(String dataCompra) { this.dataCompra = nullIfBlankTrim(dataCompra); }
-	public String getDataLectura() { return dataLectura; }
-	public void setDataLectura(String dataLectura) { this.dataLectura = nullIfBlankTrim(dataLectura); }
-	public String getIdioma() { return idioma; }
-	public void setIdioma(String idioma) { this.idioma = nullIfBlankTrim(idioma); }
+	public String obtenirNotes() { return notes; }
+	public void posarNotes(String notes) { this.notes = notes != null ? notes : ""; }
+	public int obtenirPagines() { return pagines; }
+	public void posarPagines(int pagines) { this.pagines = Math.max(0, pagines); }
+	public int obtenirPaginesLlegides() { return paginesLlegides; }
+	public void posarPaginesLlegides(int paginesLlegides) { this.paginesLlegides = Math.max(0, paginesLlegides); }
+	public String obtenirEditorial() { return editorial; }
+	public void posarEditorial(String editorial) { this.editorial = editorial != null ? editorial : ""; }
+	public String obtenirSerie() { return serie; }
+	public void posarSerie(String serie) { this.serie = serie != null ? serie : ""; }
+	public int obtenirVolum() { return volum; }
+	public void posarVolum(int volum) { this.volum = Math.max(0, volum); }
+	public String obtenirDataCompra() { return dataCompra; }
+	public void posarDataCompra(String dataCompra) { this.dataCompra = nullIfBlankTrim(dataCompra); }
+	public String obtenirDataLectura() { return dataLectura; }
+	public void posarDataLectura(String dataLectura) { this.dataLectura = nullIfBlankTrim(dataLectura); }
+	public String obtenirIdioma() { return idioma; }
+	public void posarIdioma(String idioma) { this.idioma = nullIfBlankTrim(idioma); }
 	public String getFormat() { return format; }
-	public void setFormat(String format) { this.format = nullIfBlankTrim(format); }
-	public String getPaisOrigen() { return paisOrigen; }
-	public void setPaisOrigen(String paisOrigen) { this.paisOrigen = nullIfBlankTrim(paisOrigen); }
-	public boolean isDesitjat() { return desitjat; }
-	public void setDesitjat(boolean desitjat) { this.desitjat = desitjat; }
-	public String getEstat() { return estat; }
-	public void setEstat(String estat) { this.estat = nullIfBlankTrim(estat); }
-	public int getExemplars() { return exemplars; }
-	public void setExemplars(int exemplars) { this.exemplars = Math.max(1, exemplars); }
-	public String getLlenguaOriginal() { return llenguaOriginal; }
-	public void setLlenguaOriginal(String llengua) { this.llenguaOriginal = nullIfBlankTrim(llengua); }
+	public void posarFormat(String format) { this.format = nullIfBlankTrim(format); }
+	public String obtenirPaisOrigen() { return paisOrigen; }
+	public void posarPaisOrigen(String paisOrigen) { this.paisOrigen = nullIfBlankTrim(paisOrigen); }
+	public boolean esDesitjat() { return desitjat; }
+	public void posarDesitjat(boolean desitjat) { this.desitjat = desitjat; }
+	public String obtenirEstat() { return estat; }
+	public void posarEstat(String estat) { this.estat = nullIfBlankTrim(estat); }
+	public int obtenirExemplars() { return exemplars; }
+	public void posarExemplars(int exemplars) { this.exemplars = Math.max(1, exemplars); }
+	public String obtenirLlenguaOriginal() { return llenguaOriginal; }
+	public void posarLlenguaOriginal(String llengua) { this.llenguaOriginal = nullIfBlankTrim(llengua); }
 
 	public static Llibre copyOf(Llibre src) {
-		Llibre c = Llibre.bindUpdateableFields(new Llibre(), src.isbn, src.nom, src.autor, src.any, src.descripcio,
+		Llibre c = Llibre.vincularUpdateableFields(new Llibre(), src.isbn, src.nom, src.autor, src.any, src.descripcio,
 			src.valoracio, src.preu, src.llegit, src.imatge);
 		c.notes = src.notes; c.pagines = src.pagines; c.paginesLlegides = src.paginesLlegides;
 		c.editorial = src.editorial; c.serie = src.serie; c.volum = src.volum;
@@ -261,18 +261,18 @@ public class Llibre {
 		c.exemplars = src.exemplars; c.llenguaOriginal = src.llenguaOriginal;
 		c.autors = src.autors != null ? new java.util.ArrayList<>(src.autors) : new java.util.ArrayList<>();
 		c.nomCa = src.nomCa; c.nomEs = src.nomEs; c.nomEn = src.nomEn;
-		c.hasBlob = src.hasBlob;
+		c.teBlob = src.teBlob;
 		c.imatgeBlob = src.imatgeBlob != null ? src.imatgeBlob.clone() : null;
 		c.heavyFieldsLoaded = src.heavyFieldsLoaded;
 		return c;
 	}
 
-	public boolean isHeavyFieldsLoaded() { return heavyFieldsLoaded; }
-	public void setHeavyFieldsLoaded(boolean heavyFieldsLoaded) { this.heavyFieldsLoaded = heavyFieldsLoaded; }
+	public boolean esHeavyFieldsLoaded() { return heavyFieldsLoaded; }
+	public void posarHeavyFieldsLoaded(boolean heavyFieldsLoaded) { this.heavyFieldsLoaded = heavyFieldsLoaded; }
 
 	@Override
 	public String toString() {
-		return "Llibre{isbn=" + isbn + ", nom=" + nom + ", autor=" + getAutor()
+		return "Llibre{isbn=" + isbn + ", nom=" + nom + ", autor=" + obtenirAutor()
 			+ ", any=" + any
 			+ ", valoracio=" + valoracio + ", preu=" + preu + ", llegit=" + llegit
 			+ ", pagines=" + pagines + ", paginesLlegides=" + paginesLlegides

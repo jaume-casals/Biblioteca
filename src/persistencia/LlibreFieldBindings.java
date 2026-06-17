@@ -30,9 +30,9 @@ public final class LlibreFieldBindings {
     private LlibreFieldBindings() {}
 
     /** Marker for a SQL NULL of a specific JDBC type. */
-    public static final class Null {
+    public static final class Nul {
         public final int sqlType;
-        public Null(int sqlType) { this.sqlType = sqlType; }
+        public Nul(int sqlType) { this.sqlType = sqlType; }
     }
 
     private static Integer intOrZero(Integer n) { return n == null ? 0 : n; }
@@ -56,33 +56,33 @@ public final class LlibreFieldBindings {
      */
     public static Object[] forLlibre(Llibre ll, boolean includeIsbn, boolean includeBlob) {
         java.util.List<Object> vals = new java.util.ArrayList<>(27);
-        if (includeIsbn)             vals.add(ll.getISBN());
-        vals.add(sOrEmpty(ll.getNom()));
-        vals.add(intOrZero(ll.getAny()));
-        vals.add(sOrEmpty(ll.getDescripcio()));
-        vals.add(doubleOrZero(ll.getValoracio()));
-        vals.add(doubleOrZero(ll.getPreu()));
-        vals.add(Boolean.TRUE.equals(ll.getLlegit()));
-        vals.add(sOrEmpty(ll.getImatge()));
-        if (includeBlob)             vals.add(ll.getImatgeBlob());
-        vals.add(ll.getNotes());
-        vals.add(ll.getPagines());
-        vals.add(ll.getPaginesLlegides());
-        vals.add(ll.getEditorial());
-        vals.add(ll.getSerie());
-        vals.add(ll.getVolum());
-        vals.add(dateOrNull(ll.getDataCompra()));
-        vals.add(dateOrNull(ll.getDataLectura()));
-        vals.add(sOrNull(ll.getIdioma()));
+        if (includeIsbn)             vals.add(ll.obtenirISBN());
+        vals.add(sOrEmpty(ll.obtenirNom()));
+        vals.add(intOrZero(ll.obtenirAny()));
+        vals.add(sOrEmpty(ll.obtenirDescripcio()));
+        vals.add(doubleOrZero(ll.obtenirValoracio()));
+        vals.add(doubleOrZero(ll.obtenirPreu()));
+        vals.add(Boolean.TRUE.equals(ll.obtenirLlegit()));
+        vals.add(sOrEmpty(ll.obtenirImatge()));
+        if (includeBlob)             vals.add(ll.obtenirImatgeBlob());
+        vals.add(ll.obtenirNotes());
+        vals.add(ll.obtenirPagines());
+        vals.add(ll.obtenirPaginesLlegides());
+        vals.add(ll.obtenirEditorial());
+        vals.add(ll.obtenirSerie());
+        vals.add(ll.obtenirVolum());
+        vals.add(dateOrNull(ll.obtenirDataCompra()));
+        vals.add(dateOrNull(ll.obtenirDataLectura()));
+        vals.add(sOrNull(ll.obtenirIdioma()));
         vals.add(sOrNull(ll.getFormat()));
-        vals.add(ll.isDesitjat());
-        vals.add(sOrNull(ll.getPaisOrigen()));
-        vals.add(sOrNull(ll.getEstat()));
-        vals.add(Math.max(1, ll.getExemplars()));
-        vals.add(sOrNull(ll.getLlenguaOriginal()));
-        vals.add(sOrNull(ll.getNomCa()));
-        vals.add(sOrNull(ll.getNomEs()));
-        vals.add(sOrNull(ll.getNomEn()));
+        vals.add(ll.esDesitjat());
+        vals.add(sOrNull(ll.obtenirPaisOrigen()));
+        vals.add(sOrNull(ll.obtenirEstat()));
+        vals.add(Math.max(1, ll.obtenirExemplars()));
+        vals.add(sOrNull(ll.obtenirLlenguaOriginal()));
+        vals.add(sOrNull(ll.obtenirNomCa()));
+        vals.add(sOrNull(ll.obtenirNomEs()));
+        vals.add(sOrNull(ll.obtenirNomEn()));
         return vals.toArray();
     }
 
@@ -107,7 +107,7 @@ public final class LlibreFieldBindings {
 
     /** Render the column list as a single comma-separated SQL fragment
      *  (e.g. {@code "`ISBN`,`nom`,`any`,..."}) for use in an INSERT. */
-    public static String insertColumnsSql() {
+    public static String inserirColumnsSql() {
         StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 12);
         for (int i = 0; i < COLUMNS_INSERT.length; i++) {
             if (i > 0) sb.append(',');
@@ -118,7 +118,7 @@ public final class LlibreFieldBindings {
 
     /** Render the placeholder list for a 27-value INSERT
      *  (e.g. {@code "?,?,?,...,?"}). */
-    public static String insertPlaceholders() {
+    public static String inserirPlaceholders() {
         StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 2);
         for (int i = 0; i < COLUMNS_INSERT.length; i++) {
             if (i > 0) sb.append(',');
@@ -128,9 +128,9 @@ public final class LlibreFieldBindings {
     }
 
     private static Object dateOrNull(String s) {
-        if (s == null) return new Null(Types.DATE);
+        if (s == null) return new Nul(Types.DATE);
         try { return java.sql.Date.valueOf(s); }
-        catch (IllegalArgumentException e) { return new Null(Types.DATE); }
+        catch (IllegalArgumentException e) { return new Nul(Types.DATE); }
     }
 
     /** Binds a single value to the PreparedStatement, with the type-aware
@@ -138,7 +138,7 @@ public final class LlibreFieldBindings {
     public static void bind(PreparedStatement ps, int idx, Object value) throws SQLException {
         if (value == null) {
             ps.setNull(idx, Types.VARCHAR);
-        } else if (value instanceof Null n) {
+        } else if (value instanceof Nul n) {
             ps.setNull(idx, n.sqlType);
         } else if (value instanceof Integer i) {
             ps.setInt(idx, i);

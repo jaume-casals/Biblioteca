@@ -87,7 +87,7 @@ public final class StateContext {
      *  (today the two paths clear the maps directly, but the centralised
      *  call makes future additions — e.g. a new id-index map — a single
      *  line change rather than a two-line search). */
-    public void clearAll() {
+    public void netejarAll() {
         synchronized (lock) {
             bib.clear();
             llistes.clear();
@@ -99,9 +99,9 @@ public final class StateContext {
     /** Rebuild id-index maps from the current backing lists. Must be called under lock. */
     private void rebuildIdIndexesLocked() {
         llistesById.clear();
-        for (Llista l : llistes) llistesById.put(l.getId(), l);
+        for (Llista l : llistes) llistesById.put(l.obtenirId(), l);
         tagsById.clear();
-        for (Tag t : tags) tagsById.put(t.getId(), t);
+        for (Tag t : tags) tagsById.put(t.obtenirId(), t);
     }
 
     /** Run {@code action} while holding the state lock. */

@@ -21,7 +21,7 @@ public final class FormValidator {
 
     private FormValidator() {}
 
-    public static void validateField(JTextField field, boolean valid) {
+    public static void validarField(JTextField field, boolean valid) {
         if (valid) {
             UIComponents.styleField(field);
         } else {

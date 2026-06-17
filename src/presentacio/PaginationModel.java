@@ -8,17 +8,17 @@ public class PaginationModel {
     private boolean useDBPagination = false;
     private int cachedTotalCount = -1;
 
-    public int getCurrentPage() { return currentPage; }
-    public void setCurrentPage(int currentPage) { this.currentPage = currentPage; }
+    public int obtenirCurrentPage() { return currentPage; }
+    public void posarCurrentPage(int currentPage) { this.currentPage = currentPage; }
 
-    public boolean isPaginatedMode() { return paginatedMode; }
-    public void setPaginatedMode(boolean paginatedMode) { this.paginatedMode = paginatedMode; }
+    public boolean esPaginatedMode() { return paginatedMode; }
+    public void posarPaginatedMode(boolean paginatedMode) { this.paginatedMode = paginatedMode; }
 
-    public boolean isUseDBPagination() { return useDBPagination; }
-    public void setUseDBPagination(boolean useDBPagination) { this.useDBPagination = useDBPagination; }
+    public boolean esUseDBPagination() { return useDBPagination; }
+    public void posarUseDBPagination(boolean useDBPagination) { this.useDBPagination = useDBPagination; }
 
-    public int getCachedTotalCount() { return cachedTotalCount; }
-    public void setCachedTotalCount(int cachedTotalCount) { this.cachedTotalCount = cachedTotalCount; }
+    public int obtenirCachedTotalCount() { return cachedTotalCount; }
+    public void posarCachedTotalCount(int cachedTotalCount) { this.cachedTotalCount = cachedTotalCount; }
 
     public void invalidateCache() { cachedTotalCount = -1; }
 }

@@ -2,7 +2,7 @@ package herramienta.export;
 
 import domini.Llibre;
 import domini.Llista;
-import herramienta.csv.CsvUtils;
+import herramienta.csv.UtilitatsCsv;
 import interficie.BibliotecaReader;
 import persistencia.LlibreLlistaRow;
 
@@ -18,72 +18,75 @@ import static java.util.stream.Collectors.joining;
 public final class GoodreadsExportService {
     private GoodreadsExportService() {}
 
-    public static String exportToCsv(BibliotecaReader cd) throws Exception {
-        // String overload retained for back-compat with the few existing
-        // callers that read the whole export into memory. For 10k-book
-        // libraries this allocates ~10 MB transiently; the streaming
-        // {@link #exportToCsv(BibliotecaWriter, PrintWriter)} overload
-        // is the recommended path for new code.
+    public static String exportarToCsv(BibliotecaReader cd) throws Exception {
+        // Sobrecàrrega de String conservada per compatibilitat enrere
+        // amb els pocs consumidors existents que llegeixen l'exportació
+        // sencera a memòria. Per a biblioteques de 10k llibres això
+        // assigna ~10 MB transitòriament; la sobrecàrrega de streaming
+        // {@link #exportToCsv(BibliotecaWriter, PrintWriter)} és el
+        // camí recomanat per a codi nou.
         java.io.StringWriter sw = new java.io.StringWriter();
         try (PrintWriter pw = new PrintWriter(sw)) {
-            exportToCsv(cd, pw);
+            exportarToCsv(cd, pw);
         }
         return sw.toString();
     }
 
     /**
-     * Streaming variant — writes one row at a time to {@code pw}, no
-     * intermediate String. For a 10k-book library this is ~10x faster
-     * (no full-doc allocation) and ~20x friendlier on the heap.
+     * Variant de streaming — escriu una fila a la vegada a {@code pw},
+     * sense String intermitja. Per a una biblioteca de 10k llibres és
+     * ~10x més ràpida (sense assignació del document complet) i ~20x
+     * més amigable amb el heap.
      */
-    public static void exportToCsv(BibliotecaReader cd, PrintWriter pw) throws Exception {
+    public static void exportarToCsv(BibliotecaReader cd, PrintWriter pw) throws Exception {
         pw.println("Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
                  + "Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publicación Year,"
                  + "Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,"
                  + "Read Count,Recommended For,Recommended By,Owned Copies,Original Purchase Date,"
                  + "Condition,Condition Description,BCID");
         Map<Integer, Llista> llistaById = new HashMap<>();
-        for (Llista ll : cd.getAllLlistes()) llistaById.put(ll.getId(), ll);
+        for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
         Map<Long, List<Llista>> llibLlistes = new HashMap<>();
-        for (LlibreLlistaRow row : cd.getAllLlibreLlistaRows()) {
+        for (LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows()) {
             Llista ll = llistaById.get(row.llistaId());
             if (ll != null) llibLlistes.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(ll);
         }
         int rowId = 1;
-        for (Llibre l : cd.getAllLlibres()) {
-            List<Llista> llistes = llibLlistes.getOrDefault(l.getISBN(), List.of());
-            String shelf = Boolean.TRUE.equals(l.getLlegit()) ? "read"
-                : (!llistes.isEmpty() ? llistes.get(0).getNom() : "to-read");
-            String bookshelves = llistes.stream().map(Llista::getNom)
+        for (Llibre l : cd.obtenirAllLlibres()) {
+            List<Llista> llistes = llibLlistes.getOrDefault(l.obtenirISBN(), List.of());
+            String shelf = Boolean.TRUE.equals(l.obtenirLlegit()) ? "read"
+                : (!llistes.isEmpty() ? llistes.get(0).obtenirNom() : "to-read");
+            String bookshelves = llistes.stream().map(Llista::obtenirNom)
                 .collect(joining(", "));
-            // Goodreads' rating is 0..5 (half-points). Our rating is
-            // 0..10; the legacy implementation used Math.round which
-            // does banker's rounding (4.5 → 4). Use a half-up variant
-            // for fidelity: 4.5 → 5, 4.4 → 4. The constant 2.0 below
-            // rescales our 0..10 to Goodreads' 0..5.
+            // La valoració de Goodreads és 0..5 (punts mitjos). La
+            // nostra és 0..10; la implementació antiga feia servir
+            // Math.round, que aplica l'arrodoniment bancari (4.5 → 4).
+            // Fem servir una variant mig-amunt per fidelitat: 4.5 → 5,
+            // 4.4 → 4. La constant 2.0 de baix reescala el nostre
+            // 0..10 al 0..5 de Goodreads.
             int myRating = 0;
-            Double val = l.getValoracio();
+            Double val = l.obtenirValoracio();
             if (val != null && val > 0) myRating = (int) Math.floor(val / 2.0 + 0.5);
-            Integer any = l.getAny();
+            Integer any = l.obtenirAny();
             pw.print(rowId++); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getNom())); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getAutor())); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getAutor())); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirNom())); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); pw.print(',');
             pw.print(',');
-            pw.print(CsvUtils.csvQ("=\"" + String.valueOf(l.getISBN()) + "\"")); pw.print(',');
-            pw.print(CsvUtils.csvQ("=\"" + String.valueOf(l.getISBN()) + "\"")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); pw.print(',');
             pw.print(myRating); pw.print(',');
             pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getEditorial() != null ? l.getEditorial() : "")); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getFormat() != null ? l.getFormat() : "")); pw.print(',');
-            pw.print(l.getPagines() > 0 ? l.getPagines() : ""); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirEditorial() != null ? l.obtenirEditorial() : "")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.getFormat() != null ? l.getFormat() : "")); pw.print(',');
+            pw.print(l.obtenirPagines() > 0 ? l.obtenirPagines() : ""); pw.print(',');
             pw.print(any != null && any > 0 ? any : ""); pw.print(',');
             pw.print(any != null && any > 0 ? any : ""); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getDataLectura() != null ? l.getDataLectura() : "")); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getDataCompra() != null ? l.getDataCompra() : "")); pw.print(',');
-            pw.print(CsvUtils.csvQ(bookshelves)); pw.print(',');
-            pw.print(CsvUtils.csvQ(shelf)); pw.print(',');
-            pw.print(CsvUtils.csvQ(l.getNotes() != null ? l.getNotes() : "")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirDataLectura() != null ? l.obtenirDataLectura() : "")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(bookshelves)); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(shelf)); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirNotes() != null ? l.obtenirNotes() : "")); pw.print(',');
             pw.println(",,,,,,,,");
         }
     }

@@ -23,12 +23,12 @@ public final class JarLocator {
     private JarLocator() {}
 
     @FunctionalInterface
-    public interface Strategy {
+    public interface Estrategia {
         /** Retorna el path {@code lib/} trobat, o null per continuar provant. */
-        File tryLocate(StringBuilder diag, Predicate<File> hasJars);
+        File tryLocate(StringBuilder diag, Predicate<File> teJars);
     }
 
-    private static final List<Strategy> STRATEGIES = new ArrayList<>();
+    private static final List<Estrategia> STRATEGIES = new ArrayList<>();
 
     static {
         STRATEGIES.add(JarLocator::fromBibliotecaRoot);
@@ -47,59 +47,60 @@ public final class JarLocator {
      * el problema retornant un directori existent però sense el
      * JAR que es volia carregar.
      */
-    public static File locate(StringBuilder diag, Predicate<File> hasJars) {
+    public static File locate(StringBuilder diag, Predicate<File> teJars) {
         for (int i = 0; i < STRATEGIES.size(); i++) {
             diag.append("  [").append(i + 1).append("] ");
-            File found = STRATEGIES.get(i).tryLocate(diag, hasJars);
+            File found = STRATEGIES.get(i).tryLocate(diag, teJars);
             if (found != null) return found;
         }
         return null;
     }
 
-    private static File fromBibliotecaRoot(StringBuilder diag, Predicate<File> hasJars) {
+    private static File fromBibliotecaRoot(StringBuilder diag, Predicate<File> teJars) {
         diag.append("biblioteca.root=").append(System.getProperty("biblioteca.root")).append("\n");
         String root = System.getProperty("biblioteca.root");
         if (root == null || root.isBlank()) return null;
         File lib = new File(root, "lib");
-        return recordAndReturn(lib, diag, hasJars);
+        return recordAndReturn(lib, diag, teJars);
     }
 
-    private static File fromUserDir(StringBuilder diag, Predicate<File> hasJars) {
+    private static File fromUserDir(StringBuilder diag, Predicate<File> teJars) {
         diag.append("user.dir=").append(System.getProperty("user.dir")).append("\n");
         File lib = new File(System.getProperty("user.dir"), "lib");
-        return recordAndReturn(lib, diag, hasJars);
+        return recordAndReturn(lib, diag, teJars);
     }
 
-    private static File fromUserDirSiblings(StringBuilder diag, Predicate<File> hasJars) {
+    private static File fromUserDirSiblings(StringBuilder diag, Predicate<File> teJars) {
         File[] children = new File(System.getProperty("user.dir")).listFiles(File::isDirectory);
         if (children == null) return null;
         for (File child : children) {
             File lib = new File(child, "lib");
-            if (recordAndReturn(lib, diag, hasJars) != null) return lib;
+            if (recordAndReturn(lib, diag, teJars) != null) return lib;
         }
         return null;
     }
 
-    private static File walkUp(StringBuilder diag, Predicate<File> hasJars,
+    private static File walkUp(StringBuilder diag, Predicate<File> teJars,
                                int maxLevels, String originLabel) {
         File dir = new File(System.getProperty("user.dir"));
         for (int i = 0; i < maxLevels; i++) {
             if (dir == null) return null;
             File lib = new File(dir, "lib");
-            if (recordAndReturn(lib, diag, hasJars) != null) return lib;
+            if (recordAndReturn(lib, diag, teJars) != null) return lib;
             dir = dir.getParentFile();
         }
         return null;
     }
 
-    private static File walkUpFromClassSource(StringBuilder diag, Predicate<File> hasJars, int maxLevels) {
+    private static File walkUpFromClassSource(StringBuilder diag, Predicate<File> teJars, int maxLevels) {
         java.net.URL loc;
         try {
             loc = JarLocator.class.getProtectionDomain().getCodeSource().getLocation();
         } catch (RuntimeException se) {
-            // SecurityException is a RuntimeException; some JVMs surface
-            // the code-source access denial as plain IllegalArgument or
-            // SecurityException. Catch both to keep the locator robust.
+            // SecurityException és una RuntimeException; algunes JVM
+            // exposen la denegació d'accés a code-source com un simple
+            // IllegalArgument o SecurityException. Les capturem totes
+            // dues per mantenir el localitzador robust.
             diag.append("  classSource=SecurityException:").append(se.getMessage()).append("\n");
             return null;
         }
@@ -121,16 +122,16 @@ public final class JarLocator {
         for (int i = 0; i < maxLevels; i++) {
             if (dir == null) return null;
             File lib = new File(dir, "lib");
-            if (recordAndReturn(lib, diag, hasJars) != null) return lib;
+            if (recordAndReturn(lib, diag, teJars) != null) return lib;
             dir = dir.getParentFile();
         }
         return null;
     }
 
-    private static File recordAndReturn(File lib, StringBuilder diag, Predicate<File> hasJars) {
-        String label = hasJars.test(lib) ? " HAS_JARS"
+    private static File recordAndReturn(File lib, StringBuilder diag, Predicate<File> teJars) {
+        String label = teJars.test(lib) ? " HAS_JARS"
             : lib.isDirectory() ? " no-jars" : " missing";
         diag.append(lib.getAbsolutePath()).append(label).append("\n");
-        return hasJars.test(lib) ? lib : null;
+        return teJars.test(lib) ? lib : null;
     }
 }

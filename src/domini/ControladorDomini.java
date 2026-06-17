@@ -5,14 +5,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import domini.facade.BackupDelegate;
-import domini.facade.BookDelegate;
-import domini.facade.LoanDelegate;
-import domini.facade.ShelfDelegate;
+import domini.facade.DelegatCopiaSeguretat;
+import domini.facade.DelegatLlibre;
+import domini.facade.DelegatPrestec;
+import domini.facade.DelegatPrestatgeria;
 import domini.facade.StateContext;
-import domini.facade.StatsDelegate;
+import domini.facade.DelegatEstadistiques;
 import domini.facade.TagDelegate;
-import herramienta.BackupService;
+import herramienta.ServeiCopiaSeguretat;
 import interficie.BibliotecaWriter;
 import interficie.BookWriter;
 import interficie.LoanWriter;
@@ -49,24 +49,24 @@ public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWri
 	private static ControladorDomini inst;
 
 	private final StateContext state;
-	private final BackupService backupService;
-	private final ShelfDelegate shelves;
+	private final ServeiCopiaSeguretat copiaSegService;
+	private final DelegatPrestatgeria shelves;
 	private final TagDelegate tags;
-	private final LoanDelegate loans;
-	private final BookDelegate books;
-	private final StatsDelegate stats;
-	private final BackupDelegate backup;
+	private final DelegatPrestec loans;
+	private final DelegatLlibre books;
+	private final DelegatEstadistiques stats;
+	private final DelegatCopiaSeguretat backup;
 
 	public static synchronized ControladorDomini getInstance() {
 		if (inst == null) inst = new ControladorDomini(ControladorPersistencia.getInstance());
 		return inst;
 	}
 
-	public static synchronized void resetForTest() { inst = null; }
+	public static synchronized void reinicialitzarForTest() { inst = null; }
 
-	public static synchronized void resetForProfileSwitch() {
+	public static synchronized void reinicialitzarForProfileSwitch() {
 		inst = null;
-		ControladorPersistencia.resetForProfileSwitch();
+		ControladorPersistencia.reinicialitzarForProfileSwitch();
 	}
 
 	/**
@@ -81,19 +81,19 @@ public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWri
 
 	public ControladorDomini(ControladorPersistencia cp) {
 		this.state = new StateContext(cp,
-			new java.util.ArrayList<Llibre>(cp.getAllLlibres()),
-			new java.util.ArrayList<>(cp.getAllLlistes()),
-			new java.util.ArrayList<>(cp.getAllTags()));
-		Collections.sort(this.state.bib(), BookDelegate.ISBN_COMPARATOR);
-		this.backupService = new BackupService(cp);
-		this.shelves = new ShelfDelegate(this.state);
+			new java.util.ArrayList<Llibre>(cp.obtenirAllLlibres()),
+			new java.util.ArrayList<>(cp.obtenirAllLlistes()),
+			new java.util.ArrayList<>(cp.obtenirAllTags()));
+		Collections.sort(this.state.bib(), DelegatLlibre.ISBN_COMPARATOR);
+		this.copiaSegService = new ServeiCopiaSeguretat(cp);
+		this.shelves = new DelegatPrestatgeria(this.state);
 		this.tags    = new TagDelegate(this.state);
-		this.loans   = new LoanDelegate(this.state);
-		this.books   = new BookDelegate(this.state);
-		this.stats   = new StatsDelegate(this.state);
-		this.backup  = new BackupDelegate(this.state, this.backupService);
+		this.loans   = new DelegatPrestec(this.state);
+		this.books   = new DelegatLlibre(this.state);
+		this.stats   = new DelegatEstadistiques(this.state);
+		this.backup  = new DelegatCopiaSeguretat(this.state, this.copiaSegService);
 		if (!"true".equals(System.getProperty("biblioteca.test"))) {
-			backupService.scheduleAutoBackup();
+			copiaSegService.scheduleAutoBackup();
 		}
 	}
 
@@ -101,83 +101,83 @@ public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWri
 
 	public java.util.List<Llibre> aplicarFiltres(LlibreFilter f)                                  { return books.aplicarFiltres(f); }
 	public java.util.List<Llibre> aplicarFiltres(java.util.List<Llibre> font, LlibreFilter f)     { return books.aplicarFiltres(font, f); }
-	public java.util.List<Llibre> searchLlibresSQL(LlibreFilter f)                                { return books.searchLlibresSQL(f); }
-	public java.util.List<Llibre> getLlibresPage(int offset, int pageSize)                        { return books.getLlibresPage(offset, pageSize); }
-	public int countLlibresDB()                                                                   { return books.countLlibresDB(); }
-	public boolean isLargeLibrary()                                                               { return books.isLargeLibrary(); }
-	public java.util.List<Llibre> getAllLlibres()                                                 { return books.getAllLlibres(); }
-	public java.util.List<Llibre> getUnmodifiableLlibres()                                        { return books.getUnmodifiableLlibres(); }
+	public java.util.List<Llibre> cercarLlibresSQL(LlibreFilter f)                                { return books.cercarLlibresSQL(f); }
+	public java.util.List<Llibre> obtenirLlibresPage(int offset, int pageSize)                        { return books.obtenirLlibresPage(offset, pageSize); }
+	public int comptarLlibresDB()                                                                   { return books.comptarLlibresDB(); }
+	public boolean esLargeLibrary()                                                               { return books.esLargeLibrary(); }
+	public java.util.List<Llibre> obtenirAllLlibres()                                                 { return books.obtenirAllLlibres(); }
+	public java.util.List<Llibre> obtenirUnmodifiableLlibres()                                        { return books.obtenirUnmodifiableLlibres(); }
 	public java.util.List<Llibre> get10Llibres()                                                  { return books.get10Llibres(); }
 	public java.util.List<Llibre> get100Llibres(int index)                                        { return books.get100Llibres(index); }
 	public int maxIndex100Llibres()                                                               { return books.maxIndex100Llibres(); }
 	public int getSize()                                                                         { return books.getSize(); }
-	public void addLlibre(Llibre l)                                                               { books.addLlibre(l); }
-	public void deleteLlibre(Llibre l)                                                            { books.deleteLlibre(l); }
-	public void deleteLlibre(Long ISBN)                                                           { books.deleteLlibreByIsbn(ISBN); }
-	public void updateLlibre(Llibre l)                                                            { books.updateLlibre(l); }
+	public void afegirLlibre(Llibre l)                                                               { books.afegirLlibre(l); }
+	public void eliminarLlibre(Llibre l)                                                            { books.eliminarLlibre(l); }
+	public void eliminarLlibre(Long ISBN)                                                           { books.eliminarLlibreByIsbn(ISBN); }
+	public void actualitzarLlibre(Llibre l)                                                            { books.actualitzarLlibre(l); }
 	public boolean existsLlibre(long ISBN)                                                        { return books.existsLlibre(ISBN); }
-	public Llibre getLlibre(long ISBN)                                                            { return books.getLlibre(ISBN); }
-	@Override public void loadHeavyFields(Llibre book)                                            { books.loadHeavyFields(book); }
-	public java.util.List<Llibre> getRecentlyAdded()                                              { return books.getRecentlyAdded(); }
-	public byte[] getLlibreBlob(long isbn)                                                        { return books.getLlibreBlob(isbn); }
-	public void setLlibreBlob(long isbn, byte[] blob)                                             { books.setLlibreBlob(isbn, blob); }
+	public Llibre obtenirLlibre(long ISBN)                                                            { return books.obtenirLlibre(ISBN); }
+	@Override public void carregarHeavyFields(Llibre book)                                            { books.carregarHeavyFields(book); }
+	public java.util.List<Llibre> obtenirRecentlyAdded()                                              { return books.obtenirRecentlyAdded(); }
+	public byte[] obtenirLlibreBlob(long isbn)                                                        { return books.obtenirLlibreBlob(isbn); }
+	public void posarLlibreBlob(long isbn, byte[] blob)                                             { books.posarLlibreBlob(isbn, blob); }
 
 	// ── Shelf ─────────────────────────────────────────────────────────────────
 
-	public java.util.List<Llista> getAllLlistes()                                                 { return shelves.getAllLlistes(); }
-	public Llista getLlistaById(int id) throws Exception                                          { return shelves.getLlistaById(id); }
-	public Llista addLlista(String nom)                                                           { return shelves.addLlista(nom); }
-	public void deleteLlista(Llista llista)                                                       { shelves.deleteLlista(llista); }
-	public void renameLlista(int id, String newNom)                                               { shelves.renameLlista(id, newNom); }
-	public int getCountInLlista(int llistaId)                                                     { return shelves.getCountInLlista(llistaId); }
-	public java.util.Map<Integer, Integer> getAllCountsInLlistes()                                { return shelves.getAllCountsInLlistes(); }
-	public java.util.List<Llibre> getLlibresInLlista(int llistaId)                                { return shelves.getLlibresInLlista(llistaId); }
-	public java.util.List<Llista> getLlistesForLlibre(long isbn)                                  { return shelves.getLlistesForLlibre(isbn); }
-	public java.util.List<LlibreLlistaContext> getLlistesForLlibreContext(long isbn)               { return shelves.getLlistesForLlibreContext(isbn); }
-	public void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit)      { shelves.addLlibreToLlista(isbn, llistaId, valoracio, llegit); }
-	public void removeLlibreFromLlista(long isbn, int llistaId)                                   { shelves.removeLlibreFromLlista(isbn, llistaId); }
-	public void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit)  { shelves.updateLlibreInLlista(isbn, llistaId, valoracio, llegit); }
-	public void moveLlistaUp(int id)                                                              { shelves.moveLlistaUp(id); }
-	public void moveLlistaDown(int id)                                                            { shelves.moveLlistaDown(id); }
-	public void setLlistaColor(int id, String color)                                              { shelves.setLlistaColor(id, color); }
+	public java.util.List<Llista> obtenirAllLlistes()                                                 { return shelves.obtenirAllLlistes(); }
+	public Llista obtenirLlistaById(int id) throws Exception                                          { return shelves.obtenirLlistaById(id); }
+	public Llista afegirLlista(String nom)                                                           { return shelves.afegirLlista(nom); }
+	public void eliminarLlista(Llista llista)                                                       { shelves.eliminarLlista(llista); }
+	public void reanomenarLlista(int id, String newNom)                                               { shelves.reanomenarLlista(id, newNom); }
+	public int obtenirCountInLlista(int llistaId)                                                     { return shelves.obtenirCountInLlista(llistaId); }
+	public java.util.Map<Integer, Integer> obtenirAllCountsInLlistes()                                { return shelves.obtenirAllCountsInLlistes(); }
+	public java.util.List<Llibre> obtenirLlibresInLlista(int llistaId)                                { return shelves.obtenirLlibresInLlista(llistaId); }
+	public java.util.List<Llista> obtenirLlistesForLlibre(long isbn)                                  { return shelves.obtenirLlistesForLlibre(isbn); }
+	public java.util.List<LlibreLlistaContext> obtenirLlistesForLlibreContext(long isbn)               { return shelves.obtenirLlistesForLlibreContext(isbn); }
+	public void afegirLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit)      { shelves.afegirLlibreToLlista(isbn, llistaId, valoracio, llegit); }
+	public void eliminarLlibreFromLlista(long isbn, int llistaId)                                   { shelves.eliminarLlibreFromLlista(isbn, llistaId); }
+	public void actualitzarLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit)  { shelves.actualitzarLlibreInLlista(isbn, llistaId, valoracio, llegit); }
+	public void moureLlistaUp(int id)                                                              { shelves.moureLlistaUp(id); }
+	public void moureLlistaDown(int id)                                                            { shelves.moureLlistaDown(id); }
+	public void posarLlistaColor(int id, String color)                                              { shelves.posarLlistaColor(id, color); }
 
 	// ── Tag ───────────────────────────────────────────────────────────────────
 
-	public java.util.List<Tag> getAllTags()                                                       { return tags.getAllTags(); }
-	public Tag getTagById(int id) throws Exception                                                { return tags.getTagById(id); }
-	public Tag addTag(String nom)                                                                 { return tags.addTag(nom); }
-	public void deleteTag(Tag tag)                                                                { tags.deleteTag(tag); }
-	public void renameTag(int id, String newNom)                                                  { tags.renameTag(id, newNom); }
-	public java.util.Set<Long> getLlibresWithTag(int tagId)                                       { return tags.getLlibresWithTag(tagId); }
-	public java.util.List<Tag> getTagsForLlibre(long isbn)                                        { return tags.getTagsForLlibre(isbn); }
-	public void addLlibreToTag(long isbn, int tagId)                                              { tags.addLlibreToTag(isbn, tagId); }
-	public void removeLlibreFromTag(long isbn, int tagId)                                         { tags.removeLlibreFromTag(isbn, tagId); }
+	public java.util.List<Tag> obtenirAllTags()                                                       { return tags.obtenirAllTags(); }
+	public Tag obtenirTagById(int id) throws Exception                                                { return tags.obtenirTagById(id); }
+	public Tag afegirTag(String nom)                                                                 { return tags.afegirTag(nom); }
+	public void eliminarTag(Tag tag)                                                                { tags.eliminarTag(tag); }
+	public void reanomenarTag(int id, String newNom)                                                  { tags.reanomenarTag(id, newNom); }
+	public java.util.Set<Long> obtenirLlibresWithTag(int tagId)                                       { return tags.obtenirLlibresWithTag(tagId); }
+	public java.util.List<Tag> obtenirTagsForLlibre(long isbn)                                        { return tags.obtenirTagsForLlibre(isbn); }
+	public void afegirLlibreToTag(long isbn, int tagId)                                              { tags.afegirLlibreToTag(isbn, tagId); }
+	public void eliminarLlibreFromTag(long isbn, int tagId)                                         { tags.eliminarLlibreFromTag(isbn, tagId); }
 
 	// ── Loan ──────────────────────────────────────────────────────────────────
 
 	public void prestarLlibre(long isbn, String nom)                                              { loans.prestarLlibre(isbn, nom); }
 	public void retornarLlibre(long isbn)                                                         { loans.retornarLlibre(isbn); }
-	public java.util.Set<Long> getLoanedISBNs()                                                   { return loans.getLoanedISBNs(); }
-	public java.util.List<PrestecRow> getAllActiveLoans()                                         { return loans.getAllActiveLoans(); }
-	public java.util.List<PrestecRow> getLoansForIsbn(long isbn)                                  { return loans.getLoansForIsbn(isbn); }
-	public java.util.List<persistencia.OverdueLoan> getAllOverdueLoans(int daysThreshold)          { return loans.getAllOverdueLoans(daysThreshold); }
-	public int countLoans(long isbn)                                                              { return loans.countLoans(isbn); }
+	public java.util.Set<Long> obtenirLoanedISBNs()                                                   { return loans.obtenirLoanedISBNs(); }
+	public java.util.List<PrestecRow> obtenirAllActiveLoans()                                         { return loans.obtenirAllActiveLoans(); }
+	public java.util.List<PrestecRow> obtenirLoansForIsbn(long isbn)                                  { return loans.obtenirLoansForIsbn(isbn); }
+	public java.util.List<persistencia.OverdueLoan> obtenirAllOverdueLoans(int daysThreshold)          { return loans.obtenirAllOverdueLoans(daysThreshold); }
+	public int comptarLoans(long isbn)                                                              { return loans.comptarLoans(isbn); }
 
 	// ── Stats / autocomplete / backup payload ────────────────────────────────
 
-	public java.util.List<String> getDistinctValues(String column)                                { return stats.getDistinctValues(column); }
-	public java.util.List<String> getDistinctAutorNames()                                         { return stats.getDistinctAutorNames(); }
-	public java.util.List<LlibreLlistaRow> getAllLlibreLlistaRows()                               { return stats.getAllLlibreLlistaRows(); }
-	public java.util.List<LlibreTagRow>    getAllLlibreTagRows()                                  { return stats.getAllLlibreTagRows(); }
-	public java.util.List<Object[]>        getAutorsData()                                        { return stats.getAutorsData(); }
-	public java.util.List<Object[]>        getLlibreAutorData()                                   { return stats.getLlibreAutorData(); }
-	public java.util.List<PrestecRow>      getAllPrestecs()                                       { return stats.getAllPrestecs(); }
-	public java.util.List<LecturaRow>      getAllLecturesData()                                   { return stats.getAllLecturesData(); }
-	public long getDbSizeBytes()                                                                  { return stats.getDbSizeBytes(); }
+	public java.util.List<String> obtenirDistinctValues(String column)                                { return stats.obtenirDistinctValues(column); }
+	public java.util.List<String> obtenirDistinctAutorNames()                                         { return stats.obtenirDistinctAutorNames(); }
+	public java.util.List<LlibreLlistaRow> obtenirAllLlibreLlistaRows()                               { return stats.obtenirAllLlibreLlistaRows(); }
+	public java.util.List<LlibreTagRow>    obtenirAllLlibreTagRows()                                  { return stats.obtenirAllLlibreTagRows(); }
+	public java.util.List<Object[]>        obtenirAutorsData()                                        { return stats.obtenirAutorsData(); }
+	public java.util.List<Object[]>        obtenirLlibreAutorData()                                   { return stats.obtenirLlibreAutorData(); }
+	public java.util.List<PrestecRow>      obtenirAllPrestecs()                                       { return stats.obtenirAllPrestecs(); }
+	public java.util.List<LecturaRow>      obtenirAllLecturesData()                                   { return stats.obtenirAllLecturesData(); }
+	public long obtenirDbSizeBytes()                                                                  { return stats.obtenirDbSizeBytes(); }
 
 	// ── Backup / restore / clearAll ───────────────────────────────────────────
 
-	public void backupToSQL(File file)                                                            { backup.backupToSQL(file); }
-	public void restoreFromSQL(File file)                                                         { backup.restoreFromSQL(file); }
-	@Override public void clearAll()                                                              { backup.clearAll(); }
+	public void copiaSegToSQL(File file)                                                            { backup.copiaSegToSQL(file); }
+	public void restaurarFromSQL(File file)                                                         { backup.restaurarFromSQL(file); }
+	@Override public void netejarAll()                                                              { backup.netejarAll(); }
 }

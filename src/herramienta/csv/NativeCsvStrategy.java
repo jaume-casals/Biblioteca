@@ -2,7 +2,7 @@ package herramienta.csv;
 
 import domini.Llibre;
 import herramienta.I18n;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import interficie.BibliotecaWriter;
 
 import java.util.Map;
@@ -22,14 +22,14 @@ public class NativeCsvStrategy implements CsvImportStrategy {
     private static final int COL_LLISTES = 9;
 
     @Override
-    public boolean canHandle(String headerRow) {
+    public boolean potHandle(String headerRow) {
         if (headerRow == null || headerRow.isBlank()) return false;
-        String[] cols = CsvUtils.parseLine(headerRow);
+        String[] cols = UtilitatsCsv.analitzarLine(headerRow);
         return cols.length >= 2;
     }
 
     @Override
-    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd)
+    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd)
             throws domini.BibliotecaException {
         if (c.length < 4) throw new domini.BibliotecaException(I18n.t("csv_row_too_short"));
         String isbnRaw = c[COL_ISBN].trim();
@@ -38,42 +38,42 @@ public class NativeCsvStrategy implements CsvImportStrategy {
                 || !digits.matches("[0-9]{9}[0-9X]|[0-9]{13}")) {
             throw new domini.BibliotecaException(I18n.t("csv_bad_isbn", isbnRaw));
         }
-        String normalizedIsbn = CsvUtils.parseIsbn(isbnRaw);
+        String normalizedIsbn = UtilitatsCsv.analitzarIsbn(isbnRaw);
         long isbn;
         try {
             isbn = Long.parseLong(normalizedIsbn);
         } catch (NumberFormatException e) {
             throw new domini.BibliotecaException(I18n.t("csv_bad_isbn", isbnRaw));
         }
-        if (CsvUtils.existsInLibrary(cd, isbn)) return false;
+        if (UtilitatsCsv.existsInLibrary(cd, isbn)) return false;
         int any = 0;
         try { any = Integer.parseInt(c[COL_ANY].trim()); } catch (NumberFormatException ignored) {}
-        Llibre l = LlibreValidator.checkLlibre(
+        Llibre l = ValidadorLlibre.comprovarLlibre(
             isbn, c[COL_NOM], c[COL_AUTOR],
             any,
             c.length > COL_DESCR ? c[COL_DESCR] : "",
-            c.length > COL_VAL ? CsvUtils.parseDoubleOrZero(c[COL_VAL]) : 0.0,
-            c.length > COL_PREU ? CsvUtils.parseDoubleOrZero(c[COL_PREU]) : 0.0,
-            c.length > COL_LLEGIT ? parseBool(c[COL_LLEGIT].trim()) : false,
+            c.length > COL_VAL ? UtilitatsCsv.analitzarDoubleOrZero(c[COL_VAL]) : 0.0,
+            c.length > COL_PREU ? UtilitatsCsv.analitzarDoubleOrZero(c[COL_PREU]) : 0.0,
+            c.length > COL_LLEGIT ? analitzarBool(c[COL_LLEGIT].trim()) : false,
             c.length > COL_PORTADA ? c[COL_PORTADA] : "");
-        cd.addLlibre(l);
+        cd.afegirLlibre(l);
         if (c.length > COL_LLISTES && !c[COL_LLISTES].isBlank()) {
             for (String entry : c[COL_LLISTES].split(";")) {
                 String[] parts = entry.split("\\|", 3);
                 if (parts.length < 1 || parts[0].isBlank()) continue;
                 String nomLlista = parts[0].trim();
-                double val = parts.length > 1 ? CsvUtils.parseDoubleOrZero(parts[1]) : 0.0;
-                boolean llegitLl = parts.length > 2 && parseBool(parts[2].trim());
-                domini.Llista llista = cd.getAllLlistes().stream()
-                    .filter(ll -> ll.getNom().equals(nomLlista)).findFirst().orElse(null);
-                if (llista == null) llista = cd.addLlista(nomLlista);
-                cd.addLlibreToLlista(isbn, llista.getId(), val, llegitLl);
+                double val = parts.length > 1 ? UtilitatsCsv.analitzarDoubleOrZero(parts[1]) : 0.0;
+                boolean llegitLl = parts.length > 2 && analitzarBool(parts[2].trim());
+                domini.Llista llista = cd.obtenirAllLlistes().stream()
+                    .filter(ll -> ll.obtenirNom().equals(nomLlista)).findFirst().orElse(null);
+                if (llista == null) llista = cd.afegirLlista(nomLlista);
+                cd.afegirLlibreToLlista(isbn, llista.obtenirId(), val, llegitLl);
             }
         }
         return true;
     }
 
-    private static boolean parseBool(String s) {
+    private static boolean analitzarBool(String s) {
         if (s == null || s.isBlank()) return false;
         return "true".equalsIgnoreCase(s) || "1".equals(s) || "yes".equalsIgnoreCase(s) || "y".equalsIgnoreCase(s);
     }

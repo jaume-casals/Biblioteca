@@ -16,15 +16,15 @@ final class LlibreMapper {
 
     static Llibre buildLlibreLight(ResultSet rs) throws SQLException {
         Llibre l = buildLlibreCore(rs, null);
-        l.setHasBlob(rs.getBoolean("has_blob"));
+        l.posarHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, false);
-        l.setHeavyFieldsLoaded(false);
+        l.posarHeavyFieldsLoaded(false);
         return l;
     }
 
     static Llibre buildLlibre(ResultSet rs) throws SQLException {
         Llibre l = buildLlibreCore(rs, rs.getString("descripcio"));
-        l.setHasBlob(rs.getBoolean("has_blob"));
+        l.posarHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, true);
         return l;
     }
@@ -46,25 +46,25 @@ final class LlibreMapper {
     /** @param includeNotes if true, read the {@code notes} column from the result set */
     private static void fillLlibreTail(Llibre l, ResultSet rs, boolean includeNotes) throws SQLException {
         if (includeNotes) {
-            l.setNotes(rs.getString("notes"));
+            l.posarNotes(rs.getString("notes"));
         }
-        l.setPagines(rs.getInt("pagines"));
-        l.setPaginesLlegides(rs.getInt("pagines_llegides"));
-        l.setEditorial(rs.getString("editorial"));
-        l.setSerie(rs.getString("serie"));
-        l.setVolum(rs.getInt("volum"));
-        l.setDataCompra(rs.getString("data_compra"));
-        l.setDataLectura(rs.getString("data_lectura"));
-        l.setIdioma(rs.getString("idioma"));
-        l.setFormat(rs.getString("format"));
-        l.setDesitjat(rs.getBoolean("desitjat"));
-        l.setPaisOrigen(rs.getString("pais_origen"));
-        l.setEstat(rs.getString("estat"));
+        l.posarPagines(rs.getInt("pagines"));
+        l.posarPaginesLlegides(rs.getInt("pagines_llegides"));
+        l.posarEditorial(rs.getString("editorial"));
+        l.posarSerie(rs.getString("serie"));
+        l.posarVolum(rs.getInt("volum"));
+        l.posarDataCompra(rs.getString("data_compra"));
+        l.posarDataLectura(rs.getString("data_lectura"));
+        l.posarIdioma(rs.getString("idioma"));
+        l.posarFormat(rs.getString("format"));
+        l.posarDesitjat(rs.getBoolean("desitjat"));
+        l.posarPaisOrigen(rs.getString("pais_origen"));
+        l.posarEstat(rs.getString("estat"));
         int exemplars = rs.getInt("exemplars");
-        l.setExemplars(exemplars > 0 ? exemplars : 1);
-        l.setLlenguaOriginal(rs.getString("llengua_original"));
-        l.setNomCa(rs.getString("nom_ca"));
-        l.setNomEs(rs.getString("nom_es"));
-        l.setNomEn(rs.getString("nom_en"));
+        l.posarExemplars(exemplars > 0 ? exemplars : 1);
+        l.posarLlenguaOriginal(rs.getString("llengua_original"));
+        l.posarNomCa(rs.getString("nom_ca"));
+        l.posarNomEs(rs.getString("nom_es"));
+        l.posarNomEn(rs.getString("nom_en"));
     }
 }

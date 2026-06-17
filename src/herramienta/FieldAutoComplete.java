@@ -18,12 +18,12 @@ public class FieldAutoComplete {
      *  {@link #attach(JTextField, java.util.List, int)}. */
     public static final int MAX_SUGGESTIONS = 8;
 
-    public sealed interface Attachment permits FieldAutoCompletionAttachment {}
-    private static final class FieldAutoCompletionAttachment implements Attachment { }
+    public sealed interface Adjunts permits AdjuntsAutoCompletatCamp {}
+    private static final class AdjuntsAutoCompletatCamp implements Adjunts { }
 
-    public static Attachment attachReturning(JTextField field, List<String> suggestions) {
+    public static Adjunts adjuntarReturning(JTextField field, List<String> suggestions) {
         attach(field, suggestions);
-        return new FieldAutoCompletionAttachment();
+        return new AdjuntsAutoCompletatCamp();
     }
 
     public static void attach(JTextField field, List<String> suggestions) {

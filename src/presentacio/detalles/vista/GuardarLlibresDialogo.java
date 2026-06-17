@@ -29,7 +29,7 @@ import javax.swing.border.EmptyBorder;
 import herramienta.I18n;
 import herramienta.UITheme;
 import presentacio.FormFieldRegistry;
-import presentacio.FormFieldRegistry.Field;
+import presentacio.FormFieldRegistry.Camp;
 import presentacio.FormGridBuilder;
 
 public class GuardarLlibresDialogo extends JDialog {
@@ -118,32 +118,32 @@ public class GuardarLlibresDialogo extends JDialog {
 		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
 
 		FormFieldRegistry reg = new FormFieldRegistry()
-			.add(Field.text("textISBN",       "field_isbn",        10))
-			.add(Field.text("textNom",        "field_title",       10))
-			.add(Field.text("textAutor",      "field_author",      10))
-			.add(Field.text("textAny",        "field_year",        10))
-			.add(Field.text("textDescripcio", "field_description", 10))
-			.add(Field.text("textValoracio",  "field_rating",      10))
-			.add(Field.text("textPreu",       "field_price",       10))
-			.add(Field.text("textEditorial",  "field_publisher",   10))
-			.add(Field.text("textSerie",      "field_series",      10))
-			.add(Field.text("textVolum",      "field_volume",      10))
-			.add(Field.text("textDataCompra", "field_purchased",   10))
-			.add(Field.text("textDataLectura","field_read_on",     10))
-			.add(Field.text("textIdioma",     "field_language",    10))
-			.add(Field.combo("comboFormat",   "field_format",      null, 0))
-			.add(Field.check("chckDesitjat",  null,                "tip_desitjat"))
-			.add(Field.check("chckLlegit",    null,                null))
-			.add(Field.text("textPortada",    "col_cover",         10))
-			.add(Field.text("textPaisOrigen", "field_country",     10))
-			.add(Field.combo("comboEstat",    "field_estat",       null, 0))
-			.add(Field.text("textExemplars",  "field_exemplars",   10))
-			.add(Field.text("textNomCa",      "field_title_ca",    10))
-			.add(Field.text("textNomEs",      "field_title_es",    10))
-			.add(Field.text("textNomEn",      "field_title_en",    10))
+			.add(Camp.text("textISBN",       "field_isbn",        10))
+			.add(Camp.text("textNom",        "field_title",       10))
+			.add(Camp.text("textAutor",      "field_author",      10))
+			.add(Camp.text("textAny",        "field_year",        10))
+			.add(Camp.text("textDescripcio", "field_description", 10))
+			.add(Camp.text("textValoracio",  "field_rating",      10))
+			.add(Camp.text("textPreu",       "field_price",       10))
+			.add(Camp.text("textEditorial",  "field_publisher",   10))
+			.add(Camp.text("textSerie",      "field_series",      10))
+			.add(Camp.text("textVolum",      "field_volume",      10))
+			.add(Camp.text("textDataCompra", "field_purchased",   10))
+			.add(Camp.text("textDataLectura","field_read_on",     10))
+			.add(Camp.text("textIdioma",     "field_language",    10))
+			.add(Camp.combo("comboFormat",   "field_format",      null, 0))
+			.add(Camp.check("chckDesitjat",  null,                "tip_desitjat"))
+			.add(Camp.check("chckLlegit",    null,                null))
+			.add(Camp.text("textPortada",    "col_cover",         10))
+			.add(Camp.text("textPaisOrigen", "field_country",     10))
+			.add(Camp.combo("comboEstat",    "field_estat",       null, 0))
+			.add(Camp.text("textExemplars",  "field_exemplars",   10))
+			.add(Camp.text("textNomCa",      "field_title_ca",    10))
+			.add(Camp.text("textNomEs",      "field_title_es",    10))
+			.add(Camp.text("textNomEn",      "field_title_en",    10))
 			.build();
 
-		for (Field f : reg.specsOfKind(FormFieldRegistry.Kind.TEXT)) {
+		for (Camp f : reg.specsOfKind(FormFieldRegistry.Tipus.TEXT)) {
 			UIComponents.styleField(reg.textField(f.key()));
 		}
 
@@ -179,10 +179,10 @@ public class GuardarLlibresDialogo extends JDialog {
 		comboEstat.setBackground(UITheme.palette().bgMain());
 		comboEstat.setForeground(UITheme.palette().textDark());
 		comboEstat.setFont(UITheme.fontBase());
-		chckDesitjat   = reg.checkBox("chckDesitjat");
+		chckDesitjat   = reg.comprovarBox("chckDesitjat");
 		chckDesitjat.setBackground(UITheme.palette().bgPanel());
 		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);
-		chckLlegit     = reg.checkBox("chckLlegit");
+		chckLlegit     = reg.comprovarBox("chckLlegit");
 		chckLlegit.setBackground(UITheme.palette().bgPanel());
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -193,30 +193,30 @@ public class GuardarLlibresDialogo extends JDialog {
 		textNotes.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 
 		FormGridBuilder builder = FormGridBuilder.columnsOf(grid);
-		builder.addField(I18n.t("field_isbn"), textISBN);
-		builder.addField(I18n.t("field_title"), textNom);
-		builder.addField(I18n.t("field_author"), textAutor);
-		builder.addField(I18n.t("field_year"), textAny);
-		builder.addField(I18n.t("field_description"), textDescripcio);
-		builder.addField(I18n.t("field_rating"), textValoracio);
-		builder.addField(I18n.t("field_price"), textPreu);
-		builder.addField(I18n.t("field_publisher"), textEditorial);
-		builder.addField(I18n.t("field_series"), textSerie);
-		builder.addField(I18n.t("field_volume"), textVolum);
-		builder.addField(I18n.t("field_purchased"), textDataCompra);
-		builder.addField(I18n.t("field_read_on"), textDataLectura);
-		builder.addField(I18n.t("field_language"), textIdioma);
-		builder.addCombo(I18n.t("field_format"), comboFormat);
-		builder.addCheck(I18n.t("field_wishlist"), chckDesitjat);
-		builder.addCheck(I18n.t("field_read"), chckLlegit);
-		builder.addRaw(I18n.t("field_notes"), new javax.swing.JScrollPane(textNotes));
-		builder.addField(I18n.t("col_cover"), textPortada);
-		builder.addField(I18n.t("field_country"), textPaisOrigen);
-		builder.addCombo(I18n.t("field_estat"), comboEstat);
-		builder.addField(I18n.t("field_exemplars"), textExemplars);
-		builder.addField(I18n.t("field_title_ca"), textNomCa);
-		builder.addField(I18n.t("field_title_es"), textNomEs);
-		builder.addField(I18n.t("field_title_en"), textNomEn);
+		builder.afegirField(I18n.t("field_isbn"), textISBN);
+		builder.afegirField(I18n.t("field_title"), textNom);
+		builder.afegirField(I18n.t("field_author"), textAutor);
+		builder.afegirField(I18n.t("field_year"), textAny);
+		builder.afegirField(I18n.t("field_description"), textDescripcio);
+		builder.afegirField(I18n.t("field_rating"), textValoracio);
+		builder.afegirField(I18n.t("field_price"), textPreu);
+		builder.afegirField(I18n.t("field_publisher"), textEditorial);
+		builder.afegirField(I18n.t("field_series"), textSerie);
+		builder.afegirField(I18n.t("field_volume"), textVolum);
+		builder.afegirField(I18n.t("field_purchased"), textDataCompra);
+		builder.afegirField(I18n.t("field_read_on"), textDataLectura);
+		builder.afegirField(I18n.t("field_language"), textIdioma);
+		builder.afegirCombo(I18n.t("field_format"), comboFormat);
+		builder.afegirCheck(I18n.t("field_wishlist"), chckDesitjat);
+		builder.afegirCheck(I18n.t("field_read"), chckLlegit);
+		builder.afegirRaw(I18n.t("field_notes"), new javax.swing.JScrollPane(textNotes));
+		builder.afegirField(I18n.t("col_cover"), textPortada);
+		builder.afegirField(I18n.t("field_country"), textPaisOrigen);
+		builder.afegirCombo(I18n.t("field_estat"), comboEstat);
+		builder.afegirField(I18n.t("field_exemplars"), textExemplars);
+		builder.afegirField(I18n.t("field_title_ca"), textNomCa);
+		builder.afegirField(I18n.t("field_title_es"), textNomEs);
+		builder.afegirField(I18n.t("field_title_en"), textNomEn);
 
 		JScrollPane scroll = new JScrollPane(grid,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -226,14 +226,14 @@ public class GuardarLlibresDialogo extends JDialog {
 		add(scroll, BorderLayout.CENTER);
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int lastCols = 2;
+			private int ultimCols = 2;
 			@Override
 			public void componentResized(ComponentEvent e) {
 				int vpW = scroll.getViewport().getWidth();
 				if (vpW <= 0) return;
 				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != lastCols) {
-					lastCols = cols;
+				if (cols != ultimCols) {
+					ultimCols = cols;
 					((GridLayout) grid.getLayout()).setColumns(cols);
 					grid.revalidate();
 					grid.repaint();
@@ -263,33 +263,33 @@ public class GuardarLlibresDialogo extends JDialog {
 
 	// ── getters ───────────────────────────────────────────────────────────────
 
-	public JLabel        getLabelPreview()       { return labelPreview; }
-	public JProgressBar  getProgressBar()        { return progressBar; }
-	public JButton       getBtnGuardar()         { return btnGuardar; }
-	public JButton       getBtnSeleccionarImatge(){ return btnSeleccionarImatge; }
-	public JButton       getBtnCercaInternet()   { return btnCercaInternet; }
-	public JTextField    getTextISBN()           { return textISBN; }
-	public JTextField    getTextNom()            { return textNom; }
-	public JTextField    getTextAutor()          { return textAutor; }
-	public JTextField    getTextAny()            { return textAny; }
-	public JTextField    getTextDescripcio()     { return textDescripcio; }
-	public JTextField    getTextValoracio()      { return textValoracio; }
-	public JTextField    getTextPreu()           { return textPreu; }
-	public JTextField    getTextEditorial()      { return textEditorial; }
-	public JTextField    getTextSerie()          { return textSerie; }
-	public JTextField    getTextVolum()          { return textVolum; }
-	public JTextField    getTextDataCompra()     { return textDataCompra; }
-	public JTextField    getTextDataLectura()    { return textDataLectura; }
-	public JTextField    getTextIdioma()         { return textIdioma; }
-	public JComboBox<String> getComboFormat()    { return comboFormat; }
-	public JCheckBox     getChckDesitjat()       { return chckDesitjat; }
-	public JTextField    getTextPortada()        { return textPortada; }
-	public JCheckBox     getChckLlegit()         { return chckLlegit; }
-	public JTextArea     getTextNotes()          { return textNotes; }
-	public JTextField    getTextPaisOrigen()     { return textPaisOrigen; }
-	public JComboBox<String> getComboEstat()     { return comboEstat; }
-	public JTextField    getTextExemplars()      { return textExemplars; }
-	public JTextField    getTextNomCa()          { return textNomCa; }
-	public JTextField    getTextNomEs()          { return textNomEs; }
-	public JTextField    getTextNomEn()          { return textNomEn; }
+	public JLabel        obtenirLabelPreview()       { return labelPreview; }
+	public JProgressBar  obtenirProgressBar()        { return progressBar; }
+	public JButton       obtenirBtnGuardar()         { return btnGuardar; }
+	public JButton       obtenirBtnSeleccionarImatge(){ return btnSeleccionarImatge; }
+	public JButton       obtenirBtnCercaInternet()   { return btnCercaInternet; }
+	public JTextField    obtenirTextISBN()           { return textISBN; }
+	public JTextField    obtenirTextNom()            { return textNom; }
+	public JTextField    obtenirTextAutor()          { return textAutor; }
+	public JTextField    obtenirTextAny()            { return textAny; }
+	public JTextField    obtenirTextDescripcio()     { return textDescripcio; }
+	public JTextField    obtenirTextValoracio()      { return textValoracio; }
+	public JTextField    obtenirTextPreu()           { return textPreu; }
+	public JTextField    obtenirTextEditorial()      { return textEditorial; }
+	public JTextField    obtenirTextSerie()          { return textSerie; }
+	public JTextField    obtenirTextVolum()          { return textVolum; }
+	public JTextField    obtenirTextDataCompra()     { return textDataCompra; }
+	public JTextField    obtenirTextDataLectura()    { return textDataLectura; }
+	public JTextField    obtenirTextIdioma()         { return textIdioma; }
+	public JComboBox<String> obtenirComboFormat()    { return comboFormat; }
+	public JCheckBox     obtenirChckDesitjat()       { return chckDesitjat; }
+	public JTextField    obtenirTextPortada()        { return textPortada; }
+	public JCheckBox     obtenirChckLlegit()         { return chckLlegit; }
+	public JTextArea     obtenirTextNotes()          { return textNotes; }
+	public JTextField    obtenirTextPaisOrigen()     { return textPaisOrigen; }
+	public JComboBox<String> obtenirComboEstat()     { return comboEstat; }
+	public JTextField    obtenirTextExemplars()      { return textExemplars; }
+	public JTextField    obtenirTextNomCa()          { return textNomCa; }
+	public JTextField    obtenirTextNomEs()          { return textNomEs; }
+	public JTextField    obtenirTextNomEn()          { return textNomEn; }
 }

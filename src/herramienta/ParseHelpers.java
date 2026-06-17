@@ -25,7 +25,7 @@ public final class ParseHelpers {
 
     private ParseHelpers() {}
 
-    public static Long parseLongOrNull(String s) {
+    public static Long analitzarLongOrNull(String s) {
         if (s == null) return null;
         String t = s.trim();
         if (t.isEmpty()) return null;
@@ -33,7 +33,7 @@ public final class ParseHelpers {
         catch (NumberFormatException e) { return null; }
     }
 
-    public static Integer parseIntOrNull(String s) {
+    public static Integer analitzarIntOrNull(String s) {
         if (s == null) return null;
         String t = s.trim();
         if (t.isEmpty()) return null;
@@ -41,7 +41,7 @@ public final class ParseHelpers {
         catch (NumberFormatException e) { return null; }
     }
 
-    public static Double parseDoubleOrNull(String s) {
+    public static Double analitzarDoubleOrNull(String s) {
         if (s == null) return null;
         String t = s.trim();
         if (t.isEmpty()) return null;

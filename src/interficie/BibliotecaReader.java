@@ -6,12 +6,12 @@ import java.util.List;
 
 public interface BibliotecaReader extends BookReader, ShelfReader, TagReader, LoanReader {
 
-    byte[] getLlibreBlob(long isbn);
+    byte[] obtenirLlibreBlob(long isbn);
 
-    long getDbSizeBytes();
-    List<String> getDistinctValues(String column);
-    List<String> getDistinctAutorNames();
+    long obtenirDbSizeBytes();
+    List<String> obtenirDistinctValues(String column);
+    List<String> obtenirDistinctAutorNames();
 
     /** Loads notes/descripcio for a book returned by a light table query. */
-    default void loadHeavyFields(Llibre book) {}
+    default void carregarHeavyFields(Llibre book) {}
 }

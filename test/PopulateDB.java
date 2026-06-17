@@ -1,6 +1,6 @@
 import domini.ControladorDomini;
 import domini.Llibre;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -15,9 +15,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Fetches books from OpenLibrary and inserts them into the local database.
- * Run: java -cp lib/h2-2.3.232.jar:bin test.PopulateDB [max_books]
- * Default max: 2000
+ * Cerca llibres a OpenLibrary i els insereix a la base de dades local.
+ * Executa: java -cp lib/h2-2.3.232.jar:bin test.PopulateDB [max_books]
+ * Màxim per defecte: 2000
  */
 public class PopulateDB {
 
@@ -25,7 +25,7 @@ public class PopulateDB {
     private static final int READ_TIMEOUT    = 15_000;
     private static final int LIMIT_PER_QUERY = 100;
 
-    // Diverse search terms — each fetches up to 100 books
+    // Termes de cerca diversos — cada un obté fins a 100 llibres
     private static final String[] QUERIES = {
         "subject:fiction",        "subject:science",        "subject:history",
         "subject:philosophy",     "subject:biography",      "subject:mystery",
@@ -72,14 +72,14 @@ public class PopulateDB {
             "jdbc:h2:" + System.getProperty("user.home") + "/.biblioteca/biblioteca" +
             ";MODE=MySQL;NON_KEYWORDS=VALUE");
 
-        System.out.println("Connecting to database...");
+        System.out.println("Connectant a la base de dades...");
         ControladorDomini cd = ControladorDomini.getInstance();
         int before = cd.getSize();
-        System.out.println("Books currently in DB: " + before);
-        System.out.println("Target: +" + maxBooks + " new books\n");
+        System.out.println("Llibres actuals a la BD: " + before);
+        System.out.println("Objectiu: +" + maxBooks + " nous llibres\n");
 
         Set<Long> existingISBNs = new HashSet<>();
-        for (Llibre l : cd.getAllLlibres()) existingISBNs.add(l.getISBN());
+        for (Llibre l : cd.obtenirAllLlibres()) existingISBNs.add(l.obtenirISBN());
 
         int inserted = 0;
         int skipped  = 0;
@@ -89,43 +89,43 @@ public class PopulateDB {
         for (String q : QUERIES) {
             if (inserted >= maxBooks) break;
 
-            System.out.printf("  Querying: %s%n", q);
-            List<BookRecord> books = searchOpenLibrary(q, LIMIT_PER_QUERY);
-            System.out.printf("    → %d results%n", books.size());
+            System.out.printf("  Consultant: %s%n", q);
+            List<RegistreLlibre> books = cercarOpenLibrary(q, LIMIT_PER_QUERY);
+            System.out.printf("    → %d resultats%n", books.size());
 
-            for (BookRecord b : books) {
+            for (RegistreLlibre b : books) {
                 if (inserted >= maxBooks) break outer;
                 if (b.isbn == null || existingISBNs.contains(b.isbn)) { skipped++; continue; }
                 try {
-                    Llibre l = LlibreValidator.checkLlibre(
+                    Llibre l = ValidadorLlibre.comprovarLlibre(
                         b.isbn, b.title, b.author, b.year, b.subject,
                         null, null, false, "");
-                    cd.addLlibre(l);
+                    cd.afegirLlibre(l);
                     existingISBNs.add(b.isbn);
                     inserted++;
                     if (inserted % 50 == 0)
-                        System.out.printf("    [%d inserted so far]%n", inserted);
+                        System.out.printf("    [%d inserits fins ara]%n", inserted);
                 } catch (Exception e) {
                     errors++;
                 }
             }
 
-            // Polite delay between queries
+            // Pausa educada entre consultes
             Thread.sleep(500);
         }
 
         System.out.printf("%n══════════════════════════════════════%n");
-        System.out.printf("  Inserted : %d%n", inserted);
-        System.out.printf("  Skipped  : %d (duplicate/no ISBN)%n", skipped);
-        System.out.printf("  Errors   : %d%n", errors);
-        System.out.printf("  Total DB : %d%n", cd.getSize());
+        System.out.printf("  Inserits  : %d%n", inserted);
+        System.out.printf("  Omesos    : %d (duplicat/sense ISBN)%n", skipped);
+        System.out.printf("  Errors    : %d%n", errors);
+        System.out.printf("  Total BD  : %d%n", cd.getSize());
         System.out.printf("══════════════════════════════════════%n");
     }
 
-    // ── OpenLibrary search ───────────────────────────────────────────────────
+    // ── Cerca a OpenLibrary ────────────────────────────────────────────────────
 
-    private static List<BookRecord> searchOpenLibrary(String query, int limit) {
-        List<BookRecord> results = new ArrayList<>();
+    private static List<RegistreLlibre> cercarOpenLibrary(String query, int limit) {
+        List<RegistreLlibre> results = new ArrayList<>();
         try {
             String encoded = query.replace(" ", "+");
             String url = "https://openlibrary.org/search.json?q=" + encoded
@@ -134,20 +134,20 @@ public class PopulateDB {
             String json = fetch(url);
             if (json == null) return results;
 
-            // Extract docs array
+            // Extreu el vector docs
             int docsStart = json.indexOf("\"docs\"");
             if (docsStart < 0) return results;
             int arrStart = json.indexOf('[', docsStart);
             if (arrStart < 0) return results;
 
-            // Split into individual doc objects
+            // Divideix en objectes doc individuals
             List<String> docs = splitJsonArray(json, arrStart);
             for (String doc : docs) {
-                BookRecord b = parseDoc(doc);
+                RegistreLlibre b = analitzarDoc(doc);
                 if (b != null) results.add(b);
             }
         } catch (Exception e) {
-            System.out.println("    [fetch error: " + e.getMessage() + "]");
+            System.out.println("    [error de fetch: " + e.getMessage() + "]");
         }
         return results;
     }
@@ -174,7 +174,7 @@ public class PopulateDB {
         return items;
     }
 
-    private static BookRecord parseDoc(String doc) {
+    private static RegistreLlibre analitzarDoc(String doc) {
         String title  = extractString(doc, "title");
         String author = extractArrayFirst(doc, "author_name");
         String isbn13 = pickBestISBN(doc);
@@ -187,7 +187,7 @@ public class PopulateDB {
         }
 
         if (title == null || title.isBlank() || isbn13 == null) return null;
-        return new BookRecord(isbn13 == null ? null : parseLong(isbn13), title, author, year, subj);
+        return new RegistreLlibre(isbn13 == null ? null : parseLong(isbn13), title, author, year, subj);
     }
 
     private static String pickBestISBN(String doc) {
@@ -234,11 +234,11 @@ public class PopulateDB {
         return m.find() ? m.group(1) : null;
     }
 
-    // ── Data class ───────────────────────────────────────────────────────────
+    // ── Classe de dades ──────────────────────────────────────────────────────
 
-    static class BookRecord {
+    static class RegistreLlibre {
         Long isbn; String title, author, subject; Integer year;
-        BookRecord(Long isbn, String title, String author, Integer year, String subject) {
+        RegistreLlibre(Long isbn, String title, String author, Integer year, String subject) {
             this.isbn = isbn; this.title = title; this.author = author;
             this.year = year; this.subject = subject;
         }

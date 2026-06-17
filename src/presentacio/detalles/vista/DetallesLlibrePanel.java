@@ -127,9 +127,9 @@ public class DetallesLlibrePanel extends JDialog {
 		add(east, BorderLayout.EAST);
 
 		JTabbedPane tabbedPane = new JTabbedPane();
-		// The DetallesGeneralTab/DetallesNotesTab/DetallesAvancatTab thin
-		// facades were 9-line pass-throughs; inlined here per the tot.txt
-		// LOW finding (the delegation added no value).
+		// Les façanes DetallesGeneralTab/DetallesNotesTab/DetallesAvancatTab,
+		// de 9 línies cadascuna, eren simples passarel·les; s'han inlineat
+		// aquí segons el finding LOW de tot.txt (la delegació no aportava res).
 		tabbedPane.addTab(I18n.t("stats_tab_general"), buildGeneralTab());
 		tabbedPane.addTab(I18n.t("field_notes"), buildNotesTab());
 		tabbedPane.addTab(I18n.t("tab_advanced"), buildAdvancedTab());
@@ -149,7 +149,7 @@ public class DetallesLlibrePanel extends JDialog {
 			registry.textField("textNomCa"), registry.textField("textNomEs"),
 			registry.textField("textNomEn"),
 			registry.comboBox("comboFormat"), registry.comboBox("comboEstat"),
-			registry.checkBox("chckDesitjat"), registry.checkBox("chckLlegit"),
+			registry.comprovarBox("chckDesitjat"), registry.comprovarBox("chckLlegit"),
 			(JTextArea) registry.get("textNotes"));
 
 		setSize(800, 680);
@@ -160,26 +160,26 @@ public class DetallesLlibrePanel extends JDialog {
 		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
 
-		addFieldEntry(grid, "textISBN",            I18n.t("field_isbn"));
-		addFieldEntry(grid, "textNom",             I18n.t("field_title"));
-		addFieldEntry(grid, "textAutor",           I18n.t("field_author"));
-		addFieldEntry(grid, "textAny",             I18n.t("field_year"));
-		addFieldEntry(grid, "textDescripcio",      I18n.t("field_description"));
-		addFieldEntry(grid, "textValoracio",       I18n.t("field_rating"));
-		addFieldEntry(grid, "textPreu",            I18n.t("field_price"));
-		addFieldEntry(grid, "textEditorial",       I18n.t("field_publisher"));
-		addFieldEntry(grid, "textSerie",           I18n.t("field_series"));
-		addFieldEntry(grid, "textVolum",           I18n.t("field_volume"));
-		addFieldEntry(grid, "textIdioma",          I18n.t("field_language"));
-		addFieldEntry(grid, "textPaisOrigen",      I18n.t("field_country"));
-		addComboEntry(grid, "comboFormat",         I18n.t("field_format"),
+		afegirFieldEntry(grid, "textISBN",            I18n.t("field_isbn"));
+		afegirFieldEntry(grid, "textNom",             I18n.t("field_title"));
+		afegirFieldEntry(grid, "textAutor",           I18n.t("field_author"));
+		afegirFieldEntry(grid, "textAny",             I18n.t("field_year"));
+		afegirFieldEntry(grid, "textDescripcio",      I18n.t("field_description"));
+		afegirFieldEntry(grid, "textValoracio",       I18n.t("field_rating"));
+		afegirFieldEntry(grid, "textPreu",            I18n.t("field_price"));
+		afegirFieldEntry(grid, "textEditorial",       I18n.t("field_publisher"));
+		afegirFieldEntry(grid, "textSerie",           I18n.t("field_series"));
+		afegirFieldEntry(grid, "textVolum",           I18n.t("field_volume"));
+		afegirFieldEntry(grid, "textIdioma",          I18n.t("field_language"));
+		afegirFieldEntry(grid, "textPaisOrigen",      I18n.t("field_country"));
+		afegirComboEntry(grid, "comboFormat",         I18n.t("field_format"),
 				herramienta.FormatOptions.withBlank());
-		addComboEntry(grid, "comboEstat",          I18n.t("field_estat"),
+		afegirComboEntry(grid, "comboEstat",          I18n.t("field_estat"),
 				new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
-		addCheckEntry(grid, "chckDesitjat",        I18n.t("field_wishlist"),
+		afegirCheckEntry(grid, "chckDesitjat",        I18n.t("field_wishlist"),
 				I18n.t("tip_desitjat"));
-		addCheckEntry(grid, "chckLlegit",          I18n.t("field_read"), null);
-		addFieldEntry(grid, "textPortada",         I18n.t("col_cover"));
+		afegirCheckEntry(grid, "chckLlegit",          I18n.t("field_read"), null);
+		afegirFieldEntry(grid, "textPortada",         I18n.t("col_cover"));
 
 		JPanel wrapper = new JPanel(new BorderLayout());
 		wrapper.setBackground(UITheme.palette().bgPanel());
@@ -192,14 +192,14 @@ public class DetallesLlibrePanel extends JDialog {
 		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int lastCols = 2;
+			private int ultimCols = 2;
 			@Override
 			public void componentResized(ComponentEvent e) {
 				int vpW = scroll.getViewport().getWidth();
 				if (vpW <= 0) return;
 				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != lastCols) {
-					lastCols = cols;
+				if (cols != ultimCols) {
+					ultimCols = cols;
 					((GridLayout) grid.getLayout()).setColumns(cols);
 					grid.revalidate();
 					grid.repaint();
@@ -241,15 +241,15 @@ public class DetallesLlibrePanel extends JDialog {
 		grid.setBackground(UITheme.palette().bgPanel());
 		grid.setBorder(new EmptyBorder(8, 8, 4, 4));
 
-		addFieldEntry(grid, "textDataCompra",      I18n.t("field_purchased"));
-		addFieldEntry(grid, "textDataLectura",     I18n.t("field_read_on"));
-		addFieldEntry(grid, "textExemplars",       I18n.t("field_exemplars"));
-		addFieldEntry(grid, "textLlenguaOriginal", I18n.t("field_llengua_original"));
-		addFieldEntry(grid, "textPagines",         I18n.t("field_pages"));
-		addFieldEntry(grid, "textPaginesLlegides", I18n.t("field_pages_read"));
-		addFieldEntry(grid, "textNomCa",           I18n.t("field_title_ca"));
-		addFieldEntry(grid, "textNomEs",           I18n.t("field_title_es"));
-		addFieldEntry(grid, "textNomEn",           I18n.t("field_title_en"));
+		afegirFieldEntry(grid, "textDataCompra",      I18n.t("field_purchased"));
+		afegirFieldEntry(grid, "textDataLectura",     I18n.t("field_read_on"));
+		afegirFieldEntry(grid, "textExemplars",       I18n.t("field_exemplars"));
+		afegirFieldEntry(grid, "textLlenguaOriginal", I18n.t("field_llengua_original"));
+		afegirFieldEntry(grid, "textPagines",         I18n.t("field_pages"));
+		afegirFieldEntry(grid, "textPaginesLlegides", I18n.t("field_pages_read"));
+		afegirFieldEntry(grid, "textNomCa",           I18n.t("field_title_ca"));
+		afegirFieldEntry(grid, "textNomEs",           I18n.t("field_title_es"));
+		afegirFieldEntry(grid, "textNomEn",           I18n.t("field_title_en"));
 
 		JPanel wrapper = new JPanel(new BorderLayout());
 		wrapper.setBackground(UITheme.palette().bgPanel());
@@ -262,14 +262,14 @@ public class DetallesLlibrePanel extends JDialog {
 		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 
 		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int lastCols = 2;
+			private int ultimCols = 2;
 			@Override
 			public void componentResized(ComponentEvent e) {
 				int vpW = scroll.getViewport().getWidth();
 				if (vpW <= 0) return;
 				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != lastCols) {
-					lastCols = cols;
+				if (cols != ultimCols) {
+					ultimCols = cols;
 					((GridLayout) grid.getLayout()).setColumns(cols);
 					grid.revalidate();
 					grid.repaint();
@@ -280,7 +280,7 @@ public class DetallesLlibrePanel extends JDialog {
 		return scroll;
 	}
 
-	JTextField addFieldEntry(JPanel grid, String key, String label) {
+	JTextField afegirFieldEntry(JPanel grid, String key, String label) {
 		JPanel entry = entryPanel();
 		JLabel lbl = makeLabel(label);
 		entry.add(lbl, BorderLayout.WEST);
@@ -288,12 +288,13 @@ public class DetallesLlibrePanel extends JDialog {
 		field.setEnabled(false);
 		field.setColumns(10);
 		UIComponents.styleField(field);
-		// Link the label to the field for screen readers and keyboard
-		// navigation. The previous implementation also stored the
-		// pair in a FormFieldRegistry, but no caller ever queried
-		// the registry (see tot.txt MEDIUM finding) — the storage
-		// was dead. The linkLabel call has visible behavior on its
-		// own, so keep it.
+		// Enllaça l'etiqueta al camp per a lectors de pantalla i
+		// navegació amb teclat. La implementació anterior també
+		// desava la parella a un FormFieldRegistry, però cap
+		// consumidor no el consultava mai (veure finding MEDIUM
+		// de tot.txt) — l'emmagatzematge era mort. La crida a
+		// setLabelFor té comportament visible per si sola, de
+		// manera que es conserva.
 		lbl.setLabelFor(field);
 		entry.add(field, BorderLayout.CENTER);
 		grid.add(entry);
@@ -301,7 +302,7 @@ public class DetallesLlibrePanel extends JDialog {
 		return field;
 	}
 
-	JComboBox<String> addComboEntry(JPanel grid, String key, String label, String[] items) {
+	JComboBox<String> afegirComboEntry(JPanel grid, String key, String label, String[] items) {
 		JPanel entry = entryPanel();
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JComboBox<String> combo = new JComboBox<>(items);
@@ -315,7 +316,7 @@ public class DetallesLlibrePanel extends JDialog {
 		return combo;
 	}
 
-	JCheckBox addCheckEntry(JPanel grid, String key, String label, String tooltip) {
+	JCheckBox afegirCheckEntry(JPanel grid, String key, String label, String tooltip) {
 		JPanel entry = entryPanel();
 		entry.add(makeLabel(label), BorderLayout.WEST);
 		JCheckBox chk = new JCheckBox("");
@@ -344,42 +345,42 @@ public class DetallesLlibrePanel extends JDialog {
 		return lbl;
 	}
 
-	public JLabel     getLabelIcono()          { return (JLabel) registry.get("labelIcono"); }
-	public JButton    getBtnSeleccionarImatge() { return registry.button("btnSeleccionarImatge"); }
-	public List<JComponent> getEditableInputs() { return editableInputs; }
-	public JButton    getBtnEliminar()          { return registry.button("btnEliminar"); }
-	public JButton    getBtnEditar()            { return registry.button("btnEditar"); }
-	public JTextField getTextISBN()             { return registry.textField("textISBN"); }
-	public JTextField getTextNom()              { return registry.textField("textNom"); }
-	public JTextField getTextAutor()            { return registry.textField("textAutor"); }
-	public JTextField getTextAny()              { return registry.textField("textAny"); }
-	public JTextField getTextDescripcio()       { return registry.textField("textDescripcio"); }
-	public JTextField getTextValoracio()        { return registry.textField("textValoracio"); }
-	public JTextField getTextPreu()             { return registry.textField("textPreu"); }
-	public JTextField getTextPortada()          { return registry.textField("textPortada"); }
-	public JTextField getTextEditorial()        { return registry.textField("textEditorial"); }
-	public JTextField getTextSerie()            { return registry.textField("textSerie"); }
-	public JTextField getTextVolum()            { return registry.textField("textVolum"); }
-	public JTextField getTextDataCompra()       { return registry.textField("textDataCompra"); }
-	public JTextField getTextDataLectura()      { return registry.textField("textDataLectura"); }
-	public JTextField getTextIdioma()           { return registry.textField("textIdioma"); }
-	public JTextField getTextPaisOrigen()       { return registry.textField("textPaisOrigen"); }
+	public JLabel     obtenirLabelIcono()          { return (JLabel) registry.get("labelIcono"); }
+	public JButton    obtenirBtnSeleccionarImatge() { return registry.button("btnSeleccionarImatge"); }
+	public List<JComponent> obtenirEditableInputs() { return editableInputs; }
+	public JButton    obtenirBtnEliminar()          { return registry.button("btnEliminar"); }
+	public JButton    obtenirBtnEditar()            { return registry.button("btnEditar"); }
+	public JTextField obtenirTextISBN()             { return registry.textField("textISBN"); }
+	public JTextField obtenirTextNom()              { return registry.textField("textNom"); }
+	public JTextField obtenirTextAutor()            { return registry.textField("textAutor"); }
+	public JTextField obtenirTextAny()              { return registry.textField("textAny"); }
+	public JTextField obtenirTextDescripcio()       { return registry.textField("textDescripcio"); }
+	public JTextField obtenirTextValoracio()        { return registry.textField("textValoracio"); }
+	public JTextField obtenirTextPreu()             { return registry.textField("textPreu"); }
+	public JTextField obtenirTextPortada()          { return registry.textField("textPortada"); }
+	public JTextField obtenirTextEditorial()        { return registry.textField("textEditorial"); }
+	public JTextField obtenirTextSerie()            { return registry.textField("textSerie"); }
+	public JTextField obtenirTextVolum()            { return registry.textField("textVolum"); }
+	public JTextField obtenirTextDataCompra()       { return registry.textField("textDataCompra"); }
+	public JTextField obtenirTextDataLectura()      { return registry.textField("textDataLectura"); }
+	public JTextField obtenirTextIdioma()           { return registry.textField("textIdioma"); }
+	public JTextField obtenirTextPaisOrigen()       { return registry.textField("textPaisOrigen"); }
 	@SuppressWarnings("unchecked")
-	public JComboBox<String> getComboFormat()   { return (JComboBox<String>) registry.comboBox("comboFormat"); }
+	public JComboBox<String> obtenirComboFormat()   { return (JComboBox<String>) registry.comboBox("comboFormat"); }
 	@SuppressWarnings("unchecked")
-	public JComboBox<String> getComboEstat()    { return (JComboBox<String>) registry.comboBox("comboEstat"); }
-	public JTextField getTextExemplars()        { return registry.textField("textExemplars"); }
-	public JTextField getTextLlenguaOriginal()  { return registry.textField("textLlenguaOriginal"); }
-	public JCheckBox  getChckDesitjat()         { return registry.checkBox("chckDesitjat"); }
-	public JTextField getTextPagines()          { return registry.textField("textPagines"); }
-	public JTextField getTextPaginesLlegides()  { return registry.textField("textPaginesLlegides"); }
-	public JTextField getTextNomCa()            { return registry.textField("textNomCa"); }
-	public JTextField getTextNomEs()            { return registry.textField("textNomEs"); }
-	public JTextField getTextNomEn()            { return registry.textField("textNomEn"); }
-	public JCheckBox  getChckLlegit()           { return registry.checkBox("chckLlegit"); }
-	public JTextArea  getTextNotes()            { return (JTextArea) registry.get("textNotes"); }
-	public JButton    getBtnGestioLlistes()      { return registry.button("btnGestioLlistes"); }
-	public JButton    getBtnGestioTags()         { return registry.button("btnGestioTags"); }
-	public JButton    getBtnHistorialPrestecs()  { return registry.button("btnHistorialPrestecs"); }
-	public JButton    getBtnImprimir()           { return registry.button("btnImprimir"); }
+	public JComboBox<String> obtenirComboEstat()    { return (JComboBox<String>) registry.comboBox("comboEstat"); }
+	public JTextField obtenirTextExemplars()        { return registry.textField("textExemplars"); }
+	public JTextField obtenirTextLlenguaOriginal()  { return registry.textField("textLlenguaOriginal"); }
+	public JCheckBox  obtenirChckDesitjat()         { return registry.comprovarBox("chckDesitjat"); }
+	public JTextField obtenirTextPagines()          { return registry.textField("textPagines"); }
+	public JTextField obtenirTextPaginesLlegides()  { return registry.textField("textPaginesLlegides"); }
+	public JTextField obtenirTextNomCa()            { return registry.textField("textNomCa"); }
+	public JTextField obtenirTextNomEs()            { return registry.textField("textNomEs"); }
+	public JTextField obtenirTextNomEn()            { return registry.textField("textNomEn"); }
+	public JCheckBox  obtenirChckLlegit()           { return registry.comprovarBox("chckLlegit"); }
+	public JTextArea  obtenirTextNotes()            { return (JTextArea) registry.get("textNotes"); }
+	public JButton    obtenirBtnGestioLlistes()      { return registry.button("btnGestioLlistes"); }
+	public JButton    obtenirBtnGestioTags()         { return registry.button("btnGestioTags"); }
+	public JButton    obtenirBtnHistorialPrestecs()  { return registry.button("btnHistorialPrestecs"); }
+	public JButton    obtenirBtnImprimir()           { return registry.button("btnImprimir"); }
 }

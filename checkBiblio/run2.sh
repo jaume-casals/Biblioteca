@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Compile and run StressTest from the project root.
-# Runs all steps; prints a consolidated error summary at the end.
-# Usage:
+# Compila i executa StressTest des de l'arrel del projecte.
+# Executa tots els passos; imprimeix un resum d'errors consolidat al final.
+# Ús:
 #   ./checkBiblio/run2.sh
 #   STRESS_EXTREME=1 ./checkBiblio/run2.sh
 #   STRESS_TIMEOUT=900 STRESS_THREADS=80 ./checkBiblio/run2.sh
@@ -15,14 +15,14 @@ WATCHDOG_PID=
 for arg in "$@"; do
     case "$arg" in
         -h|--help)
-            echo "Usage: $0 [StressTest args...]"
-            echo "  STRESS_EXTREME=1     extreme mode (default threads 100, timeout 1800s)"
-            echo "  STRESS_TIMEOUT=N     watchdog seconds (default 600, 1800 in extreme)"
-            echo "  STRESS_THREADS=N     worker threads (default 50, 100 in extreme)"
-            echo "  STRESS_INSTANCES=N   in extreme: spawn N child JVMs (default 3)"
-            echo "  STRESS_SOAK=N        in extreme: background DB activity for N seconds (0=off)"
-            echo "  STRESS_FUZZ=N        in extreme: random strings per dialog in fuzz phase (default 25)"
-            echo "  STRESS_MEMPROBE=0|1  in extreme: heap-growth probe (default 1)"
+            echo "Ús: $0 [StressTest args...]"
+            echo "  STRESS_EXTREME=1     mode extrem (per defecte threads 100, timeout 1800s)"
+            echo "  STRESS_TIMEOUT=N     segons del watchdog (per defecte 600, 1800 en extrem)"
+            echo "  STRESS_THREADS=N     fils de treball (per defecte 50, 100 en extrem)"
+            echo "  STRESS_INSTANCES=N   en extrem: llança N JVMs fills (per defecte 3)"
+            echo "  STRESS_SOAK=N        en extrem: activitat de BD en segon pla durant N segons (0=off)"
+            echo "  STRESS_FUZZ=N        en extrem: cadenes aleatòries per diàleg a la fase de fuzz (per defecte 25)"
+            echo "  STRESS_MEMPROBE=0|1  en extrem: sondatge del creixement del heap (per defecte 1)"
             exit 0
             ;;
     esac
@@ -38,13 +38,13 @@ print_final_summary() {
 
     echo ""
     echo "════════════════════════════════════════════════════════"
-    echo "  FINAL SUMMARY"
+    echo "  RESUM FINAL"
     echo "════════════════════════════════════════════════════════"
 
     if [ ${#STEP_ERRORS[@]} -eq 0 ]; then
-        echo "  Steps: no failures recorded."
+        echo "  Passos: no s'han registrat fallades."
     else
-        echo "  Step failures (${#STEP_ERRORS[@]}):"
+        echo "  Fallades de pas (${#STEP_ERRORS[@]}):"
         local err
         for err in "${STEP_ERRORS[@]}"; do
             echo "    ✗ $err"
@@ -56,7 +56,7 @@ print_final_summary() {
             | tail -6 || true)
         if [ -n "$stress_totals" ]; then
             echo ""
-            echo "  StressTest totals:"
+            echo "  Totals de StressTest:"
             echo "$stress_totals" | sed 's/^/    /'
         fi
         fail_n=$(grep 'FAIL :' checkBiblio/stress_report.txt 2>/dev/null | tail -1 | sed 's/.*FAIL : //' | tr -d ' \r' || true)
@@ -66,16 +66,16 @@ print_final_summary() {
         stress_issues=$(grep -E '✗ FAIL:|! WARN:|FATAL:|APP LAUNCH ERROR' checkBiblio/stress_report.txt 2>/dev/null || true)
         if [ -n "$stress_issues" ]; then
             echo ""
-            echo "  StressTest issues (FAIL / WARN / FATAL):"
+            echo "  Problemes de StressTest (FAIL / WARN / FATAL):"
             echo "$stress_issues" | sed 's/^/    /'
         fi
     fi
 
     echo "════════════════════════════════════════════════════════"
     if [ "$FINAL_EXIT" -eq 0 ]; then
-        echo "  Result: PASS"
+        echo "  Resultat: PASS"
     else
-        echo "  Result: FAIL (see above)"
+        echo "  Resultat: FAIL (mira amunt)"
     fi
     echo "════════════════════════════════════════════════════════"
 }
@@ -89,12 +89,12 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-if ! command -v java &>/dev/null; then echo "ERROR: java not found in PATH" >&2; exit 1; fi
+if ! command -v java &>/dev/null; then echo "ERROR: java no es troba al PATH" >&2; exit 1; fi
 for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar; do
-    [ -f "$jar" ] || { echo "ERROR: missing $jar" >&2; exit 1; }
+    [ -f "$jar" ] || { echo "ERROR: manca $jar" >&2; exit 1; }
 done
 
-# Auto-start Xvfb if no display is available
+# Auto-inicia Xvfb si no hi ha cap pantalla disponible
 if [ -z "$DISPLAY" ]; then
     DISP=:99
     if [ -f /tmp/.X99-lock ]; then rm -f /tmp/.X99-lock; fi
@@ -103,19 +103,19 @@ if [ -z "$DISPLAY" ]; then
     export DISPLAY=$DISP
     sleep 1
     if ! kill -0 "$XVFB_PID" 2>/dev/null; then
-        echo "ERROR: Xvfb failed to start. Install xvfb or set DISPLAY." >&2
+        echo "ERROR: Xvfb no ha pogut iniciar. Instal·la xvfb o defineix DISPLAY." >&2
         exit 1
     fi
-    echo "Started Xvfb on $DISP (PID $XVFB_PID)"
+    echo "Xvfb iniciat a $DISP (PID $XVFB_PID)"
 fi
 
 if [ -n "$STRESS_EXTREME" ]; then
     TIMEOUT=${STRESS_TIMEOUT:-1800}
     STRESS_THREADS=${STRESS_THREADS:-100}
     STRESS_INSTANCES=${STRESS_INSTANCES:-3}
-    STRESS_SOAK=${STRESS_SOAK:-0}        # seconds; 0 = disabled
-    STRESS_FUZZ=${STRESS_FUZZ:-25}       # payloads per dialog in fuzz phase
-    STRESS_MEMPROBE=${STRESS_MEMPROBE:-1} # 0/1; default on
+    STRESS_SOAK=${STRESS_SOAK:-0}        # segons; 0 = desactivat
+    STRESS_FUZZ=${STRESS_FUZZ:-25}       # càrregues per diàleg a la fase de fuzz
+    STRESS_MEMPROBE=${STRESS_MEMPROBE:-1} # 0/1; per defecte activat
     STRESS_JAVA_OPTS="-Dbiblioteca.stress.extreme=true -Dbiblioteca.stress.threads=${STRESS_THREADS}"
     [ "$STRESS_INSTANCES" -gt 0 ] && STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.instances=${STRESS_INSTANCES}"
     [ "$STRESS_SOAK" -gt 0 ]      && STRESS_JAVA_OPTS="$STRESS_JAVA_OPTS -Dbiblioteca.stress.soak=${STRESS_SOAK}"
@@ -131,16 +131,16 @@ fi
 
 CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar"
 
-echo "Compiling main app..."
+echo "Compilant l'aplicació principal..."
 if ! make compile -s 2>&1; then
-    record_error "make compile failed"
+    record_error "make compile ha fallat"
 fi
 
 STRESS_COMPILED=0
 if [ "$FINAL_EXIT" -eq 0 ]; then
-    echo "Compiling StressTest..."
+    echo "Compilant StressTest..."
     if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/StressTest.java -d bin 2>&1; then
-        record_error "StressTest compile failed (javac)"
+        record_error "La compilació de StressTest ha fallat (javac)"
     else
         STRESS_COMPILED=1
     fi
@@ -149,7 +149,7 @@ fi
 if [ "$STRESS_COMPILED" -eq 1 ]; then
     rm -f checkBiblio/stress_report.txt
 
-    echo "Starting StressTest... (timeout: ${TIMEOUT}s)"
+    echo "Iniciant StressTest... (timeout: ${TIMEOUT}s)"
     if command -v setsid &>/dev/null; then
         setsid java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.StressTest "$@" &
     else
@@ -159,7 +159,7 @@ if [ "$STRESS_COMPILED" -eq 1 ]; then
 
     ( sleep "$TIMEOUT"
       echo "" >&2
-      echo "[TIMEOUT] StressTest exceeded ${TIMEOUT}s — killing PID $JAVA_PID" >&2
+      echo "[TIMEOUT] StressTest ha superat ${TIMEOUT}s — matant PID $JAVA_PID" >&2
       kill -- -"$JAVA_PID" 2>/dev/null || true
       kill    "$JAVA_PID"  2>/dev/null || true ) &
     WATCHDOG_PID=$!
@@ -170,10 +170,10 @@ if [ "$STRESS_COMPILED" -eq 1 ]; then
     wait "$WATCHDOG_PID" 2>/dev/null || true
 
     if [ "$EXIT_CODE" -ne 0 ]; then
-        record_error "StressTest exited with code $EXIT_CODE"
+        record_error "StressTest ha sortit amb codi $EXIT_CODE"
     fi
     if ! grep -q 'SUMMARY' checkBiblio/stress_report.txt 2>/dev/null; then
-        record_error "StressTest did not finish (timeout ${TIMEOUT}s or crash) — see checkBiblio/stress_report.txt"
+        record_error "StressTest no ha acabat (timeout ${TIMEOUT}s o fallada) — mira checkBiblio/stress_report.txt"
     fi
 fi
 

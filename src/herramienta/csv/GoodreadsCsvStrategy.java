@@ -1,7 +1,7 @@
 package herramienta.csv;
 
 import domini.Llibre;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import interficie.BibliotecaWriter;
 
 import java.util.Map;
@@ -11,63 +11,64 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
     @Override public String getName() { return "Goodreads"; }
 
     @Override
-    public boolean canHandle(String headerRow) {
+    public boolean potHandle(String headerRow) {
         if (headerRow == null || headerRow.isBlank()) return false;
-        String[] cols = CsvUtils.parseLine(headerRow);
-        // Goodreads exports typically have 30+ columns. Require both a unique Goodreads
-        // sentinel ("Book Id" — not "Book Id" anywhere else in our other strategies)
-        // and the "Exclusive Shelf" column used to derive the "llegit" flag.
+        String[] cols = UtilitatsCsv.analitzarLine(headerRow);
+        // Les exportacions de Goodreads solen tenir més de 30 columnes.
+        // Requerim tant un sentinella únic de Goodreads ("Book Id" — que
+        // no apareix en cap de les altres estratègies) com la columna
+        // "Exclusive Shelf" usada per derivar el flag "llegit".
         if (cols.length < 10) return false;
         if (!headerRow.contains("Book Id")) return false;
         if (!headerRow.contains("Exclusive Shelf")) return false;
-        // Guard against accidental false positives: Title is also required to extract
-        // a non-empty book name.
+        // Protecció contra falsos positius accidentals: Title també és
+        // necessari per extreure un nom de llibre no buit.
         if (!headerRow.contains("Title")) return false;
         return true;
     }
 
     @Override
-    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
-        String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
-        isbnRaw = CsvUtils.parseIsbn(isbnRaw);
+    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
+        String isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN13");
+        if (isbnRaw.isEmpty()) isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN");
+        isbnRaw = UtilitatsCsv.analitzarIsbn(isbnRaw);
         if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
         long isbn = Long.parseLong(isbnRaw);
-        if (CsvUtils.existsInLibrary(cd, isbn)) return false;
+        if (UtilitatsCsv.existsInLibrary(cd, isbn)) return false;
 
-        String nom       = CsvUtils.colVal(hMap, c, "Title");
-        String autor     = CsvUtils.colVal(hMap, c, "Author");
-        String additionalAuthors = CsvUtils.colVal(hMap, c, "Additional Authors");
+        String nom       = UtilitatsCsv.colVal(hMap, c, "Title");
+        String autor     = UtilitatsCsv.colVal(hMap, c, "Author");
+        String additionalAuthors = UtilitatsCsv.colVal(hMap, c, "Additional Authors");
         if (!additionalAuthors.isEmpty() && !autor.isEmpty()) autor = autor + ", " + additionalAuthors;
         else if (!additionalAuthors.isEmpty()) autor = additionalAuthors;
-        String editorial = CsvUtils.colVal(hMap, c, "Publisher");
-        String pagesStr  = CsvUtils.colVal(hMap, c, "Number of Pages");
-        int pagines = pagesStr.isEmpty() ? 0 : (int) CsvUtils.parseDoubleOrZero(pagesStr);
+        String editorial = UtilitatsCsv.colVal(hMap, c, "Publisher");
+        String pagesStr  = UtilitatsCsv.colVal(hMap, c, "Number of Pages");
+        int pagines = pagesStr.isEmpty() ? 0 : (int) UtilitatsCsv.analitzarDoubleOrZero(pagesStr);
         int any = 0;
-        String yearStr = CsvUtils.colVal(hMap, c, "Year Published");
-        if (yearStr.isEmpty()) yearStr = CsvUtils.colVal(hMap, c, "Original Publication Year");
+        String yearStr = UtilitatsCsv.colVal(hMap, c, "Year Published");
+        if (yearStr.isEmpty()) yearStr = UtilitatsCsv.colVal(hMap, c, "Original Publication Year");
         if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
-        double valoracio = CsvUtils.parseDoubleOrZero(CsvUtils.colVal(hMap, c, "My Rating")) * 2.0;
-        String shelf    = CsvUtils.colVal(hMap, c, "Exclusive Shelf");
+        double valoracio = UtilitatsCsv.analitzarDoubleOrZero(UtilitatsCsv.colVal(hMap, c, "My Rating")) * 2.0;
+        String shelf    = UtilitatsCsv.colVal(hMap, c, "Exclusive Shelf");
         boolean llegit  = "read".equalsIgnoreCase(shelf);
-        String notes    = CsvUtils.colVal(hMap, c, "My Review");
-        String privateNotes = CsvUtils.colVal(hMap, c, "Private Notes");
+        String notes    = UtilitatsCsv.colVal(hMap, c, "My Review");
+        String privateNotes = UtilitatsCsv.colVal(hMap, c, "Private Notes");
         if (!privateNotes.isEmpty()) notes = notes.isEmpty() ? privateNotes : notes + "\n" + privateNotes;
-        String dataLect = CsvUtils.colVal(hMap, c, "Date Read");
-        Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, "", valoracio, 0.0, llegit, "");
-        l.setEditorial(editorial);
-        l.setPagines(pagines);
-        l.setNotes(notes);
+        String dataLect = UtilitatsCsv.colVal(hMap, c, "Date Read");
+        Llibre l = ValidadorLlibre.comprovarLlibre(isbn, nom, autor, any, "", valoracio, 0.0, llegit, "");
+        l.posarEditorial(editorial);
+        l.posarPagines(pagines);
+        l.posarNotes(notes);
         if (!dataLect.isEmpty() && dataLect.matches("\\d{4}[/\\-]\\d{2}[/\\-]\\d{2}"))
-            l.setDataLectura(herramienta.DateUtils.normalizeDate(dataLect));
-        cd.addLlibre(l);
+            l.posarDataLectura(herramienta.UtilitatsData.normalizeDate(dataLect));
+        cd.afegirLlibre(l);
 
-        String bookshelves = CsvUtils.colVal(hMap, c, "Bookshelves");
+        String bookshelves = UtilitatsCsv.colVal(hMap, c, "Bookshelves");
         if (!bookshelves.isEmpty()) {
             java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : bookshelves.split(",")) {
-                domini.Llista llista = ShelvesHelper.findOrCreateShelf(cd, shelfCache, s.trim());
-                if (llista != null) cd.addLlibreToLlista(isbn, llista.getId(), valoracio, llegit);
+                domini.Llista llista = ShelvesHelper.cercarOrCreateShelf(cd, shelfCache, s.trim());
+                if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);
             }
         }
         return true;

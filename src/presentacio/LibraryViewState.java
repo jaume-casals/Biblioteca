@@ -14,7 +14,7 @@ import java.util.Set;
 final class LibraryViewState {
     static final int UNDO_MAX = 20;
 
-    final MostrarBibliotecaPanel vista;
+    final PanelMostrarBiblioteca vista;
     final BibliotecaWriter cd;
     final EnActualizarBBDD enActualizarBBDD;
 
@@ -25,7 +25,7 @@ final class LibraryViewState {
     boolean groupBySeries;
     final Deque<Llibre> undoBuffer = new ArrayDeque<>();
 
-    LibraryViewState(MostrarBibliotecaPanel vista, java.util.List<Llibre> biblio,
+    LibraryViewState(PanelMostrarBiblioteca vista, java.util.List<Llibre> biblio,
                      EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
         this.vista = vista;
         this.biblio = biblio;

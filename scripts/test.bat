@@ -17,30 +17,32 @@ del test_classes.txt
 
 set "OVERALL_RC=0"
 
-echo === Running BibliotecaTest (plain) ===
+echo === Executant BibliotecaTest (plain) ===
 java -cp "%CP%" BibliotecaTest
 if errorlevel 1 set "OVERALL_RC=1"
 
-REM Discover and run every JUnit 5 test class. The naming convention is that a
-REM test class is any *.java under test\ whose name ends in "Test" and that is
-REM NOT the plain-Java runner "BibliotecaTest". Each class gets its own H2
-REM in-memory DB so the @BeforeEach reset pattern in the existing tests works.
-REM `dir /s /b` returns absolute paths, and cmd.exe's `set X=!Y:*\test\=!`
-REM substring extraction is brittle, so the conversion is done in Python
-REM via scripts\_build_test_classes.py.
+REM Descobreix i executa cada classe de test de JUnit 5. La convenció de noms
+REM és que una classe de test és qualsevol *.java sota test\ el nom del qual
+REM acaba en "Test" i que NO és el runner plain-Java "BibliotecaTest". Cada
+REM classe obté la seva pròpia BD H2 en memòria perquè el patró de
+REM reinicialització @BeforeEach dels tests existents funcioni.
+REM `dir /s /b` retorna camins absoluts, i l'extracció de subcadenes
+REM `set X=!Y:*\test\=!` de cmd.exe és fràgil, així que la conversió es fa
+REM en Python via scripts\_build_test_classes.py.
 set "DB_COUNTER=0"
-REM Use a Python helper to enumerate JUnit 5 test classes. This avoids
-REM the brittle `set X=!Y:*\test\=!` substring extraction in cmd.exe
-REM (which behaves inconsistently when the path contains the literal
-REM substring \test\ multiple times or the path uses forward/back slashes).
+REM Usa un ajudant de Python per enumerar les classes de test de JUnit 5.
+REM Això evita l'extracció de subcadenes `set X=!Y:*\test\=!` fràgil de
+REM cmd.exe (que es comporta de manera inconsistent quan el camí conté la
+REM subcadena literal \test\ múltiples vegades o el camí usa barres
+REM normals/invertides).
 if exist test\_test_classes.txt del test\_test_classes.txt
 for /f "delims=" %%C in ('dir /s /b test\*.java ^| findstr /i "Test\.java$"') do (
   set "FNAME=%%~nC"
   if /i not "!FNAME!"=="BibliotecaTest" echo %%C>> test\_test_classes.txt
 )
-REM Convert absolute paths to FQ class names via Python. The directory
-REM separator is matched explicitly because os.sep is '/' on Windows but
-REM the `dir` output uses '\'.
+REM Converteix camins absoluts a noms de classe FQ via Python. El separador
+REM de directori es fa coincidir explícitament perquè os.sep és '/' a
+REM Windows però la sortida de `dir` usa '\'.
 if exist test\_test_classes.txt (
   python scripts\_build_test_classes.py 2>nul
   if errorlevel 1 python3 scripts\_build_test_classes.py 2>nul
@@ -50,7 +52,7 @@ for /f "usebackq delims=" %%L in ("test\_test_classes.txt") do (
   if not "!CLS!"=="" (
     set /a DB_COUNTER+=1
     set "DB_URL=jdbc:h2:mem:dyn_!DB_COUNTER!;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"
-    echo === Running !CLS! (JUnit 5) ===
+    echo === Executant !CLS! (JUnit 5) ===
     java -Dbiblioteca.test=true -Dbiblioteca.h2.url="!DB_URL!" -jar lib\junit-platform-console-standalone-1.11.4.jar execute --select-class=!CLS! --details=summary --classpath "%CP%"
     if errorlevel 1 set "OVERALL_RC=1"
   )

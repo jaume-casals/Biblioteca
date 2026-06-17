@@ -2,10 +2,10 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.Llista;
-import domini.SortSpec;
+import domini.EspecificacioOrdenacio;
 import domini.Tag;
 import herramienta.FiltreUtils;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import persistencia.ControladorPersistencia;
 
 import org.junit.jupiter.api.*;
@@ -40,27 +40,27 @@ class BibliotecaJUnit5Test {
     }
 
     @BeforeEach
-    void resetDb() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+    void reinicialitzarDb() {
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Llibre book(long isbn, String nom) {
-        return LlibreValidator.checkLlibre(isbn, nom, null, null, null, null, null, null, null);
+        return ValidadorLlibre.comprovarLlibre(isbn, nom, null, null, null, null, null, null, null);
     }
 
     private Llibre book(long isbn, String nom, String autor, Integer any) {
-        return LlibreValidator.checkLlibre(isbn, nom, autor, any, null, null, null, null, null);
+        return ValidadorLlibre.comprovarLlibre(isbn, nom, autor, any, null, null, null, null, null);
     }
 
     private void add(ControladorDomini cd, long isbn, String nom) throws Exception {
-        cd.addLlibre(book(isbn, nom));
+        cd.afegirLlibre(book(isbn, nom));
     }
 
     private void add(ControladorDomini cd, long isbn, String nom, String autor, Integer any) throws Exception {
-        cd.addLlibre(book(isbn, nom, autor, any));
+        cd.afegirLlibre(book(isbn, nom, autor, any));
     }
 
     // ── LlibreValidator ────────────────────────────────────────────────────────
@@ -68,15 +68,15 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Valid ISBN-13 accepted")
     void validIsbn13() {
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Title", null, null, null, null, null, null, null);
-        assertThat(l.getISBN()).isEqualTo(9780306406157L);
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Title", null, null, null, null, null, null, null);
+        assertThat(l.obtenirISBN()).isEqualTo(9780306406157L);
     }
 
     @Test
     @DisplayName("Valid ISBN-10 accepted")
     void validIsbn10() {
-        Llibre l = LlibreValidator.checkLlibre(8420413739L, "Title", null, null, null, null, null, null, null);
-        assertThat(l.getISBN()).isEqualTo(8420413739L);
+        Llibre l = ValidadorLlibre.comprovarLlibre(8420413739L, "Title", null, null, null, null, null, null, null);
+        assertThat(l.obtenirISBN()).isEqualTo(8420413739L);
     }
 
     @ParameterizedTest(name = "ISBN {0} rejected")
@@ -84,7 +84,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("Invalid ISBN lengths rejected")
     void invalidIsbnLengths(long isbn) {
         assertThatThrownBy(() ->
-            LlibreValidator.checkLlibre(isbn, "X", null, null, null, null, null, null, null))
+            ValidadorLlibre.comprovarLlibre(isbn, "X", null, null, null, null, null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -92,7 +92,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("Null ISBN rejected")
     void nullIsbnRejected() {
         assertThatThrownBy(() ->
-            LlibreValidator.checkLlibre(null, "X", null, null, null, null, null, null, null))
+            ValidadorLlibre.comprovarLlibre(null, "X", null, null, null, null, null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -101,7 +101,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("Blank/empty nom rejected")
     void blankNomRejected(String nom) {
         assertThatThrownBy(() ->
-            LlibreValidator.checkLlibre(9780306406157L, nom, null, null, null, null, null, null, null))
+            ValidadorLlibre.comprovarLlibre(9780306406157L, nom, null, null, null, null, null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -110,7 +110,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("Out-of-range valoració rejected")
     void outOfRangeValoracio(double v) {
         assertThatThrownBy(() ->
-            LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, v, null, null, null))
+            ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, v, null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -119,18 +119,18 @@ class BibliotecaJUnit5Test {
     @DisplayName("Boundary valoració values accepted")
     void boundaryValoracioAccepted(double v) {
         assertThatNoException().isThrownBy(() ->
-            LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, v, null, null, null));
+            ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, v, null, null, null));
     }
 
     @Test
     @DisplayName("Default field values applied when nulls passed")
     void defaultFieldValues() {
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Test", null, null, null, null, null, null, null);
-        assertThat(l.getAutor()).isEqualTo("");
-        assertThat(l.getAny()).isEqualTo(0);
-        assertThat(l.getValoracio()).isEqualTo(0.0);
-        assertThat(l.getPreu()).isEqualTo(0.0);
-        assertThat(l.getLlegit()).isFalse();
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Test", null, null, null, null, null, null, null);
+        assertThat(l.obtenirAutor()).isEqualTo("");
+        assertThat(l.obtenirAny()).isEqualTo(0);
+        assertThat(l.obtenirValoracio()).isEqualTo(0.0);
+        assertThat(l.obtenirPreu()).isEqualTo(0.0);
+        assertThat(l.obtenirLlegit()).isFalse();
     }
 
     // ── FiltreUtils ──────────────────────────────────────────────────────────
@@ -165,27 +165,27 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("LlibreFilter: copy() preserves all fields")
     void llibreFilterCopyPreservesFields() {
-        LlibreFilter f = domini.LlibreFilterBuilder.of()
+        LlibreFilter f = domini.ConstructorFiltreLlibre.of()
             .isbn(978L).nom("test").autor("author").anyMin(1900).llegit(true)
             .sort("nom", false).build();
         LlibreFilter c = f.copy();
-        assertThat(c.getIsbn()).isEqualTo(978L);
-        assertThat(c.getNom()).isEqualTo("test");
-        assertThat(c.getAutor()).isEqualTo("author");
-        assertThat(c.getAnyMin()).isEqualTo(1900);
-        assertThat(c.getLlegit()).isTrue();
-        assertThat(c.getSort().column()).isEqualTo("nom");
-        assertThat(c.getSort().ascending()).isFalse();
+        assertThat(c.obtenirIsbn()).isEqualTo(978L);
+        assertThat(c.obtenirNom()).isEqualTo("test");
+        assertThat(c.obtenirAutor()).isEqualTo("author");
+        assertThat(c.obtenirAnyMin()).isEqualTo(1900);
+        assertThat(c.obtenirLlegit()).isTrue();
+        assertThat(c.obtenirSort().column()).isEqualTo("nom");
+        assertThat(c.obtenirSort().ascending()).isFalse();
     }
 
     @Test
     @DisplayName("Add book: size increments and retrieval works")
-    void addBookIncreasesSize() throws Exception {
+    void afegirBookIncreasesSize() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
         assertThat(cd.getSize()).isEqualTo(1);
-        Llibre l = cd.getLlibre(9780306406157L);
-        assertThat(l.getNom()).isEqualTo("Dune");
+        Llibre l = cd.obtenirLlibre(9780306406157L);
+        assertThat(l.obtenirNom()).isEqualTo("Dune");
     }
 
     @Test
@@ -199,12 +199,12 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("Delete book removes it from library")
-    void deleteBookRemovesIt() throws Exception {
+    void eliminarBookRemovesIt() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        cd.deleteLlibre(9780306406157L);
+        cd.eliminarLlibre(9780306406157L);
         assertThat(cd.getSize()).isZero();
-        assertThatThrownBy(() -> cd.getLlibre(9780306406157L))
+        assertThatThrownBy(() -> cd.obtenirLlibre(9780306406157L))
             .isInstanceOf(Exception.class);
     }
 
@@ -215,16 +215,16 @@ class BibliotecaJUnit5Test {
         add(cd, 9780306406157L, "C");
         add(cd, 8420413739L, "A");
         add(cd, 9780141439518L, "B");
-        List<Llibre> all = cd.getAllLlibres();
-        assertThat(all).extracting(Llibre::getISBN)
+        List<Llibre> all = cd.obtenirAllLlibres();
+        assertThat(all).extracting(Llibre::obtenirISBN)
             .isSortedAccordingTo(Long::compareTo);
     }
 
     @Test
     @DisplayName("getLlibre throws for non-existent ISBN")
-    void getLlibreThrowsForMissing() {
+    void obtenirLlibreThrowsForMissing() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.getLlibre(1111111111111L))
+        assertThatThrownBy(() -> cd.obtenirLlibre(1111111111111L))
             .isInstanceOf(Exception.class);
     }
 
@@ -239,45 +239,45 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("updateLlibre persists nom and valoracio")
-    void updateLlibrePersists() throws Exception {
+    void actualitzarLlibrePersists() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Llibre updated = LlibreValidator.checkLlibre(9780306406157L, "Dune Messiah",
+        Llibre updated = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune Messiah",
             null, null, null, 9.0, null, null, null);
-        cd.updateLlibre(updated);
-        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune Messiah");
-        assertThat(cd.getLlibre(9780306406157L).getValoracio()).isEqualTo(9.0);
+        cd.actualitzarLlibre(updated);
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune Messiah");
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirValoracio()).isEqualTo(9.0);
     }
 
     // ── Domain: Shelves (Llistes) ────────────────────────────────────────────
 
     @Test
     @DisplayName("Create shelf: appears in shelf list")
-    void createShelfAppearsInList() throws Exception {
+    void crearShelfAppearsInList() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        cd.addLlista("Favorits");
-        assertThat(cd.getAllLlistes()).extracting(Llista::getNom).contains("Favorits");
+        cd.afegirLlista("Favorits");
+        assertThat(cd.obtenirAllLlistes()).extracting(Llista::obtenirNom).contains("Favorits");
     }
 
     @Test
     @DisplayName("Add book to shelf: count is 1")
-    void addBookToShelfCount() throws Exception {
+    void afegirBookToShelfCount() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Llista shelf = cd.addLlista("Sci-Fi");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 8.0, false);
-        assertThat(cd.getCountInLlista(shelf.getId())).isEqualTo(1);
+        Llista shelf = cd.afegirLlista("Sci-Fi");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 8.0, false);
+        assertThat(cd.obtenirCountInLlista(shelf.obtenirId())).isEqualTo(1);
     }
 
     @Test
     @DisplayName("Delete shelf cascades: no orphan rows, book survives")
-    void deleteShelfCascades() throws Exception {
+    void eliminarShelfCascades() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Llista shelf = cd.addLlista("Temp");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 7.0, false);
-        cd.deleteLlista(shelf);
-        assertThat(cd.getAllLlistes()).isEmpty();
+        Llista shelf = cd.afegirLlista("Temp");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 7.0, false);
+        cd.eliminarLlista(shelf);
+        assertThat(cd.obtenirAllLlistes()).isEmpty();
         assertThat(cd.getSize()).isEqualTo(1); // book still exists
     }
 
@@ -285,80 +285,80 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("Create tag and assign to book")
-    void createTagAndAssign() throws Exception {
+    void crearTagAndAssign() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Tag tag = cd.addTag("Sci-Fi");
-        cd.addLlibreToTag(9780306406157L, tag.getId());
-        assertThat(cd.getTagsForLlibre(9780306406157L))
-            .extracting(Tag::getNom).containsExactly("Sci-Fi");
+        Tag tag = cd.afegirTag("Sci-Fi");
+        cd.afegirLlibreToTag(9780306406157L, tag.obtenirId());
+        assertThat(cd.obtenirTagsForLlibre(9780306406157L))
+            .extracting(Tag::obtenirNom).containsExactly("Sci-Fi");
     }
 
     @Test
     @DisplayName("Filter by tag via aplicarFiltres")
-    void filterByTag() throws Exception {
+    void filtrarByTag() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
         add(cd, 8420413739L, "Other");
-        Tag tag = cd.addTag("Sci-Fi");
-        cd.addLlibreToTag(9780306406157L, tag.getId());
-        LlibreFilter ft = domini.LlibreFilterBuilder.of().tagId(tag.getId()).build();
+        Tag tag = cd.afegirTag("Sci-Fi");
+        cd.afegirLlibreToTag(9780306406157L, tag.obtenirId());
+        LlibreFilter ft = domini.ConstructorFiltreLlibre.of().tagId(tag.obtenirId()).build();
         List<Llibre> results = cd.aplicarFiltres(ft);
-        assertThat(results).extracting(Llibre::getNom).containsExactly("Dune");
+        assertThat(results).extracting(Llibre::obtenirNom).containsExactly("Dune");
     }
 
     @Test
     @DisplayName("Remove tag from book")
-    void removeTagFromBook() throws Exception {
+    void eliminarTagFromBook() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Tag tag = cd.addTag("Fantasy");
-        cd.addLlibreToTag(9780306406157L, tag.getId());
-        cd.removeLlibreFromTag(9780306406157L, tag.getId());
-        assertThat(cd.getTagsForLlibre(9780306406157L)).isEmpty();
+        Tag tag = cd.afegirTag("Fantasy");
+        cd.afegirLlibreToTag(9780306406157L, tag.obtenirId());
+        cd.eliminarLlibreFromTag(9780306406157L, tag.obtenirId());
+        assertThat(cd.obtenirTagsForLlibre(9780306406157L)).isEmpty();
     }
 
     // ── Domain: Filters ─────────────────────────────────────────────────────
 
     @Test
     @DisplayName("aplicarFiltres by nom returns matching books")
-    void filterByNom() throws Exception {
+    void filtrarByNom() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
         add(cd, 8420413739L, "Foundation", "Isaac Asimov", 1951);
-        LlibreFilter fn = domini.LlibreFilterBuilder.of().nom("dune").build();
+        LlibreFilter fn = domini.ConstructorFiltreLlibre.of().nom("dune").build();
         List<Llibre> results = cd.aplicarFiltres(fn);
-        assertThat(results).extracting(Llibre::getNom).containsExactly("Dune");
+        assertThat(results).extracting(Llibre::obtenirNom).containsExactly("Dune");
     }
 
     @Test
     @DisplayName("aplicarFiltres by year range")
-    void filterByYearRange() throws Exception {
+    void filtrarByYearRange() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Herbert", 1965);
         add(cd, 8420413739L, "Foundation", "Asimov", 1951);
-        LlibreFilter fy = domini.LlibreFilterBuilder.of().anyMin(1960).anyMax(1970).build();
+        LlibreFilter fy = domini.ConstructorFiltreLlibre.of().anyMin(1960).anyMax(1970).build();
         List<Llibre> results = cd.aplicarFiltres(fy);
-        assertThat(results).extracting(Llibre::getNom).containsExactly("Dune");
+        assertThat(results).extracting(Llibre::obtenirNom).containsExactly("Dune");
     }
 
     @Test
     @DisplayName("aplicarFiltres by autor")
-    void filterByAutor() throws Exception {
+    void filtrarByAutor() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
         add(cd, 8420413739L, "Foundation", "Isaac Asimov", 1951);
-        LlibreFilter fa = domini.LlibreFilterBuilder.of().autor("Asimov").build();
+        LlibreFilter fa = domini.ConstructorFiltreLlibre.of().autor("Asimov").build();
         List<Llibre> results = cd.aplicarFiltres(fa);
-        assertThat(results).extracting(Llibre::getNom).containsExactly("Foundation");
+        assertThat(results).extracting(Llibre::obtenirNom).containsExactly("Foundation");
     }
 
     @Test
     @DisplayName("aplicarFiltres with no match returns empty")
-    void filterNoMatch() throws Exception {
+    void filtrarNoMatch() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        LlibreFilter fne = domini.LlibreFilterBuilder.of().nom("NonExistent").build();
+        LlibreFilter fne = domini.ConstructorFiltreLlibre.of().nom("NonExistent").build();
         List<Llibre> results = cd.aplicarFiltres(fne);
         assertThat(results).isEmpty();
     }
@@ -371,63 +371,63 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
         cd.prestarLlibre(9780306406157L, "Alice");
-        Set<Long> loaned = cd.getLoanedISBNs();
+        Set<Long> loaned = cd.obtenirLoanedISBNs();
         assertThat(loaned).contains(9780306406157L);
         cd.retornarLlibre(9780306406157L);
-        assertThat(cd.getLoanedISBNs()).doesNotContain(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).doesNotContain(9780306406157L);
     }
 
     // ── Domain: Backup / Restore ─────────────────────────────────────────────
 
     @Test
     @DisplayName("Backup and restore preserves all books")
-    void backupRestorePreservesBooks() throws Exception {
+    void copiaSegRestorePreservesBooks() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
         add(cd, 8420413739L, "Foundation", "Isaac Asimov", 1951);
 
         File tmp = File.createTempFile("backup_junit5_", ".sql");
         tmp.deleteOnExit();
-        cd.backupToSQL(tmp);
+        cd.copiaSegToSQL(tmp);
 
-        cd.deleteLlibre(9780306406157L);
-        cd.deleteLlibre(8420413739L);
+        cd.eliminarLlibre(9780306406157L);
+        cd.eliminarLlibre(8420413739L);
         assertThat(cd.getSize()).isZero();
 
-        cd.restoreFromSQL(tmp);
+        cd.restaurarFromSQL(tmp);
         assertThat(cd.getSize()).isEqualTo(2);
-        assertThat(cd.getAllLlibres())
-            .extracting(Llibre::getNom)
+        assertThat(cd.obtenirAllLlibres())
+            .extracting(Llibre::obtenirNom)
             .containsExactlyInAnyOrder("Dune", "Foundation");
     }
 
     @Test
     @DisplayName("Backup preserves shelf membership")
-    void backupPreservesShelf() throws Exception {
+    void copiaSegPreservesShelf() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Llista shelf = cd.addLlista("Favorits");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 9.0, true);
+        Llista shelf = cd.afegirLlista("Favorits");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 9.0, true);
 
         File tmp = File.createTempFile("backup_shelf_", ".sql");
         tmp.deleteOnExit();
-        cd.backupToSQL(tmp);
+        cd.copiaSegToSQL(tmp);
 
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
         cd = ControladorDomini.getInstance();
-        cd.restoreFromSQL(tmp);
+        cd.restaurarFromSQL(tmp);
 
-        assertThat(cd.getAllLlistes()).extracting(Llista::getNom).contains("Favorits");
-        Llista restored = cd.getAllLlistes().get(0);
-        assertThat(cd.getCountInLlista(restored.getId())).isEqualTo(1);
+        assertThat(cd.obtenirAllLlistes()).extracting(Llista::obtenirNom).contains("Favorits");
+        Llista restored = cd.obtenirAllLlistes().get(0);
+        assertThat(cd.obtenirCountInLlista(restored.obtenirId())).isEqualTo(1);
     }
 
     // ── executeSQLFile: defensive parser ─────────────────────────────────────
 
     @Test
     @DisplayName("executeSQLFile: ignores DROP TABLE / USE / ALTER in tampered file")
-    void executeSQLFileDropsAreIgnored() throws Exception {
+    void executarSQLFileDropsAreIgnored() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
         File tampered = File.createTempFile("sql_tamper_", ".sql");
@@ -438,29 +438,29 @@ class BibliotecaJUnit5Test {
             w.println("ALTER TABLE llibre DROP COLUMN isbn;");
             w.println("TRUNCATE llibre;");
         }
-        ControladorPersistencia.getInstance().executeSQLFile(tampered);
+        ControladorPersistencia.getInstance().executarSQLFile(tampered);
         // Books survive
         assertThat(cd.getSize()).isEqualTo(1);
-        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune");
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune");
     }
 
     @Test
     @DisplayName("Backup/restore round-trip preserves ';' in book notes (parser doesn't split mid-string)")
-    void backupRestorePreservesSemicolonInNotes() throws Exception {
+    void copiaSegRestorePreservesSemicolonInNotes() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        domini.Llibre book = LlibreValidator.checkLlibre(9780306406157L, "Semicolon book", null, null, null, null, null, null, null);
-        book.setNotes("first note; second note; third note");
-        cd.addLlibre(book);
+        domini.Llibre book = ValidadorLlibre.comprovarLlibre(9780306406157L, "Semicolon book", null, null, null, null, null, null, null);
+        book.posarNotes("first note; second note; third note");
+        cd.afegirLlibre(book);
 
         File tmp = File.createTempFile("sql_semi_roundtrip_", ".sql");
         tmp.deleteOnExit();
-        cd.backupToSQL(tmp);
+        cd.copiaSegToSQL(tmp);
 
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
         cd = ControladorDomini.getInstance();
-        cd.restoreFromSQL(tmp);
-        assertThat(cd.getLlibre(9780306406157L).getNotes())
+        cd.restaurarFromSQL(tmp);
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNotes())
             .isEqualTo("first note; second note; third note");
     }
 
@@ -511,7 +511,7 @@ class BibliotecaJUnit5Test {
     void recentlyAddedFewerThanLimit() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        assertThat(cd.getRecentlyAdded()).isNotEmpty();
+        assertThat(cd.obtenirRecentlyAdded()).isNotEmpty();
     }
 
     // ── Domain: Distinct values ───────────────────────────────────────────────
@@ -520,16 +520,16 @@ class BibliotecaJUnit5Test {
     @DisplayName("getDistinctValues returns unique editorials")
     void distinctEditorials() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre a = LlibreValidator.checkLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
-        a.setEditorial("Penguin");
-        Llibre b = LlibreValidator.checkLlibre(8420413739L, "B", null, null, null, null, null, null, null);
-        b.setEditorial("Penguin");
-        Llibre c = LlibreValidator.checkLlibre(9780141439518L, "C", null, null, null, null, null, null, null);
-        c.setEditorial("HarperCollins");
-        cd.addLlibre(a);
-        cd.addLlibre(b);
-        cd.addLlibre(c);
-        List<String> vals = cd.getDistinctValues("editorial");
+        Llibre a = ValidadorLlibre.comprovarLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
+        a.posarEditorial("Penguin");
+        Llibre b = ValidadorLlibre.comprovarLlibre(8420413739L, "B", null, null, null, null, null, null, null);
+        b.posarEditorial("Penguin");
+        Llibre c = ValidadorLlibre.comprovarLlibre(9780141439518L, "C", null, null, null, null, null, null, null);
+        c.posarEditorial("HarperCollins");
+        cd.afegirLlibre(a);
+        cd.afegirLlibre(b);
+        cd.afegirLlibre(c);
+        List<String> vals = cd.obtenirDistinctValues("editorial");
         assertThat(vals).containsExactlyInAnyOrder("Penguin", "HarperCollins");
     }
 
@@ -538,7 +538,7 @@ class BibliotecaJUnit5Test {
     void distinctValuesRejectsUnknownColumn() {
         ControladorDomini cd = ControladorDomini.getInstance();
         // AUTOCOMPLETE_COLUMNS whitelist blocks unknown columns → empty list, no SQL executed
-        assertThat(cd.getDistinctValues("DROP TABLE llibre; --")).isEmpty();
+        assertThat(cd.obtenirDistinctValues("DROP TABLE llibre; --")).isEmpty();
     }
 
     // ── CSV round-trip ───────────────────────────────────────────────────────
@@ -556,17 +556,17 @@ class BibliotecaJUnit5Test {
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new java.io.FileWriter(tmp, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("ISBN,Nom,Autor,Any,Descripcio,Valoracio,Preu,Llegit,Portada,Llistes");
-            for (Llibre l : cd.getAllLlibres()) {
+            for (Llibre l : cd.obtenirAllLlibres()) {
                 pw.printf("\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
-                    l.getISBN(), l.getNom().replace("\"","\"\""),
-                    l.getAutor().replace("\"","\"\""), l.getAny(),
-                    "", l.getValoracio(), l.getPreu(), l.getLlegit(), "", "");
+                    l.obtenirISBN(), l.obtenirNom().replace("\"","\"\""),
+                    l.obtenirAutor().replace("\"","\"\""), l.obtenirAny(),
+                    "", l.obtenirValoracio(), l.obtenirPreu(), l.obtenirLlegit(), "", "");
             }
         }
 
         // Clear library
-        cd.deleteLlibre(9780306406157L);
-        cd.deleteLlibre(8420413739L);
+        cd.eliminarLlibre(9780306406157L);
+        cd.eliminarLlibre(8420413739L);
         assertThat(cd.getSize()).isZero();
 
         // Re-import by parsing CSV lines (same logic as MostrarBibliotecaControl)
@@ -576,22 +576,22 @@ class BibliotecaJUnit5Test {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.isBlank()) continue;
-                String[] c = parseCsvLine(line);
+                String[] c = analitzarCsvLine(line);
                 long isbn = Long.parseLong(c[0].trim());
-                Llibre l = LlibreValidator.checkLlibre(isbn, c[1], c[2],
+                Llibre l = ValidadorLlibre.comprovarLlibre(isbn, c[1], c[2],
                     Integer.parseInt(c[3].trim()), "", 0.0, 0.0, false, "");
-                cd.addLlibre(l);
+                cd.afegirLlibre(l);
             }
         }
 
         assertThat(cd.getSize()).isEqualTo(2);
-        assertThat(cd.getAllLlibres())
-            .extracting(Llibre::getNom)
+        assertThat(cd.obtenirAllLlibres())
+            .extracting(Llibre::obtenirNom)
             .containsExactlyInAnyOrder("Dune", "Foundation");
     }
 
     /** Minimal CSV parser matching MostrarBibliotecaControl.parseCSVLine. */
-    private static String[] parseCsvLine(String line) {
+    private static String[] analitzarCsvLine(String line) {
         java.util.List<String> fields = new java.util.ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean inQuote = false;
@@ -613,15 +613,15 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("clearAll removes books, shelves and tags")
-    void clearAllRemovesEverything() throws Exception {
+    void netejarAllRemovesEverything() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        cd.addLlista("Sci-Fi");
-        cd.addTag("Space");
-        cd.clearAll();
+        cd.afegirLlista("Sci-Fi");
+        cd.afegirTag("Space");
+        cd.netejarAll();
         assertThat(cd.getSize()).isZero();
-        assertThat(cd.getAllLlistes()).isEmpty();
-        assertThat(cd.getAllTags()).isEmpty();
+        assertThat(cd.obtenirAllLlistes()).isEmpty();
+        assertThat(cd.obtenirAllTags()).isEmpty();
     }
 
     // ── CSV strategy canHandle ───────────────────────────────────────────────
@@ -631,18 +631,18 @@ class BibliotecaJUnit5Test {
     void goodreadsCanHandle() {
         var s = new herramienta.csv.GoodreadsCsvStrategy();
         String full = "Book Id,Title,Author,ISBN13,Exclusive Shelf,A,B,C,D,E,F";
-        assertThat(s.canHandle(full)).isTrue();
-        assertThat(s.canHandle("isbn,nom,autor")).isFalse();
+        assertThat(s.potHandle(full)).isTrue();
+        assertThat(s.potHandle("isbn,nom,autor")).isFalse();
     }
 
     @Test
     @DisplayName("Native canHandle is true (fallback)")
     void nativeCanHandle() {
         var s = new herramienta.csv.NativeCsvStrategy();
-        assertThat(s.canHandle("random,header")).isTrue();
-        assertThat(s.canHandle("a,b,c,d")).isTrue();
-        assertThat(s.canHandle("")).isFalse();
-        assertThat(s.canHandle("a,b")).isTrue();
+        assertThat(s.potHandle("random,header")).isTrue();
+        assertThat(s.potHandle("a,b,c,d")).isTrue();
+        assertThat(s.potHandle("")).isFalse();
+        assertThat(s.potHandle("a,b")).isTrue();
     }
 
     // ── CSV edge cases ───────────────────────────────────────────────────────
@@ -650,11 +650,11 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CsvUtils.parseLine: trailing comma, embedded quote, BOM tolerated")
     void csvParseLineEdgeCases() {
-        String[] r1 = herramienta.csv.CsvUtils.parseLine("a,b,c,");
+        String[] r1 = herramienta.csv.UtilitatsCsv.analitzarLine("a,b,c,");
         assertThat(r1).hasSize(4).contains("a", "b", "c", "");
-        String[] r2 = herramienta.csv.CsvUtils.parseLine("\"a\"\"b\",c");
+        String[] r2 = herramienta.csv.UtilitatsCsv.analitzarLine("\"a\"\"b\",c");
         assertThat(r2).contains("a\"b", "c");
-        String[] r3 = herramienta.csv.CsvUtils.parseLine("﻿ISBN,Nom");
+        String[] r3 = herramienta.csv.UtilitatsCsv.analitzarLine("﻿ISBN,Nom");
         assertThat(r3[0]).endsWith("ISBN");
     }
 
@@ -677,9 +677,9 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Re-instantiating persistence on same DB skips already-applied migrations")
     void migrationsIdempotent() {
-        ControladorPersistencia.resetForTest();
+        ControladorPersistencia.reinicialitzarForTest();
         persistencia.ControladorPersistencia.getInstance();
-        persistencia.ControladorPersistencia.resetForTest();
+        persistencia.ControladorPersistencia.reinicialitzarForTest();
         // No exception means schema_version + skip-logic worked
         persistencia.ControladorPersistencia.getInstance();
     }
@@ -689,7 +689,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DialogoError.showErrorMessage is no-op in headless/test mode")
     void dialogoErrorHeadlessSafe() {
-        new herramienta.DialogoError("test", new Exception("err")).showErrorMessage();
+        new herramienta.DialegError("test", new Exception("err")).mostrarErrorMessage();
         // No exception, no GUI; passes by virtue of biblioteca.test=true
     }
 
@@ -701,24 +701,24 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         for (int i = 0; i < 20; i++) {
             long isbn = 9780306400000L + i;
-            cd.addLlibre(book(isbn, "Book " + i, "Author " + i, 1990 + i));
+            cd.afegirLlibre(book(isbn, "Book " + i, "Author " + i, 1990 + i));
         }
-        Llista a = cd.addLlista("Read");
-        cd.addLlista("Wishlist");
-        cd.addLlista("Reference");
-        for (int i = 0; i < 5; i++) cd.addTag("Tag" + i);
+        Llista a = cd.afegirLlista("Read");
+        cd.afegirLlista("Wishlist");
+        cd.afegirLlista("Reference");
+        for (int i = 0; i < 5; i++) cd.afegirTag("Tag" + i);
 
-        cd.addLlibreToLlista(9780306400000L, a.getId(), 8.0, true);
-        cd.addLlibreToLlista(9780306400001L, a.getId(), 7.0, true);
+        cd.afegirLlibreToLlista(9780306400000L, a.obtenirId(), 8.0, true);
+        cd.afegirLlibreToLlista(9780306400001L, a.obtenirId(), 7.0, true);
 
         cd.prestarLlibre(9780306400000L, "Alice");
         cd.prestarLlibre(9780306400001L, "Bob");
 
         assertThat(cd.getSize()).isEqualTo(20);
-        assertThat(cd.getAllLlistes()).hasSize(3);
-        assertThat(cd.getAllTags()).hasSize(5);
-        assertThat(cd.getLoanedISBNs()).hasSize(2);
-        assertThat(cd.getLlibresInLlista(a.getId())).hasSize(2);
+        assertThat(cd.obtenirAllLlistes()).hasSize(3);
+        assertThat(cd.obtenirAllTags()).hasSize(5);
+        assertThat(cd.obtenirLoanedISBNs()).hasSize(2);
+        assertThat(cd.obtenirLlibresInLlista(a.obtenirId())).hasSize(2);
     }
 
     // ── Catalan diacritics autocomplete ──────────────────────────────────────
@@ -736,8 +736,8 @@ class BibliotecaJUnit5Test {
     @DisplayName("Tag.setNom rejects null and blank")
     void tagSetNomBlank() {
         Tag t = new Tag(1, "ok");
-        assertThatThrownBy(() -> t.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
-        assertThatThrownBy(() -> t.setNom("  ")).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> t.posarNom(null)).isInstanceOf(domini.BibliotecaException.Validacio.class);
+        assertThatThrownBy(() -> t.posarNom("  ")).isInstanceOf(domini.BibliotecaException.Validacio.class);
     }
 
     // ── ConnectionConfig: password masking ───────────────────────────────────
@@ -792,12 +792,12 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("parseIsoDate: ISO accepted, garbage → null")
-    void parseIsoDate() {
-        assertThat(herramienta.DateUtils.parseIsoDate("2024-03-15"))
+    void analitzarIsoDate() {
+        assertThat(herramienta.UtilitatsData.analitzarIsoDate("2024-03-15"))
             .isEqualTo(java.time.LocalDate.of(2024, 3, 15));
-        assertThat(herramienta.DateUtils.parseIsoDate(null)).isNull();
-        assertThat(herramienta.DateUtils.parseIsoDate("")).isNull();
-        assertThat(herramienta.DateUtils.parseIsoDate("not a date")).isNull();
+        assertThat(herramienta.UtilitatsData.analitzarIsoDate(null)).isNull();
+        assertThat(herramienta.UtilitatsData.analitzarIsoDate("")).isNull();
+        assertThat(herramienta.UtilitatsData.analitzarIsoDate("not a date")).isNull();
     }
 
     // ── PrestecRow.overdueDays + toDisplayMap ────────────────────────────────
@@ -844,42 +844,42 @@ class BibliotecaJUnit5Test {
     void llibreCopyOfPreservesAllFields() {
         Llibre src = new Llibre(9780306406157L, "Dune", "Frank Herbert", 1965,
                                 "Desert planet", 9.5, 19.99, true, "/img.jpg");
-        src.setNotes("note"); src.setPagines(900); src.setPaginesLlegides(300);
-        src.setEditorial("Chilton"); src.setSerie("Dune"); src.setVolum(1);
-        src.setDataCompra("2020-01-05"); src.setDataLectura("2021-02-10");
-        src.setIdioma("en"); src.setFormat("Tapa dura"); src.setDesitjat(true);
-        src.setPaisOrigen("US"); src.setEstat("ok"); src.setExemplars(2);
-        src.setLlenguaOriginal("en");
-        src.setNomCa("Duna"); src.setNomEs("Dune"); src.setNomEn("Dune");
-        src.setHasBlob(true);
-        src.setAutors(java.util.List.of("Frank Herbert", "Brian Herbert"));
+        src.posarNotes("note"); src.posarPagines(900); src.posarPaginesLlegides(300);
+        src.posarEditorial("Chilton"); src.posarSerie("Dune"); src.posarVolum(1);
+        src.posarDataCompra("2020-01-05"); src.posarDataLectura("2021-02-10");
+        src.posarIdioma("en"); src.posarFormat("Tapa dura"); src.posarDesitjat(true);
+        src.posarPaisOrigen("US"); src.posarEstat("ok"); src.posarExemplars(2);
+        src.posarLlenguaOriginal("en");
+        src.posarNomCa("Duna"); src.posarNomEs("Dune"); src.posarNomEn("Dune");
+        src.posarHasBlob(true);
+        src.posarAutors(java.util.List.of("Frank Herbert", "Brian Herbert"));
 
         Llibre c = Llibre.copyOf(src);
-        assertThat(c.getISBN()).isEqualTo(src.getISBN());
-        assertThat(c.getNom()).isEqualTo(src.getNom());
-        assertThat(c.getAutors()).isEqualTo(src.getAutors());
-        assertThat(c.getAny()).isEqualTo(src.getAny());
-        assertThat(c.getDescripcio()).isEqualTo(src.getDescripcio());
-        assertThat(c.getValoracio()).isEqualTo(src.getValoracio());
-        assertThat(c.getPreu()).isEqualTo(src.getPreu());
-        assertThat(c.getLlegit()).isEqualTo(src.getLlegit());
-        assertThat(c.getNotes()).isEqualTo(src.getNotes());
-        assertThat(c.getPagines()).isEqualTo(src.getPagines());
-        assertThat(c.getPaginesLlegides()).isEqualTo(src.getPaginesLlegides());
-        assertThat(c.getEditorial()).isEqualTo(src.getEditorial());
-        assertThat(c.getSerie()).isEqualTo(src.getSerie());
-        assertThat(c.getVolum()).isEqualTo(src.getVolum());
-        assertThat(c.getIdioma()).isEqualTo(src.getIdioma());
+        assertThat(c.obtenirISBN()).isEqualTo(src.obtenirISBN());
+        assertThat(c.obtenirNom()).isEqualTo(src.obtenirNom());
+        assertThat(c.obtenirAutors()).isEqualTo(src.obtenirAutors());
+        assertThat(c.obtenirAny()).isEqualTo(src.obtenirAny());
+        assertThat(c.obtenirDescripcio()).isEqualTo(src.obtenirDescripcio());
+        assertThat(c.obtenirValoracio()).isEqualTo(src.obtenirValoracio());
+        assertThat(c.obtenirPreu()).isEqualTo(src.obtenirPreu());
+        assertThat(c.obtenirLlegit()).isEqualTo(src.obtenirLlegit());
+        assertThat(c.obtenirNotes()).isEqualTo(src.obtenirNotes());
+        assertThat(c.obtenirPagines()).isEqualTo(src.obtenirPagines());
+        assertThat(c.obtenirPaginesLlegides()).isEqualTo(src.obtenirPaginesLlegides());
+        assertThat(c.obtenirEditorial()).isEqualTo(src.obtenirEditorial());
+        assertThat(c.obtenirSerie()).isEqualTo(src.obtenirSerie());
+        assertThat(c.obtenirVolum()).isEqualTo(src.obtenirVolum());
+        assertThat(c.obtenirIdioma()).isEqualTo(src.obtenirIdioma());
         assertThat(c.getFormat()).isEqualTo(src.getFormat());
-        assertThat(c.isDesitjat()).isEqualTo(src.isDesitjat());
-        assertThat(c.getPaisOrigen()).isEqualTo(src.getPaisOrigen());
-        assertThat(c.getEstat()).isEqualTo(src.getEstat());
-        assertThat(c.getExemplars()).isEqualTo(src.getExemplars());
-        assertThat(c.getLlenguaOriginal()).isEqualTo(src.getLlenguaOriginal());
-        assertThat(c.getNomCa()).isEqualTo(src.getNomCa());
-        assertThat(c.getNomEs()).isEqualTo(src.getNomEs());
-        assertThat(c.getNomEn()).isEqualTo(src.getNomEn());
-        assertThat(c.hasBlob()).isEqualTo(src.hasBlob());
+        assertThat(c.esDesitjat()).isEqualTo(src.esDesitjat());
+        assertThat(c.obtenirPaisOrigen()).isEqualTo(src.obtenirPaisOrigen());
+        assertThat(c.obtenirEstat()).isEqualTo(src.obtenirEstat());
+        assertThat(c.obtenirExemplars()).isEqualTo(src.obtenirExemplars());
+        assertThat(c.obtenirLlenguaOriginal()).isEqualTo(src.obtenirLlenguaOriginal());
+        assertThat(c.obtenirNomCa()).isEqualTo(src.obtenirNomCa());
+        assertThat(c.obtenirNomEs()).isEqualTo(src.obtenirNomEs());
+        assertThat(c.obtenirNomEn()).isEqualTo(src.obtenirNomEn());
+        assertThat(c.teBlob()).isEqualTo(src.teBlob());
     }
 
     // ── PrestecDao: returnLoan throws on already-returned ────────────────────
@@ -898,15 +898,15 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("LlibreFilter.hasAnyFilter true when any predicate field is set")
-    void filterHasAnyFilterPerField() {
+    void filtrarHasAnyFilterPerField() {
         LlibreFilter f = LlibreFilter.empty();
-        assertThat(f.hasAnyFilter()).isFalse();
-        f.withAutor("x"); assertThat(f.hasAnyFilter()).isTrue(); f.withAutor(null);
-        f.withNom("x"); assertThat(f.hasAnyFilter()).isTrue(); f.withNom(null);
-        f.withIsbn(1L); assertThat(f.hasAnyFilter()).isTrue(); f.withIsbn(null);
-        f.withAnyMin(1); assertThat(f.hasAnyFilter()).isTrue(); f.withAnyMin(null);
-        f.withLlegit(true); assertThat(f.hasAnyFilter()).isTrue(); f.withLlegit(null);
-        f.withSort(new SortSpec("nom", true)); assertThat(f.hasAnyFilter()).isFalse(); // sort excluded
+        assertThat(f.teAnyFilter()).isFalse();
+        f.withAutor("x"); assertThat(f.teAnyFilter()).isTrue(); f.withAutor(null);
+        f.withNom("x"); assertThat(f.teAnyFilter()).isTrue(); f.withNom(null);
+        f.withIsbn(1L); assertThat(f.teAnyFilter()).isTrue(); f.withIsbn(null);
+        f.withAnyMin(1); assertThat(f.teAnyFilter()).isTrue(); f.withAnyMin(null);
+        f.withLlegit(true); assertThat(f.teAnyFilter()).isTrue(); f.withLlegit(null);
+        f.withSort(new EspecificacioOrdenacio("nom", true)); assertThat(f.teAnyFilter()).isFalse(); // sort excluded
     }
 
     // ── FiltreUtils: accent-insensitive match ────────────────────────────────
@@ -924,10 +924,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DateUtils.parseYear accepts plausible years, returns empty on garbage")
     void dateUtilsParseYear() {
-        assertThat(herramienta.DateUtils.parseYear("1984")).contains(1984);
-        assertThat(herramienta.DateUtils.parseYear("Published 1984")).contains(1984);
-        assertThat(herramienta.DateUtils.parseYear("not a year")).isEmpty();
-        assertThat(herramienta.DateUtils.parseYear(null)).isEmpty();
+        assertThat(herramienta.UtilitatsData.analitzarYear("1984")).contains(1984);
+        assertThat(herramienta.UtilitatsData.analitzarYear("Published 1984")).contains(1984);
+        assertThat(herramienta.UtilitatsData.analitzarYear("not a year")).isEmpty();
+        assertThat(herramienta.UtilitatsData.analitzarYear(null)).isEmpty();
     }
 
     // ── LlibreValidator: thrown branches ─────────────────────────────────────
@@ -935,10 +935,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("LlibreValidator rejects bad ISBN, empty nom, out-of-range valoracio/preu")
     void validatorTableDriven() {
-        assertThatThrownBy(() -> LlibreValidator.checkLlibre(1L, "Title", null, null, null, null, null, null, null)).isNotNull();
-        assertThatThrownBy(() -> LlibreValidator.checkLlibre(9780306406157L, "", null, null, null, null, null, null, null)).isNotNull();
-        assertThatThrownBy(() -> LlibreValidator.checkLlibre(9780306406157L, "T", null, null, null, 11.0, null, null, null)).isNotNull();
-        assertThatThrownBy(() -> LlibreValidator.checkLlibre(9780306406157L, "T", null, null, null, null, -1.0, null, null)).isNotNull();
+        assertThatThrownBy(() -> ValidadorLlibre.comprovarLlibre(1L, "Title", null, null, null, null, null, null, null)).isNotNull();
+        assertThatThrownBy(() -> ValidadorLlibre.comprovarLlibre(9780306406157L, "", null, null, null, null, null, null, null)).isNotNull();
+        assertThatThrownBy(() -> ValidadorLlibre.comprovarLlibre(9780306406157L, "T", null, null, null, 11.0, null, null, null)).isNotNull();
+        assertThatThrownBy(() -> ValidadorLlibre.comprovarLlibre(9780306406157L, "T", null, null, null, null, -1.0, null, null)).isNotNull();
     }
 
     // ── Llista: setNom blank throws ──────────────────────────────────────────
@@ -947,32 +947,32 @@ class BibliotecaJUnit5Test {
     @DisplayName("Llista.setNom rejects null and blank")
     void llistaSetNomRejectsBlank() {
         Llista l = new Llista(1, "ok");
-        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
-        assertThatThrownBy(() -> l.setNom("  ")).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> l.posarNom(null)).isInstanceOf(domini.BibliotecaException.Validacio.class);
+        assertThatThrownBy(() -> l.posarNom("  ")).isInstanceOf(domini.BibliotecaException.Validacio.class);
     }
 
     // ── Llista: setNom blank throws ──────────────────────────────────────────
 
     @Test
     @DisplayName("Llista.setNom blank throws BibliotecaException.Validation")
-    void setNomBlankThrows() {
+    void posarNomBlankThrows() {
         Llista l = new Llista(1, "valid");
-        assertThatThrownBy(() -> l.setNom("")).isInstanceOf(domini.BibliotecaException.Validation.class);
-        assertThatThrownBy(() -> l.setNom(null)).isInstanceOf(domini.BibliotecaException.Validation.class);
+        assertThatThrownBy(() -> l.posarNom("")).isInstanceOf(domini.BibliotecaException.Validacio.class);
+        assertThatThrownBy(() -> l.posarNom(null)).isInstanceOf(domini.BibliotecaException.Validacio.class);
     }
 
     // ── Llista: setColor hex validation ─────────────────────────────────────
 
     @Test
     @DisplayName("Llista.isValidColor accepts #abc / #aabbcc / null, rejects garbage; setColor is a trust-the-caller setter")
-    void setColorHex3DigitAccepted() {
+    void posarColorHex3DigitAccepted() {
         // Validation is centralised in Llista.isValidColor; the setter trusts the caller
         // (DAO load paths use it with values that were validated on write).
-        assertThat(Llista.isValidColor("#abc")).isTrue();
-        assertThat(Llista.isValidColor("#aabbcc")).isTrue();
-        assertThat(Llista.isValidColor(null)).isTrue();
-        assertThat(Llista.isValidColor("red")).isFalse();
-        assertThat(Llista.isValidColor("#zzzzzz")).isFalse();
+        assertThat(Llista.esValidColor("#abc")).isTrue();
+        assertThat(Llista.esValidColor("#aabbcc")).isTrue();
+        assertThat(Llista.esValidColor(null)).isTrue();
+        assertThat(Llista.esValidColor("red")).isFalse();
+        assertThat(Llista.esValidColor("#zzzzzz")).isFalse();
         Llista l = new Llista(1, "ok");
         l.setColor("#abc");
         assertThat(l.getColor()).isEqualTo("#abc");
@@ -982,16 +982,16 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("ControladorDomini.setLlistaColor rejects invalid color with Validation")
-    void setLlistaColorInvalid() {
+    void posarLlistaColorInvalid() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llista l = cd.addLlista("Shelf");
-        assertThatThrownBy(() -> cd.setLlistaColor(l.getId(), "not-a-color"))
-            .isInstanceOf(domini.BibliotecaException.Validation.class);
-        assertThatThrownBy(() -> cd.setLlistaColor(l.getId(), "#zzzzzz"))
-            .isInstanceOf(domini.BibliotecaException.Validation.class);
+        Llista l = cd.afegirLlista("Shelf");
+        assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "not-a-color"))
+            .isInstanceOf(domini.BibliotecaException.Validacio.class);
+        assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "#zzzzzz"))
+            .isInstanceOf(domini.BibliotecaException.Validacio.class);
         // Valid colors are accepted
-        cd.setLlistaColor(l.getId(), "#aabbcc");
-        assertThat(cd.getAllLlistes().get(0).getColor()).isEqualTo("#aabbcc");
+        cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
+        assertThat(cd.obtenirAllLlistes().get(0).getColor()).isEqualTo("#aabbcc");
     }
 
     // ── BibliotecaException: cause preserved ─────────────────────────────────
@@ -1008,9 +1008,9 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("BibliotecaException subclasses carry their codes")
     void bibliotecaExceptionSubclassCodes() {
-        assertThat(new domini.BibliotecaException.NotFound("x").code()).isEqualTo(domini.BibliotecaException.Code.NOT_FOUND);
-        assertThat(new domini.BibliotecaException.Duplicate("x").code()).isEqualTo(domini.BibliotecaException.Code.DUPLICATE);
-        assertThat(new domini.BibliotecaException.Validation("x").code()).isEqualTo(domini.BibliotecaException.Code.VALIDATION);
+        assertThat(new domini.BibliotecaException.NoTrobat("x").code()).isEqualTo(domini.BibliotecaException.Code.NOT_FOUND);
+        assertThat(new domini.BibliotecaException.Duplicat("x").code()).isEqualTo(domini.BibliotecaException.Code.DUPLICATE);
+        assertThat(new domini.BibliotecaException.Validacio("x").code()).isEqualTo(domini.BibliotecaException.Code.VALIDATION);
     }
 
     // ── Loan: lend → return → lend roundtrip ─────────────────────────────────
@@ -1021,26 +1021,26 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
         cd.prestarLlibre(9780306406157L, "Paul");
-        assertThat(cd.getLoanedISBNs()).contains(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).contains(9780306406157L);
         cd.retornarLlibre(9780306406157L);
-        assertThat(cd.getLoanedISBNs()).doesNotContain(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).doesNotContain(9780306406157L);
         cd.prestarLlibre(9780306406157L, "Jessica");
-        assertThat(cd.getLoanedISBNs()).contains(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).contains(9780306406157L);
     }
 
     // ── Llista: color validation ─────────────────────────────────────────────
 
     @Test
     @DisplayName("setLlistaColor: null clears, hex accepted, garbage rejected")
-    void setLlistaColorValidates() throws Exception {
+    void posarLlistaColorValidates() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llista l = cd.addLlista("Test");
-        cd.setLlistaColor(l.getId(), null);
-        cd.setLlistaColor(l.getId(), "#abc");
-        cd.setLlistaColor(l.getId(), "#aabbcc");
-        assertThatThrownBy(() -> cd.setLlistaColor(l.getId(), "red"))
+        Llista l = cd.afegirLlista("Test");
+        cd.posarLlistaColor(l.obtenirId(), null);
+        cd.posarLlistaColor(l.obtenirId(), "#abc");
+        cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
+        assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "red"))
             .hasMessage(herramienta.I18n.t("val_color_invalid", "red"));
-        assertThatThrownBy(() -> cd.setLlistaColor(l.getId(), "#zzzzzz"))
+        assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "#zzzzzz"))
             .hasMessage(herramienta.I18n.t("val_color_invalid", "#zzzzzz"));
     }
 
@@ -1048,24 +1048,24 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("renameTag to existing name throws (unique constraint)")
-    void renameTagToExistingThrows() throws Exception {
+    void reanomenarTagToExistingThrows() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Tag a = cd.addTag("alpha");
-        cd.addTag("beta");
-        assertThatThrownBy(() -> cd.renameTag(a.getId(), "beta")).isNotNull();
+        Tag a = cd.afegirTag("alpha");
+        cd.afegirTag("beta");
+        assertThatThrownBy(() -> cd.reanomenarTag(a.obtenirId(), "beta")).isNotNull();
     }
 
 
     @Test
     @DisplayName("clearAll on empty DB still writes a pre_clear backup")
-    void clearAllOnEmptyDbWritesBackup() throws Exception {
+    void netejarAllOnEmptyDbWritesBackup() throws Exception {
         java.nio.file.Path tmp = java.nio.file.Files.createTempDirectory("biblioteca_test_backup");
         try {
             ControladorDomini cd = ControladorDomini.getInstance();
             File out = new File(tmp.toFile(), "pre_clear_empty.sql");
             synchronized (cd) {
-                cd.backupToSQL(out);
-                cd.clearAll();
+                cd.copiaSegToSQL(out);
+                cd.netejarAll();
             }
             assertThat(out).exists();
             assertThat(out.length()).isGreaterThan(0);
@@ -1078,11 +1078,11 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("renameTag to existing nom throws SQLException (UNIQUE constraint)")
-    void renameTagToExistingNomThrows() throws Exception {
+    void reanomenarTagToExistingNomThrows() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Tag a = cd.addTag("alpha");
-        cd.addTag("beta");
-        assertThatThrownBy(() -> cd.renameTag(a.getId(), "beta")).isNotNull();
+        Tag a = cd.afegirTag("alpha");
+        cd.afegirTag("beta");
+        assertThatThrownBy(() -> cd.reanomenarTag(a.obtenirId(), "beta")).isNotNull();
     }
 
     // ── LlistaDao: color null clears and hex roundtrips ────────────────────────
@@ -1091,15 +1091,15 @@ class BibliotecaJUnit5Test {
     @DisplayName("Llista color: null clears, hex roundtrips via setLlistaColor")
     void llistaColorNullClearsAndHexRoundtrips() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llista l = cd.addLlista("Colored");
-        cd.setLlistaColor(l.getId(), "#aabbcc");
-        Llista found = cd.getAllLlistes().stream()
-            .filter(x -> x.getId() == l.getId()).findFirst().orElseThrow();
+        Llista l = cd.afegirLlista("Colored");
+        cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
+        Llista found = cd.obtenirAllLlistes().stream()
+            .filter(x -> x.obtenirId() == l.obtenirId()).findFirst().orElseThrow();
         assertThat(found.getColor()).isEqualTo("#aabbcc");
 
-        cd.setLlistaColor(l.getId(), null);
-        Llista afterClear = cd.getAllLlistes().stream()
-            .filter(x -> x.getId() == l.getId()).findFirst().orElseThrow();
+        cd.posarLlistaColor(l.obtenirId(), null);
+        Llista afterClear = cd.obtenirAllLlistes().stream()
+            .filter(x -> x.obtenirId() == l.obtenirId()).findFirst().orElseThrow();
         assertThat(afterClear.getColor()).isNull();
     }
 
@@ -1109,8 +1109,8 @@ class BibliotecaJUnit5Test {
     @CsvSource({"0, 0", "1, 1", "3, 2"})
     @DisplayName("AutorDao: distinct author names for 0/1/many authors")
     void autorDaoDistinctNamesCount(int bookCount, int expectedAuthorCount) throws Exception {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
         ControladorDomini cd = ControladorDomini.getInstance();
         if (bookCount >= 1) {
             add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
@@ -1121,7 +1121,7 @@ class BibliotecaJUnit5Test {
         if (bookCount >= 3) {
             add(cd, 9780141439518L, "1984", "Frank Herbert", 1949);
         }
-        assertThat(cd.getDistinctAutorNames()).hasSize(expectedAuthorCount);
+        assertThat(cd.obtenirDistinctAutorNames()).hasSize(expectedAuthorCount);
     }
 
     // ── PrestecRow: toDisplayMap ISO date string ──────────────────────────────
@@ -1146,62 +1146,62 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("DeleteEvent: cancellable=true, veto marks as vetoed")
-    void deleteEventCancellableVeto() {
+    void eliminarEventCancellableVeto() {
         domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.OnLlibreDelete.DeleteEvent ev = new presentacio.listener.OnLlibreDelete.DeleteEvent(book, true);
-        assertThat(ev.isCancellable()).isTrue();
-        assertThat(ev.isVetoed()).isFalse();
+        presentacio.listener.OnLlibreDelete.EsborrarEvent ev = new presentacio.listener.OnLlibreDelete.EsborrarEvent(book, true);
+        assertThat(ev.esCancellable()).isTrue();
+        assertThat(ev.esVetoed()).isFalse();
         ev.veto();
-        assertThat(ev.isVetoed()).isTrue();
+        assertThat(ev.esVetoed()).isTrue();
     }
 
     @Test
     @DisplayName("DeleteEvent: cancellable=false, veto has no practical effect")
-    void deleteEventNonCancellable() {
+    void eliminarEventNonCancellable() {
         domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.OnLlibreDelete.DeleteEvent ev = new presentacio.listener.OnLlibreDelete.DeleteEvent(book, false);
-        assertThat(ev.isCancellable()).isFalse();
+        presentacio.listener.OnLlibreDelete.EsborrarEvent ev = new presentacio.listener.OnLlibreDelete.EsborrarEvent(book, false);
+        assertThat(ev.esCancellable()).isFalse();
     }
 
     @Test
     @DisplayName("DeleteEvent: cancellable=true + listener.veto() cancels the delete")
-    void deleteEventVetoCancelsDelete() throws Exception {
+    void eliminarEventVetoCancelsDelete() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
 
         presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
             @Override public void onBookDeleted(Llibre l) {}
-            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.DeleteEvent e) { e.veto(); }
+            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.EsborrarEvent e) { e.veto(); }
         };
-        presentacio.listener.OnLlibreDelete.DeleteEvent ev =
-            new presentacio.listener.OnLlibreDelete.DeleteEvent(cd.getLlibre(9780306406157L), true);
+        presentacio.listener.OnLlibreDelete.EsborrarEvent ev =
+            new presentacio.listener.OnLlibreDelete.EsborrarEvent(cd.obtenirLlibre(9780306406157L), true);
         vetoer.onBookDeleting(ev);
-        assertThat(presentacio.listener.OnLlibreDelete.shouldProceed(ev)).isFalse();
-        if (presentacio.listener.OnLlibreDelete.shouldProceed(ev)) cd.deleteLlibre(cd.getLlibre(9780306406157L));
+        assertThat(presentacio.listener.OnLlibreDelete.hauriaProceed(ev)).isFalse();
+        if (presentacio.listener.OnLlibreDelete.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
 
         assertThat(cd.getSize()).isEqualTo(1);
-        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune");
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune");
     }
 
     @Test
     @DisplayName("DeleteEvent: cancellable=false + listener.veto() still proceeds")
-    void deleteEventNonCancellableVetoProceeds() throws Exception {
+    void eliminarEventNonCancellableVetoProceeds() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
 
         presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
             @Override public void onBookDeleted(Llibre l) {}
-            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.DeleteEvent e) { e.veto(); }
+            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.EsborrarEvent e) { e.veto(); }
         };
-        presentacio.listener.OnLlibreDelete.DeleteEvent ev =
-            new presentacio.listener.OnLlibreDelete.DeleteEvent(cd.getLlibre(9780306406157L), false);
+        presentacio.listener.OnLlibreDelete.EsborrarEvent ev =
+            new presentacio.listener.OnLlibreDelete.EsborrarEvent(cd.obtenirLlibre(9780306406157L), false);
         vetoer.onBookDeleting(ev);
-        assertThat(ev.isVetoed()).isTrue();
-        assertThat(presentacio.listener.OnLlibreDelete.shouldProceed(ev)).isTrue();
-        if (presentacio.listener.OnLlibreDelete.shouldProceed(ev)) cd.deleteLlibre(cd.getLlibre(9780306406157L));
+        assertThat(ev.esVetoed()).isTrue();
+        assertThat(presentacio.listener.OnLlibreDelete.hauriaProceed(ev)).isTrue();
+        if (presentacio.listener.OnLlibreDelete.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
 
         assertThat(cd.getSize()).isEqualTo(0);
-        assertThat(cd.findLlibre(9780306406157L)).isEmpty();
+        assertThat(cd.cercarLlibre(9780306406157L)).isEmpty();
     }
 
     // ── H2 in-memory: full CRUD roundtrip ──────────────────────────────────────
@@ -1214,33 +1214,33 @@ class BibliotecaJUnit5Test {
         // Create
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
         add(cd, 8420413739L, "Foundation", "Isaac Asimov", 1951);
-        Llista shelf = cd.addLlista("Sci-Fi");
-        Tag tag = cd.addTag("Classic");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 9.0, true);
-        cd.addLlibreToTag(9780306406157L, tag.getId());
+        Llista shelf = cd.afegirLlista("Sci-Fi");
+        Tag tag = cd.afegirTag("Classic");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 9.0, true);
+        cd.afegirLlibreToTag(9780306406157L, tag.obtenirId());
         cd.prestarLlibre(9780306406157L, "Alice");
 
         // Read
         assertThat(cd.getSize()).isEqualTo(2);
-        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune");
-        assertThat(cd.getAllLlistes()).hasSize(1);
-        assertThat(cd.getAllTags()).hasSize(1);
-        assertThat(cd.getCountInLlista(shelf.getId())).isEqualTo(1);
-        assertThat(cd.getTagsForLlibre(9780306406157L)).hasSize(1);
-        assertThat(cd.getLoanedISBNs()).contains(9780306406157L);
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune");
+        assertThat(cd.obtenirAllLlistes()).hasSize(1);
+        assertThat(cd.obtenirAllTags()).hasSize(1);
+        assertThat(cd.obtenirCountInLlista(shelf.obtenirId())).isEqualTo(1);
+        assertThat(cd.obtenirTagsForLlibre(9780306406157L)).hasSize(1);
+        assertThat(cd.obtenirLoanedISBNs()).contains(9780306406157L);
 
         // Update
-        Llibre updated = LlibreValidator.checkLlibre(9780306406157L, "Dune Updated", "Frank Herbert", 1965, null, 9.5, null, null, null);
-        cd.updateLlibre(updated);
-        assertThat(cd.getLlibre(9780306406157L).getNom()).isEqualTo("Dune Updated");
+        Llibre updated = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune Updated", "Frank Herbert", 1965, null, 9.5, null, null, null);
+        cd.actualitzarLlibre(updated);
+        assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune Updated");
 
         // Delete
         cd.retornarLlibre(9780306406157L);
-        cd.removeLlibreFromLlista(9780306406157L, shelf.getId());
-        cd.removeLlibreFromTag(9780306406157L, tag.getId());
-        cd.deleteLlibre(9780306406157L);
+        cd.eliminarLlibreFromLlista(9780306406157L, shelf.obtenirId());
+        cd.eliminarLlibreFromTag(9780306406157L, tag.obtenirId());
+        cd.eliminarLlibre(9780306406157L);
         assertThat(cd.getSize()).isEqualTo(1);
-        assertThat(cd.getLoanedISBNs()).isEmpty();
+        assertThat(cd.obtenirLoanedISBNs()).isEmpty();
     }
 
     // ── ServerConect: migration produces complete schema ──────────────────────
@@ -1252,7 +1252,7 @@ class BibliotecaJUnit5Test {
         System.setProperty("biblioteca.h2.url", url);
         try {
             persistencia.ServerConect sc = new persistencia.ServerConect();
-            sc.createDatabase();
+            sc.crearDatabase();
             try (java.sql.Connection conn = sc.getConnection()) {
                 java.util.Set<String> llibreCols = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
                 try (java.sql.ResultSet rs = conn.getMetaData().getColumns(null, null, "LLIBRE", null)) {
@@ -1278,7 +1278,7 @@ class BibliotecaJUnit5Test {
                 }
                 assertThat(llistaCols).contains("ID", "NOM", "ORDRE", "COLOR");
             } finally {
-                sc.closeConnection();
+                sc.tancarConnection();
             }
         } finally {
             System.setProperty("biblioteca.h2.url",
@@ -1290,67 +1290,67 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("search() binds String, Long, Integer, Double, Boolean params correctly")
-    void searchParameterBindingByType() throws Exception {
+    void cercarParameterBindingByType() throws Exception {
         // NOTE: H2 MySQL-mode LIKE is case-sensitive; SQL-path queries use exact case.
         // In-memory aplicarFiltres normalizes both sides — SQL path doesn't (documented gap).
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre a = LlibreValidator.checkLlibre(9780306406157L, "Dune", "Frank Herbert", 1965,
+        Llibre a = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Frank Herbert", 1965,
             null, 9.5, 19.99, true, null);
-        a.setEditorial("Chilton");
-        a.setSerie("Dune Chronicles");
-        a.setFormat("Tapa dura");
-        a.setIdioma("English");
-        cd.addLlibre(a);
+        a.posarEditorial("Chilton");
+        a.posarSerie("Dune Chronicles");
+        a.posarFormat("Tapa dura");
+        a.posarIdioma("English");
+        cd.afegirLlibre(a);
 
-        Llibre b = LlibreValidator.checkLlibre(8420413739L, "Foundation", "Isaac Asimov", 1951,
+        Llibre b = ValidadorLlibre.comprovarLlibre(8420413739L, "Foundation", "Isaac Asimov", 1951,
             null, 7.0, 10.0, false, null);
-        b.setEditorial("Gnome Press");
-        b.setSerie("Foundation");
-        b.setFormat("eBook");
-        b.setIdioma("Spanish");
-        cd.addLlibre(b);
+        b.posarEditorial("Gnome Press");
+        b.posarSerie("Foundation");
+        b.posarFormat("eBook");
+        b.posarIdioma("Spanish");
+        cd.afegirLlibre(b);
 
         // String (nom LIKE — uses exact case since H2 LIKE is case-sensitive)
-        LlibreFilter fn = domini.LlibreFilterBuilder.of().nom("Du").build();
-        assertThat(cd.searchLlibresSQL(fn)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fn = domini.ConstructorFiltreLlibre.of().nom("Du").build();
+        assertThat(cd.cercarLlibresSQL(fn)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // String (autor LIKE)
-        LlibreFilter fa = domini.LlibreFilterBuilder.of().autor("Herbert").build();
-        assertThat(cd.searchLlibresSQL(fa)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fa = domini.ConstructorFiltreLlibre.of().autor("Herbert").build();
+        assertThat(cd.cercarLlibresSQL(fa)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // Long (isbn =)
-        LlibreFilter fi = domini.LlibreFilterBuilder.of().isbn(9780306406157L).build();
-        assertThat(cd.searchLlibresSQL(fi)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fi = domini.ConstructorFiltreLlibre.of().isbn(9780306406157L).build();
+        assertThat(cd.cercarLlibresSQL(fi)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // Integer (anyMin / anyMax)
-        LlibreFilter fay = domini.LlibreFilterBuilder.of().anyMin(1960).build();
-        assertThat(cd.searchLlibresSQL(fay)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fay = domini.ConstructorFiltreLlibre.of().anyMin(1960).build();
+        assertThat(cd.cercarLlibresSQL(fay)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // Double (valoracioMin / preuMin)
-        LlibreFilter fv = domini.LlibreFilterBuilder.of().valoracioMin(8.0).build();
-        assertThat(cd.searchLlibresSQL(fv)).extracting(Llibre::getNom).containsExactly("Dune");
-        LlibreFilter fp = domini.LlibreFilterBuilder.of().preuMin(15.0).build();
-        assertThat(cd.searchLlibresSQL(fp)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fv = domini.ConstructorFiltreLlibre.of().valoracioMin(8.0).build();
+        assertThat(cd.cercarLlibresSQL(fv)).extracting(Llibre::obtenirNom).containsExactly("Dune");
+        LlibreFilter fp = domini.ConstructorFiltreLlibre.of().preuMin(15.0).build();
+        assertThat(cd.cercarLlibresSQL(fp)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // Boolean (llegit = true)
-        LlibreFilter fl = domini.LlibreFilterBuilder.of().llegit(true).build();
-        assertThat(cd.searchLlibresSQL(fl)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fl = domini.ConstructorFiltreLlibre.of().llegit(true).build();
+        assertThat(cd.cercarLlibresSQL(fl)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // String (editorial LIKE — exact case)
-        LlibreFilter fe = domini.LlibreFilterBuilder.of().editorial("Chilton").build();
-        assertThat(cd.searchLlibresSQL(fe)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fe = domini.ConstructorFiltreLlibre.of().editorial("Chilton").build();
+        assertThat(cd.cercarLlibresSQL(fe)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // String (format = exact)
-        LlibreFilter ff = domini.LlibreFilterBuilder.of().format("Tapa dura").build();
-        assertThat(cd.searchLlibresSQL(ff)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter ff = domini.ConstructorFiltreLlibre.of().format("Tapa dura").build();
+        assertThat(cd.cercarLlibresSQL(ff)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // String (idioma LIKE — exact case)
-        LlibreFilter fid = domini.LlibreFilterBuilder.of().idioma("English").build();
-        assertThat(cd.searchLlibresSQL(fid)).extracting(Llibre::getNom).containsExactly("Dune");
+        LlibreFilter fid = domini.ConstructorFiltreLlibre.of().idioma("English").build();
+        assertThat(cd.cercarLlibresSQL(fid)).extracting(Llibre::obtenirNom).containsExactly("Dune");
 
         // No result
-        LlibreFilter fEmpty = domini.LlibreFilterBuilder.of().nom("zzzzz").build();
-        assertThat(cd.searchLlibresSQL(fEmpty)).isEmpty();
+        LlibreFilter fEmpty = domini.ConstructorFiltreLlibre.of().nom("zzzzz").build();
+        assertThat(cd.cercarLlibresSQL(fEmpty)).isEmpty();
     }
 
     // ── Config: column visibility persistence ──────────────────────────────────
@@ -1373,24 +1373,24 @@ class BibliotecaJUnit5Test {
 
         String origHome = System.getProperty("user.home");
         System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-        herramienta.Config.reload();
+        herramienta.Configuracio.reload();
 
-        assertThat(herramienta.Config.getColVisible(0)).isFalse();
-        assertThat(herramienta.Config.getColVisible(3)).isFalse();
-        assertThat(herramienta.Config.getColVisible(7)).isTrue();
-        assertThat(herramienta.Config.getColVisible(2)).isTrue(); // default
+        assertThat(herramienta.Configuracio.obtenirColVisible(0)).isFalse();
+        assertThat(herramienta.Configuracio.obtenirColVisible(3)).isFalse();
+        assertThat(herramienta.Configuracio.obtenirColVisible(7)).isTrue();
+        assertThat(herramienta.Configuracio.obtenirColVisible(2)).isTrue(); // default
 
-        herramienta.WindowConfig.setColVisible(5, false);
+        herramienta.ConfiguracioFinestra.posarColVisible(5, false);
         // Wait for async save (300ms scheduler)
         Thread.sleep(500);
-        assertThat(herramienta.Config.getColVisible(5)).isFalse();
+        assertThat(herramienta.Configuracio.obtenirColVisible(5)).isFalse();
 
         // Verify persistence: reload from disk and check
-        herramienta.Config.reload();
-        assertThat(herramienta.Config.getColVisible(5)).isFalse();
+        herramienta.Configuracio.reload();
+        assertThat(herramienta.Configuracio.obtenirColVisible(5)).isFalse();
 
         System.setProperty("user.home", origHome);
-        herramienta.Config.reload();
+        herramienta.Configuracio.reload();
         Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
     }
 
@@ -1398,16 +1398,16 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("resetForProfileSwitch closes connection; new instance creates fresh connection")
-    void resetForProfileSwitchReconnects() {
+    void reinicialitzarForProfileSwitchReconnects() {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
-        assertThat(cp.countLlibres()).isZero();
+        assertThat(cp.comptarLlibres()).isZero();
 
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForProfileSwitch();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForProfileSwitch();
 
         ControladorPersistencia cp2 = ControladorPersistencia.getInstance();
         assertThat(cp2).isNotSameAs(cp);
-        assertThat(cp2.countLlibres()).isZero();
+        assertThat(cp2.comptarLlibres()).isZero();
     }
 
     // ── BookExporter golden-file test ────────────────────────────────────
@@ -1416,16 +1416,16 @@ class BibliotecaJUnit5Test {
     @DisplayName("BookExporter.exportJSON output matches golden fixture structure")
     void bookExporterGoldenFile() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre g = LlibreValidator.checkLlibre(9780000000050L, "GoldenBook", "Author X", 2020, "A description", 7.5, 0.0, true, "");
-        cd.addLlibre(g);
-        Llista fav = cd.addLlista("Fav");
-        cd.addLlibreToLlista(9780000000050L, fav.getId(), 8.0, true);
-        Tag fiction = cd.addTag("fiction");
-        cd.addLlibreToTag(9780000000050L, fiction.getId());
+        Llibre g = ValidadorLlibre.comprovarLlibre(9780000000050L, "GoldenBook", "Author X", 2020, "A description", 7.5, 0.0, true, "");
+        cd.afegirLlibre(g);
+        Llista fav = cd.afegirLlista("Fav");
+        cd.afegirLlibreToLlista(9780000000050L, fav.obtenirId(), 8.0, true);
+        Tag fiction = cd.afegirTag("fiction");
+        cd.afegirLlibreToTag(9780000000050L, fiction.obtenirId());
 
         File tmp = File.createTempFile("golden_export", ".json");
         tmp.deleteOnExit();
-        herramienta.BookExporter.exportJSON(tmp, cd);
+        herramienta.ExportadorLlibres.exportarJSON(tmp, cd);
 
         String output = new String(Files.readAllBytes(tmp.toPath()), java.nio.charset.StandardCharsets.UTF_8);
         com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(output).getAsJsonObject();
@@ -1466,21 +1466,21 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         String header = "Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count";
         herramienta.csv.GoodreadsCsvStrategy gr = new herramienta.csv.GoodreadsCsvStrategy();
-        assertThat(gr.canHandle(header)).isTrue();
+        assertThat(gr.potHandle(header)).isTrue();
 
         String row = "42,The Hobbit,Tolkien,J.R.R. Tolkien,,=\"0000000000\",=\"9780000000042\",5,4.5,HarperCollins,Paperback,310,1937,1937,2024-06-15,2024-05-01,fantasy;classics,read,Awesome,,nope,3";
-        String[] headerCols = herramienta.csv.CsvUtils.parseLine(header);
-        java.util.Map<String, Integer> hMap = herramienta.csv.CsvUtils.buildHeaderMap(headerCols);
-        String[] cols = herramienta.csv.CsvUtils.parseLine(row);
+        String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
+        java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+        String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
 
-        assertThat(gr.parseLine(cols, hMap, cd)).isTrue();
-        Llibre l = cd.getLlibre(9780000000042L);
-        assertThat(l.getNom()).isEqualTo("The Hobbit");
-        assertThat(l.getValoracio()).isEqualTo(10.0);
-        assertThat(l.getLlegit()).isTrue();
-        assertThat(l.getEditorial()).isEqualTo("HarperCollins");
-        assertThat(l.getPagines()).isEqualTo(310);
-        assertThat(cd.getAllLlistes()).isNotEmpty();
+        assertThat(gr.analitzarLine(cols, hMap, cd)).isTrue();
+        Llibre l = cd.obtenirLlibre(9780000000042L);
+        assertThat(l.obtenirNom()).isEqualTo("The Hobbit");
+        assertThat(l.obtenirValoracio()).isEqualTo(10.0);
+        assertThat(l.obtenirLlegit()).isTrue();
+        assertThat(l.obtenirEditorial()).isEqualTo("HarperCollins");
+        assertThat(l.obtenirPagines()).isEqualTo(310);
+        assertThat(cd.obtenirAllLlistes()).isNotEmpty();
     }
 
     // ── LibraryThing CSV fixture ──────────────────────────────────────────
@@ -1491,19 +1491,19 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         String header = "Book Id,ISBN,ISBN13,BCID,Title,Authors,Original Publication Year,Publication Year,Rating,Summary,Comments,Review,Collections,Tags";
         herramienta.csv.LibraryThingCsvStrategy lt = new herramienta.csv.LibraryThingCsvStrategy();
-        assertThat(lt.canHandle(header)).isTrue();
+        assertThat(lt.potHandle(header)).isTrue();
 
         String row = "99,,9780000000019,BC123,Test LibBook,Author One; Author Two,2021,2021,3.5,A summary,My notes,,\"My Shelf,Favorites\",fiction;adventure";
-        String[] headerCols = herramienta.csv.CsvUtils.parseLine(header);
-        java.util.Map<String, Integer> hMap = herramienta.csv.CsvUtils.buildHeaderMap(headerCols);
-        String[] cols = herramienta.csv.CsvUtils.parseLine(row);
+        String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
+        java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+        String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
 
-        assertThat(lt.parseLine(cols, hMap, cd)).isTrue();
-        Llibre l = cd.getLlibre(9780000000019L);
-        assertThat(l.getNom()).isEqualTo("Test LibBook");
-        assertThat(l.getValoracio()).isEqualTo(7.0);
-        assertThat(cd.getAllTags()).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(cd.getAllLlistes()).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(lt.analitzarLine(cols, hMap, cd)).isTrue();
+        Llibre l = cd.obtenirLlibre(9780000000019L);
+        assertThat(l.obtenirNom()).isEqualTo("Test LibBook");
+        assertThat(l.obtenirValoracio()).isEqualTo(7.0);
+        assertThat(cd.obtenirAllTags()).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(cd.obtenirAllLlistes()).hasSizeGreaterThanOrEqualTo(1);
     }
 // ── Export/import roundtrip preserves shelf memberships (JSON) ────────
 
@@ -1511,56 +1511,56 @@ class BibliotecaJUnit5Test {
     @DisplayName("JSON export/import roundtrip preserves shelf memberships with valoracio and llegit")
     void jsonRoundtripShelfMemberships() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llibre b1 = LlibreValidator.checkLlibre(9780000000060L, "ShelfBook1", "Auth1", 2021, "Desc1", 8.0, 10.0, true, "");
-        Llibre b2 = LlibreValidator.checkLlibre(9780000000061L, "ShelfBook2", "Auth2", 2022, "Desc2", 6.0, 5.0, false, "");
-        cd.addLlibre(b1);
-        cd.addLlibre(b2);
+        Llibre b1 = ValidadorLlibre.comprovarLlibre(9780000000060L, "ShelfBook1", "Auth1", 2021, "Desc1", 8.0, 10.0, true, "");
+        Llibre b2 = ValidadorLlibre.comprovarLlibre(9780000000061L, "ShelfBook2", "Auth2", 2022, "Desc2", 6.0, 5.0, false, "");
+        cd.afegirLlibre(b1);
+        cd.afegirLlibre(b2);
 
-        Llista s1 = cd.addLlista("Sci-Fi");
-        Llista s2 = cd.addLlista("Classics");
-        cd.addLlibreToLlista(9780000000060L, s1.getId(), 9.0, true);
-        cd.addLlibreToLlista(9780000000060L, s2.getId(), 5.0, false);
-        cd.addLlibreToLlista(9780000000061L, s1.getId(), 7.5, false);
+        Llista s1 = cd.afegirLlista("Sci-Fi");
+        Llista s2 = cd.afegirLlista("Classics");
+        cd.afegirLlibreToLlista(9780000000060L, s1.obtenirId(), 9.0, true);
+        cd.afegirLlibreToLlista(9780000000060L, s2.obtenirId(), 5.0, false);
+        cd.afegirLlibreToLlista(9780000000061L, s1.obtenirId(), 7.5, false);
 
-        Tag t1 = cd.addTag("adventure");
-        Tag t2 = cd.addTag("classic");
-        cd.addLlibreToTag(9780000000060L, t1.getId());
-        cd.addLlibreToTag(9780000000060L, t2.getId());
-        cd.addLlibreToTag(9780000000061L, t1.getId());
+        Tag t1 = cd.afegirTag("adventure");
+        Tag t2 = cd.afegirTag("classic");
+        cd.afegirLlibreToTag(9780000000060L, t1.obtenirId());
+        cd.afegirLlibreToTag(9780000000060L, t2.obtenirId());
+        cd.afegirLlibreToTag(9780000000061L, t1.obtenirId());
 
         File tmp = File.createTempFile("roundtrip_json", ".json");
         tmp.deleteOnExit();
-        herramienta.BookExporter.exportJSON(tmp, cd);
+        herramienta.ExportadorLlibres.exportarJSON(tmp, cd);
 
         // Re-import into fresh DB
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
         ControladorDomini cd2 = ControladorDomini.getInstance();
-        herramienta.BookImporter.ImportResult result = herramienta.BookImporter.importJSON(tmp, cd2);
+        herramienta.ImportadorLlibres.ResultatImportacio result = herramienta.ImportadorLlibres.importarJSON(tmp, cd2);
         assertThat(result.imported()).isEqualTo(2);
 
         // Verify shelves
-        List<Llista> shelves = cd2.getAllLlistes();
+        List<Llista> shelves = cd2.obtenirAllLlistes();
         assertThat(shelves).hasSize(2);
-        Set<String> shelfNames = shelves.stream().map(Llista::getNom).collect(java.util.stream.Collectors.toSet());
+        Set<String> shelfNames = shelves.stream().map(Llista::obtenirNom).collect(java.util.stream.Collectors.toSet());
         assertThat(shelfNames).containsExactlyInAnyOrder("Sci-Fi", "Classics");
 
         // Verify tags
-        List<Tag> tags = cd2.getAllTags();
+        List<Tag> tags = cd2.obtenirAllTags();
         assertThat(tags).hasSize(2);
-        Set<String> tagNames = tags.stream().map(Tag::getNom).collect(java.util.stream.Collectors.toSet());
+        Set<String> tagNames = tags.stream().map(Tag::obtenirNom).collect(java.util.stream.Collectors.toSet());
         assertThat(tagNames).containsExactlyInAnyOrder("adventure", "classic");
 
         // Verify shelf memberships for book 60
-        List<Llista> shelvesFor60 = cd2.getLlistesForLlibre(9780000000060L);
+        List<Llista> shelvesFor60 = cd2.obtenirLlistesForLlibre(9780000000060L);
         assertThat(shelvesFor60).hasSize(2);
-        List<Tag> tagsFor60 = cd2.getTagsForLlibre(9780000000060L);
+        List<Tag> tagsFor60 = cd2.obtenirTagsForLlibre(9780000000060L);
         assertThat(tagsFor60).hasSize(2);
 
         // Verify shelf membership for book 61
-        List<Llista> shelvesFor61 = cd2.getLlistesForLlibre(9780000000061L);
+        List<Llista> shelvesFor61 = cd2.obtenirLlistesForLlibre(9780000000061L);
         assertThat(shelvesFor61).hasSize(1);
-        assertThat(shelvesFor61.get(0).getNom()).isEqualTo("Sci-Fi");
+        assertThat(shelvesFor61.get(0).obtenirNom()).isEqualTo("Sci-Fi");
     }
 
     // ── Config: switching to H2 clears stale host/user ───────────────────
@@ -1574,27 +1574,27 @@ class BibliotecaJUnit5Test {
         String origHome = System.getProperty("user.home");
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-            herramienta.Config.reload();
-            herramienta.DbConfig.setType("mariadb");
-            herramienta.DbConfig.setHost("db.example.com");
-            herramienta.DbConfig.setUser("admin");
+            herramienta.Configuracio.reload();
+            herramienta.ConfiguracioDb.setType("mariadb");
+            herramienta.ConfiguracioDb.posarHost("db.example.com");
+            herramienta.ConfiguracioDb.posarUser("admin");
             Thread.sleep(500);
 
-            assertThat(herramienta.Config.getDbType()).isEqualTo("mariadb");
-            assertThat(herramienta.Config.getDbHost()).isEqualTo("db.example.com");
-            assertThat(herramienta.Config.getDbUser()).isEqualTo("admin");
+            assertThat(herramienta.Configuracio.obtenirDbType()).isEqualTo("mariadb");
+            assertThat(herramienta.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
+            assertThat(herramienta.Configuracio.obtenirDbUser()).isEqualTo("admin");
 
             // Switch back to H2 — host/user should be preserved (putIfAbsent
             // semantics; a future re-connection to MariaDB can still reuse
             // the saved values).
-            herramienta.DbConfig.setType("h2");
+            herramienta.ConfiguracioDb.setType("h2");
             Thread.sleep(500);
-            assertThat(herramienta.Config.getDbType()).isEqualTo("h2");
-            assertThat(herramienta.Config.getDbHost()).isEqualTo("db.example.com");
-            assertThat(herramienta.Config.getDbUser()).isEqualTo("admin");
+            assertThat(herramienta.Configuracio.obtenirDbType()).isEqualTo("h2");
+            assertThat(herramienta.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
+            assertThat(herramienta.Configuracio.obtenirDbUser()).isEqualTo("admin");
         } finally {
             System.setProperty("user.home", origHome);
-            herramienta.Config.reload();
+            herramienta.Configuracio.reload();
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
@@ -1622,10 +1622,10 @@ class BibliotecaJUnit5Test {
             .withAnyMin(2000)
             .withAnyMax(2020)
             .withLlegit(false);
-        assertThat(f.getNom()).isEqualTo("Test");
-        assertThat(f.getAnyMin()).isEqualTo(2000);
-        assertThat(f.getAnyMax()).isEqualTo(2020);
-        assertThat(f.getLlegit()).isFalse();
+        assertThat(f.obtenirNom()).isEqualTo("Test");
+        assertThat(f.obtenirAnyMin()).isEqualTo(2000);
+        assertThat(f.obtenirAnyMax()).isEqualTo(2020);
+        assertThat(f.obtenirLlegit()).isFalse();
     }
 
     // ── LlibreLlistaContext: per-book shelf context ─────────────────────────
@@ -1635,12 +1635,12 @@ class BibliotecaJUnit5Test {
     void llistesForLlibreContext() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune");
-        Llista shelf = cd.addLlista("Favorites");
-        cd.addLlibreToLlista(9780306406157L, shelf.getId(), 9.5, true);
-        var ctxList = cd.getLlistesForLlibreContext(9780306406157L);
+        Llista shelf = cd.afegirLlista("Favorites");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 9.5, true);
+        var ctxList = cd.obtenirLlistesForLlibreContext(9780306406157L);
         assertThat(ctxList).hasSize(1);
         domini.LlibreLlistaContext ctx = ctxList.get(0);
-        assertThat(ctx.llistaId()).isEqualTo(shelf.getId());
+        assertThat(ctx.llistaId()).isEqualTo(shelf.obtenirId());
         assertThat(ctx.nom()).isEqualTo("Favorites");
         assertThat(ctx.valoracio()).isEqualTo(9.5);
         assertThat(ctx.llegit()).isTrue();
@@ -1666,31 +1666,31 @@ class BibliotecaJUnit5Test {
     void multipleAuthorsPreserved() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         Llibre l = book(9780306406157L, "MultiAuthor");
-        l.setAutors(java.util.Arrays.asList("A1", "A2", "A3"));
-        cd.addLlibre(l);
-        Llibre retrieved = cd.getLlibre(9780306406157L);
-        assertThat(retrieved.getAutors()).containsExactlyInAnyOrder("A1", "A2", "A3");
+        l.posarAutors(java.util.Arrays.asList("A1", "A2", "A3"));
+        cd.afegirLlibre(l);
+        Llibre retrieved = cd.obtenirLlibre(9780306406157L);
+        assertThat(retrieved.obtenirAutors()).containsExactlyInAnyOrder("A1", "A2", "A3");
     }
 
     @Test
     @DisplayName("Update book replacing authors preserves new list")
-    void updateAuthorsReplacement() throws Exception {
+    void actualitzarAuthorsReplacement() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         Llibre l = book(9780306406157L, "ReplaceAuth");
-        l.setAutors(java.util.Arrays.asList("Old Author"));
-        cd.addLlibre(l);
-        l.setAutors(java.util.Arrays.asList("New A", "New B"));
-        cd.updateLlibre(l);
-        Llibre retrieved = cd.getLlibre(9780306406157L);
-        assertThat(retrieved.getAutors()).containsExactlyInAnyOrder("New A", "New B");
-        assertThat(retrieved.getAutors()).doesNotContain("Old Author");
+        l.posarAutors(java.util.Arrays.asList("Old Author"));
+        cd.afegirLlibre(l);
+        l.posarAutors(java.util.Arrays.asList("New A", "New B"));
+        cd.actualitzarLlibre(l);
+        Llibre retrieved = cd.obtenirLlibre(9780306406157L);
+        assertThat(retrieved.obtenirAutors()).containsExactlyInAnyOrder("New A", "New B");
+        assertThat(retrieved.obtenirAutors()).doesNotContain("Old Author");
     }
 // ── AboutDialog: loads license text from /LICENSE resource ────────
 
     @Test
     @DisplayName("AboutDialog: /LICENSE resource is loadable and contains GPL text")
     void aboutDialogLicenseResource() {
-        try (var in = presentacio.AboutDialog.class.getResourceAsStream("/LICENSE")) {
+        try (var in = presentacio.QuantADialog.class.getResourceAsStream("/LICENSE")) {
             assertThat(in).isNotNull();
             String text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertThat(text).contains("GNU General Public License");
@@ -1715,14 +1715,14 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("BibliotecaException.NotFound uses NOT_FOUND code")
     void bibliotecaExceptionNotFound() {
-        domini.BibliotecaException.NotFound ex = new domini.BibliotecaException.NotFound("Book not found");
+        domini.BibliotecaException.NoTrobat ex = new domini.BibliotecaException.NoTrobat("Book not found");
         assertThat(ex.code()).isEqualTo(domini.BibliotecaException.Code.NOT_FOUND);
     }
 
     @Test
     @DisplayName("BibliotecaException.Validation uses VALIDATION code")
     void bibliotecaExceptionValidation() {
-        domini.BibliotecaException.Validation ex = new domini.BibliotecaException.Validation("bad isbn");
+        domini.BibliotecaException.Validacio ex = new domini.BibliotecaException.Validacio("bad isbn");
         assertThat(ex.code()).isEqualTo(domini.BibliotecaException.Code.VALIDATION);
     }
 
@@ -1752,7 +1752,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("TagDao: getDistinctValues with invalid column returns empty (does not throw)")
     void tagDaoDistinctValuesInvalidColumn() {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
-        java.util.List<String> vals = cp.getDistinctValues("invalid_column");
+        java.util.List<String> vals = cp.obtenirDistinctValues("invalid_column");
         assertThat(vals).isEmpty();
     }
 
@@ -1761,10 +1761,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Config: window defaults are sensible")
     void configWindowDefaults() {
-        int x = herramienta.Config.getWindowX();
-        int y = herramienta.Config.getWindowY();
-        int w = herramienta.Config.getWindowWidth();
-        int h = herramienta.Config.getWindowHeight();
+        int x = herramienta.Configuracio.obtenirWindowX();
+        int y = herramienta.Configuracio.obtenirWindowY();
+        int w = herramienta.Configuracio.obtenirWindowWidth();
+        int h = herramienta.Configuracio.obtenirWindowHeight();
         assertThat(x).isGreaterThanOrEqualTo(0);
         assertThat(y).isGreaterThanOrEqualTo(0);
         assertThat(w).isGreaterThan(100);
@@ -1776,16 +1776,16 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("LlibreValidator: year 1900 is accepted")
     void validatorYear1900Accepted() {
-        Llibre l = LlibreValidator.checkLlibre(9780000000111L, "OldBook", null, 1900, null, null, null, null, null);
-        assertThat(l.getAny()).isEqualTo(1900);
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780000000111L, "OldBook", null, 1900, null, null, null, null, null);
+        assertThat(l.obtenirAny()).isEqualTo(1900);
     }
 
     @Test
     @DisplayName("LlibreValidator: future year within +5 is accepted")
     void validatorFutureYearAccepted() {
         int futureYear = java.time.Year.now().getValue() + 5;
-        Llibre l = LlibreValidator.checkLlibre(9780000000222L, "FutureBook", null, futureYear, null, null, null, null, null);
-        assertThat(l.getAny()).isEqualTo(futureYear);
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780000000222L, "FutureBook", null, futureYear, null, null, null, null, null);
+        assertThat(l.obtenirAny()).isEqualTo(futureYear);
     }
 
     // ── CsvUtils: parseLine edge cases ───────────────────────────────
@@ -1793,14 +1793,14 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CsvUtils: parseLine handles quoted fields with embedded commas")
     void csvUtilsQuotedFieldWithComma() {
-        String[] result = herramienta.csv.CsvUtils.parseLine("a,\"b,c\",d");
+        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine("a,\"b,c\",d");
         assertThat(result).containsExactly("a", "b,c", "d");
     }
 
     @Test
     @DisplayName("CsvUtils: parseLine handles trailing comma")
     void csvUtilsTrailingComma() {
-        String[] result = herramienta.csv.CsvUtils.parseLine("a,b,");
+        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine("a,b,");
         assertThat(result).containsExactly("a", "b", "");
     }
 
@@ -1808,12 +1808,12 @@ class BibliotecaJUnit5Test {
     @DisplayName("CsvUtils: BOM in header is preserved by parseLine; callers must strip it")
     void csvUtilsBomAwareness() {
         String withBom = "\uFEFF" + "isbn,nom,autor";
-        String[] result = herramienta.csv.CsvUtils.parseLine(withBom);
+        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine(withBom);
         // parseLine does not strip BOM — this is documented behavior
         assertThat(result[0]).contains("isbn");
         // After stripping BOM, parsing works normally
         String cleaned = withBom.replace("\uFEFF", "");
-        String[] cleanedResult = herramienta.csv.CsvUtils.parseLine(cleaned);
+        String[] cleanedResult = herramienta.csv.UtilitatsCsv.analitzarLine(cleaned);
         assertThat(cleanedResult[0]).isEqualTo("isbn");
     }
 
@@ -1856,16 +1856,16 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("ControladorDomini: in-memory filter applies sort like SQL path")
-    void filterInMemoryAppliesSort() {
+    void filtrarInMemoryAppliesSort() {
         ControladorDomini cd = ControladorDomini.getInstance();
         Llibre a = new Llibre(9780000000001L, "Zebra", "A", 2020, "", 0.0, 0.0, false, "");
         Llibre b = new Llibre(9780000000002L, "Alpha", "B", 2021, "", 0.0, 0.0, false, "");
-        cd.addLlibre(a);
-        cd.addLlibre(b);
-        LlibreFilter f = domini.LlibreFilterBuilder.of().sort("nom", true).build();
+        cd.afegirLlibre(a);
+        cd.afegirLlibre(b);
+        LlibreFilter f = domini.ConstructorFiltreLlibre.of().sort("nom", true).build();
         List<Llibre> sorted = cd.aplicarFiltres(f);
-        assertThat(sorted.get(0).getNom()).isEqualTo("Alpha");
-        assertThat(sorted.get(1).getNom()).isEqualTo("Zebra");
+        assertThat(sorted.get(0).obtenirNom()).isEqualTo("Alpha");
+        assertThat(sorted.get(1).obtenirNom()).isEqualTo("Zebra");
     }
 
     @Test
@@ -1883,22 +1883,22 @@ class BibliotecaJUnit5Test {
     void bibliotecaTableModelSetBooks() {
         var model = new presentacio.BibliotecaTableModel();
         Llibre l = new Llibre(9780306406157L, "Test", "Author", 2020, "", 5.0, 10.0, true, "");
-        model.setBooks(java.util.List.of(l));
+        model.posarBooks(java.util.List.of(l));
         assertThat(model.getRowCount()).isOne();
-        assertThat(model.getBookAt(0).getISBN()).isEqualTo(9780306406157L);
+        assertThat(model.obtenirBookAt(0).obtenirISBN()).isEqualTo(9780306406157L);
     }
 
     @Test
     @DisplayName("LlibreValidator.validateInto updates target without replacing extras")
     void llibreValidatorValidateInto() {
         Llibre l = new Llibre(9780306406157L, "Old", "A", 2000, "desc", 1.0, 2.0, false, "");
-        l.setNotes("keep notes");
-        l.setPagines(400);
-        LlibreValidator.validateInto(l, 9780306406157L, "New Title", "Author", 2020,
+        l.posarNotes("keep notes");
+        l.posarPagines(400);
+        ValidadorLlibre.validarInto(l, 9780306406157L, "New Title", "Author", 2020,
             "desc", 5.0, 10.0, true, "");
-        assertThat(l.getNom()).isEqualTo("New Title");
-        assertThat(l.getNotes()).isEqualTo("keep notes");
-        assertThat(l.getPagines()).isEqualTo(400);
+        assertThat(l.obtenirNom()).isEqualTo("New Title");
+        assertThat(l.obtenirNotes()).isEqualTo("keep notes");
+        assertThat(l.obtenirPagines()).isEqualTo(400);
     }
 
     @Test
@@ -1910,29 +1910,29 @@ class BibliotecaJUnit5Test {
         String origHome = System.getProperty("user.home");
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-            herramienta.Config.reload();
-            herramienta.UiConfig.setDarkMode(true);
+            herramienta.Configuracio.reload();
+            herramienta.ConfiguracioUi.posarDarkMode(true);
             Thread.sleep(500);
-            herramienta.Config.withBatch(() -> {
-                herramienta.UiConfig.setDarkMode(false);
-                herramienta.UiConfig.setFontSize("large");
+            herramienta.Configuracio.withBatch(() -> {
+                herramienta.ConfiguracioUi.posarDarkMode(false);
+                herramienta.ConfiguracioUi.posarFontSize("large");
             });
             Thread.sleep(500);
-            assertThat(herramienta.Config.isDarkMode()).isFalse();
-            assertThat(herramienta.Config.getFontSize()).isEqualTo("large");
-            herramienta.Config.reload();
-            assertThat(herramienta.Config.isDarkMode()).isFalse();
-            assertThat(herramienta.Config.getFontSize()).isEqualTo("large");
+            assertThat(herramienta.Configuracio.esDarkMode()).isFalse();
+            assertThat(herramienta.Configuracio.obtenirFontSize()).isEqualTo("large");
+            herramienta.Configuracio.reload();
+            assertThat(herramienta.Configuracio.esDarkMode()).isFalse();
+            assertThat(herramienta.Configuracio.obtenirFontSize()).isEqualTo("large");
         } finally {
             System.setProperty("user.home", origHome);
-            herramienta.Config.reload();
+            herramienta.Configuracio.reload();
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
 @Test
     @DisplayName("MostrarBibliotecaControl: clearCoverCache is safe to call")
-    void clearCoverCacheSmoke() {
-        presentacio.MostrarBibliotecaControl.clearCoverCache();
+    void netejarCoverCacheSmoke() {
+        presentacio.ControladorMostrarBiblioteca.netejarCoverCache();
     }
 
     @Test
@@ -1953,9 +1953,9 @@ class BibliotecaJUnit5Test {
     @DisplayName("FormValidator: invalid field gets red border")
     void formValidatorInvalidBorder() {
         javax.swing.JTextField tf = new javax.swing.JTextField("bad");
-        presentacio.FormValidator.validateField(tf, false);
+        presentacio.FormValidator.validarField(tf, false);
         assertThat(tf.getBorder()).isNotNull();
-        presentacio.FormValidator.validateField(tf, true);
+        presentacio.FormValidator.validarField(tf, true);
     }
 
     @Test
@@ -1970,8 +1970,8 @@ class BibliotecaJUnit5Test {
             threads.add(new Thread(() -> {
                 try {
                     start.await();
-                    cd.addLlibre(new Llibre(isbn, "T" + isbn, "A", 2020, "", 0.0, 0.0, false, ""));
-                    cd.getAllLlibres().size();
+                    cd.afegirLlibre(new Llibre(isbn, "T" + isbn, "A", 2020, "", 0.0, 0.0, false, ""));
+                    cd.obtenirAllLlibres().size();
                 } catch (Exception e) {
                     errors.incrementAndGet();
                 }
@@ -1981,7 +1981,7 @@ class BibliotecaJUnit5Test {
         start.countDown();
         for (Thread t : threads) t.join(5000);
         assertThat(errors.get()).isZero();
-        assertThat(cd.getAllLlibres().size()).isGreaterThanOrEqualTo(8);
+        assertThat(cd.obtenirAllLlibres().size()).isGreaterThanOrEqualTo(8);
     }
 
     // ── CsvUtils extended ────────────────────────────────────────────────────
@@ -1993,29 +1993,29 @@ class BibliotecaJUnit5Test {
         "'', ''"
     })
     @DisplayName("CsvUtils.parseIsbn normalizes ISBN-10 X and ISBN-13")
-    void parseIsbnNormalization(String raw, String expected) {
-        assertThat(herramienta.csv.CsvUtils.parseIsbn(raw)).isEqualTo(expected);
+    void analitzarIsbnNormalization(String raw, String expected) {
+        assertThat(herramienta.csv.UtilitatsCsv.analitzarIsbn(raw)).isEqualTo(expected);
     }
 
     @Test
     @DisplayName("CsvUtils.colVal missing column returns empty string")
     void colValMissingColumn() {
-        var h = herramienta.csv.CsvUtils.buildHeaderMap(new String[]{"ISBN"});
-        assertThat(herramienta.csv.CsvUtils.colVal(h, new String[]{"978"}, "Title")).isEmpty();
+        var h = herramienta.csv.UtilitatsCsv.buildHeaderMap(new String[]{"ISBN"});
+        assertThat(herramienta.csv.UtilitatsCsv.colVal(h, new String[]{"978"}, "Title")).isEmpty();
     }
 
     @Test
     @DisplayName("CsvUtils.parseDoubleOrZero handles invalid input")
-    void parseDoubleOrZeroInvalid() {
-        assertThat(herramienta.csv.CsvUtils.parseDoubleOrZero("x")).isZero();
-        assertThat(herramienta.csv.CsvUtils.parseDoubleOrZero(" 3.5 ")).isEqualTo(3.5);
+    void analitzarDoubleOrZeroInvalid() {
+        assertThat(herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero("x")).isZero();
+        assertThat(herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero(" 3.5 ")).isEqualTo(3.5);
     }
 
     @Test
     @DisplayName("CsvUtils.csvQ escapes quotes and null")
     void csvQEscaping() {
-        assertThat(herramienta.csv.CsvUtils.csvQ("a\"b")).isEqualTo("\"a\"\"b\"");
-        assertThat(herramienta.csv.CsvUtils.csvQ(null)).isEmpty();
+        assertThat(herramienta.csv.UtilitatsCsv.csvQ("a\"b")).isEqualTo("\"a\"\"b\"");
+        assertThat(herramienta.csv.UtilitatsCsv.csvQ(null)).isEmpty();
     }
 
     // ── FiltreUtils extended ─────────────────────────────────────────────────
@@ -2034,12 +2034,12 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Llibre.getDisplayNom language fallback")
     void llibreDisplayNom() throws Exception {
-        Llibre l = LlibreValidator.checkLlibre(9780306406157L, "Main", null, null, null, null, null, null, null);
-        l.setNomCa("Català");
-        l.setNomEn("English");
-        assertThat(l.getDisplayNom("ca")).isEqualTo("Català");
-        assertThat(l.getDisplayNom("en")).isEqualTo("English");
-        assertThat(l.getDisplayNom("de")).isEqualTo("Main");
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Main", null, null, null, null, null, null, null);
+        l.posarNomCa("Català");
+        l.posarNomEn("English");
+        assertThat(l.obtenirDisplayNom("ca")).isEqualTo("Català");
+        assertThat(l.obtenirDisplayNom("en")).isEqualTo("English");
+        assertThat(l.obtenirDisplayNom("de")).isEqualTo("Main");
     }
 
     // ── CoverService ─────────────────────────────────────────────────────────
@@ -2047,8 +2047,8 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CoverService cache miss returns null")
     void coverServiceCacheMiss() {
-        assertThat(herramienta.CoverService.getCachedBytes("0000000000999")).isNull();
-        assertThat(herramienta.CoverService.getCachedImage("0000000000998")).isNull();
+        assertThat(herramienta.ServeiCoberta.obtenirCachedBytes("0000000000999")).isNull();
+        assertThat(herramienta.ServeiCoberta.obtenirCachedImage("0000000000998")).isNull();
     }
 
     // ── Domain: tags and loans ───────────────────────────────────────────────
@@ -2057,33 +2057,33 @@ class BibliotecaJUnit5Test {
     @DisplayName("Tag rename and delete")
     void tagRenameDelete() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Tag t = cd.addTag("old");
-        cd.renameTag(t.getId(), "new");
-        assertThat(cd.getAllTags()).extracting(Tag::getNom).containsExactly("new");
-        cd.deleteTag(t);
-        assertThat(cd.getAllTags()).isEmpty();
+        Tag t = cd.afegirTag("old");
+        cd.reanomenarTag(t.obtenirId(), "new");
+        assertThat(cd.obtenirAllTags()).extracting(Tag::obtenirNom).containsExactly("new");
+        cd.eliminarTag(t);
+        assertThat(cd.obtenirAllTags()).isEmpty();
     }
 
     @Test
     @DisplayName("Loan prestar/retornar round-trip")
     void loanRoundTrip() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        cd.addLlibre(book(9780306406157L, "Loan"));
+        cd.afegirLlibre(book(9780306406157L, "Loan"));
         cd.prestarLlibre(9780306406157L, "Bob");
-        assertThat(cd.getLoanedISBNs()).contains(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).contains(9780306406157L);
         cd.retornarLlibre(9780306406157L);
-        assertThat(cd.getLoanedISBNs()).doesNotContain(9780306406157L);
+        assertThat(cd.obtenirLoanedISBNs()).doesNotContain(9780306406157L);
     }
 
     @Test
     @DisplayName("clearAll wipes books and shelves")
-    void clearAllWipesData() throws Exception {
+    void netejarAllWipesData() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "X");
-        cd.addLlista("Shelf");
-        cd.clearAll();
+        cd.afegirLlista("Shelf");
+        cd.netejarAll();
         assertThat(cd.getSize()).isZero();
-        assertThat(cd.getAllLlistes()).isEmpty();
+        assertThat(cd.obtenirAllLlistes()).isEmpty();
     }
 
     // ── CsvUtils.existsInLibrary ─────────────────────────────────────────────
@@ -2093,8 +2093,8 @@ class BibliotecaJUnit5Test {
     void existsInLibrary() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Present");
-        assertThat(herramienta.csv.CsvUtils.existsInLibrary(cd, 9780306406157L)).isTrue();
-        assertThat(herramienta.csv.CsvUtils.existsInLibrary(cd, 9780000000001L)).isFalse();
+        assertThat(herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780306406157L)).isTrue();
+        assertThat(herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780000000001L)).isFalse();
     }
 
     // ── ControladorDomini construction ───────────────────────────────────────
@@ -2112,7 +2112,7 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("create() factory returns a fresh instance bound to given cp")
-    void createFactoryReturnsFreshInstance() {
+    void crearFactoryReturnsFreshInstance() {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
         ControladorDomini a = ControladorDomini.create(cp);
         ControladorDomini b = ControladorDomini.create(cp);
@@ -2124,34 +2124,34 @@ class BibliotecaJUnit5Test {
 
     @Test
     @DisplayName("getLlistaById returns matching shelf")
-    void getLlistaByIdFindsShelf() throws Exception {
+    void obtenirLlistaByIdFindsShelf() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llista shelf = cd.addLlista("Fiction");
-        assertThat(cd.getLlistaById(shelf.getId()).getNom()).isEqualTo("Fiction");
+        Llista shelf = cd.afegirLlista("Fiction");
+        assertThat(cd.obtenirLlistaById(shelf.obtenirId()).obtenirNom()).isEqualTo("Fiction");
     }
 
     @Test
     @DisplayName("getLlistaById throws on missing id")
-    void getLlistaByIdMissingThrows() {
+    void obtenirLlistaByIdMissingThrows() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.getLlistaById(99_999))
+        assertThatThrownBy(() -> cd.obtenirLlistaById(99_999))
             .isInstanceOf(Exception.class)
             .hasMessageContaining("99");
     }
 
     @Test
     @DisplayName("getTagById returns matching tag")
-    void getTagByIdFindsTag() throws Exception {
+    void obtenirTagByIdFindsTag() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Tag tag = cd.addTag("ToRead");
-        assertThat(cd.getTagById(tag.getId()).getNom()).isEqualTo("ToRead");
+        Tag tag = cd.afegirTag("ToRead");
+        assertThat(cd.obtenirTagById(tag.obtenirId()).obtenirNom()).isEqualTo("ToRead");
     }
 
     @Test
     @DisplayName("getTagById throws on missing id")
-    void getTagByIdMissingThrows() {
+    void obtenirTagByIdMissingThrows() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.getTagById(99_999))
+        assertThatThrownBy(() -> cd.obtenirTagById(99_999))
             .isInstanceOf(Exception.class)
             .hasMessageContaining("99");
     }
@@ -2162,56 +2162,56 @@ class BibliotecaJUnit5Test {
     @DisplayName("Llibre.setAutors(['Alice']) makes getAutor return 'Alice'")
     void llibreSetAutorsSingle() {
         domini.Llibre l = new domini.Llibre(9780306406157L, "T", null, null, null, null, null, null, null);
-        l.setAutors(java.util.List.of("Alice"));
-        assertThat(l.getAutor()).isEqualTo("Alice");
-        assertThat(l.getAutors()).containsExactly("Alice");
+        l.posarAutors(java.util.List.of("Alice"));
+        assertThat(l.obtenirAutor()).isEqualTo("Alice");
+        assertThat(l.obtenirAutors()).containsExactly("Alice");
     }
 
     @Test
     @DisplayName("Llibre.setAutors reflects in getAutor")
     void llibreSetAutorsReflectsInGetAutor() {
         domini.Llibre l = new domini.Llibre(9780306406157L, "T", null, null, null, null, null, null, null);
-        l.setAutors(java.util.List.of("Alice", "Bob"));
-        assertThat(l.getAutor()).isEqualTo("Alice, Bob");
+        l.posarAutors(java.util.List.of("Alice", "Bob"));
+        assertThat(l.obtenirAutor()).isEqualTo("Alice, Bob");
     }
 
     @Test
     @DisplayName("Llibre.setAutors(null) clears autors list")
     void llibreSetAutorsNullClearsAutors() {
         domini.Llibre l = new domini.Llibre(9780306406157L, "T", null, null, null, null, null, null, null);
-        l.setAutors(java.util.List.of("Alice"));
-        l.setAutors(null);
-        assertThat(l.getAutors()).isEmpty();
+        l.posarAutors(java.util.List.of("Alice"));
+        l.posarAutors(null);
+        assertThat(l.obtenirAutors()).isEmpty();
     }
 
     // ── getDistinctValues: dual-path behavior ────────────────────────────────
 
     @Test
     @DisplayName("getDistinctValues: in-memory path returns distinct sorted values for editorial")
-    void getDistinctValuesInMemoryEditorial() throws Exception {
+    void obtenirDistinctValuesInMemoryEditorial() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        domini.Llibre a = herramienta.LlibreValidator.checkLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
-        domini.Llibre b = herramienta.LlibreValidator.checkLlibre(9780000000001L, "B", null, null, null, null, null, null, null);
-        a.setEditorial("Penguin");
-        b.setEditorial("Ace");
-        cd.addLlibre(a);
-        cd.addLlibre(b);
-        assertThat(cd.getDistinctValues("editorial")).contains("Ace", "Penguin");
+        domini.Llibre a = herramienta.ValidadorLlibre.comprovarLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
+        domini.Llibre b = herramienta.ValidadorLlibre.comprovarLlibre(9780000000001L, "B", null, null, null, null, null, null, null);
+        a.posarEditorial("Penguin");
+        b.posarEditorial("Ace");
+        cd.afegirLlibre(a);
+        cd.afegirLlibre(b);
+        assertThat(cd.obtenirDistinctValues("editorial")).contains("Ace", "Penguin");
     }
 
     @Test
     @DisplayName("getDistinctValues: SQL fallback returns empty for unknown column")
-    void getDistinctValuesUnknownColumnEmpty() {
+    void obtenirDistinctValuesUnknownColumnEmpty() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThat(cd.getDistinctValues("not_a_column")).isEmpty();
-        assertThat(cd.getDistinctValues("any")).isEmpty();
+        assertThat(cd.obtenirDistinctValues("not_a_column")).isEmpty();
+        assertThat(cd.obtenirDistinctValues("any")).isEmpty();
     }
 
     // ── OpenLibraryClient: number_of_pages=null must not NPE ──────────────────
 
     @Test
     @DisplayName("OpenLibraryClient.lookupByISBN tolerates JSON null for number_of_pages")
-    void openLibraryNullNumberOfPagesTolerated() throws Exception {
+    void obrirLibraryNullNumberOfPagesTolerated() throws Exception {
         com.sun.net.httpserver.HttpServer srv = com.sun.net.httpserver.HttpServer.create(
             new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), 0), 0);
         srv.createContext("/", ex -> {
@@ -2222,22 +2222,22 @@ class BibliotecaJUnit5Test {
         });
         srv.start();
         try {
-            String prev = herramienta.OpenLibraryClient.testBaseUrl;
-            int prevRetries = herramienta.OpenLibraryClient.testMaxRetries;
-            long prevBase = herramienta.OpenLibraryClient.testRetryBaseMs;
-            herramienta.OpenLibraryClient.testBaseUrl = "http://localhost:" + srv.getAddress().getPort();
-            herramienta.OpenLibraryClient.testMaxRetries = 0;
-            herramienta.OpenLibraryClient.testRetryBaseMs = 0;
+            String prev = herramienta.ClientOpenLibrary.testBaseUrl;
+            int anteriorRetries = herramienta.ClientOpenLibrary.testMaxRetries;
+            long anteriorBase = herramienta.ClientOpenLibrary.testRetryBaseMs;
+            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:" + srv.getAddress().getPort();
+            herramienta.ClientOpenLibrary.testMaxRetries = 0;
+            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
             try {
-                java.util.Map<String, String> r = herramienta.OpenLibraryClient.lookupByISBN("9780000000001");
+                java.util.Map<String, String> r = herramienta.ClientOpenLibrary.lookupByISBN("9780000000001");
                 // title present, no NPE thrown, no "error" key
                 assertThat(r).containsKey("title");
                 assertThat(r).doesNotContainKey("error");
                 assertThat(r).doesNotContainKey("pagines");
             } finally {
-                herramienta.OpenLibraryClient.testBaseUrl = prev;
-                herramienta.OpenLibraryClient.testMaxRetries = prevRetries;
-                herramienta.OpenLibraryClient.testRetryBaseMs = prevBase;
+                herramienta.ClientOpenLibrary.testBaseUrl = prev;
+                herramienta.ClientOpenLibrary.testMaxRetries = anteriorRetries;
+                herramienta.ClientOpenLibrary.testRetryBaseMs = anteriorBase;
             }
         } finally {
             srv.stop(0);
@@ -2250,10 +2250,10 @@ class BibliotecaJUnit5Test {
     @DisplayName("BibliotecaException.NotFound uses NOT_FOUND code")
     void notFoundCode() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        domini.Llibre l = LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, null, null, null, null);
-        cd.addLlibre(l);
-        assertThatThrownBy(() -> cd.getLlibre(9780000000001L))
-            .isInstanceOf(domini.BibliotecaException.NotFound.class)
+        domini.Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, null, null, null, null);
+        cd.afegirLlibre(l);
+        assertThatThrownBy(() -> cd.obtenirLlibre(9780000000001L))
+            .isInstanceOf(domini.BibliotecaException.NoTrobat.class)
             .extracting("code").isEqualTo(domini.BibliotecaException.Code.NOT_FOUND);
     }
 
@@ -2261,34 +2261,34 @@ class BibliotecaJUnit5Test {
     @DisplayName("Duplicate ISBN throws BibliotecaException.Duplicate")
     void duplicateCode() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        domini.Llibre l = LlibreValidator.checkLlibre(9780306406157L, "X", null, null, null, null, null, null, null);
-        cd.addLlibre(l);
-        assertThatThrownBy(() -> cd.addLlibre(l))
-            .isInstanceOf(domini.BibliotecaException.Duplicate.class);
+        domini.Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, null, null, null, null);
+        cd.afegirLlibre(l);
+        assertThatThrownBy(() -> cd.afegirLlibre(l))
+            .isInstanceOf(domini.BibliotecaException.Duplicat.class);
     }
 
     @Test
     @DisplayName("getLlistaById throws BibliotecaException.NotFound for unknown id")
-    void getLlistaByIdNotFound() throws Exception {
+    void obtenirLlistaByIdNotFound() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.getLlistaById(9999))
-            .isInstanceOf(domini.BibliotecaException.NotFound.class);
+        assertThatThrownBy(() -> cd.obtenirLlistaById(9999))
+            .isInstanceOf(domini.BibliotecaException.NoTrobat.class);
     }
 
     @Test
     @DisplayName("getTagById throws BibliotecaException.NotFound for unknown id")
-    void getTagByIdNotFound() throws Exception {
+    void obtenirTagByIdNotFound() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.getTagById(9999))
-            .isInstanceOf(domini.BibliotecaException.NotFound.class);
+        assertThatThrownBy(() -> cd.obtenirTagById(9999))
+            .isInstanceOf(domini.BibliotecaException.NoTrobat.class);
     }
 
     @Test
     @DisplayName("deleteLlibre throws BibliotecaException.NotFound for unknown ISBN")
-    void deleteLlibreNotFound() {
+    void eliminarLlibreNotFound() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        assertThatThrownBy(() -> cd.deleteLlibre(9780000000001L))
-            .isInstanceOf(domini.BibliotecaException.NotFound.class);
+        assertThatThrownBy(() -> cd.eliminarLlibre(9780000000001L))
+            .isInstanceOf(domini.BibliotecaException.NoTrobat.class);
     }
 }
 

@@ -8,7 +8,7 @@ import java.io.File;
  * on backup/restore/clear capabilities.
  */
 public interface BibliotecaAdmin {
-    void backupToSQL(File f) throws Exception;
-    void restoreFromSQL(File f) throws Exception;
-    void clearAll() throws Exception;
+    void copiaSegToSQL(File f) throws Exception;
+    void restaurarFromSQL(File f) throws Exception;
+    void netejarAll() throws Exception;
 }

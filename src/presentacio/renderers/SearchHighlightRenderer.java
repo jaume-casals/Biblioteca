@@ -11,7 +11,7 @@ import herramienta.UITheme;
 import presentacio.BibliotecaTableModel;
 
 public class SearchHighlightRenderer extends DefaultTableCellRenderer {
-    private String searchText = "";
+    private String cercarText = "";
     /** Cached set reference — refreshed via {@link #setLoanedISBNs(Set)} from
      *  {@link presentacio.TableController} whenever the host's
      *  {@code state.loanedISBNs} is reassigned. Avoids the per-cell
@@ -27,8 +27,8 @@ public class SearchHighlightRenderer extends DefaultTableCellRenderer {
         this.loanedISBNs = loanedISBNs != null ? loanedISBNs : Collections.emptySet();
     }
 
-    public void setSearchText(String text) { this.searchText = text != null ? text : ""; }
-    public void setLoanedISBNs(Set<Long> isbns) { this.loanedISBNs = isbns != null ? isbns : Collections.emptySet(); }
+    public void posarSearchText(String text) { this.cercarText = text != null ? text : ""; }
+    public void posarLoanedISBNs(Set<Long> isbns) { this.loanedISBNs = isbns != null ? isbns : Collections.emptySet(); }
 
     @Override
     public Component getTableCellRendererComponent(JTable t, Object value,
@@ -37,20 +37,20 @@ public class SearchHighlightRenderer extends DefaultTableCellRenderer {
         if (!selected && t.getModel() instanceof BibliotecaTableModel model) {
             try {
                 int modelRow = t.convertRowIndexToModel(row);
-                Llibre l = model.getBookAt(modelRow);
-                if (l != null && loanedISBNs.contains(l.getISBN())) {
-                    setBackground(UITheme.isDark() ? new java.awt.Color(0x5C3A00) : new java.awt.Color(0xFFF3CD));
+                Llibre l = model.obtenirBookAt(modelRow);
+                if (l != null && loanedISBNs.contains(l.obtenirISBN())) {
+                    setBackground(UITheme.esDark() ? new java.awt.Color(0x5C3A00) : new java.awt.Color(0xFFF3CD));
                 }
             } catch (Exception ignored) {}
         }
-        String query = searchText.trim();
+        String query = cercarText.trim();
         String text = value != null ? value.toString() : "";
         if (!query.isEmpty() && !selected) {
             String escaped = text
                 .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
             String escapedQ = java.util.regex.Pattern.quote(query);
-            String bg = hexColor(UITheme.palette().searchHighlightBg());
-            String fg = hexColor(UITheme.palette().searchHighlightFg());
+            String bg = hexColor(UITheme.palette().cercarHighlightBg());
+            String fg = hexColor(UITheme.palette().cercarHighlightFg());
             String highlighted = escaped.replaceAll(
                 "(?i)(" + escapedQ + ")",
                 "<span style='background:" + bg + ";color:" + fg + "'>$1</span>");

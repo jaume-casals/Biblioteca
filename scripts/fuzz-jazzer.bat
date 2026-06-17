@@ -1,9 +1,9 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-REM Run the Jazzer coverage-guided fuzz harnesses.
-REM Mirrors `make fuzz-jazzer` on Linux.
-REM JAZZER_FUZZ=1 switches Jazzer from regression mode to fuzzing mode.
+REM Executa els harnesses de fuzz guiats per cobertura de Jazzer.
+REM Mirror de `make fuzz-jazzer` a Linux.
+REM JAZZER_FUZZ=1 commuta Jazzer del mode de regressió al mode de fuzzing.
 
 set "CP=bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar;lib\apiguardian-api-1.1.2.jar;lib\junit-jupiter-api-5.11.4.jar;lib\junit-jupiter-params-5.11.4.jar;lib\junit-jupiter-engine-5.11.4.jar;lib\junit-platform-launcher-1.11.4.jar;lib\junit-platform-engine-1.11.4.jar;lib\junit-platform-commons-1.11.4.jar;lib\opentest4j-1.3.0.jar;lib\assertj-core-3.26.3.jar;lib\mockito-core-5.14.2.jar;lib\mockito-junit-jupiter-5.14.2.jar;lib\byte-buddy-1.15.4.jar;lib\byte-buddy-agent-1.15.4.jar;lib\objenesis-3.3.jar;lib\jqwik-api-1.9.0.jar;lib\jqwik-engine-1.9.0.jar;lib\jazzer-0.24.0.jar;lib\jazzer-api-0.24.0.jar;lib\jazzer-junit-0.24.0.jar"
 

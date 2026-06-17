@@ -14,7 +14,7 @@ public class LlibreBlobDao {
 
     LlibreBlobDao(Connection con) { this.con = con; }
 
-    public synchronized byte[] getBlob(long isbn) {
+    public synchronized byte[] obtenirBlob(long isbn) {
         try {
             try (PreparedStatement ps = con.prepareStatement("SELECT imatge_blob FROM llibre WHERE ISBN = ?")) {
                 ps.setLong(1, isbn);
@@ -36,15 +36,15 @@ public class LlibreBlobDao {
         }
     }
 
-    public synchronized void loadHeavyFields(long isbn, Llibre target) {
+    public synchronized void carregarHeavyFields(long isbn, Llibre target) {
         try (PreparedStatement ps = con.prepareStatement(
                 "SELECT descripcio, notes FROM llibre WHERE ISBN = ?")) {
             ps.setLong(1, isbn);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    target.setDescripcio(rs.getString("descripcio"));
-                    target.setNotes(rs.getString("notes"));
-                    target.setHeavyFieldsLoaded(true);
+                    target.posarDescripcio(rs.getString("descripcio"));
+                    target.posarNotes(rs.getString("notes"));
+                    target.posarHeavyFieldsLoaded(true);
                 }
             }
         } catch (SQLException e) {
@@ -62,14 +62,15 @@ public class LlibreBlobDao {
      * (it has the in-memory reference) to avoid an unnecessary
      * {@code target.set*} no-op.
      */
-    public synchronized void loadHeavyFieldsBatched(java.util.List<Long> isbns,
+    public synchronized void carregarHeavyFieldsBatched(java.util.List<Long> isbns,
                                                     java.util.Map<Long, Llibre> targets) {
         if (isbns == null || isbns.isEmpty()) return;
-        // Build a single "IN (?, ?, …)" query. Placeholder count capped
-        // to keep the SQL string manageable — chunks of 500 are well
-        // within H2 / MariaDB IN-list limits and keep the prepared
-        // statement's parameter array from blowing up the JDBC driver
-        // memory budget.
+        // Construeix una sola consulta "IN (?, ?, …)". El recompte de
+        // placeholders està limitat per mantenar la cadena SQL manejable
+        // — els trossos de 500 estan dins dels límits de les llistes
+        // IN d'H2 / MariaDB i eviten que l'array de paràmetres del
+        // prepared statement faci explotar el pressupost de memòria
+        // del driver JDBC.
         final int CHUNK = 500;
         for (int from = 0; from < isbns.size(); from += CHUNK) {
             int to = Math.min(from + CHUNK, isbns.size());
@@ -84,9 +85,9 @@ public class LlibreBlobDao {
                         long isbn = rs.getLong(1);
                         Llibre target = targets.get(isbn);
                         if (target == null) continue;
-                        target.setDescripcio(rs.getString("descripcio"));
-                        target.setNotes(rs.getString("notes"));
-                        target.setHeavyFieldsLoaded(true);
+                        target.posarDescripcio(rs.getString("descripcio"));
+                        target.posarNotes(rs.getString("notes"));
+                        target.posarHeavyFieldsLoaded(true);
                     }
                 }
             } catch (SQLException e) {

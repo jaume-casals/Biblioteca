@@ -1,7 +1,7 @@
 package presentacio.config;
 
-import herramienta.Config;
-import herramienta.DbConfig;
+import herramienta.Configuracio;
+import herramienta.ConfiguracioDb;
 import herramienta.UITheme;
 import interficie.BibliotecaWriter;
 import presentacio.UIComponents;
@@ -42,7 +42,7 @@ public final class ConfiguracioDataSection {
         lblDbSizeVal.setFont(UITheme.fontBase());
         lblDbSizeVal.setForeground(UITheme.palette().textDark());
         new SwingWorker<Long, Void>() {
-            @Override protected Long doInBackground() { return cd.getDbSizeBytes(); }
+            @Override protected Long doInBackground() { return cd.obtenirDbSizeBytes(); }
             @Override protected void done() {
                 try {
                     long dbBytes = get();
@@ -75,13 +75,13 @@ public final class ConfiguracioDataSection {
                 t("dlg_confirm_clear_2_title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
             if (r2 != JOptionPane.YES_OPTION) return;
             try {
-                cd.clearAll();
+                cd.netejarAll();
                 if (listener != null) listener.onRefreshData();
                 JOptionPane.showMessageDialog(owner, t("dlg_clear_done"),
                     t("dlg_clear_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 owner.dispose();
             } catch (Exception ex) {
-                new herramienta.DialogoError(ex).showErrorMessage();
+                new herramienta.DialegError(ex).mostrarErrorMessage();
             }
         });
 
@@ -89,15 +89,15 @@ public final class ConfiguracioDataSection {
         UIComponents.styleSecondaryButton(btnPerfils);
         btnPerfils.setToolTipText(t("tip_gestio_perfils"));
         btnPerfils.addActionListener(e -> {
-            if (!"h2".equals(Config.getDbType())) {
+            if (!"h2".equals(Configuracio.obtenirDbType())) {
                 JOptionPane.showMessageDialog(owner,
                     t("dlg_perfils_h2_only"),
                     t("dlg_perfils_bd_title"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
-            java.util.List<String> profiles = Config.listDbProfiles();
+            java.util.List<String> profiles = Configuracio.listDbProfiles();
             String[] opts = profiles.toArray(new String[0]);
-            String current = Config.getDbProfile();
+            String current = Configuracio.obtenirDbProfile();
             String chosen = (String) JOptionPane.showInputDialog(owner,
                 t("dlg_perfil_actiu", current),
                 t("dlg_canviar_perfil_title"), JOptionPane.PLAIN_MESSAGE, null, opts, current);
@@ -115,7 +115,7 @@ public final class ConfiguracioDataSection {
                 t("dlg_perfil_confirmar", chosen), t("dlg_perfil_confirmar_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
             if (confirm != JOptionPane.YES_OPTION) return;
-            DbConfig.setProfile(chosen);
+            ConfiguracioDb.posarProfile(chosen);
             String finalChosen = chosen;
             JOptionPane.showMessageDialog(owner,
                 t("dlg_perfil_canviat", finalChosen),
@@ -143,7 +143,8 @@ public final class ConfiguracioDataSection {
     }
 
     public static void reloadFromConfig(JPanel root) {
-        // Data section has no user-editable fields to refresh; DB size is
-        // recomputed on each open via the SwingWorker in build().
+        // La secció de dades no té camps editables per l'usuari per refrescar;
+        // la mida de la BBDD es recalcula a cada obertura amb el SwingWorker
+        // de build().
     }
 }

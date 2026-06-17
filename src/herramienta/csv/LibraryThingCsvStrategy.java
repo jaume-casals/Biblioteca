@@ -1,7 +1,7 @@
 package herramienta.csv;
 
 import domini.Llibre;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import interficie.BibliotecaWriter;
 
 import java.util.Map;
@@ -11,13 +11,14 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
     @Override public String getName() { return "LibraryThing"; }
 
     @Override
-    public boolean canHandle(String headerRow) {
+    public boolean potHandle(String headerRow) {
         if (headerRow == null || headerRow.isBlank()) return false;
-        // BCID is the LibraryThing-specific book identifier; it appears in
-        // every export and is unique to that strategy. Require a few other
-        // canonical columns to avoid matching a stray substring.
+        // BCID és l'identificador de llibre específic de LibraryThing;
+        // apareix a cada exportació i és únic d'aquesta estratègia.
+        // Requerim unes quantes columnes canòniques més per evitar
+        // coincidir amb una subcadena esporàdica.
         if (!headerRow.contains("BCID")) return false;
-        String[] cols = CsvUtils.parseLine(headerRow);
+        String[] cols = UtilitatsCsv.analitzarLine(headerRow);
         if (cols.length < 8) return false;
         if (!headerRow.contains("Title")) return false;
         if (!headerRow.contains("Authors")) return false;
@@ -25,57 +26,60 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public boolean parseLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
-        // ISBN values from LibraryThing may arrive bracketed as [978...]; parseIsbn
-        // strips all non-digit characters, so brackets are removed automatically.
-        String isbnRaw = CsvUtils.colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = CsvUtils.colVal(hMap, c, "ISBN");
-        isbnRaw = CsvUtils.parseIsbn(isbnRaw);
+    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
+        // Els valors d'ISBN de LibraryThing poden arribar entre
+        // claudàtors com [978...]; parseIsbn elimina tots els caràcters
+        // no numèrics, de manera que els claudàtors es treuen
+        // automàticament.
+        String isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN13");
+        if (isbnRaw.isEmpty()) isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN");
+        isbnRaw = UtilitatsCsv.analitzarIsbn(isbnRaw);
         if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
         long isbn = Long.parseLong(isbnRaw);
-        if (CsvUtils.existsInLibrary(cd, isbn)) return false;
+        if (UtilitatsCsv.existsInLibrary(cd, isbn)) return false;
 
-        String nom   = CsvUtils.colVal(hMap, c, "Title");
-        String autor = CsvUtils.colVal(hMap, c, "Authors");
-        // Invert "Lastname, Firstname" → "Firstname Lastname". Only works for a single comma;
-        // multi-word lastnames (e.g. "van der Berg, Jan") are handled incorrectly.
-        // Known limitation: when multiple authors are separated by commas (rather than
-        // semicolons), the split produces incorrect "Firstname Lastname" inversions.
+        String nom   = UtilitatsCsv.colVal(hMap, c, "Title");
+        String autor = UtilitatsCsv.colVal(hMap, c, "Authors");
+        // Inverteix "Cognom, Nom" → "Nom Cognom". Només funciona amb una
+        // sola coma; els cognoms compostos (p. ex. "van der Berg, Jan")
+        // es gestionen incorrectament. Limitació coneguda: quan hi ha
+        // diversos autors separats per comes (en lloc de punts i coma),
+        // la divisió produeix inversions "Nom Cognom" incorrectes.
         if (autor.contains(",") && !autor.contains(";")) {
             String[] parts = autor.split(",", 2);
             if (parts.length > 1) autor = parts[1].trim() + " " + parts[0].trim();
         }
         int any = 0;
-        String yearStr = CsvUtils.colVal(hMap, c, "Original Publication Year");
-        if (yearStr.isEmpty()) yearStr = CsvUtils.colVal(hMap, c, "Publication Year");
+        String yearStr = UtilitatsCsv.colVal(hMap, c, "Original Publication Year");
+        if (yearStr.isEmpty()) yearStr = UtilitatsCsv.colVal(hMap, c, "Publication Year");
         if (!yearStr.isEmpty()) { try { any = Integer.parseInt(yearStr.trim()); } catch (NumberFormatException ignored) {} }
-        double valoracio = CsvUtils.parseDoubleOrZero(CsvUtils.colVal(hMap, c, "Rating")) * 2.0;
-        String desc  = CsvUtils.colVal(hMap, c, "Summary");
-        String notes = CsvUtils.colVal(hMap, c, "Comments");
-        if (notes.isEmpty()) notes = CsvUtils.colVal(hMap, c, "Review");
-        Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, valoracio, 0.0, false, "");
-        if (!notes.isEmpty()) l.setNotes(notes);
-        cd.addLlibre(l);
+        double valoracio = UtilitatsCsv.analitzarDoubleOrZero(UtilitatsCsv.colVal(hMap, c, "Rating")) * 2.0;
+        String desc  = UtilitatsCsv.colVal(hMap, c, "Summary");
+        String notes = UtilitatsCsv.colVal(hMap, c, "Comments");
+        if (notes.isEmpty()) notes = UtilitatsCsv.colVal(hMap, c, "Review");
+        Llibre l = ValidadorLlibre.comprovarLlibre(isbn, nom, autor, any, desc, valoracio, 0.0, false, "");
+        if (!notes.isEmpty()) l.posarNotes(notes);
+        cd.afegirLlibre(l);
 
-        String collections = CsvUtils.colVal(hMap, c, "Collections");
+        String collections = UtilitatsCsv.colVal(hMap, c, "Collections");
         if (!collections.isEmpty()) {
             java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : collections.split(",")) {
-                domini.Llista llista = ShelvesHelper.findOrCreateShelf(cd, shelfCache, s.trim());
-                if (llista != null) cd.addLlibreToLlista(isbn, llista.getId(), valoracio, false);
+                domini.Llista llista = ShelvesHelper.cercarOrCreateShelf(cd, shelfCache, s.trim());
+                if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, false);
             }
         }
 
-        String tags = CsvUtils.colVal(hMap, c, "Tags");
+        String tags = UtilitatsCsv.colVal(hMap, c, "Tags");
         if (!tags.isEmpty()) {
             java.util.Map<String, domini.Tag> tagMap = new java.util.HashMap<>();
-            for (domini.Tag tg : cd.getAllTags()) tagMap.put(tg.getNom(), tg);
+            for (domini.Tag tg : cd.obtenirAllTags()) tagMap.put(tg.obtenirNom(), tg);
             for (String t : tags.split(",")) {
                 String nomTag = t.trim();
                 if (nomTag.isEmpty()) continue;
                 domini.Tag tag = tagMap.get(nomTag);
-                if (tag == null) { tag = cd.addTag(nomTag); tagMap.put(nomTag, tag); }
-                cd.addLlibreToTag(isbn, tag.getId());
+                if (tag == null) { tag = cd.afegirTag(nomTag); tagMap.put(nomTag, tag); }
+                cd.afegirLlibreToTag(isbn, tag.obtenirId());
             }
         }
         return true;

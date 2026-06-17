@@ -37,9 +37,9 @@ public class LlistesDelLlibreTableModel extends AbstractTableModel {
     @Override public Object getValueAt(int r, int c) {
         Llista l = rows.get(r);
         return switch (c) {
-            case COL_NOM -> l.getNom();
-            case COL_VAL -> String.format(java.util.Locale.ROOT, "%.1f", l.getValoracioLlibre());
-            case COL_LLEGIT -> l.getLlegitLlibre();
+            case COL_NOM -> l.obtenirNom();
+            case COL_VAL -> String.format(java.util.Locale.ROOT, "%.1f", l.obtenirValoracioLlibre());
+            case COL_LLEGIT -> l.obtenirLlegitLlibre();
             default -> null;
         };
     }
@@ -47,9 +47,9 @@ public class LlistesDelLlibreTableModel extends AbstractTableModel {
     @Override public void setValueAt(Object val, int r, int c) {
         Llista l = rows.get(r);
         if (c == COL_VAL) {
-            try { l.setValoracioLlibre(Double.parseDouble(val.toString())); } catch (NumberFormatException ignored) {}
+            try { l.posarValoracioLlibre(Double.parseDouble(val.toString())); } catch (NumberFormatException ignored) {}
         } else if (c == COL_LLEGIT) {
-            l.setLlegitLlibre(Boolean.TRUE.equals(val));
+            l.posarLlegitLlibre(Boolean.TRUE.equals(val));
         }
         fireTableCellUpdated(r, c);
     }
@@ -70,7 +70,7 @@ public class LlistesDelLlibreTableModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
-    public Llista getLlistaAt(int index) {
+    public Llista obtenirLlistaAt(int index) {
         return index >= 0 && index < rows.size() ? rows.get(index) : null;
     }
 }

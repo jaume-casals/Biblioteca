@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # scripts/fuzz-nightly.sh
-# Run every Jazzer harness in parallel until one crashes (or Ctrl+C).
-# Each harness iterates independently — the @FuzzTest(maxDuration="30s")
-# annotation caps each Jazzer invocation, then we re-launch with the
-# accumulated corpus for the next iteration.
+# Executa cada harness de Jazzer en paral·lel fins que un falli (o Ctrl+C).
+# Cada harness itera independentment — l'anotació @FuzzTest(maxDuration="30s")
+# limita cada invocació de Jazzer, i després es torna a llançar amb el
+# corpus acumulat per a la iteració següent.
 #
-# Logs: /tmp/jazzer/YYYYMMDD-HHMMSS.log (dated) and
-#       /tmp/jazzer/latest.log (symlink to most recent)
-# Crashes: moved to fuzz-corpus/crashes/ (gitignored) with timestamp.
+# Logs: /tmp/jazzer/YYYYMMDD-HHMMSS.log (datat) i
+#       /tmp/jazzer/latest.log (enllaç simbòlic al més recent)
+# Fallades: es mouen a fuzz-corpus/crashes/ (gitignored) amb marca de temps.
 #
-# Usage:
-#   scripts/fuzz-nightly.sh                 # foreground
-#   nohup scripts/fuzz-nightly.sh &         # background, survive shell exit
-#   tail -f /tmp/jazzer/latest.log          # watch progress
+# Ús:
+#   scripts/fuzz-nightly.sh                 # en primer pla
+#   nohup scripts/fuzz-nightly.sh &         # en segon pla, sobreviu a la sortida de la shell
+#   tail -f /tmp/jazzer/latest.log          # segueix el progrés
 #
-# Exit codes:
-#   0 = stopped cleanly (Ctrl+C, kill, or no harness crashed)
-#   1 = a Jazzer run found a crash; see /tmp/jazzer/latest.log and
+# Codis de sortida:
+#   0 = aturat netament (Ctrl+C, kill, o cap harness ha fallat)
+#   1 = una execució de Jazzer ha trobat una fallada; mira /tmp/jazzer/latest.log i
 #       fuzz-corpus/crashes/
 
 set -u
@@ -28,11 +28,11 @@ LOG=$LOGDIR/$TS.log
 LATEST=$LOGDIR/latest.log
 CRASH_DIR=fuzz-corpus/crashes
 mkdir -p "$LOGDIR" "$CRASH_DIR"
-# Marker file: when present, every background loop bails out.
+# Fitxer marcador: quan és present, tots els bucles en segon pla surten.
 STOP=$LOGDIR/.stop
 rm -f "$STOP"
 
-# Harness list — keep in sync with Makefile fuzz-jazzer target.
+# Llista de harnesses — mantén-la sincronitzada amb la diana fuzz-jazzer del Makefile.
 HARNESSES=(
     fuzz.herramienta.Rfc4180FuzzTest
     fuzz.herramienta.CsvUtilsFuzzTest
@@ -51,11 +51,11 @@ run_one() {
         if make fuzz-jazzer JARZER_SEL="$cls" >> "$LOG" 2>&1; then
             continue
         fi
-        # Crash — first writer wins.
+        # Fallada — el primer que escriu guanya.
         if [ -z "$CRASHED_CLS" ]; then
             CRASHED_CLS=$cls
             CRASHED_LOG=$LOG
-            printf '\n!!! CRASH in %s at %s — see crash files in %s/\n' \
+            printf '\n!!! CRASH a %s a les %s — mira els fitxers de fallada a %s/\n' \
                 "$cls" "$(date -Iseconds)" "$CRASH_DIR" >> "$LOG"
             find . -maxdepth 1 -name 'crash-*' -exec mv {} "$CRASH_DIR/" \; 2>/dev/null
             ls -la "$CRASH_DIR" >> "$LOG" 2>&1
@@ -66,26 +66,26 @@ run_one() {
 }
 
 ln -sfn "$TS.log" "$LATEST"
-printf 'fuzz-nightly start: %s, log=%s, harnesses=%d\n' \
+printf 'inici fuzz-nightly: %s, log=%s, harnesses=%d\n' \
     "$(date -Iseconds)" "$LOG" "${#HARNESSES[@]}" | tee -a "$LOG"
 
-# Launch each harness in the background. Bash's job control handles the
-# parallel invocation; we just `wait` for any of them to exit.
+# Llança cada harness en segon pla. El control de feines de bash gestiona
+# la invocació paral·lela; simplement fem `wait` per esperar-ne qualsevol.
 PIDS=()
 for h in "${HARNESSES[@]}"; do
     run_one "$h" &
     PIDS+=($!)
 done
 
-trap 'printf "\nstopping (log=%s)...\n" "$LOG" | tee -a "$LOG"; touch "$STOP"' INT TERM
+trap 'printf "\naturant (log=%s)...\n" "$LOG" | tee -a "$LOG"; touch "$STOP"' INT TERM
 wait "${PIDS[@]}" 2>/dev/null
 rm -f "$STOP"
 
-printf '\nfuzz-nightly end: %s\n' "$(date -Iseconds)" >> "$LOG"
+printf '\nfi fuzz-nightly: %s\n' "$(date -Iseconds)" >> "$LOG"
 
 if [ -n "$CRASHED_CLS" ]; then
-    printf '\n!!! CRASH in %s — see %s and %s/\n' \
+    printf '\n!!! CRASH a %s — mira %s i %s/\n' \
         "$CRASHED_CLS" "$CRASHED_LOG" "$CRASH_DIR"
     exit 1
 fi
-printf 'stopped cleanly: log=%s\n' "$LOG"
+printf 'aturat netament: log=%s\n' "$LOG"

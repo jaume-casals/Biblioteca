@@ -15,10 +15,10 @@ import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import interficie.BibliotecaWriter;
-import herramienta.DialogoError;
+import herramienta.DialegError;
 import herramienta.FieldAutoComplete;
 import herramienta.I18n;
-import herramienta.LlibreValidator;
+import herramienta.ValidadorLlibre;
 import herramienta.ParseHelpers;
 import herramienta.UITheme;
 import presentacio.FormValidator;
@@ -31,7 +31,7 @@ public class GuardarLlibresDialogoControl {
 	private final BibliotecaWriter cLlibres;
 	private byte[] selectedBlob;
 	private final EnActualizarBBDD callback;
-	private volatile OpenLibrarySearchTask searchTask;
+	private volatile TascaCercaOpenLibrary cercarTask;
 
 	public GuardarLlibresDialogoControl(GuardarLlibresDialogo vista) {
 		this(vista, null, null);
@@ -49,75 +49,75 @@ public class GuardarLlibresDialogoControl {
 			e -> vista.dispose(),
 			KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
 			JComponent.WHEN_IN_FOCUSED_WINDOW);
-		this.vista.getBtnGuardar().addActionListener(e -> crearLlibre());
-		this.vista.getBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
-		this.vista.getBtnCercaInternet().addActionListener(e -> cercaInternet());
+		this.vista.obtenirBtnGuardar().addActionListener(e -> crearLlibre());
+		this.vista.obtenirBtnSeleccionarImatge().addActionListener(e -> seleccionarImatge());
+		this.vista.obtenirBtnCercaInternet().addActionListener(e -> cercaInternet());
 		this.vista.addWindowListener(new WindowAdapter() {
 			@Override public void windowClosed(WindowEvent e) {
-				OpenLibrarySearchTask t = searchTask; if (t != null) { t.cancel(true); searchTask = null; }
+				TascaCercaOpenLibrary t = cercarTask; if (t != null) { t.cancel(true); cercarTask = null; }
 			}
 		});
 		if (cd == null) throw new IllegalArgumentException("GuardarLlibresDialogoControl requires non-null cd");
 		cLlibres = cd;
 
-		double defVal = herramienta.Config.getDefaultValoracio();
-		if (defVal > 0.0) this.vista.getTextValoracio().setText(String.valueOf(defVal));
+		double defVal = herramienta.Configuracio.obtenirDefaultValoracio();
+		if (defVal > 0.0) this.vista.obtenirTextValoracio().setText(String.valueOf(defVal));
 
-		this.vista.getTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.getTextPortada().getText().trim()); }
+		this.vista.obtenirTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+			public void insertUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
 		});
 
-		// Load distinct autocomplete lists off the EDT — they're DB queries that
-		// can block the UI for large libraries.
+		// Carrega les llistes d'autocompletat diferenciades fora de l'EDT —
+		// són consultes a la BBDD que poden bloquejar la UI en biblioteques grans.
 		new SwingWorker<java.util.List<java.util.List<String>>, Void>() {
 			@Override protected java.util.List<java.util.List<String>> doInBackground() {
 				java.util.List<java.util.List<String>> lists = new java.util.ArrayList<>();
-				lists.add(cLlibres.getDistinctAutorNames());
-				lists.add(cLlibres.getDistinctValues("editorial"));
-				lists.add(cLlibres.getDistinctValues("serie"));
-				lists.add(cLlibres.getDistinctValues("idioma"));
+				lists.add(cLlibres.obtenirDistinctAutorNames());
+				lists.add(cLlibres.obtenirDistinctValues("editorial"));
+				lists.add(cLlibres.obtenirDistinctValues("serie"));
+				lists.add(cLlibres.obtenirDistinctValues("idioma"));
 				return lists;
 			}
 			@Override protected void done() {
 				try {
 					java.util.List<java.util.List<String>> lists = get();
-					FieldAutoComplete.attach(vista.getTextAutor(),     lists.get(0));
-					FieldAutoComplete.attach(vista.getTextEditorial(), lists.get(1));
-					FieldAutoComplete.attach(vista.getTextSerie(),     lists.get(2));
-					FieldAutoComplete.attach(vista.getTextIdioma(),    lists.get(3));
+					FieldAutoComplete.attach(vista.obtenirTextAutor(),     lists.get(0));
+					FieldAutoComplete.attach(vista.obtenirTextEditorial(), lists.get(1));
+					FieldAutoComplete.attach(vista.obtenirTextSerie(),     lists.get(2));
+					FieldAutoComplete.attach(vista.obtenirTextIdioma(),    lists.get(3));
 				} catch (Exception ignored) {}
 			}
 		}.execute();
 
 		javax.swing.event.DocumentListener live = new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshLiveValidation(); }
+			public void insertUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
+			public void removeUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
+			public void changedUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
 		};
-		vista.getTextISBN().getDocument().addDocumentListener(live);
-		vista.getTextNom().getDocument().addDocumentListener(live);
+		vista.obtenirTextISBN().getDocument().addDocumentListener(live);
+		vista.obtenirTextNom().getDocument().addDocumentListener(live);
 	}
 
-	private void refreshLiveValidation() {
-		String isbn = vista.getTextISBN().getText().trim();
+	private void refrescarLiveValidation() {
+		String isbn = vista.obtenirTextISBN().getText().trim();
 		boolean isbnOk = false;
 		if (!isbn.isEmpty()) {
 			try {
-				LlibreValidator.checkLlibreFromString(isbn, "x", null, null, null, null, null, null, null);
+				ValidadorLlibre.comprovarLlibreFromString(isbn, "x", null, null, null, null, null, null, null);
 				isbnOk = true;
 			} catch (IllegalArgumentException ignored) {}
 		}
-		FormValidator.validateField(vista.getTextISBN(), isbnOk);
-		String nom = vista.getTextNom().getText().trim();
-		FormValidator.validateField(vista.getTextNom(), !nom.isBlank() && nom.length() <= 255);
+		FormValidator.validarField(vista.obtenirTextISBN(), isbnOk);
+		String nom = vista.obtenirTextNom().getText().trim();
+		FormValidator.validarField(vista.obtenirTextNom(), !nom.isBlank() && nom.length() <= 255);
 	}
 
 	private void cercaInternet() {
-		String isbn  = vista.getTextISBN().getText().trim();
-		String titol = vista.getTextNom().getText().trim();
-		String autor = vista.getTextAutor().getText().trim();
+		String isbn  = vista.obtenirTextISBN().getText().trim();
+		String titol = vista.obtenirTextNom().getText().trim();
+		String autor = vista.obtenirTextAutor().getText().trim();
 
 		if (isbn.isEmpty() && titol.isEmpty() && autor.isEmpty()) {
 			JOptionPane.showMessageDialog(vista,
@@ -126,40 +126,40 @@ public class GuardarLlibresDialogoControl {
 			return;
 		}
 
-		JButton btn = vista.getBtnCercaInternet();
+		JButton btn = vista.obtenirBtnCercaInternet();
 		btn.setEnabled(false);
 		btn.setText(I18n.t("btn_searching"));
-		vista.getProgressBar().setVisible(true);
-		if (!isbn.isEmpty()) vista.getTextISBN().setEditable(false);
+		vista.obtenirProgressBar().setVisible(true);
+		if (!isbn.isEmpty()) vista.obtenirTextISBN().setEditable(false);
 
-		searchTask = new OpenLibrarySearchTask(isbn, titol, autor, vista, selectedBlob, this::setSelectedBlob);
-		searchTask.execute();
+		cercarTask = new TascaCercaOpenLibrary(isbn, titol, autor, vista, selectedBlob, this::posarSelectedBlob);
+		cercarTask.execute();
 	}
 
-	void setSelectedBlob(byte[] blob) { this.selectedBlob = blob; }
+	void posarSelectedBlob(byte[] blob) { this.selectedBlob = blob; }
 
 	private void carregarImatge(String path) {
 		selectedBlob = null;
-		if (path == null || path.isBlank()) { this.vista.getLabelPreview().setIcon(null); return; }
+		if (path == null || path.isBlank()) { this.vista.obtenirLabelPreview().setIcon(null); return; }
 		try {
 			selectedBlob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));
-			this.vista.getLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
+			this.vista.obtenirLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
 		} catch (Exception ignored) {
-			this.vista.getLabelPreview().setIcon(null);
+			this.vista.obtenirLabelPreview().setIcon(null);
 		}
 	}
 
 	private void seleccionarImatge() {
 		File f = UITheme.chooseImageFile(this.vista);
-		if (f != null) this.vista.getTextPortada().setText(f.getAbsolutePath());
+		if (f != null) this.vista.obtenirTextPortada().setText(f.getAbsolutePath());
 	}
 
 	private void crearLlibre() {
 		try {
-			String isbnTxt = vista.getTextISBN().getText().trim();
-			String anyTxt  = vista.getTextAny().getText().trim();
-			String valTxt  = vista.getTextValoracio().getText().trim();
-			String preuTxt = vista.getTextPreu().getText().trim();
+			String isbnTxt = vista.obtenirTextISBN().getText().trim();
+			String anyTxt  = vista.obtenirTextAny().getText().trim();
+			String valTxt  = vista.obtenirTextValoracio().getText().trim();
+			String preuTxt = vista.obtenirTextPreu().getText().trim();
 
 			java.util.List<String> errors = new java.util.ArrayList<>();
 			Long isbn       = isbnTxt.isEmpty() ? null
@@ -169,52 +169,52 @@ public class GuardarLlibresDialogoControl {
 			Double preu      = ParseHelpers.parseDouble(preuTxt, 0.0, "field_price", errors);
 
 			if (!errors.isEmpty()) {
-				new DialogoError(new IllegalArgumentException(String.join("\n", errors))).showErrorMessage();
+				new DialegError(new IllegalArgumentException(String.join("\n", errors))).mostrarErrorMessage();
 				return;
 			}
 
-			Llibre l = herramienta.LlibreValidator.checkLlibre(
-				isbn, vista.getTextNom().getText().trim(),
-				vista.getTextAutor().getText().trim(), any,
-				vista.getTextDescripcio().getText().trim(),
-				valoracio, preu, vista.getChckLlegit().isSelected(),
-				vista.getTextPortada().getText().trim());
-			java.util.List<String> autors = java.util.Arrays.stream(vista.getTextAutor().getText().split(","))
+			Llibre l = herramienta.ValidadorLlibre.comprovarLlibre(
+				isbn, vista.obtenirTextNom().getText().trim(),
+				vista.obtenirTextAutor().getText().trim(), any,
+				vista.obtenirTextDescripcio().getText().trim(),
+				valoracio, preu, vista.obtenirChckLlegit().isSelected(),
+				vista.obtenirTextPortada().getText().trim());
+			java.util.List<String> autors = java.util.Arrays.stream(vista.obtenirTextAutor().getText().split(","))
 				.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
-			l.setAutors(autors);
-			l.setEditorial(vista.getTextEditorial().getText().trim());
-			l.setSerie(vista.getTextSerie().getText().trim());
-			try { l.setVolum(Integer.parseInt(vista.getTextVolum().getText().trim())); } catch (NumberFormatException ignored) {}
-			l.setDataCompra(vista.getTextDataCompra().getText().trim());
-			l.setDataLectura(vista.getTextDataLectura().getText().trim());
-			l.setIdioma(vista.getTextIdioma().getText().trim());
-			String fmt = (String) vista.getComboFormat().getSelectedItem();
-			l.setFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
-			l.setDesitjat(vista.getChckDesitjat().isSelected());
-			l.setNotes(vista.getTextNotes().getText().trim());
-			l.setPaisOrigen(vista.getTextPaisOrigen().getText().trim());
-			String estat = (String) vista.getComboEstat().getSelectedItem();
-			l.setEstat(estat != null && !estat.isEmpty() ? estat : null);
-			String exemplarsTxt = vista.getTextExemplars().getText().trim();
+			l.posarAutors(autors);
+			l.posarEditorial(vista.obtenirTextEditorial().getText().trim());
+			l.posarSerie(vista.obtenirTextSerie().getText().trim());
+			try { l.posarVolum(Integer.parseInt(vista.obtenirTextVolum().getText().trim())); } catch (NumberFormatException ignored) {}
+			l.posarDataCompra(vista.obtenirTextDataCompra().getText().trim());
+			l.posarDataLectura(vista.obtenirTextDataLectura().getText().trim());
+			l.posarIdioma(vista.obtenirTextIdioma().getText().trim());
+			String fmt = (String) vista.obtenirComboFormat().getSelectedItem();
+			l.posarFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
+			l.posarDesitjat(vista.obtenirChckDesitjat().isSelected());
+			l.posarNotes(vista.obtenirTextNotes().getText().trim());
+			l.posarPaisOrigen(vista.obtenirTextPaisOrigen().getText().trim());
+			String estat = (String) vista.obtenirComboEstat().getSelectedItem();
+			l.posarEstat(estat != null && !estat.isEmpty() ? estat : null);
+			String exemplarsTxt = vista.obtenirTextExemplars().getText().trim();
 			if (!exemplarsTxt.isEmpty()) {
-				try { l.setExemplars(Integer.parseInt(exemplarsTxt)); }
+				try { l.posarExemplars(Integer.parseInt(exemplarsTxt)); }
 				catch (NumberFormatException ignored) {}
 			}
-			String nomCa = vista.getTextNomCa().getText().trim();
-			String nomEs = vista.getTextNomEs().getText().trim();
-			String nomEn = vista.getTextNomEn().getText().trim();
-			l.setNomCa(nomCa.isEmpty() ? null : nomCa);
-			l.setNomEs(nomEs.isEmpty() ? null : nomEs);
-			l.setNomEn(nomEn.isEmpty() ? null : nomEn);
-			l.setImatgeBlob(selectedBlob);
-			herramienta.LlibreValidator.validateExtrasAll(l.getEditorial(), l.getSerie(), l.getIdioma(), l.getFormat(), l.getPaisOrigen(), l.getEstat());
-			cLlibres.addLlibre(l);
+			String nomCa = vista.obtenirTextNomCa().getText().trim();
+			String nomEs = vista.obtenirTextNomEs().getText().trim();
+			String nomEn = vista.obtenirTextNomEn().getText().trim();
+			l.posarNomCa(nomCa.isEmpty() ? null : nomCa);
+			l.posarNomEs(nomEs.isEmpty() ? null : nomEs);
+			l.posarNomEn(nomEn.isEmpty() ? null : nomEn);
+			l.posarImatgeBlob(selectedBlob);
+			herramienta.ValidadorLlibre.validarExtrasAll(l.obtenirEditorial(), l.obtenirSerie(), l.obtenirIdioma(), l.getFormat(), l.obtenirPaisOrigen(), l.obtenirEstat());
+			cLlibres.afegirLlibre(l);
 			vista.dispose();
 			if (callback != null) callback.onBookUpdated(l, true);
 		} catch (Exception e) {
-			new DialogoError(e).showErrorMessage();
+			new DialegError(e).mostrarErrorMessage();
 		}
 	}
 
-	public Dialog getVista() { return vista; }
+	public Dialog obtenirVista() { return vista; }
 }

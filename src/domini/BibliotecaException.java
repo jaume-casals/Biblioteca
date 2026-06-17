@@ -23,13 +23,13 @@ public class BibliotecaException extends RuntimeException {
 
     public Code code() { return code; }
 
-    public static class NotFound extends BibliotecaException {
-        public NotFound(String message) { super(message, Code.NOT_FOUND, null); }
+    public static class NoTrobat extends BibliotecaException {
+        public NoTrobat(String message) { super(message, Code.NOT_FOUND, null); }
     }
-    public static class Duplicate extends BibliotecaException {
-        public Duplicate(String message) { super(message, Code.DUPLICATE, null); }
+    public static class Duplicat extends BibliotecaException {
+        public Duplicat(String message) { super(message, Code.DUPLICATE, null); }
     }
-    public static class Validation extends BibliotecaException {
-        public Validation(String message) { super(message, Code.VALIDATION, null); }
+    public static class Validacio extends BibliotecaException {
+        public Validacio(String message) { super(message, Code.VALIDATION, null); }
     }
 }

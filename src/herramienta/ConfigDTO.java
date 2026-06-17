@@ -17,33 +17,33 @@ public record ConfigDTO(
 ) {
     public static ConfigDTO fromConfig() {
         return new ConfigDTO(
-            Config.getTheme().key(),
-            Config.isDarkMode(),
-            Config.getDbType(), Config.getDbHost(), Config.getDbUser(), Config.getDbPassword(),
-            Config.getFontSize(),
-            Config.getCurrencySymbol(),
-            Config.getDefaultValoracio(),
-            Config.getReadingGoal(),
-            Config.getViewMode(), Config.getGalleryZoom(),
-            Config.getDefaultImgDir()
+            Configuracio.obtenirTheme().key(),
+            Configuracio.esDarkMode(),
+            Configuracio.obtenirDbType(), Configuracio.obtenirDbHost(), Configuracio.obtenirDbUser(), Configuracio.obtenirDbPassword(),
+            Configuracio.obtenirFontSize(),
+            Configuracio.getCurrencySymbol(),
+            Configuracio.obtenirDefaultValoracio(),
+            Configuracio.obtenirReadingGoal(),
+            Configuracio.obtenirViewMode(), Configuracio.obtenirGalleryZoom(),
+            Configuracio.obtenirDefaultImgDir()
         );
     }
 
     public void apply() {
-        Config.withBatch(() -> {
-            UiConfig.setTheme(UITheme.Theme.fromKey(theme));
-            UiConfig.setDarkMode(darkMode);
-            DbConfig.setType(dbType);
-            DbConfig.setHost(dbHost);
-            DbConfig.setUser(dbUser);
-            if (!"***".equals(dbPassword)) DbConfig.setPassword(dbPassword);
-            UiConfig.setFontSize(fontSize);
-            UiConfig.setCurrency(currencySymbol);
-            UiConfig.setDefaultValoracio(defaultValoracio);
-            UiConfig.setReadingGoal(readingGoal);
-            UiConfig.setViewMode(viewMode);
-            UiConfig.setGalleryZoom(galleryZoom);
-            FilterConfig.setDefaultImgDir(defaultImgDir);
+        Configuracio.withBatch(() -> {
+            ConfiguracioUi.posarTheme(UITheme.Tema.fromKey(theme));
+            ConfiguracioUi.posarDarkMode(darkMode);
+            ConfiguracioDb.setType(dbType);
+            ConfiguracioDb.posarHost(dbHost);
+            ConfiguracioDb.posarUser(dbUser);
+            if (!"***".equals(dbPassword)) ConfiguracioDb.posarPassword(dbPassword);
+            ConfiguracioUi.posarFontSize(fontSize);
+            ConfiguracioUi.setCurrency(currencySymbol);
+            ConfiguracioUi.posarDefaultValoracio(defaultValoracio);
+            ConfiguracioUi.posarReadingGoal(readingGoal);
+            ConfiguracioUi.posarViewMode(viewMode);
+            ConfiguracioUi.posarGalleryZoom(galleryZoom);
+            ConfiguracioFiltre.posarDefaultImgDir(defaultImgDir);
         });
     }
 }

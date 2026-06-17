@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Reads strings/*.csv and generates:
+Llegeix strings/*.csv i genera:
   src/herramienta/I18n.java
   src/herramienta/strings_ca.properties
   src/herramienta/strings_es.properties
   src/herramienta/strings_en.properties
 
-CSV format: key,ca,es,en
-Lines starting with # are section comments (skipped).
+Format CSV: key,ca,es,en
+Les línies que comencen amb # són comentaris de secció (s'ignoren).
 """
 
 import csv
@@ -122,19 +122,19 @@ def gen_props(entries, lang_idx):
 
 def main():
     entries = read_csv()
-    print(f"Read {len(entries)} string entries")
+    print(f"S'han llegit {len(entries)} entrades de cadenes")
 
     java = gen_java(entries)
     with open(JAVA_PATH, 'w', encoding='utf-8') as f:
         f.write(java)
-    print(f"Written: {JAVA_PATH}")
+    print(f"Escrit: {JAVA_PATH}")
 
     for lang_code, path in PROP_PATHS.items():
         lang_idx = {"ca": 0, "es": 1, "en": 2}[lang_code]
         props = gen_props(entries, lang_idx)
         with open(path, 'w', encoding='utf-8') as f:
             f.write(props)
-        print(f"Written: {path}")
+        print(f"Escrit: {path}")
 
 if __name__ == '__main__':
     main()

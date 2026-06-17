@@ -11,17 +11,19 @@ public class LlistaDao {
 
     LlistaDao(Connection con) { this.con = con; }
 
-    // Double-locking note: all callers go through ControladorPersistencia which
-    // is already synchronized, so DAO methods need not be synchronized themselves.
+    // Nota sobre el doble bloqueig: tots els consumidors passen per
+    // ControladorPersistencia que ja està sincronitzat, de manera que
+    // els mètodes del DAO no cal que estiguin sincronitzats ells
+    // mateixos.
 
-    public ArrayList<Llista> getAll() {
+    public ArrayList<Llista> obtenirAll() {
         ArrayList<Llista> llistes = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
                  ResultSet rs = s.executeQuery("SELECT id, nom, ordre, color FROM llista ORDER BY ordre, nom")) {
                 while (rs.next()) {
                     Llista l = new Llista(rs.getInt(1), rs.getString(2));
-                    l.setOrdre(rs.getInt(3));
+                    l.posarOrdre(rs.getInt(3));
                     l.setColor(rs.getString(4));
                     llistes.add(l);
                 }
@@ -32,9 +34,11 @@ public class LlistaDao {
         return llistes;
     }
 
-    // The subquery SELECT COALESCE(MAX(ordre),0)+1 is intentionally not wrapped in a
-    // SERIALIZABLE transaction: this application runs on a single JVM and the DAO
-    // method is synchronized, so cross-process races in MariaDB are not a concern.
+    // La subconsulta SELECT COALESCE(MAX(ordre),0)+1 no s'envolta
+    // intencionadament en una transacció SERIALIZABLE: aquesta
+    // aplicació s'executa en una sola JVM i el mètode del DAO està
+    // sincronitzat, de manera que les curses entre processos a MariaDB
+    // no són un motiu de preocupació.
     public int create(String nom) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT INTO llista (nom, ordre) VALUES (?, (SELECT COALESCE(MAX(ordre),0)+1 FROM llista AS sub))", Statement.RETURN_GENERATED_KEYS)) {
@@ -54,7 +58,7 @@ public class LlistaDao {
         }
     }
 
-    public void updateNom(int id, String newNom) throws SQLException {
+    public void actualitzarNom(int id, String newNom) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("UPDATE llista SET nom = ? WHERE id = ?")) {
             ps.setString(1, newNom);
             ps.setInt(2, id);
@@ -62,8 +66,9 @@ public class LlistaDao {
         }
     }
 
-    // getCount() could be served from getAllCounts() results in a future optimization
-    // to avoid a separate DB round-trip per shelf.
+    // getCount() es podria servir dels resultats de getAllCounts() en
+    // una optimització futura per evitar una anada i tornada a la BBDD
+    // per prestatgeria.
     public int getCount(int llistaId) {
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -79,9 +84,11 @@ public class LlistaDao {
         return 0;
     }
 
-    // Future optimization: callers that need both getAllCounts() and individual getCount()
-    // should reuse the getAllCounts() map instead of issuing per-shelf queries.
-    public java.util.Map<Integer, Integer> getAllCounts() {
+    // Optimització futura: els consumidors que necessitin tant
+    // getAllCounts() com getCount() individual haurien de reutilitzar
+    // el mapa de getAllCounts() en lloc d'emetre consultes per
+    // prestatgeria.
+    public java.util.Map<Integer, Integer> obtenirAllCounts() {
         java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
         try {
             try (Statement s = con.createStatement();
@@ -95,7 +102,7 @@ public class LlistaDao {
         return counts;
     }
 
-    public ArrayList<Llibre> getLlibres(int llistaId) {
+    public ArrayList<Llibre> obtenirLlibres(int llistaId) {
         ArrayList<Llibre> llibres = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -117,7 +124,7 @@ public class LlistaDao {
         return llibres;
     }
 
-    public java.util.Set<Long> getISBNsInLlista(int llistaId) {
+    public java.util.Set<Long> obtenirISBNsInLlista(int llistaId) {
         java.util.Set<Long> set = new java.util.HashSet<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -133,7 +140,7 @@ public class LlistaDao {
         return set;
     }
 
-    public void addLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
+    public void afegirLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT IGNORE INTO llibre_llista (isbn, llista_id, valoracio, llegit) VALUES (?, ?, ?, ?)")) {
             ps.setLong(1, isbn);
@@ -144,7 +151,7 @@ public class LlistaDao {
         }
     }
 
-    public void removeLlibre(long isbn, int llistaId) throws SQLException {
+    public void eliminarLlibre(long isbn, int llistaId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "DELETE FROM llibre_llista WHERE isbn = ? AND llista_id = ?")) {
             ps.setLong(1, isbn);
@@ -153,7 +160,7 @@ public class LlistaDao {
         }
     }
 
-    public void updateLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
+    public void actualitzarLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "UPDATE llibre_llista SET valoracio = ?, llegit = ? WHERE isbn = ? AND llista_id = ?")) {
             ps.setDouble(1, valoracio);
@@ -164,13 +171,13 @@ public class LlistaDao {
         }
     }
 
-    public ArrayList<Llista> getLlistesForLlibre(long isbn) {
+    public ArrayList<Llista> obtenirLlistesForLlibre(long isbn) {
         ArrayList<Llista> llistes = new ArrayList<>();
         for (Object[] row : queryLlistesForLlibreRaw(isbn)) {
             Llista llista = new Llista((Integer) row[0], (String) row[1]);
-            llista.setValoracioLlibre((Double) row[2]);
-            llista.setLlegitLlibre((Boolean) row[3]);
-            llista.setOrdre((Integer) row[4]);
+            llista.posarValoracioLlibre((Double) row[2]);
+            llista.posarLlegitLlibre((Boolean) row[3]);
+            llista.posarOrdre((Integer) row[4]);
             llista.setColor((String) row[5]);
             llistes.add(llista);
         }
@@ -184,7 +191,7 @@ public class LlistaDao {
      * {@code getLlistesForLlibre} per a noves crides; l'API anterior
      * existeix per compat.
      */
-    public java.util.List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) {
+    public java.util.List<domini.LlibreLlistaContext> obtenirLlistesForLlibreContext(long isbn) {
         java.util.List<domini.LlibreLlistaContext> out = new java.util.ArrayList<>();
         for (Object[] row : queryLlistesForLlibreRaw(isbn)) {
             out.add(domini.LlibreLlistaContext.of(
@@ -228,7 +235,7 @@ public class LlistaDao {
         return rows;
     }
 
-    public void updateOrdre(int id, int ordre) throws SQLException {
+    public void actualitzarOrdre(int id, int ordre) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("UPDATE llista SET ordre = ? WHERE id = ?")) {
             ps.setInt(1, ordre);
             ps.setInt(2, id);
@@ -236,7 +243,7 @@ public class LlistaDao {
         }
     }
 
-    public void updateColor(int id, String color) throws SQLException {
+    public void actualitzarColor(int id, String color) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("UPDATE llista SET color = ? WHERE id = ?")) {
             if (color == null) ps.setNull(1, java.sql.Types.VARCHAR); else ps.setString(1, color);
             ps.setInt(2, id);
@@ -244,7 +251,7 @@ public class LlistaDao {
         }
     }
 
-    public java.util.List<persistencia.LlibreLlistaRow> getAllLlibreLlista() {
+    public java.util.List<persistencia.LlibreLlistaRow> obtenirAllLlibreLlista() {
         java.util.List<persistencia.LlibreLlistaRow> rows = new java.util.ArrayList<>();
         try {
             try (Statement s = con.createStatement();

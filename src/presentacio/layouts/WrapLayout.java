@@ -8,23 +8,25 @@ import java.awt.FlowLayout;
 import java.awt.Insets;
 
 /*
- * WrapLayout — FlowLayout subclass that lets components wrap to
- * multiple rows based on parent viewport width. Originally extracted
- * from {@code GaleriaCobertesPanel}'s private inner class for reuse.
+ * WrapLayout — subclasse de FlowLayout que permet que els components
+ * s'ajustin a múltiples files segons l'amplada del viewport pare.
+ * Originalment extreta de la classe interna privada de
+ * {@code GaleriaCobertesPanel} per a reutilització.
  *
- * Adapted from the public Sun Java Tutorial "WrapLayout" example:
+ * Adaptat de l'exemple públic "WrapLayout" del tutorial de Java de Sun:
  *   https://docs.oracle.com/javase/tutorial/uiswing/layout/custom.html
  *
  * Sun Microsystems, Inc. ("Sun") SOFTWARE LICENSE AGREEMENT for the
- * Java(TM) Tutorial Sample Code. The original tutorial code is in the
- * public domain for tutorial use; this adaptation preserves the
- * layoutSize() walk-the-tree fallback but uses a single MAX_VALUE
- * fallback instead of the double-walk pattern (see the tot.txt LOW
- * finding on the wasted second walk).
+ * Java(TM) Tutorial Sample Code. El codi original del tutorial és de
+ * domini públic per a ús docent; aquesta adaptació conserva la caiguda
+ * walk-the-tree de layoutSize() però utilitza una sola caiguda a
+ * MAX_VALUE en lloc del patró de doble passada (veure el finding LOW
+ * de tot.txt sobre la segona passada inútil).
  */
 /**
- * FlowLayout subclass that lets components wrap to multiple rows based on parent viewport width.
- * Extracted from {@code GaleriaCobertesPanel}'s private inner class for reuse.
+ * Subclasse de FlowLayout que permet que els components s'ajustin a múltiples files
+ * segons l'amplada del viewport pare. Extreta de la classe interna privada de
+ * {@code GaleriaCobertesPanel} per a reutilització.
  */
 public class WrapLayout extends FlowLayout {
     public WrapLayout(int align, int hgap, int vgap) { super(align, hgap, vgap); }
@@ -34,11 +36,11 @@ public class WrapLayout extends FlowLayout {
 
     private Dimension layoutSize(Container target, boolean preferred) {
         synchronized (target.getTreeLock()) {
-            // Read the parent's width directly; fall back to MAX_VALUE on
-            // the FIRST try (per the tot.txt LOW finding — the old code
-            // did a second tree-walk to recover from a zero-width parent,
-            // which is wasteful: MAX_VALUE gives the same wrap result with
-            // a single pass).
+            // Llegeix l'amplada del pare directament; cau a MAX_VALUE al
+            // PRIMER intent (segons el finding LOW de tot.txt — el codi
+            // antic feia una segona passada per l'arbre per recuperar-se
+            // d'un pare d'amplada zero, cosa que era inútil: MAX_VALUE
+            // dóna el mateix resultat d'ajust amb una sola passada).
             Container parent = target.getParent();
             int tw = (parent instanceof JViewport) ? parent.getWidth()
                     : (parent != null ? parent.getWidth() : 0);

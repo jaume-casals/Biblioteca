@@ -24,19 +24,19 @@ public final class TagDelegate {
         this.state = state;
     }
 
-    public List<Tag> getAllTags() { return new ArrayList<>(state.tags()); }
+    public List<Tag> obtenirAllTags() { return new ArrayList<>(state.tags()); }
 
-    public Tag getTagById(int id) throws Exception {
+    public Tag obtenirTagById(int id) throws Exception {
         Tag t = state.withLockReturning(() -> state.tagsById().get(id));
-        if (t == null) throw new BibliotecaException.NotFound("Tag not found: " + id);
+        if (t == null) throw new BibliotecaException.NoTrobat("Tag not found: " + id);
         return t;
     }
 
-    public Tag addTag(String nom) {
-        if (nom == null || nom.isBlank()) throw new BibliotecaException.Validation(I18n.t("val_tag_blank"));
+    public Tag afegirTag(String nom) {
+        if (nom == null || nom.isBlank()) throw new BibliotecaException.Validacio(I18n.t("val_tag_blank"));
         return state.withLockReturning(() -> {
             try {
-                int id = state.persistence().createTag(nom);
+                int id = state.persistence().crearTag(nom);
                 Tag t = new Tag(id, nom);
                 state.tags().add(t);
                 state.tagsById().put(id, t);
@@ -45,36 +45,36 @@ public final class TagDelegate {
         });
     }
 
-    public void deleteTag(Tag tag) {
+    public void eliminarTag(Tag tag) {
         state.withLock(() -> {
             try {
-                state.persistence().deleteTag(tag.getId());
+                state.persistence().eliminarTag(tag.obtenirId());
             } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             state.tags().remove(tag);
-            state.tagsById().remove(tag.getId());
+            state.tagsById().remove(tag.obtenirId());
         });
     }
 
-    public void renameTag(int id, String newNom) {
+    public void reanomenarTag(int id, String newNom) {
         state.withLock(() -> {
             try {
-                state.persistence().renameTag(id, newNom);
+                state.persistence().reanomenarTag(id, newNom);
             } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             Tag t = state.tagsById().get(id);
-            if (t != null) t.setNom(newNom);
+            if (t != null) t.posarNom(newNom);
         });
     }
 
-    public Set<Long> getLlibresWithTag(int tagId) { return state.persistence().getLlibresWithTag(tagId); }
-    public List<Tag> getTagsForLlibre(long isbn) { return state.persistence().getTagsForLlibre(isbn); }
+    public Set<Long> obtenirLlibresWithTag(int tagId) { return state.persistence().obtenirLlibresWithTag(tagId); }
+    public List<Tag> obtenirTagsForLlibre(long isbn) { return state.persistence().obtenirTagsForLlibre(isbn); }
 
-    public void addLlibreToTag(long isbn, int tagId) {
-        try { state.persistence().addLlibreToTag(isbn, tagId); }
+    public void afegirLlibreToTag(long isbn, int tagId) {
+        try { state.persistence().afegirLlibreToTag(isbn, tagId); }
         catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
     }
 
-    public void removeLlibreFromTag(long isbn, int tagId) {
-        try { state.persistence().removeLlibreFromTag(isbn, tagId); }
+    public void eliminarLlibreFromTag(long isbn, int tagId) {
+        try { state.persistence().eliminarLlibreFromTag(isbn, tagId); }
         catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
     }
 }

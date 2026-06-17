@@ -1,13 +1,13 @@
 package presentacio;
 
-import presentacio.config.ConfiguracioAppearanceSection;
-import presentacio.config.ConfiguracioButtonBar;
+import presentacio.config.SeccioAparençaConfiguracio;
+import presentacio.config.BarraBotonsConfiguracio;
 import presentacio.config.ConfiguracioDataSection;
-import presentacio.config.ConfiguracioDbSection;
+import presentacio.config.SeccioDbConfiguracio;
 import presentacio.config.ConfiguracioDialogListener;
-import presentacio.config.ConfiguracioImagesSection;
-import presentacio.config.ConfiguracioLanguageSection;
-import presentacio.config.ConfigSections;
+import presentacio.config.SeccioImatgesConfiguracio;
+import presentacio.config.SeccioIdiomaConfiguracio;
+import presentacio.config.SeccionsConfiguracio;
 
 import java.awt.Frame;
 import javax.swing.GroupLayout;
@@ -17,7 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import herramienta.Config;
+import herramienta.Configuracio;
 import interficie.BibliotecaWriter;
 
 /**
@@ -37,22 +37,22 @@ public class ConfiguracioDialog extends JDialog {
         this.cd = cd;
         this.listener = listener;
 
-        JPanel dbSection        = ConfiguracioDbSection.build(this);
-        JPanel imgSection       = ConfiguracioImagesSection.build(this);
-        JPanel appearanceSection = ConfiguracioAppearanceSection.build(this);
-        JPanel languageSection  = ConfiguracioLanguageSection.build(this);
+        JPanel dbSection        = SeccioDbConfiguracio.build(this);
+        JPanel imgSection       = SeccioImatgesConfiguracio.build(this);
+        JPanel appearanceSection = SeccioAparençaConfiguracio.build(this);
+        JPanel languageSection  = SeccioIdiomaConfiguracio.build(this);
         JPanel dataSection      = ConfiguracioDataSection.build(this, this.cd, this.listener);
-        JPanel buttonBar = ConfiguracioButtonBar.build(this,
-            (JComboBox<String>) ConfigSections.findById(dbSection, "cmbType"),
-            (JTextField) ConfigSections.findById(dbSection, "txtHost"),
-            (JTextField) ConfigSections.findById(dbSection, "txtUser"),
-            (JPasswordField) ConfigSections.findById(dbSection, "txtPass"),
-            (JTextField) ConfigSections.findById(imgSection, "txtImgDir"),
-            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbTheme"),
-            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbFont"),
-            (JComboBox<String>) ConfigSections.findById(appearanceSection, "cmbCurrency"),
-            (JComboBox<String>) ConfigSections.findById(languageSection, "cmbLang"),
-            (JTextField) ConfigSections.findById(appearanceSection, "txtDefVal"),
+        JPanel buttonBar = BarraBotonsConfiguracio.build(this,
+            (JComboBox<String>) SeccionsConfiguracio.cercarById(dbSection, "cmbType"),
+            (JTextField) SeccionsConfiguracio.cercarById(dbSection, "txtHost"),
+            (JTextField) SeccionsConfiguracio.cercarById(dbSection, "txtUser"),
+            (JPasswordField) SeccionsConfiguracio.cercarById(dbSection, "txtPass"),
+            (JTextField) SeccionsConfiguracio.cercarById(imgSection, "txtImgDir"),
+            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbTheme"),
+            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbFont"),
+            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbCurrency"),
+            (JComboBox<String>) SeccionsConfiguracio.cercarById(languageSection, "cmbLang"),
+            (JTextField) SeccionsConfiguracio.cercarById(appearanceSection, "txtDefVal"),
             this.listener);
 
         JPanel content = new JPanel();
@@ -94,12 +94,12 @@ public class ConfiguracioDialog extends JDialog {
 
     /** Refresh form fields from {@link Config} (e.g. after external/API changes). */
     public void reloadFromConfig() {
-        Config.reload();
+        Configuracio.reload();
         JPanel root = (JPanel) getContentPane();
-        ConfiguracioDbSection.reloadFromConfig(root);
-        ConfiguracioImagesSection.reloadFromConfig(root);
-        ConfiguracioAppearanceSection.reloadFromConfig(root);
-        ConfiguracioLanguageSection.reloadFromConfig(root);
+        SeccioDbConfiguracio.reloadFromConfig(root);
+        SeccioImatgesConfiguracio.reloadFromConfig(root);
+        SeccioAparençaConfiguracio.reloadFromConfig(root);
+        SeccioIdiomaConfiguracio.reloadFromConfig(root);
         ConfiguracioDataSection.reloadFromConfig(root);
     }
 }

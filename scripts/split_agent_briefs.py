@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Split tot.txt into agent-briefs/*.md for parallel AI agents."""
+"""Divideix tot.txt en agent-briefs/*.md per a agents d'IA en paral·lel."""
 from pathlib import Path
 import re
 

@@ -19,7 +19,7 @@ public class SplashScreen {
         });
 
     private final JDialog dialog;
-    private long showTime = 0;
+    private long mostrarTime = 0;
     private static final long MIN_DISPLAY_MS = 500;
 
     public SplashScreen() {
@@ -52,13 +52,13 @@ public class SplashScreen {
 
     public void show() {
         if (dialog.isVisible()) return;
-        showTime = System.currentTimeMillis();
+        mostrarTime = System.currentTimeMillis();
         dialog.setVisible(true);
     }
 
     public void hide() {
         if (!dialog.isVisible()) return;
-        long elapsed = System.currentTimeMillis() - showTime;
+        long elapsed = System.currentTimeMillis() - mostrarTime;
         long remaining = MIN_DISPLAY_MS - elapsed;
         if (remaining > 0) {
             ScheduledFuture<?> future = SCHEDULER.schedule(

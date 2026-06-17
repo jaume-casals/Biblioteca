@@ -25,7 +25,7 @@ public class UITheme {
      *  single source of truth — they get re-assigned by {@link #setTheme}
      *  and the theme appliers).  Migration target: callers do
      *  {@code UITheme.palette().bgMain} instead of {@code UITheme.palette().bgMain()}. */
-    public record Palette(
+    public record Paleta(
             java.awt.Color bgMain,
             java.awt.Color bgPanel,
             java.awt.Color accent,
@@ -48,44 +48,44 @@ public class UITheme {
             java.awt.Color sidebarText,
             java.awt.Color sidebarTextMid,
             java.awt.Color sidebarSelBg,
-            java.awt.Color searchHighlightBg,
-            java.awt.Color searchHighlightFg) {}
+            java.awt.Color cercarHighlightBg,
+            java.awt.Color cercarHighlightFg) {}
 
     /** Snapshot the current Color state into an immutable Palette record.
      *  Callers should prefer {@code UITheme.palette().xxx} over the raw
      *  {@code UITheme.XXX} field accesses. */
-    public static Palette palette() {
-        return new Palette(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
+    public static Paleta palette() {
+        return new Paleta(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
                 BORDER_CLR, HEADER_BG, HEADER_FG, TABLE_GRID, TABLE_ALT,
                 SECONDARY_BTN_BG, FIELD_BG, NIMBUS_BLUE_GREY, DANGER, GREEN,
                 SIDEBAR_BG, SIDEBAR_ACCENT, SIDEBAR_HOVER_BG, SIDEBAR_TEXT, SIDEBAR_TEXT_MID, SIDEBAR_SEL_BG,
                 SEARCH_HIGHLIGHT_BG, SEARCH_HIGHLIGHT_FG);
     }
 
-    public enum Theme {
+    public enum Tema {
         LIGHT(false),
         DARK( true),
         SEPIA(false),
         OCEAN(false);
 
         public final boolean dark;
-        Theme(boolean dark) { this.dark = dark; }
+        Tema(boolean dark) { this.dark = dark; }
 
         public String displayName() { return I18n.t("theme_" + name().toLowerCase()); }
 
         public String key() { return name().toLowerCase(); }
 
-        public static Theme fromKey(String key) {
+        public static Tema fromKey(String key) {
             if (key == null) return LIGHT;
-            for (Theme t : values()) if (t.name().equalsIgnoreCase(key)) return t;
+            for (Tema t : values()) if (t.name().equalsIgnoreCase(key)) return t;
             return LIGHT;
         }
     }
 
-    private static Theme currentTheme = Theme.LIGHT;
+    private static Tema currentTheme = Tema.LIGHT;
 
-    public static Theme getTheme() { return currentTheme; }
-    public static boolean isDark() { return currentTheme.dark; }
+    public static Tema obtenirTheme() { return currentTheme; }
+    public static boolean esDark() { return currentTheme.dark; }
 
     // ── Palette (updated by setDark) ─────────────────────────────────────────
     public static Color BG_MAIN;
@@ -100,7 +100,7 @@ public class UITheme {
     public static Color TABLE_GRID;
     public static Color TABLE_ALT;
 
-    // Derived — used by UIComponents style helpers (panel-layer styling).
+    // Derivats — usats pels helpers d'estil de UIComponents (estil de la capa de panell).
     public static Color SECONDARY_BTN_BG;
     public static Color FIELD_BG;
     static Color NIMBUS_BLUE_GREY;
@@ -211,7 +211,7 @@ public class UITheme {
     public static Font fontBase() { return FONT_BASE; }
     public static Font fontBold() { return FONT_BOLD; }
 
-    static { setTheme(Theme.LIGHT); }
+    static { posarTheme(Tema.LIGHT); }
 
     /** Pair with {@link Config}'s shutdown hook to release the cached Font
      *  instances at JVM exit (belt-and-suspenders for the static-state pattern). */
@@ -224,7 +224,7 @@ public class UITheme {
     }
 
     // ── Theme switching ───────────────────────────────────────────────────────
-    public static void setTheme(Theme t) {
+    public static void posarTheme(Tema t) {
         if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
             java.util.logging.Logger.getLogger(UITheme.class.getName())
                 .warning("[UITheme] setTheme() called off EDT — theme changes must happen on the EDT");
@@ -295,12 +295,12 @@ public class UITheme {
                 FIELD_BG         = L_FIELD_BG;  NIMBUS_BLUE_GREY = L_NIMBUS_BG;
                 break;
         }
-        applyUIManager();
+        aplicarUIManager();
     }
 
     /** Compat — maps to LIGHT or DARK. */
-    public static void setDark(boolean dark) {
-        setTheme(dark ? Theme.DARK : Theme.LIGHT);
+    public static void posarDark(boolean dark) {
+        posarTheme(dark ? Tema.DARK : Tema.LIGHT);
     }
 
     public static void rebuildFonts(FontSize size) {
@@ -321,7 +321,7 @@ public class UITheme {
         rebuildFonts(FontSize.fromKey(size));
     }
 
-    public static void applyUIManager() {
+    public static void aplicarUIManager() {
         UIManager.put("control",                   BG_MAIN);
         UIManager.put("text",                      TEXT_DARK);
         UIManager.put("nimbusBase",                ACCENT);
@@ -330,18 +330,19 @@ public class UITheme {
         UIManager.put("nimbusSelectionBackground", ACCENT);
         UIManager.put("nimbusSelectedText",        Color.WHITE);
         UIManager.put("Table.alternateRowColor",   TABLE_ALT);
-        // Prevent Nimbus SynthBorder painter ClassCastException on label-based cell renderers
+        // Prevé el ClassCastException del pintor SynthBorder de Nimbus
+        // als renderers de cel·la basats en label
         UIManager.put("Table.cellNoFocusBorder",      BorderFactory.createEmptyBorder(0, 2, 0, 2));
         UIManager.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(0, 2, 0, 2));
-        I18n.applySwingOptionPane();
+        I18n.aplicarSwingOptionPane();
     }
 
-    // Style helpers live in presentacio.UIComponents (session 11 move):
-    // the presentacio layer is the only caller, and the indirection
-    // through this class was removed so UIComponents holds the actual
-    // implementation.  The two package-private fields
-    // (SECONDARY_BTN_BG, FIELD_BG) remain here as the theme-palette
-    // source for those helpers.
+    // Els helpers d'estil viuen a presentacio.UIComponents (moviment
+    // de la sessió 11): la capa presentacio és l'única consumidora, i
+    // la indirecta a través d'aquesta classe s'ha eliminat de manera
+    // que UIComponents té la implementació real. Els dos camps
+    // package-private (SECONDARY_BTN_BG, FIELD_BG) es queden aquí com a
+    // font de la paleta de temes per a aquests helpers.
 
     public static ImageIcon scaledIcon(byte[] data, int size) {
         if (data == null) return null;
@@ -355,7 +356,7 @@ public class UITheme {
     }
 
     public static File chooseImageFile(Component parent) {
-        String dir = Config.getDefaultImgDir();
+        String dir = Configuracio.obtenirDefaultImgDir();
         JFileChooser chooser = new JFileChooser(new File(dir).exists() ? dir : System.getProperty("user.home"));
         chooser.setFileFilter(new FileNameExtensionFilter("Imatges", "jpg", "jpeg", "png", "gif", "bmp", "webp"));
         return chooser.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION

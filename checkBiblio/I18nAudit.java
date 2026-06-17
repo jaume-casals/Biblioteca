@@ -8,8 +8,8 @@ import java.util.*;
 import java.util.regex.*;
 import java.util.stream.Stream;
 
-/** Static i18n checks for UIAudit (3-language CSV, hardcoded Catalan, unused keys). */
-final class I18nAudit {
+/** Comprovacions estàtiques d'i18n per a UIAudit (CSV de 3 idiomes, català hardcoded, claus no usades). */
+    final class I18nAudit {
 
     private I18nAudit() {}
 
@@ -42,7 +42,7 @@ final class I18nAudit {
         return out;
     }
 
-    /** Parses a single CSV line honouring double-quoted fields. Returns the fields in order. */
+    /** Analitza una sola línia CSV respectant els camps entre cometes dobles. Retorna els camps en ordre. */
     private static String[] splitCsvLine(String line) {
         java.util.List<String> out = new java.util.ArrayList<>();
         StringBuilder cur = new StringBuilder();
@@ -84,8 +84,8 @@ final class I18nAudit {
             for (int i = 0; i < 3; i++) {
                 if (v[i] == null || v[i].isBlank()) {
                     failCount[0]++;
-                    log.println("FAIL: i18n missing lang " + (i == 0 ? "ca" : i == 1 ? "es" : "en")
-                        + " for key " + e.getKey());
+                    log.println("FAIL: idioma i18n absent " + (i == 0 ? "ca" : i == 1 ? "es" : "en")
+                        + " per a la clau " + e.getKey());
                 }
             }
         }
@@ -111,8 +111,8 @@ final class I18nAudit {
                             if (text.contains("I18n.t(\"" + word + "\"")
                                 || text.contains("t(\"" + word + "\"")) continue;
                             warnCount[0]++;
-                            log.println("WARN: possible hardcoded Catalan in " + f
-                                + " (" + word + " in " + literalContext(text, start, end) + " @ " + start + ")");
+                            log.println("WARN: possible català hardcoded a " + f
+                                + " (" + word + " a " + literalContext(text, start, end) + " @ " + start + ")");
                         }
                     } catch (IOException ignored) {}
                 });
@@ -156,13 +156,13 @@ final class I18nAudit {
         for (String k : keys.keySet()) {
             if (!seen.contains(k)) {
                 warnCount[0]++;
-                log.println("WARN: i18n key never used in src: " + k);
+                log.println("WARN: clau i18n mai utilitzada a src: " + k);
             }
         }
         for (String k : seen) {
             if (!keys.containsKey(k)) {
                 failCount[0]++;
-                log.println("FAIL: I18n.t key missing from CSV: " + k);
+                log.println("FAIL: clau I18n.t absent del CSV: " + k);
             }
         }
     }
@@ -178,12 +178,12 @@ final class I18nAudit {
                     String key = stripQuotes(splitCsvLine(s)[0]);
                     if (!seenInFile.add(key)) {
                         warnCount[0]++;
-                        log.println("WARN: duplicate i18n key " + key + " in " + p.getFileName());
+                        log.println("WARN: clau i18n duplicada " + key + " a " + p.getFileName());
                     }
                     String prev = firstFile.putIfAbsent(key, p.getFileName().toString());
                     if (prev != null && !prev.equals(p.getFileName().toString())) {
                         warnCount[0]++;
-                        log.println("WARN: duplicate i18n key " + key + " in " + prev + " and " + p.getFileName());
+                        log.println("WARN: clau i18n duplicada " + key + " a " + prev + " i " + p.getFileName());
                     }
                 }
             }

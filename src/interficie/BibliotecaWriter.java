@@ -23,29 +23,29 @@ import domini.Tag;
  */
 public interface BibliotecaWriter extends BibliotecaReader, BibliotecaAdmin {
 
-    void addLlibre(Llibre l);
-    void deleteLlibre(Llibre l);
-    void deleteLlibre(Long isbn);
-    void updateLlibre(Llibre l);
+    void afegirLlibre(Llibre l);
+    void eliminarLlibre(Llibre l);
+    void eliminarLlibre(Long isbn);
+    void actualitzarLlibre(Llibre l);
 
-    Llista addLlista(String nom);
-    void deleteLlista(Llista llista);
-    void renameLlista(int id, String newNom);
-    void addLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit);
-    void removeLlibreFromLlista(long isbn, int llistaId);
-    void updateLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit);
-    void moveLlistaUp(int id);
-    void moveLlistaDown(int id);
-    void setLlistaColor(int id, String color);
+    Llista afegirLlista(String nom);
+    void eliminarLlista(Llista llista);
+    void reanomenarLlista(int id, String newNom);
+    void afegirLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit);
+    void eliminarLlibreFromLlista(long isbn, int llistaId);
+    void actualitzarLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit);
+    void moureLlistaUp(int id);
+    void moureLlistaDown(int id);
+    void posarLlistaColor(int id, String color);
 
-    Tag addTag(String nom);
-    void deleteTag(Tag tag);
-    void renameTag(int id, String newNom);
-    void addLlibreToTag(long isbn, int tagId);
-    void removeLlibreFromTag(long isbn, int tagId);
+    Tag afegirTag(String nom);
+    void eliminarTag(Tag tag);
+    void reanomenarTag(int id, String newNom);
+    void afegirLlibreToTag(long isbn, int tagId);
+    void eliminarLlibreFromTag(long isbn, int tagId);
 
     void prestarLlibre(long isbn, String nom);
     void retornarLlibre(long isbn);
 
-    void setLlibreBlob(long isbn, byte[] blob);
+    void posarLlibreBlob(long isbn, byte[] blob);
 }

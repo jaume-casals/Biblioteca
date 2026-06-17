@@ -27,11 +27,11 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
     private final Map<Long, Llibre> byIsbn = new HashMap<>();
     private boolean byIsbnDirty = true;
 
-    @Override public List<Llibre> getAllLlibres() { return new ArrayList<>(books); }
-    @Override public Llibre getLlibre(long isbn) throws Exception {
+    @Override public List<Llibre> obtenirAllLlibres() { return new ArrayList<>(books); }
+    @Override public Llibre obtenirLlibre(long isbn) throws Exception {
         if (byIsbnDirty) rebuildIndex();
         Llibre l = byIsbn.get(isbn);
-        if (l == null) throw new domini.BibliotecaException.NotFound("Not found: " + isbn);
+        if (l == null) throw new domini.BibliotecaException.NoTrobat("Not found: " + isbn);
         return l;
     }
 
@@ -39,11 +39,11 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
      *  treat the index as dirty (handled by the dirty flag). */
     private void rebuildIndex() {
         byIsbn.clear();
-        for (Llibre l : books) if (l.getISBN() != null) byIsbn.put(l.getISBN(), l);
+        for (Llibre l : books) if (l.obtenirISBN() != null) byIsbn.put(l.obtenirISBN(), l);
         byIsbnDirty = false;
     }
     @Override public int getSize() { return books.size(); }
-    @Override public boolean existsLlibre(long isbn) { return books.stream().anyMatch(l -> java.util.Objects.equals(l.getISBN(), isbn)); }
+    @Override public boolean existsLlibre(long isbn) { return books.stream().anyMatch(l -> java.util.Objects.equals(l.obtenirISBN(), isbn)); }
     @Override public List<Llibre> get10Llibres() { return new ArrayList<>(books.subList(0, Math.min(10, books.size()))); }
     @Override public List<Llibre> get100Llibres(int index) {
         int from = index * 100, to = Math.min(from + 100, books.size());
@@ -51,10 +51,10 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
         return new ArrayList<>(books.subList(from, to));
     }
     @Override public int maxIndex100Llibres() { return Math.max(0, (books.size() - 1) / 100); }
-    @Override public List<Llibre> getRecentlyAdded() { return new ArrayList<>(books.subList(Math.max(0, books.size() - 20), books.size())); }
-    @Override public boolean isLargeLibrary() { return false; }
-    @Override public int countLlibresDB() { return books.size(); }
-    @Override public List<Llibre> getLlibresPage(int offset, int pageSize) {
+    @Override public List<Llibre> obtenirRecentlyAdded() { return new ArrayList<>(books.subList(Math.max(0, books.size() - 20), books.size())); }
+    @Override public boolean esLargeLibrary() { return false; }
+    @Override public int comptarLlibresDB() { return books.size(); }
+    @Override public List<Llibre> obtenirLlibresPage(int offset, int pageSize) {
         int to = Math.min(offset + pageSize, books.size());
         return offset >= books.size() ? new ArrayList<>() : new ArrayList<>(books.subList(offset, to));
     }
@@ -66,52 +66,52 @@ public class InMemoryBibliotecaReader implements BibliotecaReader {
         throw new UnsupportedOperationException(
             "InMemoryBibliotecaReader does not honour filter criteria — use a real BibliotecaReader (see class Javadoc).");
     }
-    @Override public List<Llibre> searchLlibresSQL(LlibreFilter f) {
+    @Override public List<Llibre> cercarLlibresSQL(LlibreFilter f) {
         throw new UnsupportedOperationException(
             "InMemoryBibliotecaReader does not honour search criteria — use a real BibliotecaReader (see class Javadoc).");
     }
-    @Override public List<Llista> getAllLlistes() { return new ArrayList<>(llistes); }
-    @Override public Llista getLlistaById(int id) throws Exception {
-        for (Llista l : llistes) if (l.getId() == id) return l;
+    @Override public List<Llista> obtenirAllLlistes() { return new ArrayList<>(llistes); }
+    @Override public Llista obtenirLlistaById(int id) throws Exception {
+        for (Llista l : llistes) if (l.obtenirId() == id) return l;
         throw new Exception("Shelf not found: " + id);
     }
-    @Override public int getCountInLlista(int llistaId) { return 0; }
-    @Override public Map<Integer, Integer> getAllCountsInLlistes() { return new HashMap<>(); }
-    @Override public List<Llibre> getLlibresInLlista(int llistaId) { return new ArrayList<>(); }
-    @Override public List<LlibreLlistaRow> getAllLlibreLlistaRows() { return new ArrayList<>(); }
-    @Override public List<Llista> getLlistesForLlibre(long isbn) { return new ArrayList<>(); }
-    @Override public List<domini.LlibreLlistaContext> getLlistesForLlibreContext(long isbn) { return new ArrayList<>(); }
-    @Override public List<Tag> getAllTags() { return new ArrayList<>(tags); }
-    @Override public Tag getTagById(int id) throws Exception {
-        for (Tag t : tags) if (t.getId() == id) return t;
+    @Override public int obtenirCountInLlista(int llistaId) { return 0; }
+    @Override public Map<Integer, Integer> obtenirAllCountsInLlistes() { return new HashMap<>(); }
+    @Override public List<Llibre> obtenirLlibresInLlista(int llistaId) { return new ArrayList<>(); }
+    @Override public List<LlibreLlistaRow> obtenirAllLlibreLlistaRows() { return new ArrayList<>(); }
+    @Override public List<Llista> obtenirLlistesForLlibre(long isbn) { return new ArrayList<>(); }
+    @Override public List<domini.LlibreLlistaContext> obtenirLlistesForLlibreContext(long isbn) { return new ArrayList<>(); }
+    @Override public List<Tag> obtenirAllTags() { return new ArrayList<>(tags); }
+    @Override public Tag obtenirTagById(int id) throws Exception {
+        for (Tag t : tags) if (t.obtenirId() == id) return t;
         throw new Exception("Tag not found: " + id);
     }
-    @Override public List<Tag> getTagsForLlibre(long isbn) { return new ArrayList<>(); }
-    @Override public List<LlibreTagRow> getAllLlibreTagRows() { return new ArrayList<>(); }
-    @Override public Set<Long> getLlibresWithTag(int tagId) { return new HashSet<>(); }
-    @Override public Set<Long> getLoanedISBNs() {
+    @Override public List<Tag> obtenirTagsForLlibre(long isbn) { return new ArrayList<>(); }
+    @Override public List<LlibreTagRow> obtenirAllLlibreTagRows() { return new ArrayList<>(); }
+    @Override public Set<Long> obtenirLlibresWithTag(int tagId) { return new HashSet<>(); }
+    @Override public Set<Long> obtenirLoanedISBNs() {
         Set<Long> s = new HashSet<>();
         for (PrestecRow r : loans) if (!r.retornat()) s.add(r.isbn());
         return s;
     }
-    @Override public List<PrestecRow> getAllActiveLoans() {
+    @Override public List<PrestecRow> obtenirAllActiveLoans() {
         List<PrestecRow> out = new ArrayList<>();
         for (PrestecRow r : loans) if (!r.retornat()) out.add(r);
         return out;
     }
-    @Override public List<PrestecRow> getLoansForIsbn(long isbn) {
+    @Override public List<PrestecRow> obtenirLoansForIsbn(long isbn) {
         List<PrestecRow> out = new ArrayList<>();
         for (PrestecRow r : loans) if (r.isbn() == isbn) out.add(r);
         return out;
     }
-    @Override public List<persistencia.OverdueLoan> getAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
-    @Override public int countLoans(long isbn) {
+    @Override public List<persistencia.OverdueLoan> obtenirAllOverdueLoans(int daysThreshold) { return new ArrayList<>(); }
+    @Override public int comptarLoans(long isbn) {
         int c = 0;
         for (PrestecRow r : loans) if (r.isbn() == isbn) c++;
         return c;
     }
-    @Override public byte[] getLlibreBlob(long isbn) { return null; }
-    @Override public long getDbSizeBytes() { return 0; }
-    @Override public List<String> getDistinctValues(String column) { return new ArrayList<>(); }
-    @Override public List<String> getDistinctAutorNames() { return new ArrayList<>(); }
+    @Override public byte[] obtenirLlibreBlob(long isbn) { return null; }
+    @Override public long obtenirDbSizeBytes() { return 0; }
+    @Override public List<String> obtenirDistinctValues(String column) { return new ArrayList<>(); }
+    @Override public List<String> obtenirDistinctAutorNames() { return new ArrayList<>(); }
 }

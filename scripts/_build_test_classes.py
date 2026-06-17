@@ -1,11 +1,11 @@
 """
-Helper for scripts\test.bat.
-Reads test\_test_classes.txt (each line is an absolute path to a test .java
-file) and writes back one fully-qualified class name per line. The
-``\\test\`` prefix is stripped and any remaining path separators are
-converted to dots.
+Ajudant per a scripts\test.bat.
+Llegeix test\_test_classes.txt (cada línia és un camí absolut a un
+fitxer .java de test) i hi torna a escriure un nom de classe
+completament qualificat per línia. S'elimina el prefix ``\\test\`` i
+qualsevol separador de camí restant es converteix a punts.
 
-Usage: python scripts\_build_test_classes.py
+Ús: python scripts\_build_test_classes.py
 """
 import os
 import re

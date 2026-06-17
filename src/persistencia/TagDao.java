@@ -35,7 +35,7 @@ public class TagDao {
      */
     static {
         try {
-            Class<?> statsCls = Class.forName("domini.facade.StatsDelegate");
+            Class<?> statsCls = Class.forName("domini.facade.DelegatEstadistiques");
             java.lang.reflect.Field f = statsCls.getDeclaredField("IN_MEMORY_EXTRACTORS");
             f.setAccessible(true);
             @SuppressWarnings("unchecked")
@@ -49,8 +49,9 @@ public class TagDao {
                     + " (the SQL whitelist must be a superset of the in-memory map)");
             }
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
-            // StatsDelegate may be absent in test classpaths; the assert
-            // is best-effort. The drift is still caught by code review.
+            // StatsDelegate pot ser absent als classpath de test; el
+            // assert és best-effort. La deriva la continua capturant la
+            // revisió de codi.
         }
     }
 
@@ -60,7 +61,7 @@ public class TagDao {
 
     void invalidateLlibreTagCache() { llibreTagCache = null; }
 
-    public synchronized ArrayList<Tag> getAll() {
+    public synchronized ArrayList<Tag> obtenirAll() {
         ArrayList<Tag> tags = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -101,7 +102,7 @@ public class TagDao {
         }
     }
 
-    public synchronized ArrayList<Tag> getForLlibre(long isbn) {
+    public synchronized ArrayList<Tag> obtenirForLlibre(long isbn) {
         ArrayList<Tag> tags = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -117,7 +118,7 @@ public class TagDao {
         return tags;
     }
 
-    public synchronized void addToLlibre(long isbn, int tagId) throws SQLException {
+    public synchronized void afegirToLlibre(long isbn, int tagId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT IGNORE INTO llibre_tag (isbn, tag_id) VALUES (?, ?)")) {
             ps.setLong(1, isbn);
@@ -127,7 +128,7 @@ public class TagDao {
         invalidateLlibreTagCache();
     }
 
-    public synchronized void removeFromLlibre(long isbn, int tagId) throws SQLException {
+    public synchronized void eliminarFromLlibre(long isbn, int tagId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "DELETE FROM llibre_tag WHERE isbn = ? AND tag_id = ?")) {
             ps.setLong(1, isbn);
@@ -137,7 +138,7 @@ public class TagDao {
         invalidateLlibreTagCache();
     }
 
-    public synchronized Set<Long> getLlibresWithTag(int tagId) {
+    public synchronized Set<Long> obtenirLlibresWithTag(int tagId) {
         Set<Long> isbns = new HashSet<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -153,7 +154,7 @@ public class TagDao {
         return isbns;
     }
 
-    public synchronized java.util.List<LlibreTagRow> getAllLlibreTag() {
+    public synchronized java.util.List<LlibreTagRow> obtenirAllLlibreTag() {
         if (llibreTagCache != null) return llibreTagCache;
         java.util.List<LlibreTagRow> rows = new java.util.ArrayList<>();
         try {
@@ -178,7 +179,7 @@ public class TagDao {
      * camí alternatiu en memòria per a columnes que ja són a {@code Llibre};
      * veure'n el Javadoc per a la justificació del doble camí.
      */
-    public synchronized java.util.List<String> getDistinctValues(String column) {
+    public synchronized java.util.List<String> obtenirDistinctValues(String column) {
         java.util.List<String> vals = new java.util.ArrayList<>();
         if (!AUTOCOMPLETE_COLUMNS.contains(column)) return vals;
         try {

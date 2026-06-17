@@ -9,29 +9,31 @@ public class AutorDao {
 
     AutorDao(Connection con) { this.con = con; }
 
-    private <T> List<T> queryAll(String sql, RowMappers.RowMapper<T> mapper) {
-        try { return RowMappers.queryAll(con, sql, mapper); }
+    private <T> List<T> queryAll(String sql, MapejadorsFiles.MapejadorFiles<T> mapper) {
+        try { return MapejadorsFiles.queryAll(con, sql, mapper); }
         catch (SQLException e) { throw new domini.BibliotecaException("Error executant consulta: " + e.getMessage(), e); }
     }
 
-    // Double-locking note: callers go through ControladorPersistencia which is
-    // already synchronized, so DAO methods need not be synchronized themselves.
+    // Nota sobre el doble bloqueig: els consumidors passen per
+    // ControladorPersistencia que ja està sincronitzat, de manera que
+    // els mètodes del DAO no cal que estiguin sincronitzats ells
+    // mateixos.
 
-    public List<AutorRow> getAll() {
+    public List<AutorRow> obtenirAll() {
         return queryAll("SELECT id, nom FROM autor ORDER BY nom",
                 rs -> new AutorRow(rs.getInt(1), rs.getString(2)));
     }
 
-    public List<String> getDistinctAutorNames() {
+    public List<String> obtenirDistinctAutorNames() {
         return queryAll("SELECT nom FROM autor ORDER BY nom", rs -> rs.getString(1));
     }
 
-    public List<LlibreAutorRow> getAllLlibreAutor() {
+    public List<LlibreAutorRow> obtenirAllLlibreAutor() {
         return queryAll("SELECT isbn, autor_id FROM llibre_autor ORDER BY isbn, autor_id",
                 rs -> new LlibreAutorRow(rs.getLong(1), rs.getInt(2)));
     }
 
-    public int createAutor(String nom) {
+    public int crearAutor(String nom) {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT INTO autor (nom) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, nom);
@@ -45,7 +47,7 @@ public class AutorDao {
         throw new domini.BibliotecaException("No s'ha obtingut id d'autor nou");
     }
 
-    public void updateAutor(int id, String nom) {
+    public void actualitzarAutor(int id, String nom) {
         try (PreparedStatement ps = con.prepareStatement("UPDATE autor SET nom = ? WHERE id = ?")) {
             ps.setString(1, nom);
             ps.setInt(2, id);
@@ -55,7 +57,7 @@ public class AutorDao {
         }
     }
 
-    public void deleteAutor(int id) {
+    public void eliminarAutor(int id) {
         try (PreparedStatement ps = con.prepareStatement("DELETE FROM autor WHERE id = ?")) {
             ps.setInt(1, id);
             ps.executeUpdate();

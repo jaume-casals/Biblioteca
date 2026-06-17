@@ -87,7 +87,8 @@ public class AutoCompletion extends PlainDocument {
 			return;
 		super.insertString(offs, str, a);
 		String prefix = getText(0, getLength());
-		// Find first model item that starts with the typed prefix (case-insensitive)
+		// Cerca el primer element del model que comenci pel prefix
+		// escrit (insensible a majúscules/minúscules)
 		String lowerPrefix = prefix.toLowerCase(java.util.Locale.ROOT);
 		for (int i = 0, n = model.getSize(); i < n; i++) {
 			Object item = model.getElementAt(i);

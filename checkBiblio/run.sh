@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Compile, run unit/integration tests, and optionally UIAudit.
-# Runs all requested steps; prints a consolidated error summary at the end.
-# Usage:
-#   ./checkBiblio/run.sh              # tests + interactive UIAudit
-#   ./checkBiblio/run.sh --test-only  # tests only (make test)
+# Compila, executa els tests unitaris/d'integració i, opcionalment, UIAudit.
+# Executa tots els passos sol·licitats; imprimeix un resum d'errors consolidat al final.
+# Ús:
+#   ./checkBiblio/run.sh              # tests + UIAudit interactiu
+#   ./checkBiblio/run.sh --test-only  # només tests (make test)
 #   ./checkBiblio/run.sh --auto       # tests + UIAudit --auto
-#   ./checkBiblio/run.sh --audit-only # UIAudit only (skip tests)
+#   ./checkBiblio/run.sh --audit-only # només UIAudit (salta els tests)
 cd "$(dirname "$0")/.."
 
 RUN_TESTS=1
@@ -21,7 +21,7 @@ for arg in "$@"; do
         --audit-only) RUN_TESTS=0 ;;
         --auto)       AUDIT_ARGS+=(--auto) ;;
         -h|--help)
-            echo "Usage: $0 [--test-only | --audit-only] [--auto]"
+            echo "Ús: $0 [--test-only | --audit-only] [--auto]"
             exit 0
             ;;
         *) AUDIT_ARGS+=("$arg") ;;
@@ -38,13 +38,13 @@ print_final_summary() {
 
     echo ""
     echo "════════════════════════════════════════════════════════"
-    echo "  FINAL SUMMARY"
+    echo "  RESUM FINAL"
     echo "════════════════════════════════════════════════════════"
 
     if [ ${#STEP_ERRORS[@]} -eq 0 ]; then
-        echo "  Steps: no failures recorded."
+        echo "  Passos: no s'han registrat fallades."
     else
-        echo "  Step failures (${#STEP_ERRORS[@]}):"
+        echo "  Fallades de pas (${#STEP_ERRORS[@]}):"
         local err
         for err in "${STEP_ERRORS[@]}"; do
             echo "    ✗ $err"
@@ -57,7 +57,7 @@ print_final_summary() {
             | grep -v '^make\[' || true)
         if [ -n "$test_lines" ]; then
             echo ""
-            echo "  Test output (errors / failures):"
+            echo "  Sortida dels tests (errors / fallades):"
             echo "$test_lines" | sed 's/^/    /'
         fi
     fi
@@ -68,21 +68,21 @@ print_final_summary() {
         audit_totals=$(grep -E '\] FAIL: [0-9]+  WARN: [0-9]+|^\[AUTO\] Audit complete' checkBiblio/audit_report.txt 2>/dev/null | tail -2 || true)
         if [ -n "$audit_totals" ]; then
             echo ""
-            echo "  UIAudit totals:"
+            echo "  Totals d'UIAudit:"
             echo "$audit_totals" | sed 's/^/    /'
         fi
         if [ -n "$audit_issues" ]; then
             echo ""
-            echo "  UIAudit issues (FAIL / WARN / ERROR):"
+            echo "  Problemes d'UIAudit (FAIL / WARN / ERROR):"
             echo "$audit_issues" | sed 's/^/    /'
         fi
     fi
 
     echo "════════════════════════════════════════════════════════"
     if [ "$FINAL_EXIT" -eq 0 ]; then
-        echo "  Result: PASS"
+        echo "  Resultat: PASS"
     else
-        echo "  Result: FAIL (see above)"
+        echo "  Resultat: FAIL (mira amunt)"
     fi
     echo "════════════════════════════════════════════════════════"
 }
@@ -93,20 +93,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if ! command -v java &>/dev/null; then echo "ERROR: java not found in PATH" >&2; exit 1; fi
+if ! command -v java &>/dev/null; then echo "ERROR: java no es troba al PATH" >&2; exit 1; fi
 for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar; do
-    [ -f "$jar" ] || { echo "ERROR: missing $jar" >&2; exit 1; }
+    [ -f "$jar" ] || { echo "ERROR: manca $jar" >&2; exit 1; }
 done
 
 if [ "$RUN_TESTS" -eq 1 ]; then
     echo "══════════════════════════════════════"
-    echo "  Running make test (BibliotecaTest + JUnit 5)"
+    echo "  Executant make test (BibliotecaTest + JUnit 5)"
     echo "══════════════════════════════════════"
     TEST_LOG=$(mktemp)
     make test 2>&1 | tee "$TEST_LOG"
     TEST_RC=${PIPESTATUS[0]}
     if [ "$TEST_RC" -ne 0 ]; then
-        record_error "make test failed (exit $TEST_RC)"
+        record_error "make test ha fallat (sortida $TEST_RC)"
     fi
     echo ""
 fi
@@ -114,7 +114,7 @@ fi
 if [ "$RUN_AUDIT" -eq 1 ]; then
     CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar"
 
-    # Auto-start Xvfb if no display is available
+    # Auto-inicia Xvfb si no hi ha cap pantalla disponible
     if [ -z "$DISPLAY" ]; then
         DISP=:99
         if [ -f /tmp/.X99-lock ]; then rm -f /tmp/.X99-lock; fi
@@ -123,23 +123,23 @@ if [ "$RUN_AUDIT" -eq 1 ]; then
         export DISPLAY=$DISP
         sleep 1
         if ! kill -0 "$XVFB_PID" 2>/dev/null; then
-            echo "ERROR: Xvfb failed to start. Install xvfb or set DISPLAY." >&2
+            echo "ERROR: Xvfb no ha pogut iniciar. Instal·la xvfb o defineix DISPLAY." >&2
             exit 1
         fi
-        echo "Started Xvfb on $DISP (PID $XVFB_PID)"
+        echo "Xvfb iniciat a $DISP (PID $XVFB_PID)"
     fi
 
-    echo "Compiling UIAudit..."
+    echo "Compilant UIAudit..."
     if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin 2>&1; then
-        record_error "UIAudit compile failed (javac)"
+        record_error "La compilació d'UIAudit ha fallat (javac)"
     else
         rm -f checkBiblio/audit_report.txt
 
-        echo "Starting UIAudit..."
+        echo "Iniciant UIAudit..."
         java -Xmx512m -cp "$CP" checkBiblio.UIAudit "${AUDIT_ARGS[@]}" 2>&1
         AUDIT_RC=$?
         if [ "$AUDIT_RC" -ne 0 ]; then
-            record_error "UIAudit exited with code $AUDIT_RC"
+            record_error "UIAudit ha sortit amb codi $AUDIT_RC"
         fi
     fi
 fi

@@ -14,29 +14,30 @@ import java.util.function.Function;
 import domini.Llibre;
 
 /**
- * Core CRUD on the {@code llibre} table: insert / update / delete / getAll /
- * getRecentlyAdded / count / clearAllData / executeSQLFile / getDbSizeBytes.
- * Search lives in {@link LlibreSearchDao}, blob access in {@link LlibreBlobDao},
- * reading sessions in {@link LlibreLecturaDao}. All four DAOs share the
- * same {@link Connection} held by {@link ControladorPersistencia}.
+ * CRUD principal sobre la taula {@code llibre}: insert / update / delete /
+ * getAll / getRecentlyAdded / count / clearAllData / executeSQLFile /
+ * getDbSizeBytes. La cerca viu a {@link LlibreSearchDao}, l'accés a blobs
+ * a {@link LlibreBlobDao}, i les sessions de lectura a {@link LlibreLecturaDao}.
+ * Tots quatre DAOs comparteixen la mateixa {@link Connection} que té
+ * {@link ControladorPersistencia}.
  */
 public class LlibreDaoCore {
 
     private final Connection con;
 
     /**
-     * Single source of truth for the {@code llibre} column layout. The
-     * three SELECT projections ({@link #LLIBRE_COLUMNS_L_LIGHT},
-     * {@link #LLIBRE_COLUMNS_L}, {@link #LLIBRE_COLUMNS}) and the
-     * INSERT/UPDATE statements below are all derived from this array —
-     * adding a new column to the schema means adding one entry here
-     * and the rest stays in lockstep automatically. The {@code autor}
-     * and {@code has_blob} columns are subqueries, so their
-     * {@code selectFragment} is the full subselect (not a column
-     * reference) and their {@code bind} is a no-op (no placeholders
-     * to bind).
+     * Font única de veritat per a l'esquema de columnes de {@code llibre}.
+     * Les tres projeccions SELECT ({@link #LLIBRE_COLUMNS_L_LIGHT},
+     * {@link #LLIBRE_COLUMNS_L}, {@link #LLIBRE_COLUMNS}) i les sentències
+     * INSERT/UPDATE següents deriven totes d'aquest array — afegir una
+     * columna nova a l'esquema significa afegir una entrada aquí i la
+     * resta es manté en sincronia automàticament. Les columnes
+     * {@code autor} i {@code has_blob} són subconsultes, de manera que
+     * el seu {@code selectFragment} és la subselect sencera (no una
+     * referència de columna) i el seu {@code bind} és no-op (no hi ha
+     * placeholders per lligar).
      */
-    private enum Column {
+    private enum Columna {
         ISBN("ISBN", "l.ISBN", "ISBN", true, false, false),
         NOM("nom", "l.nom", "nom", true, false, true),
         AUTOR_SUBQUERY("autor",
@@ -48,11 +49,11 @@ public class LlibreDaoCore {
         PREU("preu", "l.preu", "preu", true, false, true),
         LLEGIT("llegit", "l.llegit", "llegit", true, false, true),
         IMATGE("imatge", "l.imatge", "imatge", true, false, true),
-        // imatge_blob is in INSERT (cover upload via LlibreBlobDao is
-        // separate) but not in UPDATE — the cover lives in the dedicated
-        // llibre_blob setBlob path, and the updateLlibre facade only
-        // touches metadata. Heavy = not selected by LIGHT view (loaded
-        // lazily by LlibreBlobDao).
+        // imatge_blob és a l'INSERT (la pujada de coberta via LlibreBlobDao
+        // és independent) però no a l'UPDATE — la coberta viu al camí
+        // dedicat setBlob de llibre_blob, i la façana updateLlibre només
+        // toca metadades. Pesat = no seleccionat per la vista LIGHT
+        // (es carrega mandrosament des de LlibreBlobDao).
         IMATGE_BLOB("imatge_blob", null, "imatge_blob", true, true, false),
         HAS_BLOB_SUBQUERY("has_blob",
             "(l.imatge_blob IS NOT NULL) AS has_blob",
@@ -76,18 +77,18 @@ public class LlibreDaoCore {
         NOM_ES("nom_es", "l.nom_es", "nom_es", true, false, true),
         NOM_EN("nom_en", "l.nom_en", "nom_en", true, false, true);
 
-        final String name;            // logical / DB column name
-        final String selectFragment;  // "l.col" or a subquery for SELECT
-        final String insertColumn;    // column name in INSERT (null = skip in INSERT)
-        final boolean bindable;       // whether this column has a bind value
-        final boolean heavy;          // true = heavy field (excluded from LIGHT view)
-        final boolean inUpdate;       // false = INSERT only (ISBN, imatge_blob)
+        final String name;            // nom lògic / de columna a la BBDD
+        final String selectFragment;  // "l.col" o una subconsulta per a SELECT
+        final String inserirColumn;    // nom de columna a l'INSERT (null = omet a l'INSERT)
+        final boolean bindable;       // si aquesta columna té valor lligat
+        final boolean heavy;          // true = camp pesat (exclòs de la vista LIGHT)
+        final boolean inUpdate;       // false = només INSERT (ISBN, imatge_blob)
 
-        Column(String name, String selectFragment, String insertColumn,
+        Columna(String name, String selectFragment, String inserirColumn,
                boolean bindable, boolean heavy, boolean inUpdate) {
             this.name = name;
             this.selectFragment = selectFragment;
-            this.insertColumn = insertColumn;
+            this.inserirColumn = inserirColumn;
             this.bindable = bindable;
             this.heavy = heavy;
             this.inUpdate = inUpdate;
@@ -95,28 +96,28 @@ public class LlibreDaoCore {
     }
 
     /**
-     * Compose the SELECT column list with the {@code l.}-prefixed alias
-     * and no heavy fields (descripcio / notes). Used by {@link #getAll}
-     * and any caller that wants a cheap row.
+     * Composa la llista de columnes SELECT amb l'àlies {@code l.}-prefixada
+     * i sense camps pesats (descripcio / notes). La fan servir {@link #getAll}
+     * i qualsevol consumidor que vulgui una fila barata.
      */
     static final String LLIBRE_COLUMNS_L_LIGHT = buildSelect(/*prefixed*/ true, /*heavy*/ false);
-    /** Same shape as {@link #LLIBRE_COLUMNS_L_LIGHT} but with descripcio + notes included. */
+    /** Mateixa forma que {@link #LLIBRE_COLUMNS_L_LIGHT} però amb descripcio + notes inclosos. */
     static final String LLIBRE_COLUMNS_L = buildSelect(true, true);
-    /** No alias prefix (used by queries without a FROM alias — none today, kept for completeness). */
+    /** Sense prefix d'àlies (per a consultes sense àlies al FROM — cap avui, es conserva per completesa). */
     @SuppressWarnings("unused")
     static final String LLIBRE_COLUMNS = buildSelect(false, true);
 
     private static String buildSelect(boolean prefixed, boolean includeHeavy) {
         StringBuilder sb = new StringBuilder(512);
-        for (Column c : Column.values()) {
+        for (Columna c : Columna.values()) {
             if (c.heavy && !includeHeavy) continue;
-            // Columns with no SELECT fragment (e.g. IMATGE_BLOB, which
-            // is bound but never projected — the heavy blob lives in a
-            // separate LlibreBlobDao call) are skipped here.
+            // Les columnes sense fragment SELECT (p. ex. IMATGE_BLOB,
+            // que es lliga però no es projecta — el blob pesat viu en
+            // una crida independent de LlibreBlobDao) se salten aquí.
             if (c.selectFragment == null) continue;
             if (sb.length() > 0) sb.append(", ");
-            // All Column.selectFragment values already carry the `l.`
-            // prefix; for the unprefixed view we strip it.
+            // Tots els valors de Column.selectFragment ja porten el
+            // prefix `l.`; per a la vista sense prefix l'esborrem.
             String frag = c.selectFragment;
             if (!prefixed) frag = frag.replace("l.", "");
             sb.append(frag);
@@ -124,59 +125,59 @@ public class LlibreDaoCore {
         return sb.toString();
     }
 
-    /** Build the {@code (col1, col2, ...)} part of the INSERT statement
-     *  from the {@link Column} enum, excluding the subquery-only entries
-     *  (autor / has_blob) which are computed, not bound. */
-    private static String insertColumnList() {
+    /** Construeix la part {@code (col1, col2, ...)} de la sentència INSERT
+     *  a partir de l'enum {@link Column}, excloent les entrades només de
+     *  subconsulta (autor / has_blob) que es calculen, no es lliguen. */
+    private static String inserirColumnList() {
         StringBuilder sb = new StringBuilder(256);
-        for (Column c : Column.values()) {
-            if (c.insertColumn == null) continue;
+        for (Columna c : Columna.values()) {
+            if (c.inserirColumn == null) continue;
             if (sb.length() > 0) sb.append(",");
-            sb.append("`").append(c.insertColumn).append("`");
+            sb.append("`").append(c.inserirColumn).append("`");
         }
         return sb.toString();
     }
 
-    /** Count of bindable columns — must match the value-list length from
-     *  {@link LlibreFieldBindings#forInsert(Llibre)} (ISBN + 25
-     *  non-subquery fields + imatge_blob = 27). Used to size the
-     *  placeholder list. */
-    private static int insertColumnCount() {
+    /** Recompte de columnes lligables — ha de coincidir amb la longitud de
+     *  la llista de valors de {@link LlibreFieldBindings#forInsert(Llibre)}
+     *  (ISBN + 25 camps sense subconsulta + imatge_blob = 27). S'usa per
+     *  dimensionar la llista de placeholders. */
+    private static int inserirColumnCount() {
         int n = 0;
-        for (Column c : Column.values()) if (c.insertColumn != null) n++;
+        for (Columna c : Columna.values()) if (c.inserirColumn != null) n++;
         return n;
     }
 
-    /** Build the {@code col=?, col=?, ...} part of the UPDATE statement.
-     *  Excludes ISBN (WHERE clause supplies it) and imatge_blob (cover
-     *  lives in the dedicated setBlob path, not the metadata UPDATE). */
-    private static String updateSetList() {
+    /** Construeix la part {@code col=?, col=?, ...} de la sentència UPDATE.
+     *  Exclou ISBN (la clàusula WHERE el proporciona) i imatge_blob (la
+     *  coberta viu al camí dedicat setBlob, no a l'UPDATE de metadades). */
+    private static String actualitzarSetList() {
         StringBuilder sb = new StringBuilder(256);
-        for (Column c : Column.values()) {
-            if (c.insertColumn == null) continue;
+        for (Columna c : Columna.values()) {
+            if (c.inserirColumn == null) continue;
             if (!c.inUpdate) continue;
             if (sb.length() > 0) sb.append(",");
-            sb.append("`").append(c.insertColumn).append("`=?");
+            sb.append("`").append(c.inserirColumn).append("`=?");
         }
         return sb.toString();
     }
 
-    /** Number of {@code ?} placeholders in the UPDATE SET list. Must
-     *  match the value-list length from
-     *  {@link LlibreFieldBindings#forUpdate(Llibre)} (25 = no ISBN,
-     *  no imatge_blob). The WHERE ISBN is bound separately by the
-     *  caller. */
-    private static int updateSetCount() {
+    /** Nombre de placeholders {@code ?} a la llista SET de l'UPDATE. Ha
+     *  de coincidir amb la longitud de la llista de valors de
+     *  {@link LlibreFieldBindings#forUpdate(Llibre)} (25 = sense ISBN,
+     *  sense imatge_blob). El WHERE ISBN el lliga per separat el
+     *  consumidor. */
+    private static int actualitzarSetCount() {
         int n = 0;
-        for (Column c : Column.values()) {
-            if (c.insertColumn != null && c.inUpdate) n++;
+        for (Columna c : Columna.values()) {
+            if (c.inserirColumn != null && c.inUpdate) n++;
         }
         return n;
     }
 
     LlibreDaoCore(Connection con) { this.con = con; }
 
-    public synchronized ArrayList<Llibre> getAll() {
+    public synchronized ArrayList<Llibre> obtenirAll() {
         ArrayList<Llibre> biblio = new ArrayList<>();
         try {
             try (Statement stmt = con.createStatement();
@@ -184,9 +185,9 @@ public class LlibreDaoCore {
                     "SELECT " + LLIBRE_COLUMNS_L_LIGHT + " FROM llibre l ORDER BY l.ISBN")) {
                 while (rs.next()) {
                     Llibre l = LlibreMapper.buildLlibreLight(rs);
-                    String autor = l.getAutor();
+                    String autor = l.obtenirAutor();
                     if (autor != null && !autor.isBlank()) {
-                        l.setAutors(java.util.Arrays.asList(autor.split(", ", -1)));
+                        l.posarAutors(java.util.Arrays.asList(autor.split(", ", -1)));
                     }
                     biblio.add(l);
                 }
@@ -197,13 +198,14 @@ public class LlibreDaoCore {
         return biblio;
     }
 
-    public synchronized ArrayList<Llibre> getRecentlyAdded(int n) {
+    public synchronized ArrayList<Llibre> obtenirRecentlyAdded(int n) {
         ArrayList<Llibre> result = new ArrayList<>();
         try {
-            // The FROM clause has no `l` alias, so this SELECT must use
-            // the unprefixed column list (LLIBRE_COLUMNS). The LlibreMapper
-            // looks up columns by name (not by index), so the resolution
-            // is independent of the projection order.
+            // La clàusula FROM no té àlies `l`, de manera que aquest
+            // SELECT ha d'utilitzar la llista de columnes sense prefix
+            // (LLIBRE_COLUMNS). LlibreMapper cerca les columnes per nom
+            // (no per índex), de manera que la resolució és independent
+            // de l'ordre de projecció.
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT " + LLIBRE_COLUMNS + " FROM llibre ORDER BY data_afegit DESC LIMIT ?")) {
                 ps.setInt(1, n);
@@ -221,14 +223,14 @@ public class LlibreDaoCore {
         if (ll == null) return;
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
-                    "INSERT INTO llibre (" + insertColumnList() + ") VALUES (" + placeholders(insertColumnCount()) + ")")) {
+                    "INSERT INTO llibre (" + inserirColumnList() + ") VALUES (" + placeholders(inserirColumnCount()) + ")")) {
                 Object[] vals = LlibreFieldBindings.forInsert(ll);
                 for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
                 ps.execute();
             }
-            List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()
-                ? List.of(ll.getAutor()) : ll.getAutors();
-            if (!autorsSync.isEmpty()) syncAutors(ll.getISBN(), autorsSync);
+            List<String> autorsSync = ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
+                ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
+            if (!autorsSync.isEmpty()) sincronitzarAutors(ll.obtenirISBN(), autorsSync);
         });
     }
 
@@ -236,15 +238,15 @@ public class LlibreDaoCore {
         if (ll == null) return;
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE llibre SET " + updateSetList() + " WHERE `ISBN`=?")) {
+                    "UPDATE llibre SET " + actualitzarSetList() + " WHERE `ISBN`=?")) {
                 Object[] vals = LlibreFieldBindings.forUpdate(ll);
                 for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
-                ps.setLong(vals.length + 1, ll.getISBN());
+                ps.setLong(vals.length + 1, ll.obtenirISBN());
                 ps.execute();
             }
-            List<String> autorsSync = ll.getAutors().isEmpty() && ll.getAutor() != null && !ll.getAutor().isBlank()
-                ? List.of(ll.getAutor()) : ll.getAutors();
-            syncAutors(ll.getISBN(), autorsSync);
+            List<String> autorsSync = ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
+                ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
+            sincronitzarAutors(ll.obtenirISBN(), autorsSync);
         });
     }
 
@@ -256,7 +258,7 @@ public class LlibreDaoCore {
     }
 
     public synchronized void delete(Llibre ll) throws SQLException {
-        if (ll != null) delete(ll.getISBN());
+        if (ll != null) delete(ll.obtenirISBN());
     }
 
     public synchronized int count() {
@@ -269,20 +271,20 @@ public class LlibreDaoCore {
         return 0;
     }
 
-    public synchronized void clearAllData() throws SQLException {
-        withTransaction(this::clearAllDataNoTx);
+    public synchronized void netejarAllData() throws SQLException {
+        withTransaction(this::netejarAllDataNoTx);
     }
 
-    /** Body of {@link #clearAllData()} without a surrounding transaction.
-     *  Used by {@link #restoreFromSQL(java.io.File)} to compose the
-     *  clear + execute into a single transaction. */
-    private void clearAllDataNoTx() throws SQLException {
+    /** Cos de {@link #clearAllData()} sense la transacció envoltant.
+     *  El fa servir {@link #restoreFromSQL(java.io.File)} per compondre
+     *  el clear + execute en una sola transacció. */
+    private void netejarAllDataNoTx() throws SQLException {
         try (Statement s = con.createStatement()) {
             for (String t : Schema.CLEAR_ORDER) s.executeUpdate("DELETE FROM " + t);
         }
     }
 
-    public synchronized long getDbSizeBytes() {
+    public synchronized long obtenirDbSizeBytes() {
         try {
             String url = con.getMetaData().getURL();
             if (url != null && url.startsWith("jdbc:h2:")) {
@@ -298,77 +300,80 @@ public class LlibreDaoCore {
     }
 
     /**
-     * Restore from a SQL backup. Previously read the entire file into a
-     * byte[] + a String (peak memory ≈ 4× file size for a 50 MB backup).
-     * Now streams the file line-by-line and accumulates one statement
-     * at a time in a StringBuilder. The accumulator is bounded by the
-     * largest single statement in the file (a few KB for typical
-     * inserts), so peak memory is O(max-statement-size), not O(file).
+     * Restaura des d'una còpia de seguretat SQL. Abans llegia tot el
+     * fitxer a un byte[] + un String (pic de memòria ≈ 4× la mida del
+     * fitxer per a una còpia de 50 MB). Ara transmet el fitxer línia a
+     * línia i acumula una sentència a la vegada en un StringBuilder.
+     * L'acumulador està limitat per la sentència individual més gran
+     * del fitxer (uns quants KB per a insercions típiques), de manera
+     * que el pic de memòria és O(mida-màxima-sentència), no O(fitxer).
      */
-    public synchronized void executeSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+    public synchronized void executarSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
-            try { executeSQLFileNoTx(file); }
+            try { executarSQLFileNoTx(file); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         });
     }
 
-    /** Body of {@link #executeSQLFile(java.io.File)} without a surrounding
-     *  transaction. Lets {@link #restoreFromSQL(java.io.File)} compose the
-     *  clear + file-execute into a single transaction so a mid-stream
-     *  {@link SQLException} rolls back both.
-     *  <p>Reads line-by-line via {@code br.lines().forEach(...)} so the
-     *  parser sees full Unicode strings (including non-BMP code points
-     *  encoded as 4-byte UTF-8). The earlier per-code-unit read broke
-     *  surrogate-pair handling for emoji and CJK ideographs: a 4-byte
-     *  UTF-8 character is two UTF-16 code units, and the comment/quote
-     *  state machine split the pair between iterations. Streaming by
-     *  line keeps multi-line string literals and their content as a
-     *  single String, and lets {@code Statement.execute} receive the
-     *  exact bytes the JDBC driver will encode. */
-    private void executeSQLFileNoTx(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+    /** Cos de {@link #executeSQLFile(java.io.File)} sense la transacció
+     *  envoltant. Permet a {@link #restoreFromSQL(java.io.File)} compondre
+     *  el clear + file-execute en una sola transacció perquè una
+     *  {@link SQLException} a meitat del flux reverteixi les dues.
+     *  <p>Llegeix línia a línia amb {@code br.lines().forEach(...)} de
+     *  manera que l'analitzador vegi cadenes Unicode completes (inclosos
+     *  punts de codi fora del BMP codificats com a UTF-8 de 4 bytes).
+     *  L'antiga lectura per unitat de codi trencava el tractament de
+     *  parelles substitutives per a emoji i ideogrames CJK: un caràcter
+     *  UTF-8 de 4 bytes són dues unitats de codi UTF-16, i la màquina
+     *  d'estats de comentari/cometes partia la parella entre iteracions.
+     *  La transmissió per línia manté els literals de cadena multilínia
+     *  i el seu contingut com un sol String, i permet a
+     *  {@code Statement.execute} rebre els bytes exactes que el driver
+     *  JDBC codificarà. */
+    private void executarSQLFileNoTx(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         try (BufferedReader br = new BufferedReader(
                 new FileReader(file, java.nio.charset.StandardCharsets.UTF_8));
              Statement st = con.createStatement()) {
             StringBuilder current = new StringBuilder(256);
             boolean[] inQuote = { false };
-            br.lines().forEach(line -> processLine(line, current, inQuote, st));
+            br.lines().forEach(line -> processarLine(line, current, inQuote, st));
             String remaining = current.toString().trim();
-            if (!remaining.isEmpty() && isAllowed(remaining)) st.execute(remaining);
+            if (!remaining.isEmpty() && esAllowed(remaining)) st.execute(remaining);
         }
     }
 
-    private void processLine(String line, StringBuilder current, boolean[] inQuote, Statement st) {
+    private void processarLine(String line, StringBuilder current, boolean[] inQuote, Statement st) {
         int i = 0;
         int len = line.length();
         while (i < len) {
             char ch = line.charAt(i);
             if (inQuote[0]) {
-                if (ch == '\'') {
-                    if (i + 1 < len && line.charAt(i + 1) == '\'') {
-                        // SQL '' escape: keep both quotes in the statement.
-                        current.append("''");
-                        i += 2;
-                        continue;
+                    if (ch == '\'') {
+                        if (i + 1 < len && line.charAt(i + 1) == '\'') {
+                            // Escapament SQL '': conserva les dues cometes a la sentència.
+                            current.append("''");
+                            i += 2;
+                            continue;
+                        }
+                        // Cometa de tancament: conserva la cometa simple i surt del literal.
+                        current.append(ch);
+                        inQuote[0] = false;
+                        i++;
+                    } else {
+                        current.append(ch);
+                        i++;
                     }
-                    // Closing quote: keep the single quote and exit the literal.
-                    current.append(ch);
-                    inQuote[0] = false;
-                    i++;
-                } else {
+                } else if (ch == '\'') {
+                    inQuote[0] = true;
                     current.append(ch);
                     i++;
-                }
-            } else if (ch == '\'') {
-                inQuote[0] = true;
-                current.append(ch);
-                i++;
-            } else if (ch == '-' && i + 1 < len && line.charAt(i + 1) == '-') {
-                // -- line comment: drop the rest of the line.
-                return;
-            } else if (ch == ';') {
+                } else if (ch == '-' && i + 1 < len && line.charAt(i + 1) == '-') {
+                    // -- comentari de línia: descarta la resta de la línia.
+                    return;
+                } else if (ch == ';') {
                 String stmt = current.toString().trim();
                 current.setLength(0);
-                if (!stmt.isEmpty() && isAllowed(stmt)) {
+                if (!stmt.isEmpty() && esAllowed(stmt)) {
                     try { st.execute(stmt); }
                     catch (SQLException e) { throw new RuntimeException(e); }
                 }
@@ -381,31 +386,33 @@ public class LlibreDaoCore {
     }
 
     /**
-     * Restore the database from a SQL backup file: clears all data and
-     * executes the file's statements inside a single JDBC transaction.
-     * If the file execution fails partway through, the {@code DELETE}
-     * statements are rolled back along with the partial restore, and
-     * the database is left unchanged. The caller (BackupDelegate) is
-     * still responsible for taking a pre-restore snapshot for the
-     * user-initiated undo path; this method is the safety net.
+     * Restaura la base de dades des d'un fitxer de còpia de seguretat SQL:
+     * esborra totes les dades i executa les sentències del fitxer dins
+     * d'una sola transacció JDBC. Si l'execució del fitxer falla a
+     * meitat, les sentències {@code DELETE} es reverteixen juntament
+     * amb la restauració parcial, i la base de dades queda intacta. El
+     * consumidor (BackupDelegate) continua sent responsable de fer una
+     * captura pre-restauració pel camí d'undoing iniciat per l'usuari;
+     * aquest mètode és la xarxa de seguretat.
      */
-    public synchronized void restoreFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+    public synchronized void restaurarFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
-            clearAllDataNoTx();
-            try { executeSQLFileNoTx(file); }
+            netejarAllDataNoTx();
+            try { executarSQLFileNoTx(file); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         });
     }
 
-    /** Allow-list of SQL statement types acceptable in a backup file. {@code SET}
-     *  is intentionally NOT included: a MariaDB {@code SET @@global.*} would
-     *  otherwise pass this check. BackupService never writes {@code SET}
-     *  statements, so the restore path does not need them. */
+    /** Llista blanca de tipus de sentència SQL acceptables en un fitxer
+     *  de còpia de seguretat. {@code SET} s'ha exclòs intencionadament:
+     *  un {@code SET @@global.*} de MariaDB passaria la comprovació.
+     *  BackupService no escriu mai sentències {@code SET}, de manera
+     *  que el camí de restauració no les necessita. */
     private static final String[] ALLOWED_LEAD = {
         "INSERT ", "VALUES ", "BEGIN", "COMMIT", "ROLLBACK"
     };
 
-    private static boolean isAllowed(String sql) {
+    private static boolean esAllowed(String sql) {
         String upper = sql.toUpperCase(java.util.Locale.ROOT);
         for (String kw : ALLOWED_LEAD) {
             if (upper.startsWith(kw)) return true;
@@ -413,16 +420,16 @@ public class LlibreDaoCore {
         return false;
     }
 
-    /** {@code ?, ?, ?} × {@code n}. Helper for the INSERT statement. */
+    /** {@code ?, ?, ?} × {@code n}. Helper per a la sentència INSERT. */
     private static String placeholders(int n) {
         StringBuilder sb = new StringBuilder(n * 2);
         for (int i = 0; i < n; i++) sb.append(i == 0 ? "?" : ",?");
         return sb.toString();
     }
 
-    @FunctionalInterface private interface SqlWork { void run() throws Exception; }
+    @FunctionalInterface private interface TreballSql { void run() throws Exception; }
 
-    private void withTransaction(SqlWork work) throws SQLException {
+    private void withTransaction(TreballSql work) throws SQLException {
         boolean prev = con.getAutoCommit();
         con.setAutoCommit(false);
         try {
@@ -430,17 +437,17 @@ public class LlibreDaoCore {
             con.commit();
         } catch (Exception e) {
             try { con.rollback(); }
-            catch (SQLException re) { /* original exception is what matters */ }
+            catch (SQLException re) { /* l'excepció original és la que importa */ }
             if (e instanceof SQLException) throw (SQLException) e;
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new SQLException(e);
         } finally {
             try { con.setAutoCommit(prev); }
-            catch (SQLException ae) { /* ignore */ }
+            catch (SQLException ae) { /* ignora */ }
         }
     }
 
-    private void syncAutors(long isbn, List<String> autors) throws SQLException {
+    private void sincronitzarAutors(long isbn, List<String> autors) throws SQLException {
         try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
             del.setLong(1, isbn);
             del.execute();

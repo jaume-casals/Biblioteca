@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-Drop or fix tests that still reference removed web/API code (Swing-only Biblioteca).
+Elimina o corregeix tests que encara fan referència a codi web/API eliminat
+(Biblioteca només Swing).
 
-Run from repo root after pulling web-removal changes:
+Executa des de l'arrel del repositori després de baixar els canvis
+d'eliminació web:
 
     python scripts/patch_tests_after_web_removal.py
     make test
 
-Edits test/BibliotecaTest.java and test/BibliotecaJUnit5Test.java in place.
+Edita in situ test/BibliotecaTest.java i test/BibliotecaJUnit5Test.java.
 """
 
 from __future__ import annotations

@@ -15,35 +15,35 @@ import java.util.Map;
  */
 public final class RelationRemapper {
 
-    public static final class ShelfIdRemapper {
+    public static final class RemapejadorIdPrestatgeria {
         private final ShelfWriter cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public ShelfIdRemapper(ShelfWriter cd) {
+        public RemapejadorIdPrestatgeria(ShelfWriter cd) {
             this.cd = cd;
-            for (Llista l : cd.getAllLlistes()) byNom.put(l.getNom(), l.getId());
+            for (Llista l : cd.obtenirAllLlistes()) byNom.put(l.obtenirNom(), l.obtenirId());
         }
         public int resolve(String name) {
             Integer cached = byNom.get(name);
             if (cached != null) return cached;
-            Llista created = cd.addLlista(name);
-            byNom.put(name, created.getId());
-            return created.getId();
+            Llista created = cd.afegirLlista(name);
+            byNom.put(name, created.obtenirId());
+            return created.obtenirId();
         }
     }
 
-    public static final class TagIdRemapper {
+    public static final class RemapejadorIdEtiqueta {
         private final TagWriter cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public TagIdRemapper(TagWriter cd) {
+        public RemapejadorIdEtiqueta(TagWriter cd) {
             this.cd = cd;
-            for (Tag t : cd.getAllTags()) byNom.put(t.getNom(), t.getId());
+            for (Tag t : cd.obtenirAllTags()) byNom.put(t.obtenirNom(), t.obtenirId());
         }
         public int resolve(String name) {
             Integer cached = byNom.get(name);
             if (cached != null) return cached;
-            Tag created = cd.addTag(name);
-            byNom.put(name, created.getId());
-            return created.getId();
+            Tag created = cd.afegirTag(name);
+            byNom.put(name, created.obtenirId());
+            return created.obtenirId();
         }
     }
 

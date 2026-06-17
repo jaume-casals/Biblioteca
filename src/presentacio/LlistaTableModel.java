@@ -24,7 +24,7 @@ public class LlistaTableModel extends AbstractTableModel {
 
     public void setRows(List<Llista> newRows) { rows.clear(); rows.addAll(newRows); fireTableDataChanged(); }
 
-    public void setCounts(Map<Integer, Integer> counts) { this.counts = counts; fireTableDataChanged(); }
+    public void posarCounts(Map<Integer, Integer> counts) { this.counts = counts; fireTableDataChanged(); }
 
     @Override public int getRowCount() { return rows.size(); }
     @Override public int getColumnCount() { return COLS.length; }
@@ -32,9 +32,9 @@ public class LlistaTableModel extends AbstractTableModel {
     @Override public Object getValueAt(int r, int c) {
         Llista l = rows.get(r);
         return switch (c) {
-            case 0 -> l.getId();
-            case 1 -> l.getNom();
-            case 2 -> counts.getOrDefault(l.getId(), 0);
+            case 0 -> l.obtenirId();
+            case 1 -> l.obtenirNom();
+            case 2 -> counts.getOrDefault(l.obtenirId(), 0);
             case 3 -> l.getColor();
             default -> null;
         };

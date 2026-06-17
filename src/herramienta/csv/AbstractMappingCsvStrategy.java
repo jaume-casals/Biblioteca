@@ -14,12 +14,12 @@ abstract class AbstractMappingCsvStrategy implements CsvImportStrategy {
     private Map<String, Tag>    tagMap;
 
     protected Llista resolveShelf(BibliotecaWriter cd, String name) {
-        return resolveOrCreate(cd, name, cd::getAllLlistes, Llista::getNom, cd::addLlista, this.shelfMap,
+        return resolveOrCreate(cd, name, cd::obtenirAllLlistes, Llista::obtenirNom, cd::afegirLlista, this.shelfMap,
             m -> { this.shelfMap = m; });
     }
 
     protected Tag resolveTag(BibliotecaWriter cd, String name) {
-        return resolveOrCreate(cd, name, cd::getAllTags, Tag::getNom, cd::addTag, this.tagMap,
+        return resolveOrCreate(cd, name, cd::obtenirAllTags, Tag::obtenirNom, cd::afegirTag, this.tagMap,
             m -> { this.tagMap = m; });
     }
 

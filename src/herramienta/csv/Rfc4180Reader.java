@@ -31,21 +31,21 @@ public final class Rfc4180Reader implements AutoCloseable {
      *  {@link #next()} will return a non-null {@code String[]}. */
     public boolean hasNext() throws IOException {
         if (pending != null) return true;
-        pending = readLogicalRow();
+        pending = llegirLogicalRow();
         return pending != null;
     }
 
     /** Reads the next logical row, joining continuation lines inside quotes. */
     public String[] next() throws IOException {
-        if (pending == null) pending = readLogicalRow();
+        if (pending == null) pending = llegirLogicalRow();
         if (pending == null) throw new NoSuchElementException();
-        String[] row = CsvUtils.parseLine(pending);
+        String[] row = UtilitatsCsv.analitzarLine(pending);
         pending = null;
         return row;
     }
 
     /** Reads one logical row (or null at EOF) into a flat string. */
-    private String readLogicalRow() throws IOException {
+    private String llegirLogicalRow() throws IOException {
         StringBuilder accum = new StringBuilder();
         boolean inQuote = false;
         String line;
@@ -63,8 +63,9 @@ public final class Rfc4180Reader implements AutoCloseable {
             }
             if (!inQuote) return accum.toString();
         }
-        // EOF: discard a trailing empty accumulator (file ended with a newline);
-        // return whatever was still being accumulated, or null for a clean EOF.
+        // EOF: descarta un acumulador buit final (el fitxer ha acabat
+        // amb un newline); retorna el que s'estava acumulant, o null
+        // per a un EOF net.
         return accum.length() == 0 ? null : accum.toString();
     }
 

@@ -46,7 +46,7 @@ public class LlistesDelLlibreDialog extends JDialog {
     }
 
     public LlistesDelLlibreDialog(Window owner, Llibre llibre, ShelfWriter cd) {
-        super(owner, I18n.t("dlg_llistes_title", llibre.getNom()), ModalityType.APPLICATION_MODAL);
+        super(owner, I18n.t("dlg_llistes_title", llibre.obtenirNom()), ModalityType.APPLICATION_MODAL);
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
         setSize(520, 460);
@@ -86,7 +86,7 @@ public class LlistesDelLlibreDialog extends JDialog {
         west.add(new JScrollPane(shelfCheckList), BorderLayout.CENTER);
         panel.add(west, BorderLayout.WEST);
 
-        // ── South: add-to-shelf controls + save/remove ───────────────────────
+        // ── Sud: controls d'afegir a prestatgeria + desar/treure ─────────────
         JPanel south = new JPanel(new BorderLayout(4, 8));
         south.setBackground(UITheme.palette().bgPanel());
 
@@ -135,13 +135,13 @@ public class LlistesDelLlibreDialog extends JDialog {
         new LlistesDelLlibreControl(this, llibre, cd);
     }
 
-    public JTable getTable() { return table; }
-    public LlistesDelLlibreTableModel getTableModel() { return tableModel; }
-    public JComboBox<Llista> getComboAdd() { return comboAdd; }
-    public JTextField getTxtVal() { return txtVal; }
-    public JCheckBox getChkLlegit() { return chkLlegit; }
-    public JList<Llista> getShelfCheckList() { return shelfCheckList; }
-    public JButton getBtnAfegir() { return btnAfegir; }
-    public JButton getBtnTreure() { return btnTreure; }
-    public JButton getBtnGuardar() { return btnGuardar; }
+    public JTable obtenirTable() { return table; }
+    public LlistesDelLlibreTableModel obtenirTableModel() { return tableModel; }
+    public JComboBox<Llista> obtenirComboAdd() { return comboAdd; }
+    public JTextField obtenirTxtVal() { return txtVal; }
+    public JCheckBox obtenirChkLlegit() { return chkLlegit; }
+    public JList<Llista> obtenirShelfCheckList() { return shelfCheckList; }
+    public JButton obtenirBtnAfegir() { return btnAfegir; }
+    public JButton obtenirBtnTreure() { return btnTreure; }
+    public JButton obtenirBtnGuardar() { return btnGuardar; }
 }

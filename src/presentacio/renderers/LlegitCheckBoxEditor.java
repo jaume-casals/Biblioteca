@@ -7,11 +7,11 @@ import javax.swing.*;
 import javax.swing.table.*;
 
 import domini.Llibre;
-import herramienta.DialogoError;
+import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.UITheme;
 import interficie.BookWriter;
-import presentacio.MainFrameControl;
+import presentacio.ControladorMarcPrincipal;
 
 /**
  * Cell editor for the "llegit" column. Only persists the {@code llegit}
@@ -52,13 +52,13 @@ public class LlegitCheckBoxEditor extends AbstractCellEditor implements TableCel
                 String isbn = isbnStr;
                 LLEGIT_EXEC.submit(() -> {
                     try {
-                        Llibre l = MainFrameControl.getInstance().getLlibreIsbn(Long.parseLong(isbn));
+                        Llibre l = ControladorMarcPrincipal.getInstance().obtenirLlibreIsbn(Long.parseLong(isbn));
                         if (l == null) return;
-                        l.setLlegit(newLlegit);
-                        cd.updateLlibre(l);
+                        l.posarLlegit(newLlegit);
+                        cd.actualitzarLlibre(l);
                         SwingUtilities.invokeLater(() -> onUpdated.accept(l));
                     } catch (Exception ex) {
-                        SwingUtilities.invokeLater(() -> new DialogoError(ex).showErrorMessage());
+                        SwingUtilities.invokeLater(() -> new DialegError(ex).mostrarErrorMessage());
                     }
                 });
             }

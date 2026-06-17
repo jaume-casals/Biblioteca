@@ -1,6 +1,6 @@
-# Compile and run StressTest from the project root.
-# Equivalent to ./checkBiblio/run2.sh on Linux/macOS.
-# Usage:
+# Compila i executa StressTest des de l'arrel del projecte.
+# Equivalent a ./checkBiblio/run2.sh a Linux/macOS.
+# Ús:
 #   .\checkBiblio\run2.ps1
 #   $env:STRESS_EXTREME=1; .\checkBiblio\run2.ps1
 #   $env:STRESS_TIMEOUT=900; $env:STRESS_THREADS=80; .\checkBiblio\run2.ps1
@@ -18,27 +18,27 @@ try {
     $finalExit = 0
 
     if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
-        Write-Error "java not found in PATH"; exit 1
+        Write-Error "java no es troba al PATH"; exit 1
     }
     foreach ($jar in @("lib\h2-2.3.232.jar", "lib\mariadb-java-client-3.3.3.jar", "lib\gson-2.11.0.jar")) {
         if (-not (Test-Path $jar)) {
-            Write-Error "missing $jar"; exit 1
+            Write-Error "manca $jar"; exit 1
         }
     }
 
     if ($StressArgs -contains "-h" -or $StressArgs -contains "--help") {
-        Write-Host "Usage: .\checkBiblio\run2.ps1 [StressTest args...]"
-        Write-Host "  STRESS_EXTREME=1     extreme mode (default threads 100, timeout 1800s)"
-        Write-Host "  STRESS_TIMEOUT=N     watchdog seconds (default 600, 1800 in extreme)"
-        Write-Host "  STRESS_THREADS=N     worker threads (default 50, 100 in extreme)"
-        Write-Host "  STRESS_INSTANCES=N   in extreme: spawn N child JVMs (default 3)"
-        Write-Host "  STRESS_SOAK=N        in extreme: background DB activity for N seconds (0=off)"
-        Write-Host "  STRESS_FUZZ=N        in extreme: random strings per dialog in fuzz phase (default 25)"
-        Write-Host "  STRESS_MEMPROBE=0|1  in extreme: heap-growth probe (default 1)"
+        Write-Host "Ús: .\checkBiblio\run2.ps1 [StressTest args...]"
+        Write-Host "  STRESS_EXTREME=1     mode extrem (per defecte threads 100, timeout 1800s)"
+        Write-Host "  STRESS_TIMEOUT=N     segons del watchdog (per defecte 600, 1800 en extrem)"
+        Write-Host "  STRESS_THREADS=N     fils de treball (per defecte 50, 100 en extrem)"
+        Write-Host "  STRESS_INSTANCES=N   en extrem: llança N JVMs fills (per defecte 3)"
+        Write-Host "  STRESS_SOAK=N        en extrem: activitat de BD en segon pla durant N segons (0=off)"
+        Write-Host "  STRESS_FUZZ=N        en extrem: cadenes aleatòries per diàleg a la fase de fuzz (per defecte 25)"
+        Write-Host "  STRESS_MEMPROBE=0|1  en extrem: sondatge del creixement del heap (per defecte 1)"
         exit 0
     }
 
-    # ── Configuration ──────────────────────────────────────────────────────
+    # ── Configuració ──────────────────────────────────────────────────────
     if ($env:STRESS_EXTREME) {
         $timeout = if ($env:STRESS_TIMEOUT) { [int]$env:STRESS_TIMEOUT } else { 1800 }
         $threads = if ($env:STRESS_THREADS) { [int]$env:STRESS_THREADS } else { 100 }
@@ -61,37 +61,37 @@ try {
 
     $cp = "bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar"
 
-    # ── Compile main app ──────────────────────────────────────────────────
+    # ── Compila l'aplicació principal ─────────────────────────────────────
     Write-Host ""
     Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  Compiling main app"
+    Write-Host "  Compilant l'aplicació principal"
     Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
     & scripts\compile.bat
     if ($LASTEXITCODE -ne 0) {
-        $stepErrors += "compile failed"
+        $stepErrors += "la compilació ha fallat"
         $finalExit = 1
     }
 
-    # ── Compile StressTest ─────────────────────────────────────────────────
+    # ── Compila StressTest ─────────────────────────────────────────────────
     if ($stepErrors.Count -eq 0) {
         Write-Host ""
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host "  Compiling StressTest"
+        Write-Host "  Compilant StressTest"
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
         javac -Xlint:deprecation -cp $cp checkBiblio\UiTestSupport.java checkBiblio\StressTest.java -d bin
         if ($LASTEXITCODE -ne 0) {
-            $stepErrors += "StressTest compile failed (javac)"
+            $stepErrors += "La compilació de StressTest ha fallat (javac)"
             $finalExit = 1
         }
     }
 
-    # ── Run StressTest with timeout ────────────────────────────────────────
+    # ── Executa StressTest amb timeout ────────────────────────────────────
     if ($stepErrors.Count -eq 0) {
         Remove-Item checkBiblio\stress_report.txt -ErrorAction SilentlyContinue
 
         Write-Host ""
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host "  Starting StressTest (timeout: ${timeout}s)"
+        Write-Host "  Iniciant StressTest (timeout: ${timeout}s)"
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
 
         $job = Start-Job -ScriptBlock {
@@ -105,27 +105,27 @@ try {
         if ($completed) {
             Receive-Job $job
             if ($job.State -ne "Completed") {
-                $stepErrors += "StressTest state: $($job.State)"
+                $stepErrors += "Estat de StressTest: $($job.State)"
                 $finalExit = 1
             }
         } else {
             Stop-Job $job
-            $stepErrors += "StressTest did not finish (timeout ${timeout}s or crash)"
+            $stepErrors += "StressTest no ha acabat (timeout ${timeout}s o fallada)"
             $finalExit = 1
         }
         Remove-Job $job -Force
     }
 
-    # ── Final summary ─────────────────────────────────────────────────────
+    # ── Resum final ───────────────────────────────────────────────────────
     Write-Host ""
     Write-Host "════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  FINAL SUMMARY"
+    Write-Host "  RESUM FINAL"
     Write-Host "════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
     if ($stepErrors.Count -eq 0) {
-        Write-Host "  Steps: no failures recorded." -ForegroundColor Green
+        Write-Host "  Passos: no s'han registrat fallades." -ForegroundColor Green
     } else {
-        Write-Host "  Step failures ($($stepErrors.Count)):" -ForegroundColor Red
+        Write-Host "  Fallades de pas ($($stepErrors.Count)):" -ForegroundColor Red
         foreach ($err in $stepErrors) {
             Write-Host "    ✗ $err" -ForegroundColor Red
         }
@@ -136,7 +136,7 @@ try {
             Select-Object -Last 6
         if ($stressTotals) {
             Write-Host ""
-            Write-Host "  StressTest totals:"
+            Write-Host "  Totals de StressTest:"
             foreach ($t in $stressTotals) { Write-Host "    $($t.Line)" }
         }
         $failLine = Select-String -Path checkBiblio\stress_report.txt -Pattern 'FAIL :' | Select-Object -Last 1
@@ -149,16 +149,16 @@ try {
         $stressIssues = Select-String -Path checkBiblio\stress_report.txt -Pattern '✗ FAIL:|! WARN:|FATAL:|APP LAUNCH ERROR'
         if ($stressIssues) {
             Write-Host ""
-            Write-Host "  StressTest issues (FAIL / WARN / FATAL):"
+            Write-Host "  Problemes de StressTest (FAIL / WARN / FATAL):"
             foreach ($i in $stressIssues) { Write-Host "    $($i.Line)" }
         }
     }
 
     Write-Host "════════════════════════════════════════════════════════" -ForegroundColor Cyan
     if ($finalExit -eq 0) {
-        Write-Host "  Result: PASS" -ForegroundColor Green
+        Write-Host "  Resultat: PASS" -ForegroundColor Green
     } else {
-        Write-Host "  Result: FAIL (see above)" -ForegroundColor Red
+        Write-Host "  Resultat: FAIL (mira amunt)" -ForegroundColor Red
     }
     Write-Host "════════════════════════════════════════════════════════" -ForegroundColor Cyan
 

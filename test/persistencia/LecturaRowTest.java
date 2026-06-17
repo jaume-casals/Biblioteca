@@ -23,35 +23,35 @@ class LecturaRowTest {
 
     @Test
     @DisplayName("parseDateOrNull: valid ISO returns LocalDate")
-    void parseValid() {
-        LocalDate d = LecturaRow.parseDateOrNull("2024-03-15");
+    void analitzarValid() {
+        LocalDate d = LecturaRow.analitzarDateOrNull("2024-03-15");
         assertThat(d).isEqualTo(LocalDate.of(2024, 3, 15));
     }
 
     @Test
     @DisplayName("parseDateOrNull: null → null")
-    void parseNull() {
-        assertThat(LecturaRow.parseDateOrNull(null)).isNull();
+    void analitzarNull() {
+        assertThat(LecturaRow.analitzarDateOrNull(null)).isNull();
     }
 
     @Test
     @DisplayName("parseDateOrNull: blank → null")
-    void parseBlank() {
-        assertThat(LecturaRow.parseDateOrNull("")).isNull();
-        assertThat(LecturaRow.parseDateOrNull("   ")).isNull();
+    void analitzarBlank() {
+        assertThat(LecturaRow.analitzarDateOrNull("")).isNull();
+        assertThat(LecturaRow.analitzarDateOrNull("   ")).isNull();
     }
 
     @Test
     @DisplayName("parseDateOrNull: invalid format → throws DateTimeParseException (caller catches)")
-    void parseInvalid() {
-        assertThatThrownBy(() -> LecturaRow.parseDateOrNull("not a date"))
+    void analitzarInvalid() {
+        assertThatThrownBy(() -> LecturaRow.analitzarDateOrNull("not a date"))
             .isInstanceOf(java.time.format.DateTimeParseException.class);
     }
 
     @Test
     @DisplayName("parseDateOrNull: trims surrounding whitespace")
-    void parseTrims() {
-        assertThat(LecturaRow.parseDateOrNull("  2024-03-15  "))
+    void analitzarTrims() {
+        assertThat(LecturaRow.analitzarDateOrNull("  2024-03-15  "))
             .isEqualTo(LocalDate.of(2024, 3, 15));
     }
 

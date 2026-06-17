@@ -10,7 +10,7 @@ import domini.Llista;
 import domini.Llibre;
 import domini.Tag;
 import interficie.BibliotecaWriter;
-import herramienta.BookImporter.ImportResult;
+import herramienta.ImportadorLlibres.ResultatImportacio;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -32,14 +32,14 @@ public final class JsonImporter {
 
     private JsonImporter() {}
 
-    public static ImportResult run(File f, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio run(File f, BibliotecaWriter cd) throws Exception {
         try (Reader reader = new InputStreamReader(
                 new BufferedInputStream(new FileInputStream(f)), StandardCharsets.UTF_8)) {
             return run(JsonParser.parseReader(reader).getAsJsonObject(), cd);
         }
     }
 
-    public static ImportResult run(JsonObject root, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio run(JsonObject root, BibliotecaWriter cd) throws Exception {
         int ok = 0, skipped = 0, err = 0;
         List<String> errDetails = new ArrayList<>();
         Map<Integer, Integer> tagIdMap = new HashMap<>();
@@ -48,9 +48,9 @@ public final class JsonImporter {
                 JsonObject to = te.getAsJsonObject();
                 int oldId = to.get("id").getAsInt();
                 String nom = to.get("nom").getAsString();
-                Tag existing = cd.getAllTags().stream().filter(t -> t.getNom().equals(nom)).findFirst().orElse(null);
-                if (existing != null) { tagIdMap.put(oldId, existing.getId()); }
-                else { Tag nt = cd.addTag(nom); tagIdMap.put(oldId, nt.getId()); }
+                Tag existing = cd.obtenirAllTags().stream().filter(t -> t.obtenirNom().equals(nom)).findFirst().orElse(null);
+                if (existing != null) { tagIdMap.put(oldId, existing.obtenirId()); }
+                else { Tag nt = cd.afegirTag(nom); tagIdMap.put(oldId, nt.obtenirId()); }
             }
         }
         Map<Integer, Integer> llistaIdMap = new HashMap<>();
@@ -59,9 +59,9 @@ public final class JsonImporter {
                 JsonObject lo = le.getAsJsonObject();
                 int oldId = lo.get("id").getAsInt();
                 String nom = lo.get("nom").getAsString();
-                Llista existing = cd.getAllLlistes().stream().filter(l -> l.getNom().equals(nom)).findFirst().orElse(null);
-                if (existing != null) { llistaIdMap.put(oldId, existing.getId()); }
-                else { Llista nl = cd.addLlista(nom); llistaIdMap.put(oldId, nl.getId()); }
+                Llista existing = cd.obtenirAllLlistes().stream().filter(l -> l.obtenirNom().equals(nom)).findFirst().orElse(null);
+                if (existing != null) { llistaIdMap.put(oldId, existing.obtenirId()); }
+                else { Llista nl = cd.afegirLlista(nom); llistaIdMap.put(oldId, nl.obtenirId()); }
             }
         }
         if (root.has("llibres")) {
@@ -78,31 +78,31 @@ public final class JsonImporter {
                     double preu = bo.has("preu") ? bo.get("preu").getAsDouble() : 0.0;
                     boolean llegit = bo.has("llegit") && bo.get("llegit").getAsBoolean();
                     String imatge = bo.has("imatge") && !bo.get("imatge").isJsonNull() ? bo.get("imatge").getAsString() : "";
-                    Llibre l = LlibreValidator.checkLlibre(isbn, nom, autor, any, desc, val, preu, llegit, imatge);
-                    if (bo.has("notes") && !bo.get("notes").isJsonNull()) l.setNotes(bo.get("notes").getAsString());
-                    if (bo.has("pagines")) l.setPagines(bo.get("pagines").getAsInt());
-                    if (bo.has("paginesLlegides")) l.setPaginesLlegides(bo.get("paginesLlegides").getAsInt());
-                    if (bo.has("editorial") && !bo.get("editorial").isJsonNull()) l.setEditorial(bo.get("editorial").getAsString());
-                    if (bo.has("serie") && !bo.get("serie").isJsonNull()) l.setSerie(bo.get("serie").getAsString());
-                    if (bo.has("volum")) l.setVolum(bo.get("volum").getAsInt());
-                    if (bo.has("dataCompra") && !bo.get("dataCompra").isJsonNull()) l.setDataCompra(bo.get("dataCompra").getAsString());
-                    if (bo.has("dataLectura") && !bo.get("dataLectura").isJsonNull()) l.setDataLectura(bo.get("dataLectura").getAsString());
-                    if (bo.has("idioma") && !bo.get("idioma").isJsonNull()) l.setIdioma(bo.get("idioma").getAsString());
-                    if (bo.has("format") && !bo.get("format").isJsonNull()) l.setFormat(bo.get("format").getAsString());
-                    if (bo.has("desitjat")) l.setDesitjat(bo.get("desitjat").getAsBoolean());
-                    if (bo.has("paisOrigen") && !bo.get("paisOrigen").isJsonNull()) l.setPaisOrigen(bo.get("paisOrigen").getAsString());
-                    if (bo.has("estat") && !bo.get("estat").isJsonNull()) l.setEstat(bo.get("estat").getAsString());
-                    if (bo.has("exemplars")) l.setExemplars(bo.get("exemplars").getAsInt());
-                    if (bo.has("llenguaOriginal") && !bo.get("llenguaOriginal").isJsonNull()) l.setLlenguaOriginal(bo.get("llenguaOriginal").getAsString());
-                    if (bo.has("nomCa") && !bo.get("nomCa").isJsonNull()) l.setNomCa(bo.get("nomCa").getAsString());
-                    if (bo.has("nomEs") && !bo.get("nomEs").isJsonNull()) l.setNomEs(bo.get("nomEs").getAsString());
-                    if (bo.has("nomEn") && !bo.get("nomEn").isJsonNull()) l.setNomEn(bo.get("nomEn").getAsString());
-                    cd.addLlibre(l);
+                    Llibre l = ValidadorLlibre.comprovarLlibre(isbn, nom, autor, any, desc, val, preu, llegit, imatge);
+                    if (bo.has("notes") && !bo.get("notes").isJsonNull()) l.posarNotes(bo.get("notes").getAsString());
+                    if (bo.has("pagines")) l.posarPagines(bo.get("pagines").getAsInt());
+                    if (bo.has("paginesLlegides")) l.posarPaginesLlegides(bo.get("paginesLlegides").getAsInt());
+                    if (bo.has("editorial") && !bo.get("editorial").isJsonNull()) l.posarEditorial(bo.get("editorial").getAsString());
+                    if (bo.has("serie") && !bo.get("serie").isJsonNull()) l.posarSerie(bo.get("serie").getAsString());
+                    if (bo.has("volum")) l.posarVolum(bo.get("volum").getAsInt());
+                    if (bo.has("dataCompra") && !bo.get("dataCompra").isJsonNull()) l.posarDataCompra(bo.get("dataCompra").getAsString());
+                    if (bo.has("dataLectura") && !bo.get("dataLectura").isJsonNull()) l.posarDataLectura(bo.get("dataLectura").getAsString());
+                    if (bo.has("idioma") && !bo.get("idioma").isJsonNull()) l.posarIdioma(bo.get("idioma").getAsString());
+                    if (bo.has("format") && !bo.get("format").isJsonNull()) l.posarFormat(bo.get("format").getAsString());
+                    if (bo.has("desitjat")) l.posarDesitjat(bo.get("desitjat").getAsBoolean());
+                    if (bo.has("paisOrigen") && !bo.get("paisOrigen").isJsonNull()) l.posarPaisOrigen(bo.get("paisOrigen").getAsString());
+                    if (bo.has("estat") && !bo.get("estat").isJsonNull()) l.posarEstat(bo.get("estat").getAsString());
+                    if (bo.has("exemplars")) l.posarExemplars(bo.get("exemplars").getAsInt());
+                    if (bo.has("llenguaOriginal") && !bo.get("llenguaOriginal").isJsonNull()) l.posarLlenguaOriginal(bo.get("llenguaOriginal").getAsString());
+                    if (bo.has("nomCa") && !bo.get("nomCa").isJsonNull()) l.posarNomCa(bo.get("nomCa").getAsString());
+                    if (bo.has("nomEs") && !bo.get("nomEs").isJsonNull()) l.posarNomEs(bo.get("nomEs").getAsString());
+                    if (bo.has("nomEn") && !bo.get("nomEn").isJsonNull()) l.posarNomEn(bo.get("nomEn").getAsString());
+                    cd.afegirLlibre(l);
                     if (bo.has("tags") && bo.get("tags").isJsonArray()) {
                         for (JsonElement te : bo.getAsJsonArray("tags")) {
                             int oldTagId = te.getAsInt();
                             Integer newId = tagIdMap.get(oldTagId);
-                            if (newId != null) cd.addLlibreToTag(isbn, newId);
+                            if (newId != null) cd.afegirLlibreToTag(isbn, newId);
                         }
                     }
                     if (bo.has("llistes") && bo.get("llistes").isJsonArray()) {
@@ -112,7 +112,7 @@ public final class JsonImporter {
                             if (newLlistaId == null) continue;
                             double mVal = mo.has("valoracio") ? mo.get("valoracio").getAsDouble() : 0.0;
                             boolean mLlegit = mo.has("llegit") && mo.get("llegit").getAsBoolean();
-                            cd.addLlibreToLlista(isbn, newLlistaId, mVal, mLlegit);
+                            cd.afegirLlibreToLlista(isbn, newLlistaId, mVal, mLlegit);
                         }
                     }
                     ok++;
@@ -124,6 +124,6 @@ public final class JsonImporter {
                 }
             }
         }
-        return new ImportResult(ok, skipped, err, errDetails);
+        return new ResultatImportacio(ok, skipped, err, errDetails);
     }
 }

@@ -49,22 +49,22 @@ public class FiltreUtils {
      * pure and side-effect-free.
      */
     public static boolean matches(Llibre l, LlibreFilter f, Set<Long> tagISBNs, Set<Long> llistaISBNs) {
-        if (f.getAutor() != null && !matchString(f.getAutor(), l.getAutor())) return false;
-        if (f.getNom()   != null && !matchString(f.getNom(),   l.getNom()))   return false;
-        if (f.getIsbn()  != null && !matchISBN(f.getIsbn(), l.getISBN()))    return false;
-        if (f.getAnyMin()       != null && (l.getAny()       == null || l.getAny()       < f.getAnyMin()))       return false;
-        if (f.getAnyMax()       != null && (l.getAny()       == null || l.getAny()       > f.getAnyMax()))       return false;
-        if (f.getValoracioMin() != null && (l.getValoracio() == null || l.getValoracio() < f.getValoracioMin())) return false;
-        if (f.getValoracioMax() != null && (l.getValoracio() == null || l.getValoracio() > f.getValoracioMax())) return false;
-        if (f.getPreuMin()      != null && (l.getPreu()      == null || l.getPreu()      < f.getPreuMin()))      return false;
-        if (f.getPreuMax()      != null && (l.getPreu()      == null || l.getPreu()      > f.getPreuMax()))      return false;
-        if (f.getLlegit()       != null && !f.getLlegit().equals(l.getLlegit())) return false;
-        if (tagISBNs    != null && !tagISBNs.contains(l.getISBN()))    return false;
-        if (llistaISBNs != null && !llistaISBNs.contains(l.getISBN())) return false;
-        if (f.getEditorial() != null && !matchString(f.getEditorial(), l.getEditorial())) return false;
-        if (f.getSerie()     != null && !matchString(f.getSerie(),     l.getSerie()))     return false;
+        if (f.obtenirAutor() != null && !matchString(f.obtenirAutor(), l.obtenirAutor())) return false;
+        if (f.obtenirNom()   != null && !matchString(f.obtenirNom(),   l.obtenirNom()))   return false;
+        if (f.obtenirIsbn()  != null && !matchISBN(f.obtenirIsbn(), l.obtenirISBN()))    return false;
+        if (f.obtenirAnyMin()       != null && (l.obtenirAny()       == null || l.obtenirAny()       < f.obtenirAnyMin()))       return false;
+        if (f.obtenirAnyMax()       != null && (l.obtenirAny()       == null || l.obtenirAny()       > f.obtenirAnyMax()))       return false;
+        if (f.obtenirValoracioMin() != null && (l.obtenirValoracio() == null || l.obtenirValoracio() < f.obtenirValoracioMin())) return false;
+        if (f.obtenirValoracioMax() != null && (l.obtenirValoracio() == null || l.obtenirValoracio() > f.obtenirValoracioMax())) return false;
+        if (f.obtenirPreuMin()      != null && (l.obtenirPreu()      == null || l.obtenirPreu()      < f.obtenirPreuMin()))      return false;
+        if (f.obtenirPreuMax()      != null && (l.obtenirPreu()      == null || l.obtenirPreu()      > f.obtenirPreuMax()))      return false;
+        if (f.obtenirLlegit()       != null && !f.obtenirLlegit().equals(l.obtenirLlegit())) return false;
+        if (tagISBNs    != null && !tagISBNs.contains(l.obtenirISBN()))    return false;
+        if (llistaISBNs != null && !llistaISBNs.contains(l.obtenirISBN())) return false;
+        if (f.obtenirEditorial() != null && !matchString(f.obtenirEditorial(), l.obtenirEditorial())) return false;
+        if (f.obtenirSerie()     != null && !matchString(f.obtenirSerie(),     l.obtenirSerie()))     return false;
         if (f.getFormat()    != null && !f.getFormat().equalsIgnoreCase(l.getFormat()))   return false;
-        if (f.getIdioma()    != null && !matchString(f.getIdioma(),    l.getIdioma()))    return false;
+        if (f.obtenirIdioma()    != null && !matchString(f.obtenirIdioma(),    l.obtenirIdioma()))    return false;
         return true;
     }
 }

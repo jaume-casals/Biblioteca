@@ -26,14 +26,14 @@ class RelationRemapperTest {
 
     @BeforeEach
     void reset() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     @AfterEach
     void tearDown() {
-        ControladorDomini.resetForTest();
-        ControladorPersistencia.resetForTest();
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
     }
 
     // ── ShelfIdRemapper ─────────────────────────────────────────────────
@@ -42,20 +42,20 @@ class RelationRemapperTest {
     @DisplayName("ShelfIdRemapper: returns existing id when name matches")
     void shelfResolveExisting() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Llista existing = cd.addLlista("Favorits");
-        var rem = new RelationRemapper.ShelfIdRemapper(cd);
-        assertThat(rem.resolve("Favorits")).isEqualTo(existing.getId());
+        Llista existing = cd.afegirLlista("Favorits");
+        var rem = new RelationRemapper.RemapejadorIdPrestatgeria(cd);
+        assertThat(rem.resolve("Favorits")).isEqualTo(existing.obtenirId());
     }
 
     @Test
     @DisplayName("ShelfIdRemapper: creates new shelf for unknown name")
     void shelfCreateNew() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        var rem = new RelationRemapper.ShelfIdRemapper(cd);
+        var rem = new RelationRemapper.RemapejadorIdPrestatgeria(cd);
         int id1 = rem.resolve("Favorits");
         int id2 = rem.resolve("Wishlist");
         assertThat(id1).isNotEqualTo(id2);
-        assertThat(cd.getAllLlistes()).extracting(Llista::getNom)
+        assertThat(cd.obtenirAllLlistes()).extracting(Llista::obtenirNom)
             .containsExactlyInAnyOrder("Favorits", "Wishlist");
     }
 
@@ -63,13 +63,13 @@ class RelationRemapperTest {
     @DisplayName("ShelfIdRemapper: same name resolves to same id on repeated calls (cached)")
     void shelfCacheHit() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        var rem = new RelationRemapper.ShelfIdRemapper(cd);
+        var rem = new RelationRemapper.RemapejadorIdPrestatgeria(cd);
         int id1 = rem.resolve("Favorits");
         int id2 = rem.resolve("Favorits");
         int id3 = rem.resolve("Favorits");
         assertThat(id1).isEqualTo(id2).isEqualTo(id3);
         // Only one shelf created
-        assertThat(cd.getAllLlistes()).hasSize(1);
+        assertThat(cd.obtenirAllLlistes()).hasSize(1);
     }
 
     // ── TagIdRemapper ───────────────────────────────────────────────────
@@ -78,20 +78,20 @@ class RelationRemapperTest {
     @DisplayName("TagIdRemapper: returns existing id when name matches")
     void tagResolveExisting() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        Tag existing = cd.addTag("Sci-Fi");
-        var rem = new RelationRemapper.TagIdRemapper(cd);
-        assertThat(rem.resolve("Sci-Fi")).isEqualTo(existing.getId());
+        Tag existing = cd.afegirTag("Sci-Fi");
+        var rem = new RelationRemapper.RemapejadorIdEtiqueta(cd);
+        assertThat(rem.resolve("Sci-Fi")).isEqualTo(existing.obtenirId());
     }
 
     @Test
     @DisplayName("TagIdRemapper: creates new tag for unknown name")
     void tagCreateNew() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        var rem = new RelationRemapper.TagIdRemapper(cd);
+        var rem = new RelationRemapper.RemapejadorIdEtiqueta(cd);
         int id1 = rem.resolve("Sci-Fi");
         int id2 = rem.resolve("Fantasy");
         assertThat(id1).isNotEqualTo(id2);
-        assertThat(cd.getAllTags()).extracting(Tag::getNom)
+        assertThat(cd.obtenirAllTags()).extracting(Tag::obtenirNom)
             .containsExactlyInAnyOrder("Sci-Fi", "Fantasy");
     }
 
@@ -99,23 +99,23 @@ class RelationRemapperTest {
     @DisplayName("TagIdRemapper: same name resolves to same id on repeated calls (cached)")
     void tagCacheHit() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        var rem = new RelationRemapper.TagIdRemapper(cd);
+        var rem = new RelationRemapper.RemapejadorIdEtiqueta(cd);
         int id1 = rem.resolve("Sci-Fi");
         int id2 = rem.resolve("Sci-Fi");
         assertThat(id1).isEqualTo(id2);
-        assertThat(cd.getAllTags()).hasSize(1);
+        assertThat(cd.obtenirAllTags()).hasSize(1);
     }
 
     @Test
     @DisplayName("TagIdRemapper: constructor seeds cache from existing tags")
     void tagSeedsCache() {
         ControladorDomini cd = ControladorDomini.getInstance();
-        cd.addTag("PreExisting");
+        cd.afegirTag("PreExisting");
         // No rem.resolve yet — but the cache should already have it
-        var rem = new RelationRemapper.TagIdRemapper(cd);
+        var rem = new RelationRemapper.RemapejadorIdEtiqueta(cd);
         int id = rem.resolve("PreExisting");
         // No new tag created
-        assertThat(cd.getAllTags()).hasSize(1);
+        assertThat(cd.obtenirAllTags()).hasSize(1);
         // id is positive
         assertThat(id).isPositive();
     }

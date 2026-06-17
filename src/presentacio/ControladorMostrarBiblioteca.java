@@ -1,0 +1,181 @@
+package presentacio;
+
+
+
+import presentacio.UIComponents;
+import domini.Llibre;
+import herramienta.UITheme;
+import interficie.BibliotecaWriter;
+import presentacio.listener.EnActualizarBBDD;
+
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import java.util.ArrayList;
+
+/** Slim coordinator for the main library screen; delegates to sub-controllers. */
+public class ControladorMostrarBiblioteca implements LibraryScreenHost {
+
+    public static void netejarCoverCache() { MemoriaImatgesCoberta.clear(); }
+
+    private final LibraryViewState state;
+    private final ControladorTaula tableCtrl;
+    private final ControladorPaginaTaula pageCtrl;
+    private final JButton botonDetalles;
+    private ControladorIOLlibre ioCtrl;
+
+    private final ControladorFiltre filtrarCtrl;
+    private final ControladorPrestatgeria shelfCtrl;
+    private final ControladorAccionsLlibre bookActionsCtrl;
+    private final ControladorMenuContextual contextMenuCtrl;
+    private final ControladorModeVista viewModeCtrl;
+
+    public ControladorMostrarBiblioteca(PanelMostrarBiblioteca vista, java.util.List<Llibre> biblio,
+            EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
+        if (cd == null) throw new IllegalArgumentException("cd (BibliotecaWriter) is required");
+        this.state = new LibraryViewState(vista, biblio, enActualizarBBDD, cd);
+        this.botonDetalles = new JButton();
+        UIComponents.styleAccentButton(this.botonDetalles);
+        this.tableCtrl = new ControladorTaula(vista);
+        this.pageCtrl = new ControladorPaginaTaula(vista, cd, this::posarTable);
+
+        this.filtrarCtrl = new ControladorFiltre(state, this);
+        this.shelfCtrl = new ControladorPrestatgeria(state, this, this);
+        this.bookActionsCtrl = new ControladorAccionsLlibre(state, this, filtrarCtrl, shelfCtrl);
+        this.contextMenuCtrl = new ControladorMenuContextual(state, this, shelfCtrl, bookActionsCtrl);
+        this.viewModeCtrl = new ControladorModeVista(state, this, bookActionsCtrl, contextMenuCtrl);
+
+        inicialitzarButtons();
+        inicialitzarTable();
+        filtrarCtrl.wireListeners();
+        shelfCtrl.wireListeners();
+        bookActionsCtrl.wireListeners();
+        viewModeCtrl.wireListeners();
+        viewModeCtrl.inicialitzarGaleria();
+
+        state.loanedISBNs = cd.obtenirLoanedISBNs();
+        tableCtrl.posarLoanedISBNs(state.loanedISBNs);
+        shelfCtrl.refrescarComboLlistes();
+        shelfCtrl.refrescarComboTags();
+
+        mostrarPage(0);
+        viewModeCtrl.restaurarViewMode();
+        viewModeCtrl.restaurarSort();
+    }
+
+    private void inicialitzarButtons() {
+        ioCtrl = new ControladorIOLlibre(state.vista, state.cd, this::obtenirCurrentViewBooks, this::refresh);
+        state.vista.obtenirBtnPaginaAnterior().addActionListener(e -> mostrarPage(pageCtrl.obtenirCurrentPage() - 1));
+        state.vista.obtenirBtnPaginaSeguent().addActionListener(e -> mostrarPage(pageCtrl.obtenirCurrentPage() + 1));
+        state.vista.obtenirBtnExportCSV().addActionListener(e -> ioCtrl.exportarCSV());
+        state.vista.obtenirBtnImportarCSV().addActionListener(e -> ioCtrl.importarCSV());
+        state.vista.obtenirBtnImportarCalibre().addActionListener(e -> ioCtrl.importarCalibre());
+        state.vista.obtenirBtnExportJSON().addActionListener(e -> ioCtrl.exportarJSON());
+        state.vista.obtenirBtnImportarJSON().addActionListener(e -> ioCtrl.importarJSON());
+        state.vista.obtenirBtnExportHTML().addActionListener(e -> ioCtrl.exportarHTML());
+        state.vista.obtenirBtnExportPDF().addActionListener(e -> ioCtrl.exportarPDF());
+        state.vista.obtenirBtnFetchCovers().addActionListener(e -> ioCtrl.fetchMissingCovers(state.vista.obtenirBtnFetchCovers()));
+        state.vista.obtenirBtnEscanejarISBN().addActionListener(e -> ioCtrl.escanejarISBN());
+        state.vista.obtenirBtnBackupBD().addActionListener(e -> ioCtrl.copiaSegBD());
+        state.vista.obtenirBtnRestaurarBD().addActionListener(e -> ioCtrl.restaurarBD(() -> {
+            state.currentLlistaId = null;
+            refresh();
+            shelfCtrl.refrescarComboLlistes();
+            shelfCtrl.refrescarComboTags();
+        }));
+        state.vista.obtenirBtnSobre().addActionListener(e ->
+            new QuantADialog((java.awt.Frame) state.vista.getTopLevelAncestor()).setVisible(true));
+        botonDetalles.addActionListener(e -> bookActionsCtrl.abrirDetallesLlibres());
+    }
+
+    private void inicialitzarTable() {
+        tableCtrl.installInteractionListeners(this,
+            bookActionsCtrl::abrirDetallesLlibres,
+            filtrarCtrl::filtrar,
+            contextMenuCtrl.contextMenu());
+    }
+
+    // ── LibraryScreenHost ──────────────────────────────────────────────────────
+
+    @Override public void posarTable(java.util.List<Llibre> llibres) {
+        state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
+        tableCtrl.posarBooks(llibres != null ? llibres : new ArrayList<>(), state.cd, botonDetalles,
+            MemoriaImatgesCoberta.cache(), MemoriaImatgesCoberta.loading(), state.loanedISBNs, this::refreshRow);
+        tableCtrl.aplicarColumnVisibility();
+        filtrarCtrl.aplicarSearchBar();
+        if (state.vista.esGaleriaMode()) {
+            state.vista.obtenirGaleria().actualitzarLlibres(llibres instanceof ArrayList<Llibre> a ? a : new ArrayList<>(llibres));
+        }
+    }
+
+    @Override public void mostrarPage(int page) { pageCtrl.mostrarPage(page, state.biblio); }
+
+    @Override public void refrescarAll() { refresh(); }
+
+    @Override public void actualitzarTitleBar() { viewModeCtrl.actualitzarTitleBar(); }
+
+    @Override public void refrescarComboLlistes() { shelfCtrl.refrescarComboLlistes(); }
+
+    @Override public void refrescarComboTags() { shelfCtrl.refrescarComboTags(); }
+
+    @Override public void refreshRow(Llibre l) {
+        int row = tableCtrl.indexOfIsbn(l.obtenirISBN());
+        if (row >= 0) tableCtrl.refreshRow(row, l);
+    }
+
+    @Override public void removeRow(Llibre l) { tableCtrl.eliminarRowByIsbn(l.obtenirISBN()); }
+
+    @Override public void afegirRow(Llibre l) { tableCtrl.afegirBook(l); }
+
+    @Override public ControladorPaginaTaula pageCtrl() { return pageCtrl; }
+
+    @Override public ControladorTaula tableCtrl() { return tableCtrl; }
+
+    @Override public ControladorFiltre filtrarCtrl() { return filtrarCtrl; }
+
+    @Override public ControladorPrestatgeria shelfCtrl() { return shelfCtrl; }
+
+    @Override public ControladorAccionsLlibre bookActionsCtrl() { return bookActionsCtrl; }
+
+    @Override public ControladorMenuContextual contextMenuCtrl() { return contextMenuCtrl; }
+
+    @Override public ControladorModeVista viewModeCtrl() { return viewModeCtrl; }
+
+    @Override public JButton detallesBtn() { return botonDetalles; }
+
+    @Override public LibraryViewState state() { return state; }
+
+    // ── Public API (MainFrameControl, GestioLlistesDialog, EnActualizarBBDD) ─
+
+    public JPanel view() { return state.vista; }
+
+    public void abrirDetallesEnEdicio() { bookActionsCtrl.abrirDetallesEnEdicio(); }
+
+    public void refrescarLlibre(Llibre l, boolean nuevo) { bookActionsCtrl.refrescarLlibre(l, nuevo); }
+
+    public void eliminarFilaSeleccionada() { bookActionsCtrl.eliminarFilaSeleccionada(); }
+
+    public void eliminarFila(Llibre l) { bookActionsCtrl.eliminarFila(l); }
+
+    public Integer obtenirCurrentLlistaId() { return state.currentLlistaId; }
+
+    public void refresh() {
+        pageCtrl.posarCurrentPage(0);
+        if (state.currentLlistaId != null) {
+            state.biblio = new ArrayList<>(state.cd.obtenirLlibresInLlista(state.currentLlistaId));
+            pageCtrl.posarUseDBPagination(false);
+        } else {
+            // Lleuger — els textos, notes i coberta pesats es carreguen
+            // de manera mandrosa des de DetallesLlibrePanelControl via
+            // loadHeavyFields() quan l'usuari obre el diàleg de detalls.
+            state.biblio = new ArrayList<>(state.cd.obtenirAllLlibresSummary());
+            pageCtrl.posarUseDBPagination(state.cd.esLargeLibrary());
+        }
+        filtrarCtrl.quitarFiltros();
+    }
+
+    public void undoDelete() { bookActionsCtrl.undoDelete(); }
+
+    private java.util.List<Llibre> obtenirCurrentViewBooks() {
+        return state.biblio != null ? new ArrayList<>(state.biblio) : new ArrayList<>();
+    }
+}

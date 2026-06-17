@@ -21,11 +21,11 @@ public class ProgressBarRenderer extends JProgressBar implements TableCellRender
             boolean selected, boolean focus, int row, int col) {
         try {
             int modelRow = t.convertRowIndexToModel(row);
-            Llibre l = ((BibliotecaTableModel) t.getModel()).getBookAt(modelRow);
-            if (l != null && l.getPagines() > 0) {
-                setMaximum(l.getPagines());
-                setValue(l.getPaginesLlegides());
-                setString(l.getPaginesLlegides() + " / " + l.getPagines());
+            Llibre l = ((BibliotecaTableModel) t.getModel()).obtenirBookAt(modelRow);
+            if (l != null && l.obtenirPagines() > 0) {
+                setMaximum(l.obtenirPagines());
+                setValue(l.obtenirPaginesLlegides());
+                setString(l.obtenirPaginesLlegides() + " / " + l.obtenirPagines());
             } else {
                 setMaximum(1); setValue(0); setString("\u2014");
             }

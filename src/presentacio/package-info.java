@@ -1,4 +1,4 @@
 /**
- * Swing presentation layer: main library screen, dialogs, table/gallery views, and UI controllers.
+ * Capa de presentació Swing: pantalla principal de la biblioteca, diàlegs, vistes de taula/galeria i controladors d'IU.
  */
 package presentacio;

@@ -1,4 +1,4 @@
 /**
- * Cross-cutting utilities: {@link herramienta.Config}, {@link herramienta.I18n}, themes, import/export, validation.
+ * Utilitats transversals: {@link herramienta.Config}, {@link herramienta.I18n}, temes, importació/exportació, validació.
  */
 package herramienta;

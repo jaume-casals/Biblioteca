@@ -9,7 +9,7 @@ public class LoadingDialog {
     private final JDialog dialog;
     private final JLabel label;
     private final JProgressBar bar;
-    private long showTime = 0;
+    private long mostrarTime = 0;
 
     public LoadingDialog(Frame owner, String message) {
         dialog = new JDialog(owner, true);
@@ -46,7 +46,7 @@ public class LoadingDialog {
         label.setText(message);
     }
 
-    public void setResult(int value) {
+    public void posarResult(int value) {
         bar.setIndeterminate(false);
         bar.setValue(value);
     }
@@ -57,7 +57,7 @@ public class LoadingDialog {
 
     public void show() {
         if (dialog.isVisible()) return;
-        showTime = System.currentTimeMillis();
+        mostrarTime = System.currentTimeMillis();
         dialog.setVisible(true);
     }
 
@@ -65,9 +65,9 @@ public class LoadingDialog {
         dialog.dispose();
     }
 
-    public void hideAfterMinimum(long minMs) {
+    public void amagarAfterMinimum(long minMs) {
         if (!dialog.isVisible()) return;
-        long elapsed = System.currentTimeMillis() - showTime;
+        long elapsed = System.currentTimeMillis() - mostrarTime;
         long remaining = minMs - elapsed;
         if (remaining > 0) {
             Timer t = new Timer((int) remaining, e -> dialog.dispose());

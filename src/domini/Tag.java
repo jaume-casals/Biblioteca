@@ -7,17 +7,19 @@ public class Tag {
     private int id;
     private String nom;
 
-    // Tags currently have no color field. If color-tag support is added in the future,
-    // add a private String color field + getColor()/setColor() mirroring Llista's pattern,
-    // and update TagDao, TagRouter, and the DB schema (migration).
+    // Actualment les etiquetes no tenen camp de color. Si en el futur
+    // s'afegeix suport de color a les etiquetes, cal afegir un camp
+    // privat String color + getColor()/setColor() seguint el patró de
+    // Llista, i actualitzar TagDao, TagRouter i l'esquema de la BBDD
+    // (migració).
 
     public Tag(int id, String nom) { this.id = id; this.nom = nom; }
 
-    public int getId() { return id; }
-    public String getNom() { return nom; }
-    public void setNom(String nom) {
+    public int obtenirId() { return id; }
+    public String obtenirNom() { return nom; }
+    public void posarNom(String nom) {
         if (nom == null || nom.isBlank())
-            throw new BibliotecaException.Validation(herramienta.I18n.t("val_tag_blank"));
+            throw new BibliotecaException.Validacio(herramienta.I18n.t("val_tag_blank"));
         this.nom = nom;
     }
 
@@ -28,14 +30,16 @@ public class Tag {
         return m;
     }
 
-    /** Returns nom — used for display in JComboBox and toString(). Not a debug representation. */
+    /** Retorna nom — s'usa per a visualitzar a JComboBox i a toString(). No és una representació de depuració. */
     @Override
     public String toString() { return nom; }
 
-    // Cross-db identity concern: equals compares only by database-generated id,
-    // so two Tags with the same nom but from different DB instances will never be equal.
-    // Transient (id=0) tags are never equal to each other — they represent in-progress
-    // creates whose DB id is not yet known.
+    // Identitat entre bases de dades: equals compara només per l'id
+    // generat a la BBDD, de manera que dues etiquetes amb el mateix
+    // nom però de bases de dades diferents mai no seran iguals. Les
+    // etiquetes transitòries (id=0) mai no són iguals entre elles —
+    // representen creacions en curs l'id de les quals encara no es
+    // coneix.
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

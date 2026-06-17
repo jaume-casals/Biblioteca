@@ -28,7 +28,7 @@ import javax.swing.JTextField;
  */
 public class FormFieldRegistry {
 
-    public enum Kind { TEXT, CHECK, COMBO, BUTTON }
+    public enum Tipus { TEXT, CHECK, COMBO, BUTTON }
 
     /**
      * Declarative spec for a single field.
@@ -40,37 +40,37 @@ public class FormFieldRegistry {
      * @param width       preferred width in characters (text/combo only)
      * @param defaultText initial text (text fields only)
      */
-    public record Field(
+    public record Camp(
         String key,
         String labelKey,
-        Kind kind,
+        Tipus kind,
         String tooltipKey,
         int width,
         String defaultText
     ) {
-        public static Field text(String key, String labelKey, int width) {
-            return new Field(key, labelKey, Kind.TEXT, null, width, "");
+        public static Camp text(String key, String labelKey, int width) {
+            return new Camp(key, labelKey, Tipus.TEXT, null, width, "");
         }
-        public static Field text(String key, String labelKey, String tooltipKey, int width) {
-            return new Field(key, labelKey, Kind.TEXT, tooltipKey, width, "");
+        public static Camp text(String key, String labelKey, String tooltipKey, int width) {
+            return new Camp(key, labelKey, Tipus.TEXT, tooltipKey, width, "");
         }
-        public static Field check(String key, String labelKey, String tooltipKey) {
-            return new Field(key, labelKey, Kind.CHECK, tooltipKey, 0, "");
+        public static Camp check(String key, String labelKey, String tooltipKey) {
+            return new Camp(key, labelKey, Tipus.CHECK, tooltipKey, 0, "");
         }
-        public static Field combo(String key, String labelKey, String tooltipKey, int width) {
-            return new Field(key, labelKey, Kind.COMBO, tooltipKey, width, "");
+        public static Camp combo(String key, String labelKey, String tooltipKey, int width) {
+            return new Camp(key, labelKey, Tipus.COMBO, tooltipKey, width, "");
         }
-        public static Field button(String key, String labelKey, String tooltipKey) {
-            return new Field(key, labelKey, Kind.BUTTON, tooltipKey, 0, "");
+        public static Camp button(String key, String labelKey, String tooltipKey) {
+            return new Camp(key, labelKey, Tipus.BUTTON, tooltipKey, 0, "");
         }
     }
 
-    private final List<Field> specs = new ArrayList<>();
+    private final List<Camp> specs = new ArrayList<>();
     private final Map<String, JComponent> components = new HashMap<>();
     private final Map<String, JLabel> labels = new HashMap<>();
 
     /** Append a spec to the registry. Order is preserved. */
-    public FormFieldRegistry add(Field f) {
+    public FormFieldRegistry add(Camp f) {
         specs.add(f);
         return this;
     }
@@ -87,7 +87,7 @@ public class FormFieldRegistry {
      * tool tip text).
      */
     public FormFieldRegistry build() {
-        for (Field f : specs) {
+        for (Camp f : specs) {
             JComponent c = switch (f.kind()) {
                 case TEXT   -> {
                     JTextField tf = new JTextField(f.width());
@@ -102,7 +102,7 @@ public class FormFieldRegistry {
                 c.setToolTipText(herramienta.I18n.t(f.tooltipKey()));
             }
             components.put(f.key(), c);
-            if (f.labelKey() != null && f.kind() != Kind.CHECK && f.kind() != Kind.BUTTON) {
+            if (f.labelKey() != null && f.kind() != Tipus.CHECK && f.kind() != Tipus.BUTTON) {
                 JLabel lbl = new JLabel(herramienta.I18n.t(f.labelKey()) + ":");
                 labels.put(f.key(), lbl);
             }
@@ -112,7 +112,7 @@ public class FormFieldRegistry {
 
     public JComponent get(String key)            { return components.get(key); }
     public JTextField  textField(String key)     { return (JTextField)  components.get(key); }
-    public JCheckBox   checkBox(String key)      { return (JCheckBox)   components.get(key); }
+    public JCheckBox   comprovarBox(String key)      { return (JCheckBox)   components.get(key); }
     /**
      * Raw-typed accessor kept for the 60+ existing callers that
      * declared {@code JComboBox<String>} or {@code JComboBox<Object>}
@@ -127,9 +127,9 @@ public class FormFieldRegistry {
     public JLabel      label(String key)         { return labels.get(key); }
     public boolean has(String key)               { return components.containsKey(key); }
 
-    public List<Field> specs()                   { return Collections.unmodifiableList(specs); }
+    public List<Camp> specs()                   { return Collections.unmodifiableList(specs); }
 
-    public List<Field> specsOfKind(Kind k) {
+    public List<Camp> specsOfKind(Tipus k) {
         return specs.stream().filter(s -> s.kind() == k).collect(Collectors.toUnmodifiableList());
     }
 

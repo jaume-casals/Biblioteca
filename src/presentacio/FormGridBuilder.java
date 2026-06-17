@@ -24,25 +24,25 @@ public final class FormGridBuilder {
 
     public static FormGridBuilder columnsOf(JPanel host) { return new FormGridBuilder(host); }
 
-    public FormGridBuilder addField(String label, JTextField field) {
+    public FormGridBuilder afegirField(String label, JTextField field) {
         host.add(new JLabel(label));
         host.add(field);
         return this;
     }
 
-    public FormGridBuilder addCombo(String label, JComboBox<?> combo) {
+    public FormGridBuilder afegirCombo(String label, JComboBox<?> combo) {
         host.add(new JLabel(label));
         host.add(combo);
         return this;
     }
 
-    public FormGridBuilder addCheck(String label, JCheckBox check) {
+    public FormGridBuilder afegirCheck(String label, JCheckBox check) {
         host.add(new JLabel(label));
         host.add(check);
         return this;
     }
 
-    public FormGridBuilder addRaw(String label, JComponent comp) {
+    public FormGridBuilder afegirRaw(String label, JComponent comp) {
         host.add(new JLabel(label));
         host.add(comp);
         return this;

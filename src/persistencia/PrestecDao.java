@@ -44,7 +44,7 @@ public class PrestecDao {
      *  {@link #getAllActiveLoans()} (exposat a través de
      *  {@code ControladorPersistencia.getAllActiveLoans} i
      *  {@code ControladorDomini.getAllActiveLoans}). */
-    public List<persistencia.PrestecRow> getAll() {
+    public List<persistencia.PrestecRow> obtenirAll() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -59,7 +59,7 @@ public class PrestecDao {
         return rows;
     }
 
-    public List<persistencia.PrestecRow> getActiveLoans() {
+    public List<persistencia.PrestecRow> obtenirActiveLoans() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -74,7 +74,7 @@ public class PrestecDao {
         return rows;
     }
 
-    public Set<Long> getLoanedISBNs() {
+    public Set<Long> obtenirLoanedISBNs() {
         Set<Long> set = new HashSet<>();
         try {
             try (Statement s = con.createStatement();
@@ -88,7 +88,7 @@ public class PrestecDao {
         return set;
     }
 
-    public List<persistencia.PrestecRow> getForIsbn(long isbn) {
+    public List<persistencia.PrestecRow> obtenirForIsbn(long isbn) {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -120,7 +120,7 @@ public class PrestecDao {
         return 0;
     }
 
-    public List<OverdueLoan> getOverdue(int daysThreshold) {
+    public List<OverdueLoan> obtenirOverdue(int daysThreshold) {
         List<OverdueLoan> rows = new ArrayList<>();
         try {
             java.sql.Date cutoff = java.sql.Date.valueOf(
