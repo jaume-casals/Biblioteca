@@ -46,8 +46,8 @@ public class TagDao {
             missing.removeAll(AUTOCOMPLETE_COLUMNS);
             if (!missing.isEmpty()) {
                 throw new ExceptionInInitializerError(
-                    "TagDao.AUTOCOMPLETE_COLUMNS is missing the in-memory extractors: " + missing
-                    + " (the SQL whitelist must be a superset of the in-memory map)");
+                    "A TagDao.AUTOCOMPLETE_COLUMNS li falten els extractors en memòria: " + missing
+                    + " (la llista blanca SQL ha de ser un superconjunt del mapa en memòria)");
             }
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             // StatsDelegate pot ser absent als classpath de test; el

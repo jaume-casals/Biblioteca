@@ -120,7 +120,7 @@ class DominiPersistenciaJUnit5Test {
         var wrapped = assertThrows(java.lang.reflect.InvocationTargetException.class,
             () -> method.invoke(null, "../evil"));
         assertInstanceOf(IllegalArgumentException.class, wrapped.getCause());
-        assertTrue(wrapped.getCause().getMessage().contains("Invalid H2 db profile"));
+        assertTrue(wrapped.getCause().getMessage().contains("Nom de perfil de BD H2"));
     }
 
     private static boolean autorColumnExists(ControladorPersistencia cp) throws Exception {
