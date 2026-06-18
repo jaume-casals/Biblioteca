@@ -1,17 +1,18 @@
 package persistencia;
 
 /**
- * Schema constants shared across DAOs and the backup path.
+ * Constants d'esquema compartides entre els DAO i el camí de còpia de seguretat.
  */
 public final class Schema {
     private Schema() {}
 
     /**
-     * Correct DELETE order to satisfy foreign keys: child tables first
-     * (those with FKs to others), parent tables last.  Shared between
-     * {@link LlibreDaoCore#clearAllData()}, {@link herramienta.BackupService#backupToSQL}
-     * and any bulk reset — the order must stay in sync or the FOREIGN KEY
-     * constraints will fail in strict mode.
+     * Ordre DELETE correcte per satisfer les claus foranes: primer les
+     * taules filles (les que tenen FK a altres), les taules pares les
+     * últimes. Compartit entre {@link LlibreDaoCore#netejarAllData()},
+     * {@link herramienta.ServeiCopiaSeguretat#backupToSQL} i qualsevol
+     * reinicialització massiva — l'ordre ha de mantenir-se sincronitzat
+     * o les restriccions FOREIGN KEY fallaran en mode estricte.
      */
     public static final String[] CLEAR_ORDER = {
         "lectura", "prestec", "llibre_llista", "llista",

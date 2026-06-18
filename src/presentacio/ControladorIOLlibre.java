@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 import javax.swing.*;
 
 import domini.Llibre;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 public class ControladorIOLlibre {
 
@@ -14,7 +14,7 @@ public class ControladorIOLlibre {
     private final ControladorExportacio exportarCtrl;
     private final ControladorCopiaSeguretat copiaSegCtrl;
 
-    public ControladorIOLlibre(Component parent, BibliotecaWriter cd,
+    public ControladorIOLlibre(Component parent, EscritorBiblioteca cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
         this.importarCtrl = new ControladorImportacio(parent, cd, currentBooks, onDataChanged);
         this.exportarCtrl = new ControladorExportacio(parent, cd, currentBooks, onDataChanged);

@@ -2,13 +2,13 @@ package herramienta.csv;
 
 import domini.Llibre;
 import herramienta.ValidadorLlibre;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 import java.util.Map;
 
 public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
-    @Override public String getName() { return "LibraryThing"; }
+    @Override public String obtenirNom() { return "LibraryThing"; }
 
     @Override
     public boolean potHandle(String headerRow) {
@@ -26,7 +26,7 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException {
+    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, EscritorBiblioteca cd) throws domini.BibliotecaException {
         // Els valors d'ISBN de LibraryThing poden arribar entre
         // claudàtors com [978...]; parseIsbn elimina tots els caràcters
         // no numèrics, de manera que els claudàtors es treuen
@@ -65,7 +65,7 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
         if (!collections.isEmpty()) {
             java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : collections.split(",")) {
-                domini.Llista llista = ShelvesHelper.cercarOrCreateShelf(cd, shelfCache, s.trim());
+                domini.Llista llista = ShelvesHelper.cercarOCrearPrestatge(cd, shelfCache, s.trim());
                 if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, false);
             }
         }

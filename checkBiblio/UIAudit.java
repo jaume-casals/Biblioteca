@@ -76,7 +76,7 @@ public class UIAudit {
         // ── Llança l'app (força mode Swing via --swing, evita el ModeSelectorDialog) ──
         log("Llançant Biblioteca en mode Swing...");
         Thread appThread = new Thread(() -> {
-            try { main.Ejecutable.main(new String[]{"--swing"}); }
+            try { main.Executable.main(new String[]{"--swing"}); }
             catch (Exception e) { log("APP LAUNCH ERROR: " + e); }
         }, "biblioteca-main");
         appThread.setDaemon(true);

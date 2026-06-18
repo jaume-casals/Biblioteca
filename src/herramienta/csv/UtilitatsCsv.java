@@ -1,6 +1,6 @@
 package herramienta.csv;
 
-import interficie.BookReader;
+import interficie.LectorLlibre;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,10 +38,11 @@ public final class UtilitatsCsv {
         return fields.toArray(new String[0]);
     }
 
-    /** Returns the trimmed value for the given column name, or "" if the column is absent
-     *  or its index exceeds the row length. Note: callers cannot distinguish a missing column
-     *  from a column whose value is actually empty — both yield "". For column-presence checks,
-     *  use hMap.containsKey(col) first. */
+    /** Retorna el valor retallat per al nom de columna donat, o "" si la columna
+     *  no hi és o el seu índex excedeix la llargada de la fila. Nota: els consumidors
+     *  no poden distingir una columna absent d'una columna amb valor buit — tots dos
+     *  donen "". Per a comprovacions de presència de columna, usa primer
+     *  hMap.containsKey(col). */
     public static String colVal(Map<String, Integer> hMap, String[] c, String col) {
         Integer idx = hMap.get(col);
         if (idx == null || idx >= c.length) return "";
@@ -59,7 +60,7 @@ public final class UtilitatsCsv {
         return java.util.Optional.of(v == null ? "" : v.trim());
     }
 
-    /** Returns the trimmed value parsed as a double, or 0.0 on null/blank/parse failure. */
+    /** Retorna el valor retallat analitzat com a double, o 0.0 si és null/buit/error d'anàlisi. */
     public static double analitzarDoubleOrZero(String s) {
         if (s == null || s.isBlank()) return 0.0;
         try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
@@ -76,16 +77,17 @@ public final class UtilitatsCsv {
         return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
-    /** Parses an ISBN string, converting any valid ISBN-10 to ISBN-13.
-     *  Delegates to {@link herramienta.Isbn13Normalizer#toIsbn13(String)}
-     *  (the canonical implementation) so the ISBN-10→13 checksum and
-     *  the lowercase-X tolerance are in one place — per the tot.txt LOW
-     *  finding on the three near-duplicate parseIsbn / normalizeIsbn13
-     *  / toIsbn13 implementations. Falls back to a digit-only pass-through
-     *  for inputs that don't match the normalizer's strict shape, so the
-     *  CSV import path can still recover from unusual exports (the
-     *  normalizer returns null for those, but the CSV path wants a best
-     *  effort rather than a failed row). */
+    /** Analitza una cadena ISBN, convertint qualsevol ISBN-10 vàlid a ISBN-13.
+     *  Delega a {@link herramienta.Isbn13Normalizer#toIsbn13(String)}
+     *  (la implementació canònica) perquè la suma de verificació ISBN-10→13 i
+     *  la tolerància a la X minúscula estiguin en un sol lloc — segons el finding
+     *  LOW de tot.txt sobre les tres implementacions gairebé duplicades
+     *  parseIsbn / normalizeIsbn13 / toIsbn13. Cau a un passthrough de només
+     *  dígits per a entrades que no coincideixen amb la forma estricta del
+     *  normalitzador, de manera que el camí d'importació CSV encara es pot
+     *  recuperar d'exportacions poc habituals (el normalitzador retorna null
+     *  per a aquestes, però el camí CSV prefereix un millor esforç abans que
+     *  una fila fallida). */
     public static String analitzarIsbn(String raw) {
         String normalized = herramienta.Isbn13Normalizer.toIsbn13(raw);
         if (normalized != null) return normalized;
@@ -94,8 +96,8 @@ public final class UtilitatsCsv {
         return raw == null ? null : raw.replaceAll("[^0-9]", "");
     }
 
-    /** Returns true if a book with the given ISBN already exists in the library (skip on import). */
-    public static boolean existsInLibrary(BookReader cd, long isbn) {
+    /** Retorna cert si ja existeix un llibre amb l'ISBN donat a la biblioteca (omet en importar). */
+    public static boolean existsInLibrary(LectorLlibre cd, long isbn) {
         try { cd.obtenirLlibre(isbn); return true; } catch (Exception e) { return false; }
     }
 }

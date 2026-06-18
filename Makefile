@@ -32,14 +32,14 @@ compile:
 run:
 	make clean
 	make compile
-	java -cp bin:$(CP) main.Ejecutable
+	java -cp bin:$(CP) main.Executable
 
 run-only:
-	@if [ ! -f "bin/main/Ejecutable.class" ]; then \
+	@if [ ! -f "bin/main/Executable.class" ]; then \
 		echo "ERROR: Classes not found. Run: make compile"; \
 		exit 1; \
 	fi
-	java -cp bin:$(CP) main.Ejecutable
+	java -cp bin:$(CP) main.Executable
 
 # ---------- TEST ----------- #
 
@@ -163,7 +163,7 @@ LAUNCH4J_JAVA_HOME := $(shell \
 
 # ── slim JAR (manifest points to external lib/ JARs) ─────────────────────────
 jar: compile
-	@jar cfm biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Ejecutable\nClass-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar\n\n') -C bin .
+	@jar cfm biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar\n\n') -C bin .
 	@echo "Built biblioteca.jar"
 
 # ── fat JAR (all deps bundled, standalone) ────────────────────────────────────
@@ -179,7 +179,7 @@ fat-jar: compile
 	@# Remove JAR signature files — they break fat JARs
 	@rm -f /tmp/_bib_fat/META-INF/*.SF /tmp/_bib_fat/META-INF/*.DSA \
 	       /tmp/_bib_fat/META-INF/*.RSA /tmp/_bib_fat/META-INF/*.EC
-	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/biblioteca-fat.jar main.Ejecutable .
+	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/biblioteca-fat.jar main.Executable .
 	@rm -rf /tmp/_bib_fat
 	@echo "Built biblioteca-fat.jar ($$(du -sh $(CURDIR)/biblioteca-fat.jar | cut -f1))"
 
@@ -234,7 +234,7 @@ jpackage-win: fat-jar icon
 	    --type app-image \
 	    --input . \
 	    --main-jar biblioteca-fat.jar \
-	    --main-class main.Ejecutable \
+	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
 	    --description "Gestio Personal de Llibres" \
@@ -260,7 +260,7 @@ installer-win-standalone: fat-jar icon
 	    --type app-image \
 	    --input . \
 	    --main-jar biblioteca-fat.jar \
-	    --main-class main.Ejecutable \
+	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
 	    --description "Gestio Personal de Llibres" \
@@ -308,7 +308,7 @@ installer-linux: fat-jar icon
 	@jpackage \
 	    --input . \
 	    --main-jar biblioteca-fat.jar \
-	    --main-class main.Ejecutable \
+	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
 	    --description "Gestio Personal de Llibres" \
@@ -320,7 +320,7 @@ installer-linux: fat-jar icon
 	jpackage \
 	    --input . \
 	    --main-jar biblioteca-fat.jar \
-	    --main-class main.Ejecutable \
+	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
 	    --description "Gestio Personal de Llibres" \

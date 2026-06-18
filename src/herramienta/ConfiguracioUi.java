@@ -3,11 +3,12 @@ package herramienta;
 import herramienta.UITheme.Tema;
 
 /**
- * Typed read/write view of UI-related {@link Config} keys.
- * Internally backed by the UI sub-store introduced with the B1 god-class
- * split.  Callers should prefer these typed setters over {@link Config}'s
- * generic ones — they group related configuration and make the
- * dependency from callers to a specific sub-domain explicit.
+ * Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades
+ * amb la IU. Internament recolzada pel sub-emmagatzematge UI introduït amb la
+ * divisió de la classe-déu B1. Els consumidors haurien de preferir aquests
+ * setters tipats sobre els genèrics de {@link Config} — agrupen la configuració
+ * relacionada i fan explícita la dependència dels consumidors envers un
+ * sub-domini concret.
  */
 public final class ConfiguracioUi {
     private ConfiguracioUi() {}

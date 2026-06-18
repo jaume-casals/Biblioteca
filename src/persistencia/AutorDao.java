@@ -42,7 +42,7 @@ public class AutorDao {
                 if (keys.next()) return keys.getInt(1);
             }
         } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error creant autor: " + e.getMessage(), e);
+            throw new domini.BibliotecaException("Error en crear l'autor: " + e.getMessage(), e);
         }
         throw new domini.BibliotecaException("No s'ha obtingut id d'autor nou");
     }

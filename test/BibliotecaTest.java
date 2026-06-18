@@ -527,7 +527,7 @@ public class BibliotecaTest {
             Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Format Book", null, null, null, null, null, null, null);
             l.posarFormat("eBook");
             cd.afegirLlibre(l);
-            assertEqual("eBook", cd.obtenirLlibre(9780306406157L).getFormat());
+            assertEqual("eBook", cd.obtenirLlibre(9780306406157L).obtenirFormat());
         });
 
         test("format null by default", () -> {
@@ -535,7 +535,7 @@ public class BibliotecaTest {
             ControladorDomini cd = ControladorDomini.getInstance();
             Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "No Format", null, null, null, null, null, null, null);
             cd.afegirLlibre(l);
-            assertEqual(null, cd.obtenirLlibre(9780306406157L).getFormat());
+            assertEqual(null, cd.obtenirLlibre(9780306406157L).obtenirFormat());
         });
 
         test("format backup and restore", () -> {
@@ -549,7 +549,7 @@ public class BibliotecaTest {
             cd.copiaSegToSQL(f);
             cd.netejarAll();
             cd.restaurarFromSQL(f);
-            assertEqual("Tapa dura", cd.obtenirLlibre(9780306406157L).getFormat());
+            assertEqual("Tapa dura", cd.obtenirLlibre(9780306406157L).obtenirFormat());
         });
 
         test("aplicarFiltres on shelf list excludes books from other shelves", () -> {
@@ -728,16 +728,16 @@ public class BibliotecaTest {
                 conn.createStatement().executeUpdate("INSERT INTO schema_version VALUES (" + i + ")");
             conn.close();
 
-            // Now let ServerConect run migrations on that DB — pais_origen (v23) must be applied
+            // Now let ConnexioServidor run migrations on that DB — pais_origen (v23) must be applied
             System.setProperty("biblioteca.test", "true");
             System.setProperty("biblioteca.h2.url", url);
-            persistencia.ServerConect sc = new persistencia.ServerConect();
+            persistencia.ConnexioServidor sc = new persistencia.ConnexioServidor();
             sc.crearDatabase();
             // If pais_origen column now exists, SELECT on it succeeds
-            java.sql.ResultSet rs2 = sc.getConnection().createStatement().executeQuery(
+            java.sql.ResultSet rs2 = sc.obtenirConnexio().createStatement().executeQuery(
                 "SELECT pais_origen FROM llibre");
             rs2.close();
-            sc.getConnection().close();
+            sc.obtenirConnexio().close();
             System.setProperty("biblioteca.h2.url", "jdbc:h2:mem:test;MODE=MySQL;NON_KEYWORDS=VALUE");
         });
 
@@ -1010,7 +1010,7 @@ public class BibliotecaTest {
             ControladorDomini cd = ControladorDomini.getInstance();
             Llista s = cd.afegirLlista("Colorful");
             cd.posarLlistaColor(s.obtenirId(), "#FF0000");
-            assertEqual("#FF0000", cd.obtenirAllLlistes().get(0).getColor());
+            assertEqual("#FF0000", cd.obtenirAllLlistes().get(0).obtenirColor());
         });
         test("setLlistaColor null clears color", () -> {
             reinicialitzarSingletons();
@@ -1018,7 +1018,7 @@ public class BibliotecaTest {
             Llista s = cd.afegirLlista("Colorful");
             cd.posarLlistaColor(s.obtenirId(), "#FF0000");
             cd.posarLlistaColor(s.obtenirId(), null);
-            assertEqual(null, cd.obtenirAllLlistes().get(0).getColor());
+            assertEqual(null, cd.obtenirAllLlistes().get(0).obtenirColor());
         });
 
         // ── Loans (prestec) ───────────────────────────────────────────────────
@@ -1826,7 +1826,7 @@ public class BibliotecaTest {
             assertEqual(220, herramienta.Configuracio.obtenirColWidth(5, 100));
         });
 
-        // ── DetallesLlibrePanelControl: save→updateLlibre→callback happy path ──
+        // ── ControladorPanellDetallsLlibre: save→updateLlibre→callback happy path ──
         test("updateLlibre persists changes and callback fires", () -> {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
@@ -1846,20 +1846,20 @@ public class BibliotecaTest {
             assertEqual(true, retrieved.obtenirLlegit());
 
             int[] callbackCount = {0};
-            presentacio.listener.EnActualizarBBDD callback = new presentacio.listener.EnActualizarBBDD() {
-                @Override public void onBookUpdated(Llibre llibre, boolean esNew) {
+            presentacio.listener.EnActualitzarBBDD callback = new presentacio.listener.EnActualitzarBBDD() {
+                @Override public void enActualitzarLlibre(Llibre llibre, boolean esNew) {
                     callbackCount[0]++;
                     assertEqual(9780743273565L, llibre.obtenirISBN());
                     assertEqual("Callback Title Updated", llibre.obtenirNom());
                 }
-                @Override public void onBookDeleted(Llibre llibre) {}
+                @Override public void enEliminarLlibre(Llibre llibre) {}
             };
 
             Llibre l2 = ValidadorLlibre.comprovarLlibre(9780743273565L, "Callback Title", null, null, null, null, null, null, null);
             cd.afegirLlibre(l2);
             l2.posarNom("Callback Title Updated");
             cd.actualitzarLlibre(l2);
-            callback.onBookUpdated(l2, false);
+            callback.enActualitzarLlibre(l2, false);
             assertEqual(1, callbackCount[0]);
         });
         // ── OpenLibrarySearchTask error handling (Item 9) ────────────────────
@@ -1919,7 +1919,7 @@ public class BibliotecaTest {
             }
         });
 
-        // ── DetallesLlibrePanel: null optional fields (Item 10) ──────────────
+        // ── PanellDetallsLlibre: null optional fields (Item 10) ──────────────
         test("Llibre with null nomCa/nomEs/nomEn persists and retrieves as null", () -> {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();

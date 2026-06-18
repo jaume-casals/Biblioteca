@@ -9,16 +9,16 @@ import javax.swing.*;
 import domini.Llibre;
 import herramienta.DialegError;
 import herramienta.I18n;
-import interficie.BibliotecaAdmin;
+import interficie.AdministradorBiblioteca;
 
 public class ControladorCopiaSeguretat {
 
     private final Component parent;
-    private final BibliotecaAdmin cd;
+    private final AdministradorBiblioteca cd;
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
 
-    public ControladorCopiaSeguretat(Component parent, BibliotecaAdmin cd,
+    public ControladorCopiaSeguretat(Component parent, AdministradorBiblioteca cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
         this.parent = parent;
         this.cd = cd;
@@ -39,7 +39,7 @@ public class ControladorCopiaSeguretat {
         java.io.File selectedFile = fc.getSelectedFile();
         if (!selectedFile.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".sql")) selectedFile = new java.io.File(selectedFile.getPath() + ".sql");
         final java.io.File f = selectedFile;
-        LoadingDialog loading = new LoadingDialog(windowFrame(parent), I18n.t("dlg_backup_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_backup_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -63,7 +63,7 @@ public class ControladorCopiaSeguretat {
         JFileChooser fc = new JFileChooser();
         fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQL files", "sql"));
         if (fc.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return;
-        LoadingDialog loading = new LoadingDialog(windowFrame(parent), I18n.t("dlg_restore_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_restore_title"));
         loading.show();
         final java.io.File selectedFile = fc.getSelectedFile();
         new SwingWorker<>() {

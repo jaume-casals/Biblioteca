@@ -11,27 +11,28 @@ public class TagDao {
     private final Connection con;
 
     /**
-     * Whitelist de columnes vàlides per a {@link #getDistinctValues(String)}.
+     * Whitelist de columnes vàlides per a {@link #obtenirDistinctValues(String)}.
      * El nom de la columna s'interpola directament a la SQL (no hi ha
      * paràmetre per a un nom de columna en JDBC), per això la llista blanca
      * és <em>obligatòria</em> — sense ella, una entrada no validada seria
      * un vector d'SQL injection. Mantenir sincronitzada amb el switch en
-     * memòria de {@code domini.facade.StatsDelegate.IN_MEMORY_EXTRACTORS}
-     * — la verificació a {@link #verifyColumnWhitelistSync()} corre al
-     * constructor per fallar aviat si la llista queda desincronitzada.
+     * memòria de {@code domini.facade.DelegatEstadistiques.IN_MEMORY_EXTRACTORS}
+     * — la verificació corre al constructor per fallar aviat si la
+     * llista queda desincronitzada.
      */
     public static final Set<String> AUTOCOMPLETE_COLUMNS = Set.of(
         "editorial", "serie", "idioma", "pais_origen", "format", "llengua_original");
 
     /**
-     * Startup assertion: every column the in-memory path in
-     * {@code StatsDelegate.IN_MEMORY_EXTRACTORS} knows about must also be
-     * in the SQL whitelist. Without this check the two paths drift
-     * silently — a column added to the in-memory extractors but not the
-     * SQL whitelist would yield a smaller result set when the SQL path
-     * is exercised (e.g. for a column that doesn't have an in-memory
-     * extractor at all). Reference is by string to keep this DAO
-     * ignorant of the facade layer (which would create a cycle).
+     * Asserció d'inici: cada columna que el camí en memòria a
+     * {@code DelegatEstadistiques.IN_MEMORY_EXTRACTORS} coneix ha de ser
+     * també a la llista blanca SQL. Sense aquesta comprovació els dos
+     * camins es desincronitzen silenciosament — una columna afegida als
+     * extractors en memòria però no a la llista blanca SQL donaria un
+     * conjunt de resultats més petit quan s'exercita el camí SQL (p.ex.
+     * per a una columna que no té cap extractor en memòria). La
+     * referència és per cadena per mantenir aquest DAO ignorant de la
+     * capa de façana (que crearia un cicle).
      */
     static {
         try {
@@ -80,7 +81,7 @@ public class TagDao {
             ps.setString(1, nom);
             ps.execute();
             try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (!rs.next()) throw new SQLException("createTag: no generated key returned");
+                if (!rs.next()) throw new SQLException("createTag: no s'ha retornat cap clau generada");
                 return rs.getInt(1);
             }
         }
@@ -172,7 +173,7 @@ public class TagDao {
     }
 
     /**
-     * Camí SQL per a {@code getDistinctValues}: consulta la taula {@code llibre}
+     * Camí SQL per a {@code obtenirDistinctValues}: consulta la taula {@code llibre}
      * amb {@code SELECT DISTINCT}. La columna ha de ser a
      * {@link #AUTOCOMPLETE_COLUMNS} (llista blanca) — qualsevol altra columna
      * retorna llista buida. La capa de domini ({@code ControladorDomini}) té un

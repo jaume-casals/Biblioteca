@@ -25,7 +25,7 @@ class TestFiltreLlibre {
         assertThat(f.obtenirLlistaId()).isNull();
         assertThat(f.obtenirEditorial()).isNull();
         assertThat(f.obtenirSerie()).isNull();
-        assertThat(f.getFormat()).isNull();
+        assertThat(f.obtenirFormat()).isNull();
         assertThat(f.obtenirIdioma()).isNull();
         EspecificacioOrdenacio s = f.obtenirSort();
         assertThat(s.column()).isEqualTo(EspecificacioOrdenacio.COL_ISBN);
@@ -114,7 +114,7 @@ class TestFiltreLlibre {
         assertThat(c.obtenirLlistaId()).isEqualTo(3);
         assertThat(c.obtenirEditorial()).isEqualTo("e");
         assertThat(c.obtenirSerie()).isEqualTo("s");
-        assertThat(c.getFormat()).isEqualTo("f");
+        assertThat(c.obtenirFormat()).isEqualTo("f");
         assertThat(c.obtenirIdioma()).isEqualTo("i");
         assertThat(c.obtenirSort().column()).isEqualTo("any");
         assertThat(c.obtenirSort().ascending()).isFalse();

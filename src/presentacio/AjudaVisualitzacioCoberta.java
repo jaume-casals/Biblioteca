@@ -1,25 +1,27 @@
 package presentacio;
 
-import interficie.BibliotecaReader;
+import interficie.LectorBiblioteca;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.SwingWorker;
 
 /**
- * Shared cover-image loading: BLOB → URL → default fallback. Lifted from inline logic in
- * detail panels so all four cover surfaces use the same precedence.
+ * Càrrega compartida d'imatges de coberta: BLOB → URL → fallback per defecte.
+ * Extreta de la lògica en línia dels panells de detalls perquè les quatre
+ * superfícies de coberta facin servir la mateixa precedència.
  *
- * <p>Per the tot.txt LOW finding: the load runs on a {@link SwingWorker} so a
- * 500 KB cover decode no longer stutters the EDT. The {@code target} is
- * captured by reference; the {@code done()} callback checks the JLabel is
- * still showing the same target (its component identity, not its contents)
- * via the captured `this` reference.
+ * <p>Segons la troballa LOW de tot.txt: la càrrega s'executa en un
+ * {@link SwingWorker} perquè una descodificació de coberta de 500 KB ja no
+ * entrebanqui l'EDT. El {@code target} es captura per referència; el
+ * callback {@code done()} comprova que el JLabel encara mostri el mateix
+ * target (la identitat del component, no el seu contingut) mitjançant la
+ * referència `this` capturada.
  */
 public final class AjudaVisualitzacioCoberta {
     private AjudaVisualitzacioCoberta() {}
 
-    public static void carregarAndDisplay(long isbn, BibliotecaReader cd, JLabel target, int width, int height) {
+    public static void carregarAndDisplay(long isbn, LectorBiblioteca cd, JLabel target, int width, int height) {
         new SwingWorker<ImageIcon, Void>() {
             @Override protected ImageIcon doInBackground() throws Exception {
                 byte[] blob = cd.obtenirLlibreBlob(isbn);

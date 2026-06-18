@@ -14,7 +14,7 @@ import javax.swing.JTextField;
 
 import static herramienta.I18n.t;
 
-/** Appearance section: theme, font size, currency symbol, default rating. */
+/** Secció d'aparença: tema, mida de lletra, símbol de moneda, valoració per defecte. */
 public final class SeccioAparençaConfiguracio {
     private SeccioAparençaConfiguracio() {}
 

@@ -69,7 +69,7 @@ class TestEstrategiaImportacioCsv {
     @Test
     @DisplayName("Goodreads: getName returns 'Goodreads'")
     void goodreadsGetName() {
-        assertThat(new GoodreadsCsvStrategy().getName()).isEqualTo("Goodreads");
+        assertThat(new GoodreadsCsvStrategy().obtenirNom()).isEqualTo("Goodreads");
     }
 
     @Test
@@ -122,7 +122,7 @@ class TestEstrategiaImportacioCsv {
     @Test
     @DisplayName("LibraryThing: getName returns 'LibraryThing'")
     void libraryThingGetName() {
-        assertThat(new LibraryThingCsvStrategy().getName()).isEqualTo("LibraryThing");
+        assertThat(new LibraryThingCsvStrategy().obtenirNom()).isEqualTo("LibraryThing");
     }
 
     @Test
@@ -166,7 +166,7 @@ class TestEstrategiaImportacioCsv {
     @Test
     @DisplayName("Native: getName returns 'Natiu'")
     void nativeGetName() {
-        assertThat(new NativeCsvStrategy().getName()).isEqualTo("Natiu");
+        assertThat(new NativeCsvStrategy().obtenirNom()).isEqualTo("Natiu");
     }
 
     @Test

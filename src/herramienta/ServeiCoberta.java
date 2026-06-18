@@ -1,6 +1,6 @@
 package herramienta;
 
-import interficie.BookWriter;
+import interficie.EscritorLlibre;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -13,7 +13,8 @@ import java.util.concurrent.Executors;
 import javax.imageio.ImageIO;
 
 /**
- * Unified cover-fetching: bounded pool, L1 memory cache, L2 disk cache under ~/.biblioteca/covers/.
+ * Descàrrega unificada de cobertes: pool acotat, memòria cau L1, memòria cau L2
+ * al disc sota ~/.biblioteca/covers/.
  */
 public final class ServeiCoberta {
     private static final int MAX_PARALLEL = 6;
@@ -80,8 +81,8 @@ public final class ServeiCoberta {
         }
     }
 
-    /** Fetch cover bytes for {@code isbn}, save to DB blob, invoke callback on success. */
-    public static void fetchAsync(BookWriter cd, String isbn, Runnable onDone) {
+    /** Obté els bytes de la coberta per a {@code isbn}, desa el blob a la BBDD, invoca el callback en cas d'èxit. */
+    public static void fetchAsync(EscritorLlibre cd, String isbn, Runnable onDone) {
         byte[] cached = obtenirCachedBytes(isbn);
         if (cached != null) {
             escriureCoverAsync(cd, isbn, cached, onDone);
@@ -106,7 +107,7 @@ public final class ServeiCoberta {
      *  cobertes). {@code onComplete} s'invoca al fil WRITE_POOL amb
      *  {@code true} si s'ha emmagatzemat una coberta, {@code false} si
      *  OL no tenia coberta o l'escriptura ha fallat. */
-    public static void submitCoverFetch(interficie.BibliotecaWriter cd, String isbn, java.util.function.Consumer<Boolean> onComplete) {
+    public static void submitCoverFetch(interficie.EscritorBiblioteca cd, String isbn, java.util.function.Consumer<Boolean> onComplete) {
         byte[] cached = obtenirCachedBytes(isbn);
         if (cached != null) {
             submitWrite(cd, isbn, cached, onComplete);
@@ -127,7 +128,7 @@ public final class ServeiCoberta {
     /** Planifica una escriptura JDBC de {@code data} per a {@code isbn} a
      *  {@link #WRITE_POOL}, cridant {@code onDone} (al fil WRITE_POOL)
      *  quan acabi. */
-    private static void escriureCoverAsync(BookWriter cd, String isbn, byte[] data, Runnable onDone) {
+    private static void escriureCoverAsync(EscritorLlibre cd, String isbn, byte[] data, Runnable onDone) {
         long lIsbn;
         try { lIsbn = Long.parseLong(isbn); }
         catch (Exception e) { if (onDone != null) onDone.run(); return; }
@@ -137,7 +138,7 @@ public final class ServeiCoberta {
         });
     }
 
-    private static void submitWrite(interficie.BibliotecaWriter cd, String isbn, byte[] data, java.util.function.Consumer<Boolean> onComplete) {
+    private static void submitWrite(interficie.EscritorBiblioteca cd, String isbn, byte[] data, java.util.function.Consumer<Boolean> onComplete) {
         long lIsbn;
         try { lIsbn = Long.parseLong(isbn); }
         catch (Exception e) { onComplete.accept(false); return; }
@@ -148,7 +149,7 @@ public final class ServeiCoberta {
         });
     }
 
-    /** Shutdown the cover-fetch pool. Called from a shutdown hook. */
+    /** Tanca el pool de descàrrega de cobertes. Es crida des d'un ganxo de tancada. */
     public static void shutdown() {
         FETCHER.shutdownNow();
         WRITE_POOL.shutdownNow();

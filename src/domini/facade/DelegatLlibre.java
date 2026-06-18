@@ -46,7 +46,7 @@ public final class DelegatLlibre {
     /** Comparador d'ISBN ascendent; públic perquè la façana el pugui fer servir per a l'ordenació inicial. */
     public static final Comparator<Llibre> ISBN_COMPARATOR = EspecificacioOrdenacio.ISBN_COMPARATOR;
 
-    /** Comparadors d'ordenació en memòria indexats pel nom de columna de SortSpec; provenen de {@link SortSpec}. */
+    /** Comparadors d'ordenació en memòria indexats pel nom de columna de l'EspecificacioOrdenacio; provenen de {@link EspecificacioOrdenacio}. */
     private static final Map<String, Comparator<Llibre>> SORT_BY = EspecificacioOrdenacio.comparators();
 
     private final StateContext state;
@@ -161,7 +161,7 @@ public final class DelegatLlibre {
             if (idx < 0)
                 throw new BibliotecaException.NoTrobat("No existeix el llibre amb ISBN " + ISBN);
             Llibre l = state.bib().get(idx);
-            if (!l.esHeavyFieldsLoaded()) {
+            if (!l.teCampsPesatsCarregats()) {
                 try {
                     state.persistence().carregarHeavyFields(l.obtenirISBN(), l);
                 } catch (RuntimeException e) {
@@ -173,7 +173,7 @@ public final class DelegatLlibre {
     }
 
     public void carregarHeavyFields(Llibre book) {
-        if (book == null || book.esHeavyFieldsLoaded()) return;
+        if (book == null || book.teCampsPesatsCarregats()) return;
         state.withLock(() -> {
             try {
                 state.persistence().carregarHeavyFields(book.obtenirISBN(), book);

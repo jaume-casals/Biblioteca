@@ -33,26 +33,30 @@ import domini.Llibre;
 import herramienta.Configuracio;
 import herramienta.UITheme;
 import herramienta.ConfiguracioUi;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 import presentacio.galeria.FabricantTargetesCoberta;
 import presentacio.galeria.ServeiImatgesCoberta;
 import presentacio.galeria.PopupZoomCoberta;
 import presentacio.layouts.WrapLayout;
 
 /**
- * Grid of book covers, the gallery view of the library.
+ * Graella de cobertes de llibres, la vista de galeria de la biblioteca.
  *
- * <p>Composition:
+ * <p>Composició:
  * <ul>
- *   <li>{@link CoverImageService} — async LRU image cache + crop-scale.</li>
- *   <li>{@link CoverCardFactory} — paints each card, wires mouse + selection
- *       events back through a {@link CoverCardFactory.CardHost}.</li>
- *   <li>{@link CoverZoomPopup} — hover-zoom overlay shown next to a card.</li>
+ *   <li>{@link ServeiImatgesCoberta} — memòria cau LRU asíncrona d'imatges
+ *       + retall-escalat.</li>
+ *   <li>{@link FabricantTargetesCoberta} — pinta cada targeta, connecta
+ *       els esdeveniments de ratolí i selecció a través d'un
+ *       {@link FabricantTargetesCoberta.AmfitrioTargeta}.</li>
+ *   <li>{@link PopupZoomCoberta} — superposició de zoom en passar el ratolí
+ *       que es mostra al costat d'una targeta.</li>
  * </ul>
  *
- * <p>This class owns the scroll pane, the wrap layout, the selection /
- * focus state, the keyboard bindings, and the theme application. The
- * actual visual + image work lives in the three collaborators above.
+ * <p>Aquesta classe posseeix el panell de desplaçament, el wrap layout,
+ * l'estat de selecció / focus, les dreceres de teclat i l'aplicació de
+ * tema. La feina visual i d'imatges real viu en els tres col·laboradors
+ * anteriors.
  */
 public class PanelGaleriaCobertes extends JPanel {
 
@@ -86,7 +90,7 @@ public class PanelGaleriaCobertes extends JPanel {
     private Consumer<Llibre> onCardClick;
     private BiConsumer<MouseEvent, List<Llibre>> onRightClick;
     private Consumer<List<Llibre>> onDeleteSelected;
-    private BibliotecaWriter cd;
+    private EscritorBiblioteca cd;
     private final FabricantTargetesCoberta.AmfitrioTargeta cardHost;
 
     public PanelGaleriaCobertes() {
@@ -166,7 +170,7 @@ public class PanelGaleriaCobertes extends JPanel {
             changedIsbns -> repaintCards(changedIsbns));
     }
 
-    public void posarCd(BibliotecaWriter cd) {
+    public void posarCd(EscritorBiblioteca cd) {
         this.cd = cd;
         imageService.posarCd(cd);
     }

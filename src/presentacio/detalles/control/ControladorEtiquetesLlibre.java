@@ -12,7 +12,7 @@ import javax.swing.event.DocumentListener;
 import domini.Llibre;
 import persistencia.LlibreTagRow;
 import domini.Tag;
-import interficie.TagWriter;
+import interficie.EscritorEtiqueta;
 import herramienta.DialegError;
 import herramienta.I18n;
 import presentacio.detalles.vista.DialegEtiquetesLlibre;
@@ -21,7 +21,7 @@ public class ControladorEtiquetesLlibre {
 
     // NOTA DE DISSENY: TagsDelLlibreDialog aplica els canvis de pertinença
     // d'etiquetes immediatament (addLlibreToTag / removeLlibreFromTag es
-    // persisteixen a cada clic), mentre que LlistesDelLlibreDialog ajorna
+    // persisteixen a cada clic), mentre que DialegLlistesLlibre ajorna
     // tots els canvis fins que l'usuari fa clic a "Desar". Aquest enfocament
     // de persistència immediata s'escull perquè les operacions d'etiquetes
     // són lleugeres (una sola fila de pertinença N:M) i els usuaris esperen
@@ -31,7 +31,7 @@ public class ControladorEtiquetesLlibre {
 
     private final DialegEtiquetesLlibre vista;
     private final Llibre llibre;
-    private final TagWriter cd;
+    private final EscritorEtiqueta cd;
     private ArrayList<Tag> tagsCache = new ArrayList<>();
     private ArrayList<Tag> allTagsCache = new ArrayList<>();
     private ArrayList<Tag> displayedTags = new ArrayList<>();
@@ -42,7 +42,7 @@ public class ControladorEtiquetesLlibre {
      *  recàrrega que el finding LOW de tot.txt va assenyalar. */
     private Map<Integer, Integer> tagCounts = new HashMap<>();
 
-    public ControladorEtiquetesLlibre(DialegEtiquetesLlibre vista, Llibre llibre, TagWriter cd) {
+    public ControladorEtiquetesLlibre(DialegEtiquetesLlibre vista, Llibre llibre, EscritorEtiqueta cd) {
         this.vista = vista;
         this.llibre = llibre;
         this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();

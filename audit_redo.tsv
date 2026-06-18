@@ -1,0 +1,638 @@
+KIND	FILE	LINE	TEXT
+BLOCK	src/domini/ConstructorFiltreLlibre.java	3	*
+ * Fluent builder for {@link LlibreFilter}. Les noves crides haurien de passar pel
+ * builder en lloc d'escriure directament als camps — els camps de {@code LlibreFilter}
+ * són privats. Mètodes com {@code withX} de {@link LlibreFilter} permeten mutar
+ * in-place; el builder és útil quan es construeix des de zero amb valors dinàmics.
+BLOCK	src/domini/ControladorDomini.java	27	*
+ * Façana singleton sobre l'estat en memòria de la biblioteca i la persistència.
+ *
+ * <p>Responsabilitats:
+ * <ul>
+ *   <li>Cicle de vida del singleton ({@link #getInstance()}, {@link #reinicialitzarForTest()},
+ *       {@link #reinicialitzarForProfileSwitch()}, {@link #create(ControladorPersistencia)}).</li>
+ *   <li>Posseeix el {@link StateContext}: les tres llistes de suport
+ *       ({@code bib}, {@code llistes}, {@code tags}), el lock en memòria
+ *       ({@code BIB_LOCK}) i els mapes d'índex per id.</li>
+ *   <li>Delega cada operació de negoci a una de les sis classes col·laboradores
+ *       específiques de {@code domini.facade} — Prestatgeria, Etiqueta,
+ *       Préstec, Llibre, Estadístiques, CòpiaDeSeguretat.</li>
+ * </ul>
+ *
+ * <p>L'API pública d'aquesta classe no canvia: cada mètode que existia
+ * abans de la divisió continua existint, amb la mateixa signatura, les
+ * mateixes excepcions i els mateixos efectes col·laterals. L'únic canvi
+ * externament observable és el recompte de línies del fitxer (637 → ~150).
+BLOCK	src/domini/EspecificacioOrdenacio.java	46	*
+ * Els noms de columna desconeguts o nuls es toleren i es transformen silenciosament a
+ * {@link #COL_ISBN}. El recau aquí (no al punt de crida) perquè la política
+ * "desconegut → ISBN" estigui en un sol lloc. toSql() i
+ * {@link #comparator(String)} respecten tots dos el recau.
+BLOCK	src/domini/Llibre.java	135	* Retorna {@code s.trim()} si {@code s} no és null ni blanc; altrament {@code null}.
+BLOCK	src/domini/Llista.java	21	* Font única de veritat per a la validació de colors; null significa "sense color / netejar".
+BLOCK	src/domini/Llista.java	26	*
+     * Setter no comprovat — crida primer {@link #esValidColor(String)} quan
+     * el valor provingui d'entrada de l'usuari. Els camins de càrrega del
+     * DAO el fan servir directament amb valors que ja s'han validat en
+     * escriure.
+LINE	src/domini/Tag.java	12	privat String color + getColor()/setColor() seguint el patró de
+BLOCK	src/domini/facade/DelegatEstadistiques.java	16	*
+ * Estadístiques de només lectura / consultes de valors diferenciats que
+ * usen l'autocompletat, el panell d'estadístiques i {@code BackupService}.
+ *
+ * <p>{@link #getDistinctValues(String)} i {@link #getDistinctAutorNames()}
+ * són els únics mètodes que toquen la captura en memòria de {@code bib};
+ * la resta són simples passarel·les a la capa de persistència.
+BLOCK	src/domini/facade/DelegatEstadistiques.java	49	*
+     * Valors diferenciats per a l'autocompletat. Els camps String de
+     * {@link Llibre} s'escanejen en memòria (biblioteca petita, ràpid);
+     * la resta cau a {@code cp.getDistinctValues(column)} que consulta
+     * la llista blanca de {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS}.
+     *
+     * <p>Llista buida si la columna no és ni als extractors en memòria
+     * ni a la llista blanca SQL.
+LINE	src/domini/facade/DelegatLlibre.java	58	── List views ────────────────────────────────────────────────────────────
+STRING	src/domini/facade/DelegatLlibre.java	128	ISBN no pot ser null
+BLOCK	src/herramienta/AutoCompletion.java	18	This work is hereby released into the Public Domain.
+ * To view a copy of the public domain dedication, visit
+ * http://creativecommons.org/licenses/publicdomain/
+BLOCK	src/herramienta/ClientOpenLibrary.java	61	* Cerca per ISBN. Retorna un mapa amb les claus: title, autor, any,
+	 *  descripcio, pagines, editorial, idioma. En cas d'error de xarxa/HTTP
+	 *  afegeix la clau "error".
+BLOCK	src/herramienta/ClientOpenLibrary.java	111	* Cerca per títol. Retorna el primer resultat amb les claus: title,
+	 *  autor, any, isbn. En cas d'error de xarxa/HTTP afegeix la clau
+	 *  "error".
+BLOCK	src/herramienta/ClientOpenLibrary.java	118	* Cerca pel nom de l'autor. Mateixa forma de retorn que
+	 *  lookupByTitle. En cas d'error de xarxa/HTTP afegeix la clau
+	 *  "error".
+BLOCK	src/herramienta/ClientOpenLibrary.java	243	*
+	 * Com {@link #fetchWithRetry(String)} però tracta una resposta JSON
+	 * malformada com a error no reintentable. La implementació anterior
+	 * reintentava 4 vegades per a cada fallada d'anàlisi (malbaratament
+	 * del pressupost de backoff de 3500 ms — el servidor no començarà
+	 * de cop a retornar JSON vàlid per a la mateixa URL) i finalment
+	 * deixava escapar la {@code JsonSyntaxException}. Els consumidors
+	 * ara poden distingir "ho hem provat, el servidor està trencat" de
+	 * "fallada transitòria de xarxa".
+BLOCK	src/herramienta/Configuracio.java	15	*
+ * Façana estàtica sobre les propietats de configuració (tema, idioma, BBDD,
+ * geometria de finestra, etc.).
+ *
+ * <p>El magatzem intern està organitzat en 4 sub-maps (un per domini:
+ * UI, DB, Window, Filter) que es carreguen i es serialitzen junts.  El
+ * getter/setter API continua sent estàtic sobre {@code Config} per
+ * compatibilitat — les classes {@link UiConfig}, {@link DbConfig},
+ * {@link WindowConfig} en són vistes tipades.
+ *
+ * <p>Layout intern (sub-maps):
+ * <ul>
+ *   <li>{@code UI_STORE}: tema, fontSize, lang, currency, defaultValoracio, presets,
+ *       readingGoal, viewMode, galleryZoom, sortColumn, sortOrder</li>
+ *   <li>{@code DB_STORE}: dbHost, dbUser, dbPassword, dbType, dbProfile</li>
+ *   <li>{@code WINDOW_STORE}: windowX/Y/Width/Height, windowMaximized, colWidth_*, colVisible_*</li>
+ *   <li>{@code FILTER_STORE}: defaultImgDir</li>
+ * </ul>
+BLOCK	src/herramienta/Configuracio.java	45	* Emmagatzematge transitori de la contrasenya com a {@code char[]} (no a
+     *  {@code props}) perquè la representació al heap no sigui mai una còpia
+     *  immortal en forma de {@code String}.
+BLOCK	src/herramienta/Configuracio.java	74	* Domini d'una clau. Les claus desconegudes van al store FILTER i es
+     *  registren perquè un error tipogràfic (p. ex. {@code colWidths_X} en
+     *  lloc de {@code colWidth_X}) sigui visible.
+BLOCK	src/herramienta/Configuracio.java	141	* Aplica en lot les entrades de {@code src} a la configuració viva,
+     *  encaminant cada clau al seu sub-store via {@link #domainOf(String)}.
+     *  Això és un write-through: aquí NO es desencadena el desat a
+     *  fitxer — crida {@link #save()} o {@link #withBatch} si també
+     *  vols un flush.
+LINE	src/herramienta/Configuracio.java	382	── Window / geometry ────────────────────────────────────────────────────
+BLOCK	src/herramienta/ConfiguracioFinestra.java	5	*
+ * Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades
+ * amb la geometria de finestra i les columnes de la taula. Les claus
+ * d'amplada/visibilitat de columna viuen al sub-emmagatzematge WINDOW
+ * (veure {@code Config.WINDOW_KEYS} més la regla dinàmica de prefix
+ * {@code colWidth_*} / {@code colVisible_*}).
+LINE	src/herramienta/DialegError.java	87	── Validació (error de l'usuari) ──────────────────────────────────────────
+LINE	src/herramienta/DialegError.java	152	── Error del sistema / tècnic ────────────────────────────────────────────
+STRING	src/herramienta/Escapers.java	7	 '. */
+    public static String html(String s) {
+        if (s == null) return 
+STRING	src/herramienta/Escapers.java	9	;
+        return s.replace(
+BLOCK	src/herramienta/ExportadorLlibres.java	96	*
+     * Exportació HTML ampliada amb un indicador explícit d'inclusió de coberta
+     * i bytes de coberta precarregats. La sobrecàrrega més senzilla de sobre
+     * omet les cobertes (renderitza un marcador 📖 per a cada llibre) i és
+     * el valor per defecte segur per a biblioteques amb més de
+     * {@link #LARGE_LIBRARY_COVER_THRESHOLD} llibres — codificar en base64 una
+     * coberta de 50 KB per llibre produeix ~50 MB d'HTML per a 1 000 llibres,
+     * que la majoria de navegadors gestionen malament.
+     *
+     * <p>Quan {@code coverBlobs} no és null ha de contenir una entrada per
+     * llibre a {@code view} (mateix ordre). Una entrada {@code null} significa
+     * "no hi ha coberta disponible, renderitza el marcador". Els consumidors
+     * que opten per incloure cobertes han d'omplir el mapa des d'un fil en
+     * segon pla (les operacions subjacents {@code ServeiCoberta.obtenirCachedBytes}
+     * i {@code cd.obtenirLlibreBlob} fan I/O de disc + BBDD).
+BLOCK	src/herramienta/ExportadorLlibres.java	329	* Embolcalla {@link Escapers#json(String)} entre cometes dobles i renderitza
+     *  {@code null} com el literal JSON {@code null}.
+BLOCK	src/herramienta/FieldAutoComplete.java	17	* Límit per defecte de sugerències mostrades al popup. Modificable per
+     *  {@link #attach(JTextField, java.util.List, int)}.
+BLOCK	src/herramienta/FiltreUtils.java	21	*
+     * Cerca totes les paraules de {@code query} (separades per espais) a
+     * {@code haystack}, ignorant ordre i posició. "tolkien ring" troba
+     * "The Lord of the Rings". Paraules buides s'ignoren.
+STRING	src/herramienta/FiltreUtils.java	24	The Lord of the Rings
+LINE	src/herramienta/Isbn13Normalizer.java	26	branca null.
+BLOCK	src/herramienta/JsonImporter.java	26	*
+ * Importador JSON compartit per {@link ImportadorLlibres#importJSON(File, EscritorBiblioteca)}.
+ * Lògica deduplicada — un
+ * canvi en el format d'entrada només cal aplicar-lo aquí.
+BLOCK	src/herramienta/SelectorMostraColor.java	16	*
+     * Color per defecte del prestatge quan no se n'ha assignat cap. Compartit
+     * per {@link #chooseHex} (quan el consumidor passa {@code null}) i
+     * {@code GestioLlistesDialeg.onColorLlista} (quan el prestatge existent
+     * no té color). Apujar-lo a una sola constant fa que la política
+     * "prestatge nou comença en blau" sigui fàcil de canviar en un sol
+     * lloc (segons el finding MEDIUM de tot.txt sobre el valor per defecte compartit).
+BLOCK	src/herramienta/SelectorMostraColor.java	33	* @return hex del color escollit (#RRGGBB) o {@code null} si es cancel·la
+LINE	src/herramienta/ServeiCopiaSeguretat.java	73	mkdirs és el cas rar / d'error d'I/O — registra i surt
+STRING	src/herramienta/ServeiCopiaSeguretat.java	228	NULL
+STRING	src/herramienta/ServeiCopiaSeguretat.java	229	NULL
+STRING	src/herramienta/ServeiCopiaSeguretat.java	235	NULL /* 
+STRING	src/herramienta/ServeiCopiaSeguretat.java	321	NULL
+BLOCK	src/herramienta/UITheme.java	54	* Captura l'estat actual de Color en un registre Paleta immutable.
+     *  Els consumidors haurien de preferir {@code UITheme.palette().xxx} sobre
+     *  els accessos als camps crus {@code UITheme.XXX}.
+BLOCK	src/herramienta/UITheme.java	195	*
+     * Lletra base, reconstruïda per {@link #rebuildFonts(String)} quan canvia
+     * la mida de lletra configurada. Mantinguda com a {@code private static volatile}
+     * perquè el codi extern hagi de passar per {@link #fontBase()} per llegir el
+     * valor actual, evitant curses amb {@code rebuildFonts} a l'EDT.
+BLOCK	src/herramienta/UITheme.java	203	*
+     * Lletra base en negreta, reconstruïda per {@link #rebuildFonts(String)}
+     * quan canvia la mida de lletra configurada. Mantinguda com a
+     * {@code private static volatile} perquè el codi extern hagi de passar
+     * per {@link #fontBold()} per llegir el valor actual, evitant curses
+     * amb {@code rebuildFonts} a l'EDT.
+BLOCK	src/herramienta/ValidadorLlibre.java	54	*
+	 * Valida i construeix un Llibre.
+	 * Només isbn i nom són obligatoris. Tots els altres camps accepten null/buit i
+	 * reben valors per defecte segurs (valoracio=0, preu=0, llegit=false, la resta cadenes buides).
+LINE	src/herramienta/ValidadorLlibre.java	72	com a error. El finding MEDIUM de tot.txt va assenyalar la
+BLOCK	src/herramienta/csv/CsvImportStrategy.java	7	* Nom curt per a logs i missatges d'error (p.ex. "Goodreads", "LibraryThing", "Natiu").
+BLOCK	src/herramienta/csv/CsvImportStrategy.java	10	* Retorna cert si la fila s'ha importat, fals si s'ha omès (p.ex. duplicat). Llança en error d'anàlisi.
+STRING	src/herramienta/csv/GoodreadsCsvStrategy.java	45	Number of Pages
+BLOCK	src/herramienta/csv/Rfc4180Reader.java	8	*
+ * Lector CSV RFC-4180 en streaming. Substitueix la càrrega de tot el fitxer
+ * a {@link UtilitatsCsv#analitzarLine} per a importacions grans. Retorna una
+ * fila a la vegada com a {@code String[]}.
+ *
+ * <p>Contracte: {@link #hasNext()} és l'única sonda; {@link #next()} està
+ * garantit que retorna no-null quan {@code hasNext()} és cert (i llança
+ * {@link NoSuchElementException} altrament). L'API anterior retornava
+ * {@code null} per a una entrada buida final, forçant els consumidors a
+ * comprovar null a {@code next()}; segons el finding LOW de tot.txt, el
+ * contracte ara és "hasNext és l'única sonda".
+ *
+ * <p>El {@link Reader} subministrat pel consumidor ha de ser {@code BufferedReader}
+ * per a lectures línia a línia amb buffer.
+BLOCK	src/herramienta/csv/Rfc4180Reader.java	32	* Retorna cert si hi ha una altra fila per llegir. La propera crida a
+     *  {@link #next()} retornarà un {@code String[]} no-null.
+BLOCK	src/herramienta/csv/Rfc4180Reader.java	49	* Llegeix una fila lògica (o null a EOF) en una cadena plana.
+LINE	src/herramienta/csv/Rfc4180Reader.java	69	amb un newline); retorna el que s'estava acumulant, o null
+BLOCK	src/herramienta/csv/ShelvesHelper.java	17	*
+     * Troba un prestatge pel nom donat o el crea si no existeix.
+     * La primera crida amb {@code cache == null} pobla la cache
+     * amb totes les llistes existents; les crides següents
+     * aprofiten la cache per a cerques O(1).
+     *
+     * @param cd        lector/escriptor de domini
+     * @param cache     cache opcional per evitar re-cerca a cada iteració;
+     *                  si és null, es construeix a partir de {@code cd.getAllLlistes()}
+     * @param shelfName nom del prestatge; si és null o blank, retorna null
+     * @return la {@link Llista} trobada o creada, o null si {@code shelfName} és buit
+BLOCK	src/herramienta/csv/ShelvesHelper.java	43	*
+     * Crea o recupera un prestatge pel nom donat i hi afegeix el llibre.
+     *
+     * @param cd        lector/escriptor de domini
+     * @param cache     cache opcional per evitar re-cerca a cada iteració;
+     *                  si és null, es construeix a partir de {@code cd.getAllLlistes()}
+     * @param isbn      ISBN del llibre a afegir al prestatge
+     * @param shelfName nom del prestatge
+     * @param valoracio valoració dins del prestatge
+     * @param llegit    estat de lectura dins del prestatge
+BLOCK	src/herramienta/csv/UtilitatsCsv.java	52	* Com {@link #colVal} però distingeix "columna absent" de "valor buit".
+     *  Retorna {@code Optional.empty()} si la columna no és al header o si
+     *  l'índex excedeix la llargada de la fila; {@code Optional.of("")} si
+     *  la columna existeix però el valor és buit.
+BLOCK	src/herramienta/csv/UtilitatsCsv.java	63	* Retorna el valor retallat analitzat com a double, o 0.0 si és null/buit/error d'anàlisi.
+BLOCK	src/herramienta/csv/UtilitatsCsv.java	80	* Analitza una cadena ISBN, convertint qualsevol ISBN-10 vàlid a ISBN-13.
+     *  Delega a {@link herramienta.Isbn13Normalizer#toIsbn13(String)}
+     *  (la implementació canònica) perquè la suma de verificació ISBN-10→13 i
+     *  la tolerància a la X minúscula estiguin en un sol lloc — segons el finding
+     *  LOW de tot.txt sobre les tres implementacions gairebé duplicades
+     *  parseIsbn / normalizeIsbn13 / toIsbn13. Cau a un passthrough de només
+     *  dígits per a entrades que no coincideixen amb la forma estricta del
+     *  normalitzador, de manera que el camí d'importació CSV encara es pot
+     *  recuperar d'exportacions poc habituals (el normalitzador retorna null
+     *  per a aquestes, però el camí CSV prefereix un millor esforç abans que
+     *  una fila fallida).
+LINE	src/herramienta/csv/UtilitatsCsv.java	94	Caiguda best-effort: elimina els no dígits, retorna el que queda.
+STRING	src/herramienta/csv/UtilitatsCsv.java	29	') {
+                inQuote = true;
+            } else if (ch == ',') {
+                fields.add(sb.toString().trim()); sb.setLength(0);
+            } else {
+                sb.append(ch);
+            }
+        }
+        fields.add(sb.toString().trim());
+        return fields.toArray(new String[0]);
+    }
+
+    /** Retorna el valor retallat per al nom de columna donat, o 
+STRING	src/herramienta/csv/UtilitatsCsv.java	48	;
+        return c[idx].trim();
+    }
+
+    /** Com {@link #colVal} però distingeix 
+STRING	src/herramienta/csv/UtilitatsCsv.java	52	.
+     *  Retorna {@code Optional.empty()} si la columna no és al header o si
+     *  l'índex excedeix la llargada de la fila; {@code Optional.of(
+STRING	src/herramienta/csv/UtilitatsCsv.java	76	;
+        return 
+BLOCK	src/herramienta/export/GoodreadsExportService.java	35	*
+     * Variant de streaming — escriu una fila a la vegada a {@code pw},
+     * sense String intermitja. Per a una biblioteca de 10k llibres és
+     * ~10x més ràpida (sense assignació del document complet) i ~20x
+     * més amigable amb el heap.
+LINE	src/herramienta/export/GoodreadsExportService.java	22	Sobrecàrrega de String conservada per compatibilitat enrere
+STRING	src/herramienta/export/GoodreadsExportService.java	43	Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publicación Year,
+STRING	src/herramienta/export/GoodreadsExportService.java	45	Read Count,Recommended For,Recommended By,Owned Copies,Original Purchase Date,
+BLOCK	src/interficie/EscritorLlibre.java	7	* @deprecated prefer {@link #deleteLlibre(Long)} so callers carry only the key, not the full record.
+BLOCK	src/interficie/LectorBibliotecaEnMemoria.java	38	* Rebuilds the ISBN→Llibre index. Callers that mutate {@link #books} should
+     *  treat the index as dirty (handled by the dirty flag).
+LINE	src/main/Executable.java	37	Throwable, no Exception; alguns consumidors llancen Error
+STRING	src/main/Executable.java	33	Error fatal: 
+STRING	src/main/Executable.java	42	Error fatal: 
+STRING	src/persistencia/AutorDao.java	14	Error executant consulta: 
+STRING	src/persistencia/AutorDao.java	45	Error en crear l'autor: 
+STRING	src/persistencia/AutorDao.java	56	Error actualitzant autor: 
+STRING	src/persistencia/AutorDao.java	65	Error eliminant autor: 
+BLOCK	src/persistencia/ConnexioServidor.java	113	* Assignada un sol cop dins de {@link #crearDatabase(ConnectionConfig)} o
+	 *  {@link #crearDatabase()} i mai reassignada; {@link #tancarConnection()}
+	 *  posa el camp a null després de tancar. No assignis una nova Connection en un altre lloc.
+BLOCK	src/persistencia/ConnexioServidor.java	126	* Variant que pren la contrasenya com a {@code char[]} perquè el consumidor
+	 *  la pugui posar a zero després de la crida en lloc de deixar una
+	 *  {@code String} a l'heap.
+	 *  <p>El contracte JDBC {@link java.sql.Driver#connect(String, java.util.Properties)}
+	 *  requereix la contrasenya com a {@code String} dins la {@code Properties},
+	 *  de manera que una única còpia de la contrasenya com a {@code String} és
+	 *  inevitable per a MariaDB; la còpia viu dins de les {@code Properties}
+	 *  de la {@link Connection} fins que el driver l'allibera. El {@code char[]}
+	 *  del consumidor és l'única porció que aquest mètode pot mantenir
+	 *  curta: posa-la a zero tan aviat com la connexió tingui èxit o falli.
+LINE	src/persistencia/ConnexioServidor.java	94	Migració 32-34: passa els autors de la columna `llibre.autor` (string)
+LINE	src/persistencia/ConnexioServidor.java	100	`todo.txt` [1] Migration 34. Abans de re-córrer, comprova que
+LINE	src/persistencia/ConnexioServidor.java	190	mostraria a l'usuari un error enganyós "err_db_init_h2"
+LINE	src/persistencia/ConnexioServidor.java	363	evita el fals negatiu "column not found" en un MariaDB
+STRING	src/persistencia/ConnexioServidor.java	27	llegit BOOLEAN, 
+STRING	src/persistencia/ConnexioServidor.java	41	isbn BIGINT NOT NULL, llista_id INT NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	42	valoracio FLOAT DEFAULT 0.0, llegit BOOLEAN DEFAULT FALSE, 
+STRING	src/persistencia/ConnexioServidor.java	54	isbn BIGINT NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	56	data_prestec DATE NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	57	retornat BOOLEAN DEFAULT FALSE, 
+STRING	src/persistencia/ConnexioServidor.java	62	isbn BIGINT NOT NULL, tag_id INT NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	75	isbn BIGINT NOT NULL, autor_id INT NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	83	isbn BIGINT NOT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	84	data_inici DATE DEFAULT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	85	data_fi DATE DEFAULT NULL, 
+STRING	src/persistencia/ConnexioServidor.java	183	CREATE DATABASE IF NOT EXISTS BIBLIOTECA;
+STRING	src/persistencia/ConnexioServidor.java	221	Invalid H2 db profile name: 
+STRING	src/persistencia/ConnexioServidor.java	307	Column AUTOR not found
+STRING	src/persistencia/ConnexioServidor.java	350	Migració 34: ometent DROP COLUMN autor — 
+STRING	src/persistencia/ConnexioServidor.java	363	column not found
+BLOCK	src/persistencia/ControladorPersistencia.java	12	*
+ * Façana singleton sobre tots els DAO. Tots els mètodes públics són {@code synchronized}
+ * perquè els consumidors (ControladorDomini i la capa d'API) obtinguin accés thread-safe
+ * sense necessitat de bloquejar els DAO individuals.
+ *
+ * <p>Aquest embolcall existeix per centralitzar el cicle de vida (singleton, reinicialització
+ * de test, canvi de perfil, ganxo de tancada) i per donar a {@code ControladorDomini} una sola
+ * dependència. Els DAO no es sincronitzen individualment — cada ruta de crida passa per un
+ * mètode {@code synchronized} aquí, de manera que un {@code synchronized} a nivell de DAO
+ * seria un doble bloqueig redundant.
+ *
+ * <p>Cicle de vida: {@link #getInstance()} obre una connexió JDBC i inicialitza els DAO;
+ * {@link #reinicialitzarForTest()} buida les dades i descarta la instància (entre grups de test);
+ * {@link #reinicialitzarForProfileSwitch()} tanca la connexió (canvi de perfil H2 ↔ MariaDB).
+ *
+ * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un
+ * {@link java.util.concurrent.locks.ReadWriteLock} (lectures concurrents, escriptures
+ * exclusives). Conversió mecànica però tediosa.
+BLOCK	src/persistencia/ControladorPersistencia.java	123	*
+	 * Restaura atòmicament la base de dades des d'un fitxer SQL de còpia de seguretat:
+	 * buida totes les dades i executa les sentències del fitxer dins d'una sola transacció
+	 * JDBC. Si alguna sentència del fitxer falla, tota la transacció es reverteix i la
+	 * base de dades queda intacta. Usat per {@link domini.facade.DelegatCopiaSeguretat#restaurarFromSQL(java.io.File)}
+	 * per tancar la finestra "matar l'aplicació entre clearAllData() i executarSQLFile()".
+	 * La instantània pre-restauració a un fitxer temporal és el camí de desfer visible
+	 * per a l'usuari; aquest mètode és la xarxa de seguretat dins del procés.
+STRING	src/persistencia/ControladorPersistencia.java	98	Error en tancar la BD en sortir
+BLOCK	src/persistencia/JarLocator.java	27	* Retorna el path {@code lib/} trobat, o null per continuar provant.
+BLOCK	src/persistencia/JarLocator.java	41	*
+     * Tria la primera estratègia que troba un directori amb JARs.
+     * Retorna {@code null} si cap funciona — el caller ({@code
+     * ConnexioServidor.loadDriverFromLib}) llança un
+     * {@code ClassNotFoundException} amb el diag log. L'antic
+     * fallback ({@code new File(user.dir, "lib")}) emmascarava
+     * el problema retornant un directori existent però sense el
+     * JAR que es volia carregar.
+BLOCK	src/persistencia/LecturaRow.java	12	* Analitza una columna DATE ({@code YYYY-MM-DD}) a {@code LocalDate}; null/buit → null.
+LINE	src/persistencia/LlibreBlobDao.java	72	IN d'H2 / MariaDB i eviten que l'array de paràmetres del
+STRING	src/persistencia/LlibreBlobDao.java	26	Error carregant la imatge del llibre: 
+STRING	src/persistencia/LlibreBlobDao.java	51	Error carregant camps pesats: 
+STRING	src/persistencia/LlibreBlobDao.java	95	Error carregant camps pesats (batch): 
+BLOCK	src/persistencia/LlibreDaoCore.java	278	* Cos de {@link #clearAllData()} sense la transacció envoltant.
+     *  El fa servir {@link #restoreFromSQL(java.io.File)} per compondre
+     *  el clear + execute en una sola transacció.
+BLOCK	src/persistencia/LlibreDaoCore.java	302	*
+     * Restaura des d'una còpia de seguretat SQL. Abans llegia tot el
+     * fitxer a un byte[] + un String (pic de memòria ≈ 4× la mida del
+     * fitxer per a una còpia de 50 MB). Ara transmet el fitxer línia a
+     * línia i acumula una sentència a la vegada en un StringBuilder.
+     * L'acumulador està limitat per la sentència individual més gran
+     * del fitxer (uns quants KB per a insercions típiques), de manera
+     * que el pic de memòria és O(mida-màxima-sentència), no O(fitxer).
+BLOCK	src/persistencia/LlibreDaoCore.java	318	* Cos de {@link #executeSQLFile(java.io.File)} sense la transacció
+     *  envoltant. Permet a {@link #restoreFromSQL(java.io.File)} compondre
+     *  el clear + file-execute en una sola transacció perquè una
+     *  {@link SQLException} a meitat del flux reverteixi les dues.
+     *  <p>Llegeix línia a línia amb {@code br.lines().forEach(...)} de
+     *  manera que l'analitzador vegi cadenes Unicode completes (inclosos
+     *  punts de codi fora del BMP codificats com a UTF-8 de 4 bytes).
+     *  L'antiga lectura per unitat de codi trencava el tractament de
+     *  parelles substitutives per a emoji i ideogrames CJK: un caràcter
+     *  UTF-8 de 4 bytes són dues unitats de codi UTF-16, i la màquina
+     *  d'estats de comentari/cometes partia la parella entre iteracions.
+     *  La transmissió per línia manté els literals de cadena multilínia
+     *  i el seu contingut com un sol String, i permet a
+     *  {@code Statement.execute} rebre els bytes exactes que el driver
+     *  JDBC codificarà.
+BLOCK	src/persistencia/LlibreDaoCore.java	406	* Llista blanca de tipus de sentència SQL acceptables en un fitxer
+     *  de còpia de seguretat. {@code SET} s'ha exclòs intencionadament:
+     *  un {@code SET @@global.*} de MariaDB passaria la comprovació.
+     *  {@code ServeiCopiaSeguretat} no escriu mai sentències {@code SET}, de manera
+     *  que el camí de restauració no les necessita.
+LINE	src/persistencia/LlibreDaoCore.java	119	Tots els valors de Column.selectFragment ja porten el
+STRING	src/persistencia/LlibreDaoCore.java	59	(l.imatge_blob IS NOT NULL) AS has_blob
+STRING	src/persistencia/LlibreDaoCore.java	196	Error al agafar tots els llibres: 
+STRING	src/persistencia/LlibreDaoCore.java	217	Error carregant els llibres recents: 
+STRING	src/persistencia/LlibreDaoCore.java	269	Error comptant llibres: 
+BLOCK	src/persistencia/LlibreFieldBindings.java	31	* Marcador per a un SQL NULL d'un tipus JDBC concret.
+BLOCK	src/persistencia/LlibreFieldBindings.java	135	* Vincula un sol valor al PreparedStatement, amb el tractament de null
+     *  conscient del tipus que l'antic codi inline feia a cada crida.
+STRING	src/persistencia/LlibreLecturaDao.java	25	Error carregant les lectures: 
+BLOCK	src/persistencia/LlibreMapper.java	46	* @param includeNotes si és cert, llegeix la columna {@code notes} del result set
+BLOCK	src/persistencia/LlibreSearchDao.java	88	*
+     * Afegeix {@code clause} a {@code sql} i {@code value} a {@code params}
+     * si {@code value} no és null. No fa res quan {@code value} és null — el
+     * consumidor pot passar un valor precalculat (p.ex. {@code "%foo%"}) i deixar
+     * que l'ajudant decideixi si vincular-lo. Redueix el cos de search() des de
+     * ~20 branques de {@code if (f.getX() != null) { sql.append(...); params.add(...); }}
+     * a crides d'una sola línia per condició.
+LINE	src/persistencia/LlibreSearchDao.java	42	el valor és null i el nombre correcte de placeholders en cas
+LINE	src/persistencia/LlibreSearchDao.java	44	"if (f.getX() != null) { sql.append(" AND ..."); params.add(...); }"
+LINE	src/persistencia/LlibreSearchDao.java	110	Avui el constructor SQL no insereix mai un null literal
+LINE	src/persistencia/LlibreSearchDao.java	111	(tota condició està protegida amb != null o amb una
+LINE	src/persistencia/LlibreSearchDao.java	114	que afegeixi un null literal es faci visible als logs
+STRING	src/persistencia/LlibreSearchDao.java	44	if (f.getX() != null) { sql.append(
+STRING	src/persistencia/LlibreSearchDao.java	44	); params.add(...); }
+STRING	src/persistencia/LlibreSearchDao.java	48	 AND l.ISBN = ?
+STRING	src/persistencia/LlibreSearchDao.java	51	 AND (l.nom LIKE ? OR l.nom_ca LIKE ? OR l.nom_es LIKE ? OR l.nom_en LIKE ?)
+STRING	src/persistencia/LlibreSearchDao.java	56	 AND l.`any` >= ?
+STRING	src/persistencia/LlibreSearchDao.java	57	 AND l.`any` <= ?
+STRING	src/persistencia/LlibreSearchDao.java	58	 AND l.valoracio >= ?
+STRING	src/persistencia/LlibreSearchDao.java	59	 AND l.valoracio <= ?
+STRING	src/persistencia/LlibreSearchDao.java	60	 AND l.preu >= ?
+STRING	src/persistencia/LlibreSearchDao.java	61	 AND l.preu <= ?
+STRING	src/persistencia/LlibreSearchDao.java	62	 AND l.llegit = ?
+STRING	src/persistencia/LlibreSearchDao.java	63	 AND l.editorial LIKE ?
+STRING	src/persistencia/LlibreSearchDao.java	65	 AND l.serie LIKE ?
+STRING	src/persistencia/LlibreSearchDao.java	67	 AND l.format = ?
+STRING	src/persistencia/LlibreSearchDao.java	69	 AND l.idioma LIKE ?
+STRING	src/persistencia/LlibreSearchDao.java	83	Error en searchLlibres: 
+STRING	src/persistencia/LlibreSearchDao.java	117	bindParam: null literal a l'índex 
+STRING	src/persistencia/LlistaDao.java	32	Error carregant les llistes: 
+STRING	src/persistencia/LlistaDao.java	82	Error comptant els llibres de la llista: 
+STRING	src/persistencia/LlistaDao.java	100	Error comptant els llibres de les llistes: 
+STRING	src/persistencia/LlistaDao.java	112	(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, 
+STRING	src/persistencia/LlistaDao.java	122	Error carregant els llibres de la llista: 
+STRING	src/persistencia/LlistaDao.java	138	Error carregant ISBNs de llista: 
+STRING	src/persistencia/LlistaDao.java	233	Error carregant les llistes del llibre: 
+STRING	src/persistencia/LlistaDao.java	264	Error carregant les dades de llista: 
+LINE	src/persistencia/PrestecDao.java	17	igual, però el missatge d'error SQL és opac. Així donem un
+STRING	src/persistencia/PrestecDao.java	57	Error carregant els préstecs: 
+STRING	src/persistencia/PrestecDao.java	72	Error carregant els préstecs actius: 
+STRING	src/persistencia/PrestecDao.java	86	Error carregant els préstecs: 
+STRING	src/persistencia/PrestecDao.java	103	Error carregant els préstecs per ISBN: 
+STRING	src/persistencia/PrestecDao.java	118	Error comptant els préstecs per ISBN: 
+STRING	src/persistencia/PrestecDao.java	140	Error carregant préstecs vençuts: 
+BLOCK	src/persistencia/PrestecEndarrerit.java	5	*
+ * Fila retornada per {@link PrestecDao#obtenirEndarrerits}: un llibre
+ * actualment prestat el prèstec del qual és més antic que el llindar
+ * (i encara no retornat).
+ *
+ * <p>Substitueix l'anterior fila de tres elements {@code List<Object[]>}
+ * (nomPersona, nomLlibre, dataPrestec) per un registre tipat perquè els
+ * consumidors tinguin accés als camps en temps de compilació i no hagin
+ * de fer cast a {@code row[0..2]}.
+BLOCK	src/persistencia/TagDao.java	13	*
+     * Whitelist de columnes vàlides per a {@link #obtenirDistinctValues(String)}.
+     * El nom de la columna s'interpola directament a la SQL (no hi ha
+     * paràmetre per a un nom de columna en JDBC), per això la llista blanca
+     * és <em>obligatòria</em> — sense ella, una entrada no validada seria
+     * un vector d'SQL injection. Mantenir sincronitzada amb el switch en
+     * memòria de {@code domini.facade.DelegatEstadistiques.IN_MEMORY_EXTRACTORS}
+     * — la verificació corre al constructor per fallar aviat si la
+     * llista queda desincronitzada.
+STRING	src/persistencia/TagDao.java	49	TagDao.AUTOCOMPLETE_COLUMNS is missing the in-memory extractors: 
+STRING	src/persistencia/TagDao.java	50	 (the SQL whitelist must be a superset of the in-memory map)
+STRING	src/persistencia/TagDao.java	73	Error carregant les etiquetes: 
+STRING	src/persistencia/TagDao.java	117	Error carregant les etiquetes del llibre: 
+STRING	src/persistencia/TagDao.java	153	Error carregant els llibres de l'etiqueta: 
+STRING	src/persistencia/TagDao.java	169	Error carregant les dades d'etiquetes: 
+STRING	src/persistencia/TagDao.java	190	` IS NOT NULL AND `
+STRING	src/persistencia/TagDao.java	194	Error carregant valors de 
+STRING	src/presentacio/ConfiguracioDialog.java	36	ConfiguracioDialog requires non-null cd
+BLOCK	src/presentacio/ControladorExportacio.java	19	* La planificació de descàrrega de cobertes passa per
+     *  {@link herramienta.CoverService#submitCoverFetch}, que separa les
+     *  lectures d'OL (un sol fil, amb limitador) de les escriptures JDBC
+     *  (multifil, dimensionades pel nombre de cobertes). El limitador
+     *  de 300ms d'OL continua aplicant-se entre consumidors; la
+     *  separació elimina la penalització de "escriptures bloquejades
+     *  per les lectures" (segons el finding MEDIUM de tot.txt sobre
+     *  CoverService). El guard de concurrència al voltant de
+     *  {@link #fetchMissingCovers(JButton)} continua evitant el doble
+     *  clic al botó.
+LINE	src/presentacio/ControladorExportacio.java	160	malinterpretar com a error (segons el
+BLOCK	src/presentacio/ControladorFiltre.java	89	* Manté el worker de filtre pel camí de BBDD en vol perquè un segon
+     *  clic pugui cancel·lar el primer en lloc d'apilar dues consultes
+     *  en segon pla els resultats de les quals competirien a l'EDT.
+     *  El {@code done()} del worker comprova {@code isCancelled()} abans
+     *  de tocar la taula.
+LINE	src/presentacio/ControladorImportacio.java	129	lloc d'un error genèric d'"addLlibre" després d'haver escrit
+LINE	src/presentacio/ControladorImportacio.java	132	fent clic a "Sí".
+BLOCK	src/presentacio/ControladorMarcPrincipal.java	40	*
+	 * Singleton — un sol MainFrameControl per tota l'aplicació. A diferència
+	 * de {@link domini.ControladorDomini}, no té resetForTest() perquè la UI
+	 * Swing no es destrueix entre test runs: els tests que toquin la UI
+	 * usen la bestreta de MostrarBibliotecaControl via SpringLayout o
+	 * directament. La dependència de Swing fa que el patró DI de
+	 * ControladorDomini (constructor injectable) no sigui fàcilment
+	 * aplicable aquí.
+BLOCK	src/presentacio/ControladorMarcPrincipal.java	303	*
+	 * Si l'usuari està veient una prestatgeria específica, afegeix un llibre
+	 * acabat de crear a aquesta prestatgeria perquè aparegui immediatament.
+	 * No-op quan:
+	 *  - el llibre no és nou (aquest helper és només per a {@code isNew}),
+	 *  - l'usuari és a "Tots els llibres" (sense filtre de prestatgeria),
+	 *  - l'addició falla (el ja ha gestionat l'error visible a l'usuari).
+STRING	src/presentacio/ControladorPrestatgeria.java	50	Drag-to-shelf failed isbn=
+LINE	src/presentacio/ControladorTaula.java	212	Columna de detalls oculta — doble clic a la fila o Enter obre
+BLOCK	src/presentacio/DialegGestioLlistes.java	33	* El diàleg requereix un {@code cd} (EscritorPrestatgeria) no nul — la caiguda
+     *  a null cap a {@code ControladorDomini.getInstance()} s'ha eliminat
+     *  segons el finding MEDIUM de tot.txt. El consumidor (ShelfController)
+     *  és l'únic punt d'entrada i sempre subministra {@code state.cd}.
+BLOCK	src/presentacio/DialegGestioLlistes.java	189	*
+     * Instància única de renderer sense estat reutilitzada entre les
+     * crides a {@link #reload()}. La implementació anterior assignava
+     * un {@code DefaultListCellRenderer} nou a cada {@code reload()},
+     * de manera que una sessió de drag-and-drop a la llista de
+     * prestatgeries produïa O(n) assignacions per a una biblioteca
+     * de 10 prestatgeries. El renderer no llegeix cap estat de camp —
+     * només estableix una icona a partir de l'argument {@code value}.
+LINE	src/presentacio/PanelTaulaCentral.java	78	(table.setFont dispara un canvi de propietat).
+LINE	src/presentacio/PanelTaulaCentral.java	124	que retorna `super` (el `this` del DefaultTableCellRenderer),
+BLOCK	src/presentacio/RegistreCampsFormulari.java	116	*
+     * Accessor sense tipus conservat pels més de 60 callers existents
+     * que declaraven {@code JComboBox<String>} o {@code JComboBox<Object>}
+     * localment. Una variant tipada requeriria coneixement per-component
+     * (T des de l'especificació) — no compensa la migració donat que
+     * els call sites existents funcionen tal qual. Documentat a la
+     * troballa LOW de tot.txt; es manté sense tipus per compatibilitat
+     * enrere.
+BLOCK	src/presentacio/UIComponents.java	18	*
+ * Fàbrica de la capa de presentacio per a components Swing sensibles al tema.
+ *
+ * <p>Tot el codi de presentacio hauria de cridar aquesta classe en lloc de
+ * tocar directament els camps d'estil de {@link UITheme}, de manera que
+ * canviar a un altre look-and-feel no obligui a tocar cada panell/control.
+ *
+ * <p>Els cossos d'estil (button / label / panel / field / cardBorder) es
+ * van moure aquí des de {@code herramienta.UITheme} durant la
+ * correcció de build de la sessió 11 perquè {@code UITheme} només
+ * posseeixi l'estat del tema (colors, fonts, claus UIManager) i
+ * {@code UIComponents} posseeixi l'aplicació d'estils a la capa de
+ * panell. Els camps i colors que defineixen l'aspecte continuen venint
+ * de {@link UITheme}; els mètodes d'aquí simplement els apliquen.
+BLOCK	src/presentacio/config/SeccioImatgesConfiguracio.java	17	* Images section: default cover-folder picker.
+BLOCK	src/presentacio/config/SeccionsConfiguracio.java	6	*
+ * Utilitats compartides per a les seccions de {@code presentacio.config.*}.
+ * Cada panell de secció etiqueta els seus fills d'entrada amb un
+ * {@code ClientProperty ("id", ...)} perquè el diàleg els pugui cercar
+ * per nom a {@link #reloadFromConfig(Container, String)}.
+STRING	src/presentacio/detalles/control/ControladorDialegDesarLlibres.java	60	ControladorDialegDesarLlibres requires non-null cd
+LINE	src/presentacio/detalles/control/ControladorEtiquetesLlibre.java	24	persisteixen a cada clic), mentre que DialegLlistesLlibre ajorna
+LINE	src/presentacio/detalles/control/ControladorEtiquetesLlibre.java	25	tots els canvis fins que l'usuari fa clic a "Desar". Aquest enfocament
+BLOCK	src/presentacio/detalles/control/ControladorLlistesLlibre.java	25	*
+     * Instància única de renderer de checks de prestatgeria sense estat
+     * reutilitzada entre les crides a {@link #reload()} (segons el
+     * finding LOW de tot.txt). El renderer captura {@code memberIds}
+     * en temps de construcció — però memberIds és un camp Set mutable
+     * a la classe contenidora, de manera que totes les instàncies
+     * comparteixen el mateix set de suport (reassignem el camp, no
+     * el Set en si, a cada recàrrega per mantenir vàlida la referència
+     * capturada).
+LINE	src/presentacio/detalles/control/ControladorLlistesLlibre.java	146	perquè el SHELF_RENDERER capturat continuï apuntant a un set vàlid.
+BLOCK	src/presentacio/detalles/vista/DialegEtiquetesLlibre.java	31	*
+ * Diàleg per gestionar les etiquetes assignades a un sol llibre.
+ * <p>
+ * A diferència de {@link presentacio.detalles.vista.DialegLlistesLlibre}, que
+ * ajorna els canvis de pertinença a prestatgeria fins que l'usuari fa clic a
+ * OK/Desar, aquest diàleg aplica cada operació d'afegir/treure etiqueta
+ * immediatament (via {@link presentacio.detalles.control.ControladorEtiquetesLlibre}).
+ * Es tria el model de persistència immediata perquè les operacions
+ * d'etiquetes són files individuals de many-to-many lleugeres, mentre que
+ * la pertinença a prestatgeria també porta valoració per llibre i estat de
+ * lectura que es beneficien de l'edició per lots.
+BLOCK	src/presentacio/galeria/FabricantTargetesCoberta.java	161	*
+     * Instantaniània de només lectura de tot el que necessita
+     * {@link #paintCard} per dibuixar una targeta. Porta les referències
+     * vives a {@code imgRef} i {@code hov} perquè les mutacions del
+     * carregador d'imatges / mouse-Entered siguin visibles al següent
+     * pintat.
+BLOCK	src/presentacio/galeria/FabricantTargetesCoberta.java	236	*
+     * Adaptador de ratolí estàtic — extret del MouseAdapter en línia
+     * (segons la troballa MEDIUM de tot.txt). Gestiona els repaints
+     * de hover i la selecció / clic dret / doble clic. L'adaptador
+     * no té estat més enllà de les referències que captura a la
+     * construcció.
+LINE	src/presentacio/galeria/FabricantTargetesCoberta.java	49	Constants Color en caché — mai no assignar dins del paint path.
+BLOCK	src/presentacio/galeria/ServeiImatgesCoberta.java	21	*
+ * Carregador asíncron + memòria cau LRU d'imatges de coberta pre-escalades.
+ *
+ * <p>Indexada per {@link Llibre#getISBN()}. El valor de la memòria cau és
+ * la imatge ja escalada a les dimensions de targeta sol·licitades, de
+ * manera que el camí de pintat pot fer blit 1:1 sense treball
+ * d'escalat per frame.
+ *
+ * <p>Posseeix el pool de loader d'un sol fil, el conjunt en vol i la
+ * matemàtica de retall-escalat. Tot l'accés des de l'EDT és via
+ * {@link #submit(Llibre, int, int, Runnable)}; la càrrega en segon
+ * pla i la mutació de la memòria cau s'executen a l'executor, amb el
+ * callback de repaint enviat de tornada a l'EDT.
+ *
+ * <p>La LRU està protegida per un {@link ReentrantReadWriteLock} de
+ * manera que les lectures EDT (el camí de pintat, dominant) s'executen
+ * concurrentment mentre que les escriptures (cache miss → load)
+ * prenen un lock exclusiu. L'embolcall anterior
+ * {@code Collections.synchronizedMap} serialitzava cada {@code get()}
+ * contra cada altre {@code get()}, cosa que blocava l'EDT en un
+ * repaint de 200 targetes (segons la troballa LOW de tot.txt).
+BLOCK	src/presentacio/galeria/ServeiImatgesCoberta.java	77	*
+     * Retorna la imatge en caché per a {@code isbn} al zoom actual, o
+     * {@code null} si encara no s'ha carregat. El caller (pintat de
+     * targeta) ha de tolerar un retorn {@code null} — el callback
+     * onLoaded del carregador farà el repaint. Bloquejat en lectura
+     * perquè els repaints EDT concurrents en una galeria de 200
+     * targetes no es serialitzin.
+BLOCK	src/presentacio/galeria/ServeiImatgesCoberta.java	185	* Descodifica un array de bytes de coberta i l'escala a l'alçada
+     *  estàndard de la icona de fila. Retorna null si les dades són
+     *  nul·les o no es poden descodificar.
+BLOCK	src/presentacio/layouts/WrapLayout.java	10	* WrapLayout — subclasse de FlowLayout que permet que els components
+ * s'ajustin a múltiples files segons l'amplada del viewport pare.
+ * Originalment extreta de la classe interna privada de
+ * {@code GaleriaCobertesPanel} per a reutilització.
+ *
+ * Adaptat de l'exemple públic "WrapLayout" del tutorial de Java de Sun:
+ *   https://docs.oracle.com/javase/tutorial/uiswing/layout/custom.html
+ *
+ * Sun Microsystems, Inc. ("Sun") SOFTWARE LICENSE AGREEMENT for the
+ * Java(TM) Tutorial Sample Code. El codi original del tutorial és de
+ * domini públic per a ús docent; aquesta adaptació conserva la caiguda
+ * walk-the-tree de layoutSize() però utilitza una sola caiguda a
+ * MAX_VALUE en lloc del patró de doble passada (veure el finding LOW
+ * de tot.txt sobre la segona passada inútil).
+BLOCK	src/presentacio/renderers/RenderitzadorCellaCoberta.java	36	*
+     * ISBN → índex de fila del model. Subministrat pel consumidor perquè el
+     * renderer pugui repintar la cel·la correcta quan acaba una càrrega en
+     * segon pla sense recórrer tota la taula (O(n) per repaint era un
+     * punt calent en biblioteques de més de 1k files). Pot ser
+     * {@code null} per compatibilitat enrere — el renderer cau a un
+     * recorregut complet de la taula en aquest cas.
+BLOCK	src/presentacio/renderers/RenderitzadorDestacatCerca.java	15	* Referència al conjunt en caché — refrescada via {@link #setLoanedISBNs(Set)} des
+     *  de {@link presentacio.ControladorTaula} cada cop que es reassigna
+     *  el {@code state.loanedISBNs} del host. Evita el despatx
+     *  {@code Supplier.get()} per cel·la que requeria l'API anterior
+     *  (la troballa MEDIUM de tot.txt va assenyalar 10 000 crides de
+     *  lambda per repaint).

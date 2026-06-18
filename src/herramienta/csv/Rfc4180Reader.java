@@ -6,17 +6,19 @@ import java.io.Reader;
 import java.util.NoSuchElementException;
 
 /**
- * Streaming RFC-4180 CSV reader. Replaces whole-file loading in {@link CsvUtils#parseLine}
- * for large imports. Returns one row at a time as a {@code String[]}.
+ * Lector CSV RFC-4180 en streaming. Substitueix la càrrega de tot el fitxer
+ * a {@link UtilitatsCsv#analitzarLine} per a importacions grans. Retorna una
+ * fila a la vegada com a {@code String[]}.
  *
- * <p>Contract: {@link #hasNext()} is the only probe; {@link #next()} is
- * guaranteed to return non-null when {@code hasNext()} is true (and throw
- * {@link NoSuchElementException} otherwise). The previous API returned
- * {@code null} for a trailing empty input, forcing callers to null-check
- * {@code next()}; per the tot.txt LOW finding, the contract is now
- * "hasNext is the only probe".
+ * <p>Contracte: {@link #hasNext()} és l'única sonda; {@link #next()} està
+ * garantit que retorna no-null quan {@code hasNext()} és cert (i llança
+ * {@link NoSuchElementException} altrament). L'API anterior retornava
+ * {@code null} per a una entrada buida final, forçant els consumidors a
+ * comprovar null a {@code next()}; segons el finding LOW de tot.txt, el
+ * contracte ara és "hasNext és l'única sonda".
  *
- * <p>Caller-supplied {@link Reader} must be {@code BufferedReader} for line-buffered reads.
+ * <p>El {@link Reader} subministrat pel consumidor ha de ser {@code BufferedReader}
+ * per a lectures línia a línia amb buffer.
  */
 public final class Rfc4180Reader implements AutoCloseable {
 
@@ -27,15 +29,15 @@ public final class Rfc4180Reader implements AutoCloseable {
         this.in = r instanceof BufferedReader br ? br : new BufferedReader(r);
     }
 
-    /** Returns true if there is another row to read. The next call to
-     *  {@link #next()} will return a non-null {@code String[]}. */
+    /** Retorna cert si hi ha una altra fila per llegir. La propera crida a
+     *  {@link #next()} retornarà un {@code String[]} no-null. */
     public boolean hasNext() throws IOException {
         if (pending != null) return true;
         pending = llegirLogicalRow();
         return pending != null;
     }
 
-    /** Reads the next logical row, joining continuation lines inside quotes. */
+    /** Llegeix la següent fila lògica, unint línies de continuació dins de cometes. */
     public String[] next() throws IOException {
         if (pending == null) pending = llegirLogicalRow();
         if (pending == null) throw new NoSuchElementException();
@@ -44,7 +46,7 @@ public final class Rfc4180Reader implements AutoCloseable {
         return row;
     }
 
-    /** Reads one logical row (or null at EOF) into a flat string. */
+    /** Llegeix una fila lògica (o null a EOF) en una cadena plana. */
     private String llegirLogicalRow() throws IOException {
         StringBuilder accum = new StringBuilder();
         boolean inQuote = false;

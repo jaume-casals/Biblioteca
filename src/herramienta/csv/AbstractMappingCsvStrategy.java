@@ -2,33 +2,34 @@ package herramienta.csv;
 
 import domini.Llista;
 import domini.Tag;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
 abstract class AbstractMappingCsvStrategy implements CsvImportStrategy {
-    @Override public abstract String getName();
+    @Override public abstract String obtenirNom();
     private Map<String, Llista> shelfMap;
     private Map<String, Tag>    tagMap;
 
-    protected Llista resolveShelf(BibliotecaWriter cd, String name) {
+    protected Llista resolveShelf(EscritorBiblioteca cd, String name) {
         return resolveOrCreate(cd, name, cd::obtenirAllLlistes, Llista::obtenirNom, cd::afegirLlista, this.shelfMap,
             m -> { this.shelfMap = m; });
     }
 
-    protected Tag resolveTag(BibliotecaWriter cd, String name) {
+    protected Tag resolveTag(EscritorBiblioteca cd, String name) {
         return resolveOrCreate(cd, name, cd::obtenirAllTags, Tag::obtenirNom, cd::afegirTag, this.tagMap,
             m -> { this.tagMap = m; });
     }
 
     /**
-     * Generic "find or create by name" lookup. Caches the full table on
-     * first call so subsequent lookups are O(1) hash hits. The cache is
-     * held in the strategy so the same map is reused across rows.
+     * Cerca genèrica "troba o crea per nom". Emmagatzema en caché la taula
+     * sencera a la primera crida de manera que les cerques següents siguin
+     * encerts O(1) de hash. La caché es manté a l'estratègia perquè el
+     * mateix mapa es reutilitzi entre files.
      */
-    private static <E> E resolveOrCreate(BibliotecaWriter cd,
+    private static <E> E resolveOrCreate(EscritorBiblioteca cd,
                                          String name,
                                          java.util.function.Supplier<java.util.List<E>> all,
                                          Function<E, String> nameOf,

@@ -1,10 +1,10 @@
 package herramienta;
 
-/** Centralized string-escape utilities used by export/serialization paths. */
+/** Utilitats centralitzades d'escapament de cadenes usades pels camins d'exportació/serialització. */
 public final class Escapers {
     private Escapers() {}
 
-    /** HTML-escape: handles & < > " '. */
+    /** HTML-escape: tracta & < > " '. */
     public static String html(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;")
@@ -14,12 +14,12 @@ public final class Escapers {
                 .replace("'", "&#39;");
     }
 
-    /** SQL single-quote-string escape (doubles a {@code '} character). The caller adds outer quotes. */
+    /** Escapament SQL de cadena entre cometes simples (duplica el caràcter {@code '}). El consumidor afegeix les cometes exteriors. */
     public static String sql(String s) {
         return s == null ? "" : s.replace("'", "''");
     }
 
-    /** JSON string escape (handles backslash, quote, control chars). */
+    /** Escapament de cadena JSON (tracta la barra invertida, les cometes i els caràcters de control). */
     public static String json(String s) {
         if (s == null) return "";
         StringBuilder sb = new StringBuilder(s.length() + 8);
@@ -42,7 +42,7 @@ public final class Escapers {
         return sb.toString();
     }
 
-    /** CSV quoting per RFC-4180 (double internal {@code "}, wrap in {@code "}). */
+    /** Cometes CSV segons RFC-4180 (duplica la {@code "} interna, embolcall en {@code "}). */
     public static String csv(String s) {
         if (s == null) return "";
         return "\"" + s.replace("\"", "\"\"") + "\"";

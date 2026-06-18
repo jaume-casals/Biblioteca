@@ -17,7 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
 import domini.Llista;
-import interficie.ShelfWriter;
+import interficie.EscritorPrestatgeria;
 import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.UITheme;
@@ -28,15 +28,15 @@ public class DialegGestioLlistes extends JDialog {
     private final ControladorMostrarBiblioteca mainControl;
     private final DefaultListModel<Llista> listModel = new DefaultListModel<>();
     private final JList<Llista> jList = new JList<>(listModel);
-    private final ShelfWriter cd;
+    private final EscritorPrestatgeria cd;
 
-    /** El diàleg requereix un {@code cd} (ShelfWriter) no nul — la caiguda
+    /** El diàleg requereix un {@code cd} (EscritorPrestatgeria) no nul — la caiguda
      *  a null cap a {@code ControladorDomini.getInstance()} s'ha eliminat
      *  segons el finding MEDIUM de tot.txt. El consumidor (ShelfController)
      *  és l'únic punt d'entrada i sempre subministra {@code state.cd}. */
-    public DialegGestioLlistes(Window owner, ControladorMostrarBiblioteca mainControl, ShelfWriter cd) {
+    public DialegGestioLlistes(Window owner, ControladorMostrarBiblioteca mainControl, EscritorPrestatgeria cd) {
         super(owner, I18n.t("dlg_gestio_llistes_title"), ModalityType.APPLICATION_MODAL);
-        if (cd == null) throw new IllegalArgumentException("cd (ShelfWriter) is required");
+        if (cd == null) throw new IllegalArgumentException("cd (EscritorPrestatgeria) is required");
         this.mainControl = mainControl;
         this.cd = cd;
         setSize(340, 400);
@@ -163,8 +163,8 @@ public class DialegGestioLlistes extends JDialog {
         // Per defecte, el blau compartit del selector de color quan la
         // prestatgeria encara no té color (pujat a ColorSwatchPicker.DEFAULT_HEX
         // segons el finding MEDIUM de tot.txt sobre el valor per defecte compartit).
-        java.awt.Color initial = sel.getColor() != null
-            ? java.awt.Color.decode(sel.getColor()) : java.awt.Color.decode(herramienta.SelectorMostraColor.DEFAULT_HEX);
+        java.awt.Color initial = sel.obtenirColor() != null
+            ? java.awt.Color.decode(sel.obtenirColor()) : java.awt.Color.decode(herramienta.SelectorMostraColor.DEFAULT_HEX);
         String hex = herramienta.SelectorMostraColor.chooseHex(this, initial, "dlg_escull_color_title");
         if (hex == null) return;
         try {
@@ -204,7 +204,7 @@ public class DialegGestioLlistes extends JDialog {
                 javax.swing.JLabel lbl = (javax.swing.JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value instanceof Llista) {
                     Llista ll = (Llista) value;
-                    String col = ll.getColor();
+                    String col = ll.obtenirColor();
                     lbl.setIcon(col != null ? UtilitatsColor.colorSwatch(java.awt.Color.decode(col)) : null);
                 }
                 return lbl;

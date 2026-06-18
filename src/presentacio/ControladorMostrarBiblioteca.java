@@ -5,19 +5,19 @@ package presentacio;
 import presentacio.UIComponents;
 import domini.Llibre;
 import herramienta.UITheme;
-import interficie.BibliotecaWriter;
-import presentacio.listener.EnActualizarBBDD;
+import interficie.EscritorBiblioteca;
+import presentacio.listener.EnActualitzarBBDD;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import java.util.ArrayList;
 
-/** Slim coordinator for the main library screen; delegates to sub-controllers. */
-public class ControladorMostrarBiblioteca implements LibraryScreenHost {
+/** Coordinador prim per a la pantalla principal de la biblioteca; delega als sub-controladors. */
+public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca {
 
     public static void netejarCoverCache() { MemoriaImatgesCoberta.clear(); }
 
-    private final LibraryViewState state;
+    private final EstatVistaBiblioteca state;
     private final ControladorTaula tableCtrl;
     private final ControladorPaginaTaula pageCtrl;
     private final JButton botonDetalles;
@@ -30,9 +30,9 @@ public class ControladorMostrarBiblioteca implements LibraryScreenHost {
     private final ControladorModeVista viewModeCtrl;
 
     public ControladorMostrarBiblioteca(PanelMostrarBiblioteca vista, java.util.List<Llibre> biblio,
-            EnActualizarBBDD enActualizarBBDD, BibliotecaWriter cd) {
-        if (cd == null) throw new IllegalArgumentException("cd (BibliotecaWriter) is required");
-        this.state = new LibraryViewState(vista, biblio, enActualizarBBDD, cd);
+            EnActualitzarBBDD enActualizarBBDD, EscritorBiblioteca cd) {
+        if (cd == null) throw new IllegalArgumentException("cd (EscritorBiblioteca) is required");
+        this.state = new EstatVistaBiblioteca(vista, biblio, enActualizarBBDD, cd);
         this.botonDetalles = new JButton();
         UIComponents.styleAccentButton(this.botonDetalles);
         this.tableCtrl = new ControladorTaula(vista);
@@ -83,7 +83,7 @@ public class ControladorMostrarBiblioteca implements LibraryScreenHost {
             shelfCtrl.refrescarComboTags();
         }));
         state.vista.obtenirBtnSobre().addActionListener(e ->
-            new QuantADialog((java.awt.Frame) state.vista.getTopLevelAncestor()).setVisible(true));
+            new QuantADialeg((java.awt.Frame) state.vista.getTopLevelAncestor()).setVisible(true));
         botonDetalles.addActionListener(e -> bookActionsCtrl.abrirDetallesLlibres());
     }
 
@@ -94,7 +94,7 @@ public class ControladorMostrarBiblioteca implements LibraryScreenHost {
             contextMenuCtrl.contextMenu());
     }
 
-    // ── LibraryScreenHost ──────────────────────────────────────────────────────
+    // ── AmfitrioPantallaBiblioteca ──────────────────────────────────────────────────────
 
     @Override public void posarTable(java.util.List<Llibre> llibres) {
         state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
@@ -142,9 +142,9 @@ public class ControladorMostrarBiblioteca implements LibraryScreenHost {
 
     @Override public JButton detallesBtn() { return botonDetalles; }
 
-    @Override public LibraryViewState state() { return state; }
+    @Override public EstatVistaBiblioteca state() { return state; }
 
-    // ── Public API (MainFrameControl, GestioLlistesDialog, EnActualizarBBDD) ─
+    // ── Public API (MainFrameControl, GestioLlistesDialog, EnActualitzarBBDD) ─
 
     public JPanel view() { return state.vista; }
 
@@ -165,7 +165,7 @@ public class ControladorMostrarBiblioteca implements LibraryScreenHost {
             pageCtrl.posarUseDBPagination(false);
         } else {
             // Lleuger — els textos, notes i coberta pesats es carreguen
-            // de manera mandrosa des de DetallesLlibrePanelControl via
+            // de manera mandrosa des de ControladorPanellDetallsLlibre via
             // loadHeavyFields() quan l'usuari obre el diàleg de detalls.
             state.biblio = new ArrayList<>(state.cd.obtenirAllLlibresSummary());
             pageCtrl.posarUseDBPagination(state.cd.esLargeLibrary());

@@ -7,7 +7,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Reads from the {@code lectura} table (one row per reading session). */
+/** Lectures de la taula {@code lectura} (una fila per sessió de lectura). */
 public class LlibreLecturaDao {
 
     private final Connection con;

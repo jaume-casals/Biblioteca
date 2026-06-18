@@ -70,7 +70,7 @@ public class TestEstres {
         log("Iniciat: " + LocalDateTime.now());
 
         Thread appThread = new Thread(() -> {
-            try { main.Ejecutable.main(new String[]{"--swing"}); }
+            try { main.Executable.main(new String[]{"--swing"}); }
             catch (Exception e) { log("APP LAUNCH ERROR: " + e); }
         }, "app-main");
         appThread.setDaemon(true);
@@ -1354,7 +1354,7 @@ public class TestEstres {
                         ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_ON_EXIT=FALSE",
                     "-Duser.home=" + homeDir.getAbsolutePath(),
                     "-cp", cp,
-                    "main.Ejecutable", "--swing");
+                    "main.Executable", "--swing");
                 pb.inheritIO();
                 Process p = pb.start();
                 childProcs.add(p);
@@ -1614,7 +1614,7 @@ public class TestEstres {
             check("estat persisteix",     "nou", db.getEstat());
             check("exemplars persisteix", 4, db.getExemplars());
             check("idioma persisteix",    "Català", db.getIdioma());
-            check("format persisteix",    "Tapa dura", db.getFormat());
+            check("format persisteix",    "Tapa dura", db.obtenirFormat());
             check("pagines persisteix",   320, db.getPagines());
             check("pagines_llegides persisteix", 160, db.getPaginesLlegides());
             check("llegit persisteix",    Boolean.TRUE, db.getLlegit());

@@ -13,11 +13,11 @@ import domini.facade.StateContext;
 import domini.facade.DelegatEstadistiques;
 import domini.facade.TagDelegate;
 import herramienta.ServeiCopiaSeguretat;
-import interficie.BibliotecaWriter;
-import interficie.BookWriter;
-import interficie.LoanWriter;
-import interficie.ShelfWriter;
-import interficie.TagWriter;
+import interficie.EscritorBiblioteca;
+import interficie.EscritorLlibre;
+import interficie.EscritorPrestec;
+import interficie.EscritorPrestatgeria;
+import interficie.EscritorEtiqueta;
 import persistencia.ControladorPersistencia;
 import persistencia.LecturaRow;
 import persistencia.LlibreLlistaRow;
@@ -25,26 +25,26 @@ import persistencia.LlibreTagRow;
 import persistencia.PrestecRow;
 
 /**
- * Singleton facade over the library's in-memory state + persistence.
+ * Façana singleton sobre l'estat en memòria de la biblioteca i la persistència.
  *
- * <p>Responsibilities:
+ * <p>Responsabilitats:
  * <ul>
- *   <li>Singleton lifecycle ({@link #getInstance()}, {@link #resetForTest()},
- *       {@link #resetForProfileSwitch()}, {@link #create(ControladorPersistencia)}).</li>
- *   <li>Owns the {@link StateContext}: the three backing lists
- *       ({@code bib}, {@code llistes}, {@code tags}), the in-memory lock
- *       ({@code BIB_LOCK}), and the id-index maps.</li>
- *   <li>Delegates every business operation to one of six focused
- *       collaborator classes in {@code domini.facade} — Shelf, Tag,
- *       Loan, Book, Stats, Backup.</li>
+ *   <li>Cicle de vida del singleton ({@link #getInstance()}, {@link #reinicialitzarForTest()},
+ *       {@link #reinicialitzarForProfileSwitch()}, {@link #create(ControladorPersistencia)}).</li>
+ *   <li>Posseeix el {@link StateContext}: les tres llistes de suport
+ *       ({@code bib}, {@code llistes}, {@code tags}), el lock en memòria
+ *       ({@code BIB_LOCK}) i els mapes d'índex per id.</li>
+ *   <li>Delega cada operació de negoci a una de les sis classes col·laboradores
+ *       específiques de {@code domini.facade} — Prestatgeria, Etiqueta,
+ *       Préstec, Llibre, Estadístiques, CòpiaDeSeguretat.</li>
  * </ul>
  *
- * <p>The public API of this class is unchanged: every method that existed
- * before the split still exists, with the same signature, same
- * exceptions, and same side effects. The only externally observable
- * change is the file's line count (637 → ~150).
+ * <p>L'API pública d'aquesta classe no canvia: cada mètode que existia
+ * abans de la divisió continua existint, amb la mateixa signatura, les
+ * mateixes excepcions i els mateixos efectes col·laterals. L'únic canvi
+ * externament observable és el recompte de línies del fitxer (637 → ~150).
  */
-public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWriter, TagWriter, LoanWriter {
+public class ControladorDomini implements EscritorBiblioteca, EscritorLlibre, EscritorPrestatgeria, EscritorEtiqueta, EscritorPrestec {
 
 	private static ControladorDomini inst;
 
@@ -160,7 +160,7 @@ public class ControladorDomini implements BibliotecaWriter, BookWriter, ShelfWri
 	public java.util.Set<Long> obtenirLoanedISBNs()                                                   { return loans.obtenirLoanedISBNs(); }
 	public java.util.List<PrestecRow> obtenirAllActiveLoans()                                         { return loans.obtenirAllActiveLoans(); }
 	public java.util.List<PrestecRow> obtenirLoansForIsbn(long isbn)                                  { return loans.obtenirLoansForIsbn(isbn); }
-	public java.util.List<persistencia.OverdueLoan> obtenirAllOverdueLoans(int daysThreshold)          { return loans.obtenirAllOverdueLoans(daysThreshold); }
+	public java.util.List<persistencia.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold)          { return loans.obtenirAllOverdueLoans(daysThreshold); }
 	public int comptarLoans(long isbn)                                                              { return loans.comptarLoans(isbn); }
 
 	// ── Stats / autocomplete / backup payload ────────────────────────────────

@@ -9,7 +9,7 @@ import com.google.gson.JsonParser;
 import domini.Llista;
 import domini.Llibre;
 import domini.Tag;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 import herramienta.ImportadorLlibres.ResultatImportacio;
 
 import java.io.BufferedInputStream;
@@ -24,22 +24,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Importador JSON compartit per {@link BookImporter#importJSON(File, BibliotecaWriter)}.
- * Lònica deduplicada — un
+ * Importador JSON compartit per {@link ImportadorLlibres#importJSON(File, EscritorBiblioteca)}.
+ * Lògica deduplicada — un
  * canvi en el format d'entrada només cal aplicar-lo aquí.
  */
 public final class JsonImporter {
 
     private JsonImporter() {}
 
-    public static ResultatImportacio run(File f, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio run(File f, EscritorBiblioteca cd) throws Exception {
         try (Reader reader = new InputStreamReader(
                 new BufferedInputStream(new FileInputStream(f)), StandardCharsets.UTF_8)) {
             return run(JsonParser.parseReader(reader).getAsJsonObject(), cd);
         }
     }
 
-    public static ResultatImportacio run(JsonObject root, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio run(JsonObject root, EscritorBiblioteca cd) throws Exception {
         int ok = 0, skipped = 0, err = 0;
         List<String> errDetails = new ArrayList<>();
         Map<Integer, Integer> tagIdMap = new HashMap<>();
@@ -120,7 +120,7 @@ public final class JsonImporter {
                     err++;
                     errDetails.add(e.getMessage());
                     Logger.getLogger(JsonImporter.class.getName())
-                        .log(Level.FINE, "Failed to import book entry: " + e.getMessage(), e);
+                        .log(Level.FINE, "No s'ha pogut importar l'entrada del llibre: " + e.getMessage(), e);
                 }
             }
         }

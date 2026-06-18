@@ -36,7 +36,7 @@ public class LlibreFilter {
     public Integer obtenirTagId() { return tagId; }
     public String obtenirEditorial() { return editorial; }
     public String obtenirSerie() { return serie; }
-    public String getFormat() { return format; }
+    public String obtenirFormat() { return format; }
     public String obtenirIdioma() { return idioma; }
     public Integer obtenirLlistaId() { return llistaId; }
     public EspecificacioOrdenacio obtenirSort() { return sort; }

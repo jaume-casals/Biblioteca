@@ -1,11 +1,12 @@
 package domini;
 
 /**
- * Per-book context for a shelf membership: which shelf, which book, and the
- * shelf-local values (rating, read flag) that only make sense in the context
- * of that specific (book, shelf) pair. Use this instead of putting the
- * per-book fields on {@link Llista} directly — the shelf itself has no
- * rating, only the (book, shelf) join does.
+ * Context per llibre d'una pertinença a prestatge: quin prestatge, quin llibre,
+ * i els valors locals del prestatge (valoració, marca de llegit) que només
+ * tenen sentit en el context d'aquesta parella (llibre, prestatge) concreta.
+ * Fes servir això en lloc de posar els camps per-llibre directament a
+ * {@link Llista} — el prestatge en si no té valoració, només la unió
+ * (llibre, prestatge).
  */
 public record LlibreLlistaContext(
     long isbn,

@@ -29,14 +29,16 @@ import herramienta.UtilitatsSwing;
 import herramienta.UITheme;
 
 /**
- * Dialog for managing the tags assigned to a single book.
+ * Diàleg per gestionar les etiquetes assignades a un sol llibre.
  * <p>
- * Unlike {@link presentacio.detalles.vista.LlistesDelLlibreDialog}, which defers
- * shelf-membership changes until the user clicks OK/Save, this dialog applies every
- * tag add/remove operation immediately (via {@link presentacio.detalles.control.TagsDelLlibreControl}).
- * The immediate-persist model is chosen because tag operations are lightweight single
- * many-to-many rows, whereas shelf membership also carries per-book rating and read-state
- * that benefit from batch editing.
+ * A diferència de {@link presentacio.detalles.vista.DialegLlistesLlibre}, que
+ * ajorna els canvis de pertinença a prestatgeria fins que l'usuari fa clic a
+ * OK/Desar, aquest diàleg aplica cada operació d'afegir/treure etiqueta
+ * immediatament (via {@link presentacio.detalles.control.ControladorEtiquetesLlibre}).
+ * Es tria el model de persistència immediata perquè les operacions
+ * d'etiquetes són files individuals de many-to-many lleugeres, mentre que
+ * la pertinença a prestatgeria també porta valoració per llibre i estat de
+ * lectura que es beneficien de l'edició per lots.
  */
 public class DialegEtiquetesLlibre extends JDialog {
 
@@ -53,7 +55,7 @@ public class DialegEtiquetesLlibre extends JDialog {
         this(owner, llibre, null);
     }
 
-    public DialegEtiquetesLlibre(Window owner, Llibre llibre, interficie.TagWriter cd) {
+    public DialegEtiquetesLlibre(Window owner, Llibre llibre, interficie.EscritorEtiqueta cd) {
         super(owner, I18n.t("dlg_tags_for_book", llibre.obtenirNom()), ModalityType.APPLICATION_MODAL);
         setSize(400, 440);
         setLocationRelativeTo(owner);

@@ -3,10 +3,11 @@ package herramienta;
 import java.util.List;
 
 /**
- * Typed read/write view of window-geometry and table-column {@link Config} keys.
- * The column-width / column-visible keys live in the WINDOW sub-store
- * (see {@code Config.WINDOW_KEYS} plus the dynamic {@code colWidth_*} /
- * {@code colVisible_*} prefix rule).
+ * Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades
+ * amb la geometria de finestra i les columnes de la taula. Les claus
+ * d'amplada/visibilitat de columna viuen al sub-emmagatzematge WINDOW
+ * (veure {@code Config.WINDOW_KEYS} més la regla dinàmica de prefix
+ * {@code colWidth_*} / {@code colVisible_*}).
  */
 public final class ConfiguracioFinestra {
     private ConfiguracioFinestra() {}

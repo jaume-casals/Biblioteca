@@ -1,6 +1,6 @@
 package herramienta;
 
-/** Typed read/write view of database-related {@link Config} keys. */
+/** Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades amb la base de dades. */
 public final class ConfiguracioDb {
     private ConfiguracioDb() {}
 

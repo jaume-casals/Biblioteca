@@ -10,19 +10,19 @@ import domini.Tag;
 import herramienta.Configuracio;
 
 /**
- * Singleton facade over all DAOs. All public methods are {@code synchronized} so that
- * callers (ControladorDomini and the API layer) get thread-safe access without needing
- * to lock individual DAOs.
+ * Façana singleton sobre tots els DAO. Tots els mètodes públics són {@code synchronized}
+ * perquè els consumidors (ControladorDomini i la capa d'API) obtinguin accés thread-safe
+ * sense necessitat de bloquejar els DAO individuals.
  *
- * <p>This wrapper exists to centralise lifecycle (singleton, test reset, profile
- * switch, shutdown hook) and to give {@code ControladorDomini} a single dependency.
- * DAOs are not individually synchronised — every call path goes through a
- * {@code synchronized} method here, so DAO-level {@code synchronized} would be
- * redundant double-locking.
+ * <p>Aquest embolcall existeix per centralitzar el cicle de vida (singleton, reinicialització
+ * de test, canvi de perfil, ganxo de tancada) i per donar a {@code ControladorDomini} una sola
+ * dependència. Els DAO no es sincronitzen individualment — cada ruta de crida passa per un
+ * mètode {@code synchronized} aquí, de manera que un {@code synchronized} a nivell de DAO
+ * seria un doble bloqueig redundant.
  *
- * <p>Lifecycle: {@link #getInstance()} opens a JDBC connection and initialises DAOs;
- * {@link #resetForTest()} clears data and discards the instance (between test groups);
- * {@link #resetForProfileSwitch()} closes the connection (H2 ↔ MariaDB profile switch).
+ * <p>Cicle de vida: {@link #getInstance()} obre una connexió JDBC i inicialitza els DAO;
+ * {@link #reinicialitzarForTest()} buida les dades i descarta la instància (entre grups de test);
+ * {@link #reinicialitzarForProfileSwitch()} tanca la connexió (canvi de perfil H2 ↔ MariaDB).
  *
  * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un
  * {@link java.util.concurrent.locks.ReadWriteLock} (lectures concurrents, escriptures
@@ -35,7 +35,7 @@ public class ControladorPersistencia {
 	private static volatile ControladorPersistencia inst;
 	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
 		new java.util.concurrent.atomic.AtomicBoolean(false);
-	private final ServerConect sc;
+	private final ConnexioServidor sc;
 	private final LlibreDaoCore libreDaoCore;
 	private final LlibreBlobDao libreBlobDao;
 	private final LlibreSearchDao libreSearchDao;
@@ -54,7 +54,7 @@ public class ControladorPersistencia {
 	public static synchronized void reinicialitzarForTest() {
 		if (inst != null) {
 			try { inst.libreDaoCore.netejarAllData(); } catch (Exception e) {
-				LOG.log(java.util.logging.Level.WARNING, "Warning: failed to clear test data", e);
+				LOG.log(java.util.logging.Level.WARNING, "Avís: no s'han pogut netejar les dades de test", e);
 			}
 		}
 		inst = null;
@@ -77,9 +77,9 @@ public class ControladorPersistencia {
 			Configuracio.obtenirDbProfile(),
 			testUrl
 		);
-		sc = new ServerConect();
+		sc = new ConnexioServidor();
 		sc.crearDatabase(cfg);
-		java.sql.Connection con = sc.getConnection();
+		java.sql.Connection con = sc.obtenirConnexio();
 		libreDaoCore     = new LlibreDaoCore(con);
 		libreBlobDao     = new LlibreBlobDao(con);
 		libreSearchDao   = new LlibreSearchDao(con);
@@ -95,7 +95,7 @@ public class ControladorPersistencia {
 		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
 			main.ShutdownHooks.register(() -> {
 				try { sc.tancarConnection(); } catch (Exception e) {
-					LOG.log(java.util.logging.Level.FINE, "Error closing DB on shutdown", e);
+					LOG.log(java.util.logging.Level.FINE, "Error en tancar la BD en sortir", e);
 				}
 			});
 		}
@@ -104,9 +104,9 @@ public class ControladorPersistencia {
 	public synchronized ArrayList<Llibre> obtenirAllLlibres() { return libreDaoCore.obtenirAll(); }
 
 	/**
-	 * Alias for {@link #getAllLlibres()} retained for caller compatibility.
-	 * The DAO already returns the light view (no descripcio/notes); heavy
-	 * fields must be loaded per-book via {@link #loadHeavyFields}.
+	 * Àlies de {@link #obtenirAllLlibres()} conservat per compatibilitat amb els consumidors.
+	 * El DAO ja retorna la vista lleugera (sense descripcio/notes); els camps pesats
+	 * s'han de carregar per llibre amb {@link #carregarHeavyFields}.
 	 */
 	public synchronized ArrayList<Llibre> obtenirAllLlibresSummary() { return libreDaoCore.obtenirAll(); }
 
@@ -121,14 +121,13 @@ public class ControladorPersistencia {
 	}
 	public synchronized void executarSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDaoCore.executarSQLFile(file); }
 	/**
-	 * Atomically restore the database from a SQL backup file: clears
-	 * all data and executes the file's statements inside a single JDBC
-	 * transaction. If any statement in the file fails, the entire
-	 * transaction is rolled back and the database is unchanged. Used by
-	 * {@link domini.facade.BackupDelegate#restoreFromSQL(java.io.File)} to
-	 * close the "kill the app between clearAllData() and executeSQLFile()"
-	 * window. The pre-restore snapshot to a temp file is the user-facing
-	 * undo path; this method is the in-process safety net.
+	 * Restaura atòmicament la base de dades des d'un fitxer SQL de còpia de seguretat:
+	 * buida totes les dades i executa les sentències del fitxer dins d'una sola transacció
+	 * JDBC. Si alguna sentència del fitxer falla, tota la transacció es reverteix i la
+	 * base de dades queda intacta. Usat per {@link domini.facade.DelegatCopiaSeguretat#restaurarFromSQL(java.io.File)}
+	 * per tancar la finestra "matar l'aplicació entre clearAllData() i executarSQLFile()".
+	 * La instantània pre-restauració a un fitxer temporal és el camí de desfer visible
+	 * per a l'usuari; aquest mètode és la xarxa de seguretat dins del procés.
 	 */
 	public synchronized void restaurarFromSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
 		libreDaoCore.restaurarFromSQL(file);
@@ -142,12 +141,11 @@ public class ControladorPersistencia {
 		libreBlobDao.carregarHeavyFields(isbn, target);
 	}
 	/**
-	 * Batched counterpart to {@link #loadHeavyFields(long, Llibre)}: one
-	 * round-trip for N books instead of N. The caller supplies an ISBN
-	 * list AND a lookup function that maps each ISBN to the in-memory
-	 * {@link Llibre} to mutate. The DAO does not depend on the
-	 * in-memory state; this is the only path that closes the N+1
-	 * pre-load in {@link domini.facade.BackupDelegate}.
+	 * Contrapartida per lots de {@link #carregarHeavyFields(long, Llibre)}: un sol viatge
+	 * d'anada i tornada per a N llibres en lloc de N. El consumidor subministra una llista
+	 * d'ISBN I una funció de cerca que mapeja cada ISBN al {@link Llibre} en memòria a mutar.
+	 * El DAO no depèn de l'estat en memòria; aquest és l'únic camí que tanca la precàrrega
+	 * N+1 a {@link domini.facade.DelegatCopiaSeguretat}.
 	 */
 	public synchronized void carregarHeavyFieldsBatched(java.util.List<Long> isbns,
 	                                                java.util.function.LongFunction<domini.Llibre> targetLookup) {
@@ -160,16 +158,16 @@ public class ControladorPersistencia {
 	}
 	public synchronized void posarLlibreBlob(long isbn, byte[] blob) throws java.sql.SQLException { libreBlobDao.setBlob(isbn, blob); }
 	/**
-	 * Exposes the underlying JDBC connection for callers that need to run
-	 * multi-statement transactions (e.g. {@link herramienta.BackupService}
-	 * takes a SERIALIZABLE snapshot of all tables). Callers MUST
-	 * synchronize on this {@code ControladorPersistencia} instance while
-	 * holding the connection so the DAOs do not observe a half-set
-	 * transaction state — every DAO method is {@code synchronized} on
-	 * this same monitor, so a {@code synchronized(cp)} block around the
-	 * transaction keeps the connection state consistent.
+	 * Exposa la connexió JDBC subjacent per a consumidors que necessiten executar
+	 * transaccions multi-sentència (p.ex. {@link herramienta.ServeiCopiaSeguretat}
+	 * pren una instantània SERIALIZABLE de totes les taules). Els consumidors HAN DE
+	 * sincronitzar sobre aquesta instància de {@code ControladorPersistencia} mentre
+	 * tenen la connexió, perquè els DAO no observin un estat de transacció a mig
+	 * configurar — cada mètode de DAO és {@code synchronized} sobre el mateix monitor,
+	 * de manera que un bloc {@code synchronized(cp)} al voltant de la transacció
+	 * manté l'estat de la connexió consistent.
 	 */
-	public java.sql.Connection getConnection() { return sc.getConnection(); }
+	public java.sql.Connection obtenirConnexio() { return sc.obtenirConnexio(); }
 	public synchronized void netejarAllData() throws java.sql.SQLException {
 		libreDaoCore.netejarAllData();
 		tagDao.invalidateLlibreTagCache();
@@ -181,7 +179,7 @@ public class ControladorPersistencia {
 	public synchronized int crearLlista(String nom) throws SQLException { return llistaDao.create(nom); }
 	public synchronized void eliminarLlista(int id) throws SQLException { llistaDao.delete(id); }
 	public synchronized void reanomenarLlista(int id, String newNom) throws SQLException { llistaDao.actualitzarNom(id, newNom); }
-	public synchronized int obtenirCountInLlista(int llistaId) { return llistaDao.getCount(llistaId); }
+	public synchronized int obtenirCountInLlista(int llistaId) { return llistaDao.obtenirRecompte(llistaId); }
 	public synchronized java.util.Map<Integer,Integer> obtenirAllCountsInLlistes() { return llistaDao.obtenirAllCounts(); }
 	public synchronized java.util.List<persistencia.LlibreLlistaRow> obtenirAllLlibreLlista() { return llistaDao.obtenirAllLlibreLlista(); }
 	public synchronized ArrayList<Llibre> obtenirLlibresInLlista(int llistaId) { return llistaDao.obtenirLlibres(llistaId); }
@@ -211,7 +209,7 @@ public class ControladorPersistencia {
 		return prestecDao.obtenirActiveLoans();
 	}
 	public synchronized java.util.List<persistencia.PrestecRow> obtenirLoansForIsbn(long isbn) { return prestecDao.obtenirForIsbn(isbn); }
-	public synchronized java.util.List<persistencia.OverdueLoan> obtenirAllOverdueLoans(int days) { return prestecDao.obtenirOverdue(days); }
+	public synchronized java.util.List<persistencia.PrestecEndarrerit> obtenirAllOverdueLoans(int days) { return prestecDao.obtenirOverdue(days); }
 	public synchronized void afegirPrestec(long isbn, String nom) throws java.sql.SQLException { prestecDao.add(isbn, nom); }
 	public synchronized void returnPrestec(long isbn) throws java.sql.SQLException { prestecDao.returnLoan(isbn); }
 	public synchronized java.util.Set<Long> obtenirLoanedISBNs() { return prestecDao.obtenirLoanedISBNs(); }
@@ -220,14 +218,14 @@ public class ControladorPersistencia {
 	public synchronized java.util.List<persistencia.AutorRow> obtenirAllAutorRows() {
 		return autorDao.obtenirAll();
 	}
-	/** @deprecated use {@link #getAllAutorRows()} — kept for callers that need the Object[] shape. */
+	/** @deprecated usa {@link #obtenirAllAutorRows()} — conservat per a consumidors que necessiten la forma Object[]. */
 	@Deprecated
 	public synchronized java.util.List<Object[]> obtenirAllAutors() {
 		return autorDao.obtenirAll().stream()
 				.map(r -> new Object[]{r.id(), r.nom()})
 				.collect(java.util.stream.Collectors.toList());
 	}
-	/** @deprecated use {@link #getAllLlibreAutorRows()} — kept for callers that need the Object[] shape. */
+	/** @deprecated usa {@link #obtenirAllLlibreAutorRows()} — conservat per a consumidors que necessiten la forma Object[]. */
 	@Deprecated
 	public synchronized java.util.List<Object[]> obtenirAllLlibreAutor() {
 		return autorDao.obtenirAllLlibreAutor().stream()
@@ -238,7 +236,7 @@ public class ControladorPersistencia {
 	public synchronized java.util.List<LlibreAutorRow> obtenirAllLlibreAutorRows() {
 		return autorDao.obtenirAllLlibreAutor();
 	}
-	/** For backup/export only — no UI consumer yet. */
+	/** Només per a còpia/exportació — sense consumidor d'IU encara. */
 	public synchronized java.util.List<LecturaRow> obtenirAllLectures() { return libreLecturaDao.obtenirAllLectures(); }
 
 	public synchronized ArrayList<Llibre> cercarLlibres(domini.LlibreFilter f, int offset, int pageSize) {

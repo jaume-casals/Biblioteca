@@ -870,7 +870,7 @@ class BibliotecaJUnit5Test {
         assertThat(c.obtenirSerie()).isEqualTo(src.obtenirSerie());
         assertThat(c.obtenirVolum()).isEqualTo(src.obtenirVolum());
         assertThat(c.obtenirIdioma()).isEqualTo(src.obtenirIdioma());
-        assertThat(c.getFormat()).isEqualTo(src.getFormat());
+        assertThat(c.obtenirFormat()).isEqualTo(src.obtenirFormat());
         assertThat(c.esDesitjat()).isEqualTo(src.esDesitjat());
         assertThat(c.obtenirPaisOrigen()).isEqualTo(src.obtenirPaisOrigen());
         assertThat(c.obtenirEstat()).isEqualTo(src.obtenirEstat());
@@ -974,10 +974,10 @@ class BibliotecaJUnit5Test {
         assertThat(Llista.esValidColor("red")).isFalse();
         assertThat(Llista.esValidColor("#zzzzzz")).isFalse();
         Llista l = new Llista(1, "ok");
-        l.setColor("#abc");
-        assertThat(l.getColor()).isEqualTo("#abc");
-        l.setColor(null);
-        assertThat(l.getColor()).isNull();
+        l.posarColor("#abc");
+        assertThat(l.obtenirColor()).isEqualTo("#abc");
+        l.posarColor(null);
+        assertThat(l.obtenirColor()).isNull();
     }
 
     @Test
@@ -991,7 +991,7 @@ class BibliotecaJUnit5Test {
             .isInstanceOf(domini.BibliotecaException.Validacio.class);
         // Valid colors are accepted
         cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
-        assertThat(cd.obtenirAllLlistes().get(0).getColor()).isEqualTo("#aabbcc");
+        assertThat(cd.obtenirAllLlistes().get(0).obtenirColor()).isEqualTo("#aabbcc");
     }
 
     // ── BibliotecaException: cause preserved ─────────────────────────────────
@@ -1095,12 +1095,12 @@ class BibliotecaJUnit5Test {
         cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
         Llista found = cd.obtenirAllLlistes().stream()
             .filter(x -> x.obtenirId() == l.obtenirId()).findFirst().orElseThrow();
-        assertThat(found.getColor()).isEqualTo("#aabbcc");
+        assertThat(found.obtenirColor()).isEqualTo("#aabbcc");
 
         cd.posarLlistaColor(l.obtenirId(), null);
         Llista afterClear = cd.obtenirAllLlistes().stream()
             .filter(x -> x.obtenirId() == l.obtenirId()).findFirst().orElseThrow();
-        assertThat(afterClear.getColor()).isNull();
+        assertThat(afterClear.obtenirColor()).isNull();
     }
 
     // ── AutorDao: parameterized 0/1/many authors ──────────────────────────────
@@ -1148,7 +1148,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("DeleteEvent: cancellable=true, veto marks as vetoed")
     void eliminarEventCancellableVeto() {
         domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.OnLlibreDelete.EsborrarEvent ev = new presentacio.listener.OnLlibreDelete.EsborrarEvent(book, true);
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(book, true);
         assertThat(ev.esCancellable()).isTrue();
         assertThat(ev.esVetoed()).isFalse();
         ev.veto();
@@ -1159,7 +1159,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("DeleteEvent: cancellable=false, veto has no practical effect")
     void eliminarEventNonCancellable() {
         domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.OnLlibreDelete.EsborrarEvent ev = new presentacio.listener.OnLlibreDelete.EsborrarEvent(book, false);
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(book, false);
         assertThat(ev.esCancellable()).isFalse();
     }
 
@@ -1169,15 +1169,15 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
 
-        presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
-            @Override public void onBookDeleted(Llibre l) {}
-            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.EsborrarEvent e) { e.veto(); }
+        presentacio.listener.EnEliminarLlibre vetoer = new presentacio.listener.EnEliminarLlibre() {
+            @Override public void enEliminarLlibre(Llibre l) {}
+            @Override public void enEliminantLlibre(presentacio.listener.EnEliminarLlibre.EsborrarEvent e) { e.veto(); }
         };
-        presentacio.listener.OnLlibreDelete.EsborrarEvent ev =
-            new presentacio.listener.OnLlibreDelete.EsborrarEvent(cd.obtenirLlibre(9780306406157L), true);
-        vetoer.onBookDeleting(ev);
-        assertThat(presentacio.listener.OnLlibreDelete.hauriaProceed(ev)).isFalse();
-        if (presentacio.listener.OnLlibreDelete.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev =
+            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(cd.obtenirLlibre(9780306406157L), true);
+        vetoer.enEliminantLlibre(ev);
+        assertThat(presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)).isFalse();
+        if (presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
 
         assertThat(cd.getSize()).isEqualTo(1);
         assertThat(cd.obtenirLlibre(9780306406157L).obtenirNom()).isEqualTo("Dune");
@@ -1189,16 +1189,16 @@ class BibliotecaJUnit5Test {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Dune", "Frank Herbert", 1965);
 
-        presentacio.listener.OnLlibreDelete vetoer = new presentacio.listener.OnLlibreDelete() {
-            @Override public void onBookDeleted(Llibre l) {}
-            @Override public void onBookDeleting(presentacio.listener.OnLlibreDelete.EsborrarEvent e) { e.veto(); }
+        presentacio.listener.EnEliminarLlibre vetoer = new presentacio.listener.EnEliminarLlibre() {
+            @Override public void enEliminarLlibre(Llibre l) {}
+            @Override public void enEliminantLlibre(presentacio.listener.EnEliminarLlibre.EsborrarEvent e) { e.veto(); }
         };
-        presentacio.listener.OnLlibreDelete.EsborrarEvent ev =
-            new presentacio.listener.OnLlibreDelete.EsborrarEvent(cd.obtenirLlibre(9780306406157L), false);
-        vetoer.onBookDeleting(ev);
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev =
+            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(cd.obtenirLlibre(9780306406157L), false);
+        vetoer.enEliminantLlibre(ev);
         assertThat(ev.esVetoed()).isTrue();
-        assertThat(presentacio.listener.OnLlibreDelete.hauriaProceed(ev)).isTrue();
-        if (presentacio.listener.OnLlibreDelete.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
+        assertThat(presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)).isTrue();
+        if (presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
 
         assertThat(cd.getSize()).isEqualTo(0);
         assertThat(cd.cercarLlibre(9780306406157L)).isEmpty();
@@ -1243,17 +1243,17 @@ class BibliotecaJUnit5Test {
         assertThat(cd.obtenirLoanedISBNs()).isEmpty();
     }
 
-    // ── ServerConect: migration produces complete schema ──────────────────────
+    // ── ConnexioServidor: migration produces complete schema ──────────────────────
 
     @Test
-    @DisplayName("ServerConect: CREATE_TABLE + all migrations produce complete schema")
+    @DisplayName("ConnexioServidor: CREATE_TABLE + all migrations produce complete schema")
     void migrationProducesCompleteSchema() throws Exception {
         String url = "jdbc:h2:mem:schema_" + System.nanoTime() + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
         System.setProperty("biblioteca.h2.url", url);
         try {
-            persistencia.ServerConect sc = new persistencia.ServerConect();
+            persistencia.ConnexioServidor sc = new persistencia.ConnexioServidor();
             sc.crearDatabase();
-            try (java.sql.Connection conn = sc.getConnection()) {
+            try (java.sql.Connection conn = sc.obtenirConnexio()) {
                 java.util.Set<String> llibreCols = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
                 try (java.sql.ResultSet rs = conn.getMetaData().getColumns(null, null, "LLIBRE", null)) {
                     while (rs.next()) llibreCols.add(rs.getString("COLUMN_NAME"));
@@ -1599,14 +1599,14 @@ class BibliotecaJUnit5Test {
         }
     }
 
-    // ── SplashScreen: hide before show is no-op ──────────────────────────
+    // ── PantallaInici: hide before show is no-op ──────────────────────────
 
     @Test
-    @DisplayName("SplashScreen: hide() before show() is a no-op")
+    @DisplayName("PantallaInici: hide() before show() is a no-op")
     void splashHideBeforeShow() {
         java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
         if (ge.isHeadless()) return;
-        presentacio.SplashScreen splash = new presentacio.SplashScreen();
+        presentacio.PantallaInici splash = new presentacio.PantallaInici();
         // Calling hide() before show() should not throw and should be a no-op
         splash.hide();
         splash.forceHide();
@@ -1690,7 +1690,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("AboutDialog: /LICENSE resource is loadable and contains GPL text")
     void aboutDialogLicenseResource() {
-        try (var in = presentacio.QuantADialog.class.getResourceAsStream("/LICENSE")) {
+        try (var in = presentacio.QuantADialeg.class.getResourceAsStream("/LICENSE")) {
             assertThat(in).isNotNull();
             String text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertThat(text).contains("GNU General Public License");
@@ -1869,9 +1869,9 @@ class BibliotecaJUnit5Test {
     }
 
     @Test
-    @DisplayName("FormFieldRegistry links JLabel to field for accessibility")
+    @DisplayName("RegistreCampsFormulari links JLabel to field for accessibility")
     void formFieldRegistryLinkLabel() {
-        var registry = new presentacio.FormFieldRegistry();
+        var registry = new presentacio.RegistreCampsFormulari();
         javax.swing.JLabel lbl = new javax.swing.JLabel("ISBN");
         javax.swing.JTextField tf = new javax.swing.JTextField();
         registry.linkLabel(lbl, tf);
@@ -1879,9 +1879,9 @@ class BibliotecaJUnit5Test {
     }
 
     @Test
-    @DisplayName("BibliotecaTableModel backs row count from book list")
+    @DisplayName("ModelTaulaBiblioteca backs row count from book list")
     void bibliotecaTableModelSetBooks() {
-        var model = new presentacio.BibliotecaTableModel();
+        var model = new presentacio.ModelTaulaBiblioteca();
         Llibre l = new Llibre(9780306406157L, "Test", "Author", 2020, "", 5.0, 10.0, true, "");
         model.posarBooks(java.util.List.of(l));
         assertThat(model.getRowCount()).isOne();
@@ -1936,9 +1936,9 @@ class BibliotecaJUnit5Test {
     }
 
     @Test
-    @DisplayName("LlegitCheckBoxRenderer: marks read when cell value matches I18n filter_read")
+    @DisplayName("RenderitzadorCasellaLlegit: marks read when cell value matches I18n filter_read")
     void llegitRendererShowsReadState() {
-        var renderer = new presentacio.renderers.LlegitCheckBoxRenderer();
+        var renderer = new presentacio.renderers.RenderitzadorCasellaLlegit();
         javax.swing.JTable table = new javax.swing.JTable();
         java.awt.Component c = renderer.getTableCellRendererComponent(
             table, herramienta.I18n.t("filter_read"), false, false, 0, 0);
@@ -1950,12 +1950,12 @@ class BibliotecaJUnit5Test {
     }
 
     @Test
-    @DisplayName("FormValidator: invalid field gets red border")
+    @DisplayName("ValidadorFormulari: invalid field gets red border")
     void formValidatorInvalidBorder() {
         javax.swing.JTextField tf = new javax.swing.JTextField("bad");
-        presentacio.FormValidator.validarField(tf, false);
+        presentacio.ValidadorFormulari.validarField(tf, false);
         assertThat(tf.getBorder()).isNotNull();
-        presentacio.FormValidator.validarField(tf, true);
+        presentacio.ValidadorFormulari.validarField(tf, true);
     }
 
     @Test

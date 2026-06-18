@@ -18,12 +18,13 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 /**
- * Hover-zoom popup shown next to a gallery card after a short delay.
+ * Popup de zoom en passar el ratolí que es mostra al costat d'una
+ * targeta de galeria després d'un breu retard.
  *
- * <p>The popup is a small JPanel added to the root pane's {@link JLayeredPane#POPUP_LAYER}.
- * It is owned by the gallery: only one popup can be visible at a time, and
- * it is removed when the host hides it (mouse exit, theme switch, list update,
- * shutdown).
+ * <p>El popup és un JPanel petit afegit al {@link JLayeredPane#POPUP_LAYER}
+ * del root pane. La galeria el posseeix: només un popup pot ser visible
+ * alhora, i s'elimina quan l'amfitrió l'amaga (sortida del ratolí,
+ * canvi de tema, actualització de llista, tancament).
  */
 public final class PopupZoomCoberta {
 
@@ -38,10 +39,11 @@ public final class PopupZoomCoberta {
     };
 
     /**
-     * Schedule a zoom popup for {@code card}. The popup is shown
-     * {@value #DELAY_MS} ms after the call (debounced — repeated calls reset
-     * the timer). The image must already be in the {@link CoverImageService}
-     * cache; if not, this call is a no-op.
+     * Programa un popup de zoom per a {@code card}. El popup es mostra
+     * {@value #DELAY_MS} ms després de la crida (debounced — les crides
+     * repetides reinicien el temporitzador). La imatge ja ha de ser a la
+     * memòria cau del {@link ServeiImatgesCoberta}; si no, aquesta crida
+     * és un no-op.
      */
     public void schedule(Llibre l, Component card, ServeiImatgesCoberta images) {
         cancelarTimer();
@@ -50,7 +52,7 @@ public final class PopupZoomCoberta {
         timer.start();
     }
 
-    /** Cancel any pending show; remove the overlay if visible. */
+    /** Cancel·la qualsevol visualització pendent; elimina la superposició si és visible. */
     public void hide() {
         cancelarTimer();
         if (overlay != null) {

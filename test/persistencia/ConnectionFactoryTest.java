@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * Per-class unit tests for {@link ConnectionConfig}. The
  * {@code ConnectionFactory} wrapper was inlined into
- * {@code ServerConect.createDatabase} by the LOW-tot refactor; we
+ * {@code ConnexioServidor.createDatabase} by the LOW-tot refactor; we
  * cover the surviving public surface (the record ctor + accessor
  * record components) here.
  */

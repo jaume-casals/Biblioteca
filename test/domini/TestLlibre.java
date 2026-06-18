@@ -212,7 +212,7 @@ class TestLlibre {
     void posarFormatNormalises() {
         Llibre l = newBook();
         l.posarFormat("  eBook  ");
-        assertThat(l.getFormat()).isEqualTo("eBook");
+        assertThat(l.obtenirFormat()).isEqualTo("eBook");
     }
 
     @Test
@@ -337,10 +337,10 @@ class TestLlibre {
     @DisplayName("heavyFieldsLoaded flag round-trips")
     void heavyFieldsLoadedFlag() {
         Llibre l = newBook();
-        l.posarHeavyFieldsLoaded(false);
-        assertThat(l.esHeavyFieldsLoaded()).isFalse();
-        l.posarHeavyFieldsLoaded(true);
-        assertThat(l.esHeavyFieldsLoaded()).isTrue();
+        l.posarCampsPesatsCarregats(false);
+        assertThat(l.teCampsPesatsCarregats()).isFalse();
+        l.posarCampsPesatsCarregats(true);
+        assertThat(l.teCampsPesatsCarregats()).isTrue();
     }
 
     // ── copyOf ──────────────────────────────────────────────────────────

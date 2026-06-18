@@ -17,13 +17,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Filter drawer, search bar, and preset management. */
+/** Calaix de filtre, barra de cerca i gestió de presets. */
 class ControladorFiltre {
 
     private static final int DEBOUNCE_MS = 250;
 
-    private final LibraryViewState state;
-    private final LibraryScreenHost host;
+    private final EstatVistaBiblioteca state;
+    private final AmfitrioPantallaBiblioteca host;
 
     /** Índex ISBN→Llibre en caché; es reconstrueix només quan canvia
      *  la referència de {@code state.biblio}. Evita reindexar 5000 llibres
@@ -31,7 +31,7 @@ class ControladorFiltre {
     private java.util.List<Llibre> cachedIsbnMapBiblioRef;
     private Map<Long, Llibre> cachedIsbnMap;
 
-    ControladorFiltre(LibraryViewState state, LibraryScreenHost host) {
+    ControladorFiltre(EstatVistaBiblioteca state, AmfitrioPantallaBiblioteca host) {
         this.state = state;
         this.host = host;
     }
@@ -47,11 +47,11 @@ class ControladorFiltre {
 
     void wireListeners() {
         var vista = state.vista;
-        vista.getchckbxLlegit().addItemListener(this::enLlegitSeleccionado);
-        vista.getchckbxNoLlegit().addItemListener(this::enNoLlegitSeleccionado);
+        vista.obtenirCasellaLlegit().addItemListener(this::enLlegitSeleccionado);
+        vista.obtenirCasellaNoLlegit().addItemListener(this::enNoLlegitSeleccionado);
 
         java.awt.event.ActionListener enterFiltrar = e -> filtrar();
-        vista.obtenirFilterRegistry().specsOfKind(presentacio.FormFieldRegistry.Tipus.TEXT).stream()
+        vista.obtenirFilterRegistry().specsOfKind(presentacio.RegistreCampsFormulari.Tipus.TEXT).stream()
             .map(s -> vista.obtenirFilterRegistry().textField(s.key()))
             .forEach(tf -> tf.addActionListener(enterFiltrar));
 
@@ -61,7 +61,7 @@ class ControladorFiltre {
                 if (debounce != null && debounce.isRunning()) debounce.stop();
                 debounce = new javax.swing.Timer(DEBOUNCE_MS, e -> {
                     aplicarSearchBar();
-                    vista.getjTableBilio().repaint();
+                    vista.obtenirTaulaLlibres().repaint();
                 });
                 debounce.setRepeats(false);
                 debounce.start();
@@ -82,7 +82,7 @@ class ControladorFiltre {
             vista.obtenirBtnToggleFiltres().setText(show ? I18n.t("btn_filters_label_open") : I18n.t("btn_filters_label"));
         });
 
-        vista.getbtnFiltrar().addActionListener(e -> filtrar());
+        vista.obtenirBtnFiltrar().addActionListener(e -> filtrar());
         vista.obtenirBtnQuitarFiltros().addActionListener(e -> quitarFiltros());
     }
 
@@ -94,13 +94,13 @@ class ControladorFiltre {
     private SwingWorker<ArrayList<Llibre>, Void> pendingFilterWorker;
 
     void enNoLlegitSeleccionado(ItemEvent e) {
-        if (e.getStateChange() == ItemEvent.SELECTED && state.vista.getchckbxLlegit().isSelected())
-            state.vista.getchckbxLlegit().setSelected(false);
+        if (e.getStateChange() == ItemEvent.SELECTED && state.vista.obtenirCasellaLlegit().isSelected())
+            state.vista.obtenirCasellaLlegit().setSelected(false);
     }
 
     void enLlegitSeleccionado(ItemEvent e) {
-        if (e.getStateChange() == ItemEvent.SELECTED && state.vista.getchckbxNoLlegit().isSelected())
-            state.vista.getchckbxNoLlegit().setSelected(false);
+        if (e.getStateChange() == ItemEvent.SELECTED && state.vista.obtenirCasellaNoLlegit().isSelected())
+            state.vista.obtenirCasellaNoLlegit().setSelected(false);
     }
 
     void filtrar() {
@@ -124,8 +124,8 @@ class ControladorFiltre {
         b.preuMin(analitzarDoubleField(state.vista.obtenirPreuMin()));
         b.preuMax(analitzarDoubleField(state.vista.obtenirPreuMax()));
 
-        if (state.vista.getchckbxLlegit().isSelected())  b.llegit(Boolean.TRUE);
-        if (state.vista.getchckbxNoLlegit().isSelected()) b.llegit(Boolean.FALSE);
+        if (state.vista.obtenirCasellaLlegit().isSelected())  b.llegit(Boolean.TRUE);
+        if (state.vista.obtenirCasellaNoLlegit().isSelected()) b.llegit(Boolean.FALSE);
 
         Object selTag = state.vista.obtenirComboTagFilter().getSelectedItem();
         if (selTag instanceof Tag) b.tagId(((Tag) selTag).obtenirId());
@@ -147,14 +147,14 @@ class ControladorFiltre {
             if (pendingFilterWorker != null && !pendingFilterWorker.isDone()) {
                 pendingFilterWorker.cancel(true);
             }
-            state.vista.getbtnFiltrar().setEnabled(false);
+            state.vista.obtenirBtnFiltrar().setEnabled(false);
             pendingFilterWorker = new SwingWorker<ArrayList<Llibre>, Void>() {
                 @Override protected ArrayList<Llibre> doInBackground() {
                     return new ArrayList<>(ControladorMarcPrincipal.getInstance().aplicarFiltres(filter));
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
-                    state.vista.getbtnFiltrar().setEnabled(true);
+                    state.vista.obtenirBtnFiltrar().setEnabled(true);
                     try {
                         host.posarTable(get());
                     } catch (java.util.concurrent.CancellationException ignored) {
@@ -168,7 +168,7 @@ class ControladorFiltre {
             return;
         }
 
-        javax.swing.RowSorter<?> rs = state.vista.getjTableBilio().getRowSorter();
+        javax.swing.RowSorter<?> rs = state.vista.obtenirTaulaLlibres().getRowSorter();
         if (!(rs instanceof javax.swing.DefaultRowSorter)) {
             host.posarTable(new ArrayList<>(state.cd.aplicarFiltres(state.biblio, f)));
             return;
@@ -196,7 +196,7 @@ class ControladorFiltre {
             @Override
             public boolean include(javax.swing.RowFilter.Entry<? extends javax.swing.table.TableModel, ? extends Integer> entry) {
                 try {
-                        long isbn = Long.parseLong(entry.getStringValue(BibliotecaTableModel.COL_ISBN));
+                        long isbn = Long.parseLong(entry.getStringValue(ModelTaulaBiblioteca.COL_ISBN));
                     Llibre l = isbnMap.get(isbn);
                     if (l == null) return false;
                     return FiltreUtils.matches(l, f, tagISBNs, llistaISBNs);
@@ -207,8 +207,8 @@ class ControladorFiltre {
     }
 
     void quitarFiltros() {
-        state.vista.getchckbxLlegit().setSelected(false);
-        state.vista.getchckbxNoLlegit().setSelected(false);
+        state.vista.obtenirCasellaLlegit().setSelected(false);
+        state.vista.obtenirCasellaNoLlegit().setSelected(false);
         state.vista.obtenirAnyMin().setText("");
         state.vista.obtenirAnyMax().setText("");
         state.vista.obtenirValoracioMin().setText("");
@@ -230,7 +230,7 @@ class ControladorFiltre {
         String query = state.vista.obtenirSearchBar().getText().trim();
         if (host.tableCtrl().highlightRenderer() != null)
             host.tableCtrl().highlightRenderer().posarSearchText(query);
-        javax.swing.RowSorter<?> sorter = state.vista.getjTableBilio().getRowSorter();
+        javax.swing.RowSorter<?> sorter = state.vista.obtenirTaulaLlibres().getRowSorter();
         if (!(sorter instanceof javax.swing.DefaultRowSorter)) { host.actualitzarTitleBar(); return; }
         @SuppressWarnings("unchecked")
         javax.swing.DefaultRowSorter<? extends javax.swing.table.TableModel, Integer> drs =
@@ -247,7 +247,7 @@ class ControladorFiltre {
                         if (entry.getStringValue(i).toLowerCase(java.util.Locale.ROOT).contains(q)) return true;
                     }
                     try {
-                    long isbn = Long.parseLong(entry.getStringValue(BibliotecaTableModel.COL_ISBN));
+                    long isbn = Long.parseLong(entry.getStringValue(ModelTaulaBiblioteca.COL_ISBN));
                         Llibre l = isbnMap.get(isbn);
                         if (l != null) {
                             String desc  = l.obtenirDescripcio();
@@ -280,8 +280,8 @@ class ControladorFiltre {
         m.put("valoracioMax", state.vista.obtenirValoracioMax().getText());
         m.put("preuMin",      state.vista.obtenirPreuMin().getText());
         m.put("preuMax",      state.vista.obtenirPreuMax().getText());
-        m.put("llegit",       state.vista.getchckbxLlegit().isSelected() ? "true"
-                            : state.vista.getchckbxNoLlegit().isSelected() ? "false" : "");
+        m.put("llegit",       state.vista.obtenirCasellaLlegit().isSelected() ? "true"
+                            : state.vista.obtenirCasellaNoLlegit().isSelected() ? "false" : "");
         m.put("editorial",    state.vista.obtenirFilterEditorial().getText());
         m.put("serie",        state.vista.obtenirFilterSerie().getText());
         m.put("idioma",       state.vista.obtenirFilterIdioma().getText());
@@ -301,8 +301,8 @@ class ControladorFiltre {
         state.vista.obtenirPreuMin().setText(s.getOrDefault("preuMin", ""));
         state.vista.obtenirPreuMax().setText(s.getOrDefault("preuMax", ""));
         String llegit = s.getOrDefault("llegit", "");
-        state.vista.getchckbxLlegit().setSelected("true".equals(llegit));
-        state.vista.getchckbxNoLlegit().setSelected("false".equals(llegit));
+        state.vista.obtenirCasellaLlegit().setSelected("true".equals(llegit));
+        state.vista.obtenirCasellaNoLlegit().setSelected("false".equals(llegit));
         state.vista.obtenirFilterEditorial().setText(s.getOrDefault("editorial", ""));
         state.vista.obtenirFilterSerie().setText(s.getOrDefault("serie", ""));
         state.vista.obtenirFilterIdioma().setText(s.getOrDefault("idioma", ""));

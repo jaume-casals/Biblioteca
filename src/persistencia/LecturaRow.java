@@ -3,13 +3,13 @@ package persistencia;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-/** Reading-session row for backup/export. Not wired in the Swing UI yet. */
+/** Fila de sessió de lectura per a còpia/exportació. Encara no connectada a la IU Swing. */
 public record LecturaRow(long isbn, LocalDate dataInici, LocalDate dataFi, int paginesLlegides) {
 
-    /** ISO-8601 formatter for SQL serialization (DB stores DATE as 'YYYY-MM-DD'). */
+    /** Formatejador ISO-8601 per a la serialització SQL (la BD emmagatzema DATE com a 'YYYY-MM-DD'). */
     public static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
-    /** Parse a DATE column ({@code YYYY-MM-DD}) into a {@code LocalDate}; null/empty → null. */
+    /** Analitza una columna DATE ({@code YYYY-MM-DD}) a {@code LocalDate}; null/buit → null. */
     public static LocalDate analitzarDateOrNull(String s) {
         if (s == null || s.isBlank()) return null;
         return LocalDate.parse(s.trim(), ISO);

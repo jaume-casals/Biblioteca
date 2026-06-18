@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Loan row. isbn is a primitive long (always present FK). */
+/** Fila de prèstec. isbn és un long primitiu (FK sempre present). */
 public record PrestecRow(long isbn, String nomPersona, LocalDate dataPrestec, boolean retornat) {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;

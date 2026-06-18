@@ -7,7 +7,7 @@ import java.sql.SQLException;
 
 import domini.Llibre;
 
-/** Read/write of the {@code imatge_blob} and lazy {@code descripcio}/{@code notes} load. */
+/** Lectura/escriptura del {@code imatge_blob} i càrrega mandrosa de {@code descripcio}/{@code notes}. */
 public class LlibreBlobDao {
 
     private final Connection con;
@@ -44,7 +44,7 @@ public class LlibreBlobDao {
                 if (rs.next()) {
                     target.posarDescripcio(rs.getString("descripcio"));
                     target.posarNotes(rs.getString("notes"));
-                    target.posarHeavyFieldsLoaded(true);
+                    target.posarCampsPesatsCarregats(true);
                 }
             }
         } catch (SQLException e) {
@@ -53,14 +53,15 @@ public class LlibreBlobDao {
     }
 
     /**
-     * Batched counterpart to {@link #loadHeavyFields(long, Llibre)}: one
-     * round-trip for N books instead of N. Books not found in the DB
-     * (e.g. deleted between the caller computing the ISBN list and this
-     * SELECT running) are silently skipped — the in-memory instance
-     * keeps its stale "not loaded" state. Books that are already
-     * {@code isHeavyFieldsLoaded()} should be filtered out by the caller
-     * (it has the in-memory reference) to avoid an unnecessary
-     * {@code target.set*} no-op.
+     * Contrapartida per lots de {@link #carregarHeavyFields(long, Llibre)}: un
+     * sol viatge d'anada i tornada per a N llibres en lloc de N. Els llibres
+     * no trobats a la BBDD (p.ex. eliminats entre el càlcul de la llista
+     * d'ISBN pel consumidor i l'execució d'aquest SELECT) se salten
+     * silenciosament — la instància en memòria conserva el seu estat
+     * obsolet "no carregat". Els llibres que ja són
+     * {@code teCampsPesatsCarregats()} s'haurien de filtrar pel consumidor
+     * (té la referència en memòria) per evitar un {@code target.posar*}
+     * no-op innecessari.
      */
     public synchronized void carregarHeavyFieldsBatched(java.util.List<Long> isbns,
                                                     java.util.Map<Long, Llibre> targets) {
@@ -87,7 +88,7 @@ public class LlibreBlobDao {
                         if (target == null) continue;
                         target.posarDescripcio(rs.getString("descripcio"));
                         target.posarNotes(rs.getString("notes"));
-                        target.posarHeavyFieldsLoaded(true);
+                        target.posarCampsPesatsCarregats(true);
                     }
                 }
             } catch (SQLException e) {

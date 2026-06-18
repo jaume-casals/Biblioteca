@@ -12,7 +12,7 @@ import domini.Llibre;
 import domini.LlibreFilter;
 import domini.EspecificacioOrdenacio;
 
-/** Unified-filter search for the main library table. */
+/** Cerca amb filtre unificat per a la taula principal de la biblioteca. */
 public class LlibreSearchDao {
 
     private final Connection con;
@@ -65,7 +65,7 @@ public class LlibreSearchDao {
         afegirCondition(sql, params, " AND l.serie LIKE ?",
             f.obtenirSerie() != null && !f.obtenirSerie().isBlank() ? "%" + f.obtenirSerie() + "%" : null);
         afegirCondition(sql, params, " AND l.format = ?",
-            f.getFormat() != null && !f.getFormat().isBlank() ? f.getFormat() : null);
+            f.obtenirFormat() != null && !f.obtenirFormat().isBlank() ? f.obtenirFormat() : null);
         afegirCondition(sql, params, " AND l.idioma LIKE ?",
             f.obtenirIdioma() != null && !f.obtenirIdioma().isBlank() ? "%" + f.obtenirIdioma() + "%" : null);
         EspecificacioOrdenacio sort = f.obtenirSort();
@@ -86,12 +86,12 @@ public class LlibreSearchDao {
     }
 
     /**
-     * Append {@code clause} to {@code sql} and {@code value} to {@code params}
-     * if {@code value} is non-null. No-op when {@code value} is null — the
-     * caller can pass a pre-computed value (e.g. {@code "%foo%"}) and let the
-     * helper decide whether to bind it. Reduces the search() body from
-     * ~20 branches of {@code if (f.getX() != null) { sql.append(...); params.add(...); }}
-     * to single-line per-condition calls.
+     * Afegeix {@code clause} a {@code sql} i {@code value} a {@code params}
+     * si {@code value} no és null. No fa res quan {@code value} és null — el
+     * consumidor pot passar un valor precalculat (p.ex. {@code "%foo%"}) i deixar
+     * que l'ajudant decideixi si vincular-lo. Redueix el cos de search() des de
+     * ~20 branques de {@code if (f.getX() != null) { sql.append(...); params.add(...); }}
+     * a crides d'una sola línia per condició.
      */
     private static void afegirCondition(StringBuilder sql, List<Object> params, String clause, Object value) {
         if (value == null) return;

@@ -6,10 +6,10 @@ import java.sql.SQLException;
 import domini.Llibre;
 
 /**
- * Static mappers from {@link ResultSet} rows to {@link Llibre} domain objects.
- * Shared between {@link LlibreDaoCore} (own SELECTs) and {@link LlistaDao}
- * (cross-table SELECTs that read llibre rows).  Column names must match
- * the canonical SELECT lists in {@link LlibreDaoCore}.
+ * Mapejadors estàtics de files {@link ResultSet} a objectes de domini {@link Llibre}.
+ * Compartits entre {@link LlibreDaoCore} (els seus propis SELECTs) i {@link LlistaDao}
+ * (SELECTs entre taules que llegeixen files de llibre). Els noms de columna han de
+ * coincidir amb les llistes canòniques de SELECT a {@link LlibreDaoCore}.
  */
 final class LlibreMapper {
     private LlibreMapper() {}
@@ -18,7 +18,7 @@ final class LlibreMapper {
         Llibre l = buildLlibreCore(rs, null);
         l.posarHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, false);
-        l.posarHeavyFieldsLoaded(false);
+        l.posarCampsPesatsCarregats(false);
         return l;
     }
 
@@ -43,7 +43,7 @@ final class LlibreMapper {
             .build();
     }
 
-    /** @param includeNotes if true, read the {@code notes} column from the result set */
+    /** @param includeNotes si és cert, llegeix la columna {@code notes} del result set */
     private static void fillLlibreTail(Llibre l, ResultSet rs, boolean includeNotes) throws SQLException {
         if (includeNotes) {
             l.posarNotes(rs.getString("notes"));

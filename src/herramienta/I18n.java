@@ -260,7 +260,7 @@ public class I18n {
         T("lbl_license_section", "Llicència (GPL v3 — extracte)", "Licencia (GPL v3 — extracto)", "License (GPL v3 — excerpt)");
         T("btn_source_github", "Codi font (GitHub)", "Código fuente (GitHub)", "Source code (GitHub)");
         T("dlg_import_title", "Importació", "Importación", "Import");
-        T("dlg_import_warn", "Cuidado que hay diferentes columnas en la tabla de Libros", "Cuidado: diferentes columnas en la tabla", "Warning: different column structure in CSV");
+        T("dlg_import_warn", "Les columnes del CSV no coincideixen amb les de la taula de llibres", "Cuidado: diferentes columnas en la tabla", "Warning: different column structure in CSV");
         T("dlg_books_added_to_list", "{0} llibres afegits a \"{1}\".", "{0} libros añadidos a \"{1}\".", "{0} books added to \"{1}\".");
         T("dlg_books_existing_list", "{0} ja existien a la llista.", "{0} ya existían en la lista.", "{0} already existed in the list.");
         T("dlg_added_to_list_title", "Afegit a llista", "Añadido a lista", "Added to list");
@@ -589,7 +589,7 @@ public class I18n {
         T("val_must_be_number", "{0} ha de ser un nombre vàlid.", "{0} debe ser un número válido.", "{0} must be a valid number.");
         T("err_db_init_h2", "No s'ha pogut inicialitzar la base de dades H2.", "No se ha podido inicializar la base de datos H2.", "Failed to initialise the H2 database.");
         T("err_db_init_mariadb", "No s'ha pogut inicialitzar la base de dades MariaDB.", "No se ha podido inicializar la base de datos MariaDB.", "Failed to initialise the MariaDB database.");
-        T("lbl_csv_files", "CSV files", "CSV files", "CSV files");
+        T("lbl_csv_files", "Fitxers CSV", "CSV files", "CSV files");
         T("btn_export_csv", "Export CSV", "Exportar CSV", "Export CSV");
         T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");
         T("btn_import_csv", "Importar CSV", "Importar CSV", "Import CSV");

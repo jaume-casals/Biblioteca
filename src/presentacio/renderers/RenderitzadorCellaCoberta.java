@@ -10,8 +10,8 @@ import javax.swing.table.*;
 
 import domini.Llibre;
 import herramienta.UITheme;
-import interficie.BookReader;
-import presentacio.BibliotecaTableModel;
+import interficie.LectorLlibre;
+import presentacio.ModelTaulaBiblioteca;
 import presentacio.MemoriaImatgesCoberta;
 
 public class RenderitzadorCellaCoberta extends JLabel implements TableCellRenderer {
@@ -31,7 +31,7 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
     }
     private final Map<Long, ImageIcon> coverCache;
     private final Set<Long> coverLoading;
-    private final BookReader cd;
+    private final LectorLlibre cd;
     private final JTable table;
     /**
      * ISBN → índex de fila del model. Subministrat pel consumidor perquè el
@@ -44,12 +44,12 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
     private final java.util.function.LongFunction<Integer> isbnToRow;
 
     public RenderitzadorCellaCoberta(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, BookReader cd) {
+            Set<Long> coverLoading, LectorLlibre cd) {
         this(table, coverCache, coverLoading, cd, null);
     }
 
     public RenderitzadorCellaCoberta(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, BookReader cd,
+            Set<Long> coverLoading, LectorLlibre cd,
             java.util.function.LongFunction<Integer> isbnToRow) {
         this.table = table;
         this.coverCache = coverCache;
@@ -67,7 +67,7 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
         setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
         setIcon(null);
         try {
-            if (!(t.getModel() instanceof BibliotecaTableModel model)) return this;
+            if (!(t.getModel() instanceof ModelTaulaBiblioteca model)) return this;
             int modelRow = t.convertRowIndexToModel(row);
             Llibre l = model.obtenirBookAt(modelRow);
             if (l == null) return this;
@@ -96,11 +96,11 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
     }
 
     private void repaintCoverCell(long isbn) {
-        if (!(table.getModel() instanceof BibliotecaTableModel model)) {
+        if (!(table.getModel() instanceof ModelTaulaBiblioteca model)) {
             table.repaint();
             return;
         }
-        int viewCol = table.convertColumnIndexToView(BibliotecaTableModel.COL_COVER);
+        int viewCol = table.convertColumnIndexToView(ModelTaulaBiblioteca.COL_COVER);
         if (viewCol < 0) {
             table.repaint();
             return;

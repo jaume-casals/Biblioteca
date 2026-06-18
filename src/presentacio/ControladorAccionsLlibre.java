@@ -8,8 +8,8 @@ import herramienta.Configuracio;
 import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.UITheme;
-import presentacio.detalles.control.DetallesLlibrePanelControl;
-import presentacio.listener.OnLlibreDelete;
+import presentacio.detalles.control.ControladorPanellDetallsLlibre;
+import presentacio.listener.EnEliminarLlibre;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Book CRUD, details dialogs, stats, quick views, and undo. */
+/** CRUD de llibres, diàlegs de detalls, estadístiques, vistes ràpides i desfer. */
 class ControladorAccionsLlibre {
 
-    private final LibraryViewState state;
-    private final LibraryScreenHost host;
+    private final EstatVistaBiblioteca state;
+    private final AmfitrioPantallaBiblioteca host;
     private final ControladorFiltre filtrarCtrl;
     private final ControladorPrestatgeria shelfCtrl;
 
-    ControladorAccionsLlibre(LibraryViewState state, LibraryScreenHost host,
+    ControladorAccionsLlibre(EstatVistaBiblioteca state, AmfitrioPantallaBiblioteca host,
                           ControladorFiltre filtrarCtrl, ControladorPrestatgeria shelfCtrl) {
         this.state = state;
         this.host = host;
@@ -60,12 +60,12 @@ class ControladorAccionsLlibre {
 
     private void abrirDetalles(boolean editMode) {
         try {
-            javax.swing.JTable table = state.vista.getjTableBilio();
+            javax.swing.JTable table = state.vista.obtenirTaulaLlibres();
             int viewRow = table.getSelectedRow();
             if (viewRow < 0) return;
             int modelRow = table.convertRowIndexToModel(viewRow);
             javax.swing.table.TableModel model = table.getModel();
-            if (!(model instanceof BibliotecaTableModel bt)) return;
+            if (!(model instanceof ModelTaulaBiblioteca bt)) return;
             Llibre l = bt.obtenirBookAt(modelRow);
             if (l == null) return;
             abrirDetallesDeLlibre(l, editMode);
@@ -77,7 +77,7 @@ class ControladorAccionsLlibre {
     void abrirDetallesDeLlibre(Llibre l, boolean editMode) {
         if (l == null) return;
         try {
-            DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(l, state.enActualizarBBDD, state.cd);
+            ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(l, state.enActualizarBBDD, state.cd);
             detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
             if (editMode) detalles.obtenirDetallesLlibrePanel().obtenirBtnEditar().doClick();
             detalles.obtenirDetallesLlibrePanel().setVisible(true);
@@ -95,17 +95,17 @@ class ControladorAccionsLlibre {
     }
 
     void eliminarFilaSeleccionada() {
-        JTable t = state.vista.getjTableBilio();
+        JTable t = state.vista.obtenirTaulaLlibres();
         int[] rows = t.getSelectedRows();
         if (rows.length == 0) return;
         String msg = rows.length == 1
-            ? I18n.t("dlg_confirm_delete_one", t.getValueAt(rows[0], BibliotecaTableModel.COL_NOM))
+            ? I18n.t("dlg_confirm_delete_one", t.getValueAt(rows[0], ModelTaulaBiblioteca.COL_NOM))
             : I18n.t("dlg_confirm_delete_n", rows.length);
         if (JOptionPane.showConfirmDialog(state.vista, msg, I18n.t("dlg_confirm_delete_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         List<Long> isbns = new ArrayList<>();
         for (int row : rows) {
-            Object cell = t.getValueAt(row, BibliotecaTableModel.COL_ISBN);
+            Object cell = t.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN);
             if (!(cell instanceof String) && !(cell instanceof Number)) continue;
             try { isbns.add(Long.parseLong(cell.toString())); }
             catch (NumberFormatException nfe) { /* salta cel·les no numèriques */ }
@@ -113,9 +113,9 @@ class ControladorAccionsLlibre {
         for (long isbn : isbns) {
             try {
                 state.cd.cercarLlibre(isbn).ifPresent(l -> {
-                    OnLlibreDelete.EsborrarEvent ev = new OnLlibreDelete.EsborrarEvent(l, true);
-                    state.enActualizarBBDD.onBookDeleting(ev);
-                    if (!OnLlibreDelete.hauriaProceed(ev)) return;
+                    EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
+                    state.enActualizarBBDD.enEliminantLlibre(ev);
+                    if (!EnEliminarLlibre.hauriaProceed(ev)) return;
                     state.undoBuffer.push(l);
                     // Limita la cua d'undoing a UNDO_MAX (20). Quan
                     // l'usuari elimina més de UNDO_MAX llibres en un sol
@@ -123,7 +123,7 @@ class ControladorAccionsLlibre {
                     // silenci — el límit és un topall de memòria, no un
                     // contracte de "només els 20 primers". La pila
                     // undo() n'és l'única consumidora.
-                    if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
+                    if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
                     state.cd.eliminarLlibre(l);
                     eliminarFila(l);
                 });
@@ -197,15 +197,15 @@ class ControladorAccionsLlibre {
             return;
         }
         Llibre aleatori = noLlegits.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(noLlegits.size()));
-        JTable t = state.vista.getjTableBilio();
+        JTable t = state.vista.obtenirTaulaLlibres();
         for (int row = 0; row < t.getRowCount(); row++) {
-            if (String.valueOf(aleatori.obtenirISBN()).equals(t.getValueAt(row, BibliotecaTableModel.COL_ISBN))) {
+            if (String.valueOf(aleatori.obtenirISBN()).equals(t.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN))) {
                 t.setRowSelectionInterval(row, row);
                 t.scrollRectToVisible(t.getCellRect(row, 0, true));
                 break;
             }
         }
-        DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(aleatori, state.enActualizarBBDD, state.cd);
+        ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(aleatori, state.enActualizarBBDD, state.cd);
         detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
         detalles.obtenirDetallesLlibrePanel().setVisible(true);
     }
@@ -265,8 +265,8 @@ class ControladorAccionsLlibre {
         new ConfiguracioDialog(
             w instanceof JFrame ? (JFrame) w : null,
             new ConfiguracioDialogListener() {
-                @Override public void onThemeChange() { state.vista.aplicarTheme(); }
-                @Override public void onRefreshData() {
+                @Override public void enCanviarTema() { state.vista.aplicarTheme(); }
+                @Override public void enRefrescarDades() {
                     state.biblio = new ArrayList<>(state.cd.obtenirAllLlibres());
                     host.pageCtrl().posarUseDBPagination(state.cd.esLargeLibrary());
                     state.currentLlistaId = null;

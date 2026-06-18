@@ -8,7 +8,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Shared DAO helpers for read-only queries. */
+/** Utilitats compartides de DAO per a consultes de només lectura. */
 final class MapejadorsFiles {
     private MapejadorsFiles() {}
 

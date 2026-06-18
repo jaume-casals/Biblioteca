@@ -1,7 +1,7 @@
 package presentacio;
 
 
-import presentacio.FormFieldRegistry.Camp;
+import presentacio.RegistreCampsFormulari.Camp;
 import presentacio.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -26,21 +26,22 @@ import herramienta.I18n;
 import herramienta.UITheme;
 
 /**
- * Sidebar drawer that holds the filter inputs (text fields, checkboxes,
- * combo boxes), the preset bar, the apply/clear buttons, and the
- * export/import/backup buttons.
+ * Calaix de la barra lateral que conté les entrades de filtre (camps de
+ * text, caselles, combos), la barra de presets, els botons aplicar/netejar
+ * i els botons d'exportar/importar/còpia de seguretat.
  *
- * <p>As of R1, the 32 hand-declared component fields are replaced by a
- * single {@link FormFieldRegistry} of declarative specs. The 32 public
- * getters are kept as 1-line shims that delegate to the registry, so
- * the 217 external call sites (most prominently
- * {@link MostrarBibliotecaPanel}) keep compiling without changes.
+ * <p>A partir de R1, els 32 camps de component declarats a mà se substitueixen
+ * per un sol {@link RegistreCampsFormulari} d'especificacions declaratives.
+ * Els 32 getters públics es conserven com a shims d'una línia que deleguen
+ * al registre, de manera que els 217 call sites externs (molt
+ * prominentment {@link PanelMostrarBiblioteca}) continuen compilant sense
+ * canvis.
  */
 public class PanelCalaixFiltre extends JPanel {
 
-	private JScrollPane scrolpaneFiltro;
-	private JPanel panelFiltros;
-	private final FormFieldRegistry registry = new FormFieldRegistry();
+	private JScrollPane panellDesplacamentFiltre;
+	private JPanel panellFiltres;
+	private final RegistreCampsFormulari registry = new RegistreCampsFormulari();
 
 	public PanelCalaixFiltre() {
 		buildFilterDrawer();
@@ -83,13 +84,13 @@ public class PanelCalaixFiltre extends JPanel {
 		registry.add(Camp.button("btnBackupBD",         "btn_backup_bd",         "tip_backup_bd"));
 		registry.add(Camp.button("btnRestaurarBD",      "btn_restore_bd",        "tip_restore_bd"));
 
-		registry.add(new Camp("btnExportCSV",         null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnExportJSON",        null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnExportHTML",        null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnExportPDF",         null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnImportarCSV",       null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnImportarJSON",      null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
-		registry.add(new Camp("btnImportarCalibre",   null, FormFieldRegistry.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnExportCSV",         null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnExportJSON",        null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnExportHTML",        null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnExportPDF",         null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnImportarCSV",       null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnImportarJSON",      null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
+		registry.add(new Camp("btnImportarCalibre",   null, RegistreCampsFormulari.Tipus.BUTTON, null, 0, ""));
 
 		registry.build();
 	}
@@ -128,10 +129,10 @@ public class PanelCalaixFiltre extends JPanel {
 
 		add(presetBar, BorderLayout.NORTH);
 
-		panelFiltros = new JPanel();
-		panelFiltros.setLayout(new BoxLayout(panelFiltros, BoxLayout.Y_AXIS));
-		panelFiltros.setBackground(UITheme.palette().bgPanel());
-		panelFiltros.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+		panellFiltres = new JPanel();
+		panellFiltres.setLayout(new BoxLayout(panellFiltres, BoxLayout.Y_AXIS));
+		panellFiltres.setBackground(UITheme.palette().bgPanel());
+		panellFiltres.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
 		JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row1.setBackground(UITheme.palette().bgPanel());
@@ -157,7 +158,7 @@ public class PanelCalaixFiltre extends JPanel {
 		registry.comboBox("comboTagFilter").setPreferredSize(new Dimension(140, 28));
 		row1.add(registry.comboBox("comboTagFilter"));
 
-		panelFiltros.add(row1);
+		panellFiltres.add(row1);
 
 		JPanel row1b = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row1b.setBackground(UITheme.palette().bgPanel());
@@ -177,7 +178,7 @@ public class PanelCalaixFiltre extends JPanel {
 		registry.comboBox("filterFormat").setFont(UITheme.fontBase());
 		registry.comboBox("filterFormat").setPreferredSize(new Dimension(130, 28));
 		row1b.add(registry.comboBox("filterFormat"));
-		panelFiltros.add(row1b);
+		panellFiltres.add(row1b);
 
 		JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row2.setBackground(UITheme.palette().bgPanel());
@@ -196,7 +197,7 @@ public class PanelCalaixFiltre extends JPanel {
 		UIComponents.styleSecondaryButton(registry.button("bttnQuitarFiltros"));
 		row2.add(registry.button("bttnQuitarFiltros"));
 
-		panelFiltros.add(row2);
+		panellFiltres.add(row2);
 
 		JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row3.setBackground(UITheme.palette().bgPanel());
@@ -236,15 +237,15 @@ public class PanelCalaixFiltre extends JPanel {
 		UIComponents.styleSecondaryButton(registry.button("btnRestaurarBD"));
 		row3.add(registry.button("btnRestaurarBD"));
 
-		panelFiltros.add(row3);
+		panellFiltres.add(row3);
 
-		scrolpaneFiltro = new JScrollPane(panelFiltros);
-		scrolpaneFiltro.setBorder(null);
-		scrolpaneFiltro.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-		scrolpaneFiltro.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-		scrolpaneFiltro.getViewport().setBackground(UITheme.palette().bgPanel());
+		panellDesplacamentFiltre = new JScrollPane(panellFiltres);
+		panellDesplacamentFiltre.setBorder(null);
+		panellDesplacamentFiltre.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		panellDesplacamentFiltre.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+		panellDesplacamentFiltre.getViewport().setBackground(UITheme.palette().bgPanel());
 
-		add(scrolpaneFiltro, BorderLayout.CENTER);
+		add(panellDesplacamentFiltre, BorderLayout.CENTER);
 	}
 
 	private void afegirExportMenuItem(JPopupMenu menu, String labelKey, String tipKey, String targetKey) {
@@ -272,11 +273,11 @@ public class PanelCalaixFiltre extends JPanel {
 	}
 
 	/**
-	 * Single source of truth for the 11 button styles shared by
-	 * {@link #applyTheme()} and {@link #applyThemePostLaf()}. The
-	 * tot.txt MEDIUM finding flagged the duplicated block; the
-	 * helper keeps the two entry points in lockstep when a new
-	 * button is added to the registry.
+	 * Única font de veritat per als estils dels 11 botons compartits per
+	 * {@link #applyTheme()} i {@link #applyThemePostLaf()}. La troballa
+	 * MEDIUM de tot.txt va assenyalar el bloc duplicat; l'helper manté
+	 * els dos punts d'entrada sincronitzats quan s'afegeix un nou botó
+	 * al registre.
 	 */
 	private void styleAllButtons() {
 		styleFilterComponents();
@@ -332,9 +333,9 @@ public class PanelCalaixFiltre extends JPanel {
 	}
 
 	private void styleFilterComponents() {
-		panelFiltros.setBackground(UITheme.palette().bgPanel());
-		scrolpaneFiltro.getViewport().setBackground(UITheme.palette().bgPanel());
-		for (Component r : panelFiltros.getComponents()) {
+		panellFiltres.setBackground(UITheme.palette().bgPanel());
+		panellDesplacamentFiltre.getViewport().setBackground(UITheme.palette().bgPanel());
+		for (Component r : panellFiltres.getComponents()) {
 			if (r instanceof JPanel) {
 				((JPanel) r).setBackground(UITheme.palette().bgPanel());
 				for (Component c : ((JPanel) r).getComponents()) {
@@ -358,9 +359,9 @@ public class PanelCalaixFiltre extends JPanel {
 		}
 	}
 
-	public JPanel obtenirPanelFiltros()                { return panelFiltros; }
-	public JScrollPane obtenirScrolpaneFiltro()        { return scrolpaneFiltro; }
-	public FormFieldRegistry obtenirRegistry()         { return registry; }
+	public JPanel obtenirPanelFiltros()                { return panellFiltres; }
+	public JScrollPane obtenirScrolpaneFiltro()        { return panellDesplacamentFiltre; }
+	public RegistreCampsFormulari obtenirRegistry()         { return registry; }
 
 	public JTextField obtenirTextISBN()                 { return registry.textField("textISBN"); }
 	public JTextField obtenirTextNom()                  { return registry.textField("textNom"); }
@@ -371,9 +372,9 @@ public class PanelCalaixFiltre extends JPanel {
 	public JTextField obtenirValoracioMax()             { return registry.textField("valoracioMax"); }
 	public JTextField obtenirPreuMin()                  { return registry.textField("preuMin"); }
 	public JTextField obtenirPreuMax()                  { return registry.textField("preuMax"); }
-	public JCheckBox getchckbxLlegit()              { return registry.comprovarBox("chckbxLlegit"); }
-	public JCheckBox getchckbxNoLlegit()            { return registry.comprovarBox("chckbxNoLlegit"); }
-	public JButton getbtnFiltrar()                  { return registry.button("bttnFiltrar"); }
+	public JCheckBox obtenirCasellaLlegit()              { return registry.comprovarBox("chckbxLlegit"); }
+	public JCheckBox obtenirCasellaNoLlegit()            { return registry.comprovarBox("chckbxNoLlegit"); }
+	public JButton obtenirBtnFiltrar()                  { return registry.button("bttnFiltrar"); }
 	public JButton obtenirBtnQuitarFiltros()           { return registry.button("bttnQuitarFiltros"); }
 	public JComboBox<Object> obtenirComboTagFilter()    { return registry.comboBox("comboTagFilter"); }
 	public JTextField obtenirFilterEditorial()          { return registry.textField("filterEditorial"); }
@@ -397,18 +398,18 @@ public class PanelCalaixFiltre extends JPanel {
 	public JButton obtenirBtnRestaurarBD()              { return registry.button("btnRestaurarBD"); }
 
 	/**
-	 * Declarative triple for a single labelled text-field filter row.
-	 * Used by {@link #buildFilterDrawer()} to declare the three "row1b"
-	 * text fields (editorial / serie / idioma) without repeating the
-	 * label-key + new-JTextField boilerplate three times.
+	 * Triple declaratiu per a una fila de filtre de camp de text amb
+	 * etiqueta. Usat per {@link #buildFilterDrawer()} per declarar els
+	 * tres camps de text de la "fila1b" (editorial / serie / idioma)
+	 * sense repetir tres cops el boilerplate label-key + new-JTextField.
 	 */
 	record FilaFiltre(String labelKey, JTextField field) {}
 
 	/**
-	 * Declarative triple for a single numeric-range filter row.
-	 * Used by {@link #buildFilterDrawer()} to declare the three "row2"
-	 * range fields (any / valoracio / preu) without repeating the
-	 * label-key + two new-JTextFields boilerplate three times.
+	 * Triple declaratiu per a una fila de filtre de rang numèric.
+	 * Usat per {@link #buildFilterDrawer()} per declarar els tres camps
+	 * de rang de la "fila2" (any / valoracio / preu) sense repetir tres
+	 * cops el boilerplate label-key + dos new-JTextFields.
 	 */
 	record RangFiltre(String labelKey, JTextField min, JTextField max) {}
 }

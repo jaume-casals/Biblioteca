@@ -68,7 +68,7 @@ class TestConstructorFiltreLlibre {
         assertThat(f.obtenirLlistaId()).isEqualTo(2);
         assertThat(f.obtenirEditorial()).isEqualTo("E");
         assertThat(f.obtenirSerie()).isEqualTo("S");
-        assertThat(f.getFormat()).isEqualTo("F");
+        assertThat(f.obtenirFormat()).isEqualTo("F");
         assertThat(f.obtenirIdioma()).isEqualTo("I");
         assertThat(f.obtenirSort().column()).isEqualTo("any");
         assertThat(f.obtenirSort().ascending()).isTrue();

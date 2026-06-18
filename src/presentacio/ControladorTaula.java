@@ -4,13 +4,13 @@ import domini.Llibre;
 import herramienta.I18n;
 import herramienta.ConfiguracioUi;
 import herramienta.ConfiguracioFinestra;
-import interficie.BibliotecaWriter;
-import interficie.BookWriter;
+import interficie.EscritorBiblioteca;
+import interficie.EscritorLlibre;
 import presentacio.renderers.RenderitzadorCellaCoberta;
-import presentacio.renderers.LlegitCheckBoxEditor;
-import presentacio.renderers.LlegitCheckBoxRenderer;
-import presentacio.renderers.ProgressBarRenderer;
-import presentacio.renderers.SearchHighlightRenderer;
+import presentacio.renderers.EditorCasellaLlegit;
+import presentacio.renderers.RenderitzadorCasellaLlegit;
+import presentacio.renderers.RenderitzadorBarraProgres;
+import presentacio.renderers.RenderitzadorDestacatCerca;
 
 import javax.swing.*;
 import javax.swing.table.TableColumn;
@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Table view: model, renderers, column visibility, table UX listeners. */
+/** Vista de taula: model, renderitzadors, visibilitat de columnes i listeners d'experiència d'usuari. */
 class ControladorTaula {
 
     private static final boolean[] COL_TOGGLEABLE =
@@ -42,10 +42,10 @@ class ControladorTaula {
     }
 
     private final PanelMostrarBiblioteca vista;
-    private final BibliotecaTableModel tableModel = new BibliotecaTableModel();
+    private final ModelTaulaBiblioteca tableModel = new ModelTaulaBiblioteca();
     private boolean columnsInstalled;
     private boolean ordenarListenerAttached;
-    private SearchHighlightRenderer highlightRenderer;
+    private RenderitzadorDestacatCerca highlightRenderer;
     private final java.util.TreeMap<Integer, TableColumn> hiddenCols = new java.util.TreeMap<>();
     /** Cerca O(1) des de l'ISBN a l'índex de fila del model. Es reconstrueix a {@link #setBooks}; s'actualitza incrementalment en mutacions de fila. */
     private final java.util.HashMap<Long, Integer> isbnToRow = new java.util.HashMap<>();
@@ -54,15 +54,15 @@ class ControladorTaula {
         this.vista = vista;
     }
 
-    BibliotecaTableModel model() { return tableModel; }
-    SearchHighlightRenderer highlightRenderer() { return highlightRenderer; }
+    ModelTaulaBiblioteca model() { return tableModel; }
+    RenderitzadorDestacatCerca highlightRenderer() { return highlightRenderer; }
 
-    void posarBooks(List<Llibre> books, BibliotecaWriter cd, JButton detallesBtn,
+    void posarBooks(List<Llibre> books, EscritorBiblioteca cd, JButton detallesBtn,
                   Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
                   Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         tableModel.posarBooks(books);
         rebuildIsbnIndex();
-        JTable t = vista.getjTableBilio();
+        JTable t = vista.obtenirTaulaLlibres();
         if (t.getModel() != tableModel) {
             t.setModel(tableModel);
             columnsInstalled = false;
@@ -89,9 +89,9 @@ class ControladorTaula {
         }
     }
 
-    void installInteractionListeners(LibraryScreenHost host, Runnable onOpenDetails,
+    void installInteractionListeners(AmfitrioPantallaBiblioteca host, Runnable onOpenDetails,
                                      Runnable onFilterByAuthor, MouseAdapter contextMenu) {
-        JTable table = vista.getjTableBilio();
+        JTable table = vista.obtenirTaulaLlibres();
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
@@ -106,9 +106,9 @@ class ControladorTaula {
                 int col = table.columnAtPoint(e.getPoint());
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0 || col < 0) return;
-                if (table.convertColumnIndexToModel(col) != BibliotecaTableModel.COL_AUTOR) return;
+                if (table.convertColumnIndexToModel(col) != ModelTaulaBiblioteca.COL_AUTOR) return;
                 int modelRow = table.convertRowIndexToModel(row);
-                Object val = table.getModel().getValueAt(modelRow, BibliotecaTableModel.COL_AUTOR);
+                Object val = table.getModel().getValueAt(modelRow, ModelTaulaBiblioteca.COL_AUTOR);
                 if (val == null) return;
                 String autor = val.toString().trim();
                 if (autor.isEmpty()) return;
@@ -175,7 +175,7 @@ class ControladorTaula {
     }
 
     private void toggleColumn(int modelIndex) {
-        JTable t = vista.getjTableBilio();
+        JTable t = vista.obtenirTaulaLlibres();
         if (hiddenCols.containsKey(modelIndex)) {
             TableColumn tc = hiddenCols.remove(modelIndex);
             t.addColumn(tc);
@@ -194,35 +194,35 @@ class ControladorTaula {
         }
     }
 
-    private void installColumns(JTable t, BibliotecaWriter cd, JButton detallesBtn,
+    private void installColumns(JTable t, EscritorBiblioteca cd, JButton detallesBtn,
                                 Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
                                 Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         t.setRowHeight(ROW_HEIGHT);
-        setWidth(t, BibliotecaTableModel.COL_COVER, 48, 48, 56);
-        setWidth(t, BibliotecaTableModel.COL_ISBN, 130, 80, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_NOM, 220, 80, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_AUTOR, 180, 80, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_ANY, 55, 40, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_VALORACIO, 75, 50, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_PREU, 60, 40, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
-        setWidth(t, BibliotecaTableModel.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_COVER).setCellRenderer(
+        setWidth(t, ModelTaulaBiblioteca.COL_COVER, 48, 48, 56);
+        setWidth(t, ModelTaulaBiblioteca.COL_ISBN, 130, 80, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_NOM, 220, 80, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_AUTOR, 180, 80, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_ANY, 55, 40, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_VALORACIO, 75, 50, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_PREU, 60, 40, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
+        setWidth(t, ModelTaulaBiblioteca.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
+        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_COVER).setCellRenderer(
             new RenderitzadorCellaCoberta(t, coverCache, coverLoading, cd, isbnToRow::get));
         // Columna de detalls oculta — doble clic a la fila o Enter obre
         // els detalls (veure installInteractionListeners)
-        TableColumn detallsCol = t.getColumnModel().getColumn(BibliotecaTableModel.COL_DETALLS);
-        hiddenCols.put(BibliotecaTableModel.COL_DETALLS, detallsCol);
+        TableColumn detallsCol = t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_DETALLS);
+        hiddenCols.put(ModelTaulaBiblioteca.COL_DETALLS, detallsCol);
         t.removeColumn(detallsCol);
-        ConfiguracioFinestra.posarColVisible(BibliotecaTableModel.COL_DETALLS, false);
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellRenderer(new LlegitCheckBoxRenderer());
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_LLEGIT).setCellEditor(
-            new LlegitCheckBoxEditor((BookWriter) cd, onRowUpdated));
-        t.getColumnModel().getColumn(BibliotecaTableModel.COL_PROGRES).setCellRenderer(new ProgressBarRenderer());
-        highlightRenderer = new SearchHighlightRenderer(loanedIsbns);
+        ConfiguracioFinestra.posarColVisible(ModelTaulaBiblioteca.COL_DETALLS, false);
+        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_LLEGIT).setCellRenderer(new RenderitzadorCasellaLlegit());
+        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_LLEGIT).setCellEditor(
+            new EditorCasellaLlegit((EscritorLlibre) cd, onRowUpdated));
+        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_PROGRES).setCellRenderer(new RenderitzadorBarraProgres());
+        highlightRenderer = new RenderitzadorDestacatCerca(loanedIsbns);
         for (int v = 0; v < t.getColumnCount(); v++) {
             int modelIndex = t.getColumnModel().getColumn(v).getModelIndex();
-            if (modelIndex != BibliotecaTableModel.COL_COVER && modelIndex != BibliotecaTableModel.COL_LLEGIT && modelIndex != BibliotecaTableModel.COL_PROGRES)
+            if (modelIndex != ModelTaulaBiblioteca.COL_COVER && modelIndex != ModelTaulaBiblioteca.COL_LLEGIT && modelIndex != ModelTaulaBiblioteca.COL_PROGRES)
                 t.getColumnModel().getColumn(v).setCellRenderer(highlightRenderer);
         }
         for (int i = 0; i < DEFAULT_COL_WIDTHS.length; i++) {

@@ -36,7 +36,7 @@ public final class AnalitzadorPrestatgeria {
         return "true".equalsIgnoreCase(s) || "1".equals(s);
     }
 
-    public static void exportarToCsv(File f, List<Llibre> view, interficie.ShelfReader cd) throws Exception {
+    public static void exportarToCsv(File f, List<Llibre> view, interficie.LectorPrestatgeria cd) throws Exception {
         java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
         for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
         java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();

@@ -278,9 +278,9 @@ lbl_source,Font,Fuente,Source
 lbl_license_section,Llicència (GPL v3 — extracte),Licencia (GPL v3 — extracto),License (GPL v3 — excerpt)
 btn_source_github,Codi font (GitHub),Código fuente (GitHub),Source code (GitHub)
 # ── Java: Import/export CSV ───────────────────────────────────────────────────
-lbl_csv_files,CSV files,CSV files,CSV files
+lbl_csv_files,Fitxers CSV,CSV files,CSV files
 dlg_import_title,Importació,Importación,Import
-dlg_import_warn,Cuidado que hay diferentes columnas en la tabla de Libros,Cuidado: diferentes columnas en la tabla,Warning: different column structure in CSV
+dlg_import_warn,Les columnes del CSV no coincideixen amb les de la taula de llibres,Cuidado: diferentes columnas en la tabla,Warning: different column structure in CSV
 dlg_books_added_to_list,{0} llibres afegits a "{1}".,{0} libros añadidos a "{1}".,{0} books added to "{1}".
 dlg_books_existing_list,{0} ja existien a la llista.,{0} ya existían en la lista.,{0} already existed in the list.
 dlg_added_to_list_title,Afegit a llista,Añadido a lista,Added to list

@@ -5,21 +5,22 @@ import java.util.function.ToIntFunction;
 import javax.swing.JComboBox;
 
 /**
- * Shared combo-reload logic for entity selection dialogs (shelves, tags, etc.).
- * Preserves the previously selected item by id after reloading the model.
+ * Lògica compartida de recàrrega de combos per a diàlegs de selecció
+ * d'entitats (prestatgeries, etiquetes, etc.). Preserva l'element
+ * seleccionat prèviament per id després de recarregar el model.
  */
 public final class UtilitatsComboEntitat {
 
     private UtilitatsComboEntitat() {}
 
     /**
-     * Reloads a JComboBox from a fresh entity list, restoring the previously
-     * selected item by its id.
+     * Recarrega un JComboBox des d'una llista d'entitats nova, restaurant
+     * l'element seleccionat prèviament pel seu id.
      *
-     * @param <E>          entity type displayed in the combo
-     * @param combo        the combo to reload
-     * @param items        the full list of entities (fresh from domain)
-     * @param idExtractor  function returning the entity's numeric id
+     * @param <E>          tipus d'entitat mostrada al combo
+     * @param combo        el combo a recarregar
+     * @param items        la llista completa d'entitats (nova des del domini)
+     * @param idExtractor  funció que retorna l'id numèric de l'entitat
      */
     @SuppressWarnings("unchecked")
     public static <E> void reloadCombo(JComboBox<E> combo, List<E> items, ToIntFunction<E> idExtractor) {

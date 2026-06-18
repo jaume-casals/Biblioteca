@@ -33,7 +33,7 @@ public final class DelegatEstadistiques {
         "editorial",        Llibre::obtenirEditorial,
         "serie",            Llibre::obtenirSerie,
         "idioma",           Llibre::obtenirIdioma,
-        "format",           Llibre::getFormat,
+        "format",           Llibre::obtenirFormat,
         "pais_origen",      Llibre::obtenirPaisOrigen,
         "llengua_original", Llibre::obtenirLlenguaOriginal
     );

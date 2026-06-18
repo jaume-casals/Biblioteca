@@ -12,7 +12,7 @@ import herramienta.ExportadorLlibres;
 import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.ClientOpenLibrary;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 public class ControladorExportacio {
 
@@ -32,11 +32,11 @@ public class ControladorExportacio {
         new java.util.concurrent.atomic.AtomicBoolean(false);
 
     private final Component parent;
-    private final BibliotecaWriter cd;
+    private final EscritorBiblioteca cd;
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
 
-    public ControladorExportacio(Component parent, BibliotecaWriter cd,
+    public ControladorExportacio(Component parent, EscritorBiblioteca cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
         this.parent = parent;
         this.cd = cd;
@@ -48,7 +48,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.csv", "csv", "CSV files");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -68,7 +68,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.json", "json", "JSON files");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_json_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_json_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -93,7 +93,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.html", "html", "HTML files", "htm");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_html_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_html_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {

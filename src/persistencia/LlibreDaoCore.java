@@ -406,7 +406,7 @@ public class LlibreDaoCore {
     /** Llista blanca de tipus de sentència SQL acceptables en un fitxer
      *  de còpia de seguretat. {@code SET} s'ha exclòs intencionadament:
      *  un {@code SET @@global.*} de MariaDB passaria la comprovació.
-     *  BackupService no escriu mai sentències {@code SET}, de manera
+     *  {@code ServeiCopiaSeguretat} no escriu mai sentències {@code SET}, de manera
      *  que el camí de restauració no les necessita. */
     private static final String[] ALLOWED_LEAD = {
         "INSERT ", "VALUES ", "BEGIN", "COMMIT", "ROLLBACK"

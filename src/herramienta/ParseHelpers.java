@@ -3,23 +3,24 @@ package herramienta;
 import java.util.List;
 
 /**
- * Shared text-to-number parsers for the presentacio layer.
+ * Analitzadors compartits de text-a-nombre per a la capa de presentacio.
  *
- * Two contracts coexist:
+ * Coexisteixen dos contractes:
  * <ul>
- *   <li><b>Best-effort</b> ({@code parseIntOrNull} / {@code parseLongOrNull} /
- *       {@code parseDoubleOrNull}): silent on bad input. Returns a boxed type so
- *       the caller can distinguish "empty" from "zero". Use in sort, display,
- *       or default-aware paths where an error dialog is undesirable.</li>
- *   <li><b>Strict</b> ({@code parseInt} / {@code parseLong} / {@code parseDouble}):
- *       empty input is mapped to {@code defaultValue}; non-numeric input
- *       appends a translated message to {@code errors} and returns
- *       {@code defaultValue}. Use in save paths so a single bad field
- *       aborts the save before the model is mutated.</li>
+ *   <li><b>Best-effort</b> ({@code analitzarIntOrNull} / {@code analitzarLongOrNull} /
+ *       {@code analitzarDoubleOrNull}): silenciós amb entrada incorrecta. Retorna
+ *       un tipus encaixat perquè el consumidor pugui distingir "buit" de "zero".
+ *       Usa en ordre, visualització o camins conscients del valor per defecte
+ *       on un diàleg d'error no és desitjable.</li>
+ *   <li><b>Estricte</b> ({@code parseInt} / {@code parseLong} / {@code parseDouble}):
+ *       l'entrada buida es mapeja a {@code defaultValue}; l'entrada no
+ *       numèrica afegeix un missatge traduït a {@code errors} i retorna
+ *       {@code defaultValue}. Usa en camins de desat perquè un sol camp
+ *       dolent avorti el desat abans que el model es muti.</li>
  * </ul>
  *
- * Replaces the parallel parsers that used to live in
- * {@code DetallesLlibrePanelControl} and {@code GuardarLlibresDialogoControl}.
+ * Substitueix els analitzadors paral·lels que abans vivien a
+ * {@code ControladorPanellDetallsLlibre} i {@code ControladorDialegDesarLlibres}.
  */
 public final class ParseHelpers {
 

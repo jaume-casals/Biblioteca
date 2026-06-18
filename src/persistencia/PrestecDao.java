@@ -35,15 +35,15 @@ public class PrestecDao {
                 "UPDATE prestec SET retornat = TRUE WHERE isbn = ? AND retornat = FALSE")) {
             ps.setLong(1, isbn);
             if (ps.executeUpdate() == 0)
-                throw new SQLException("Book with ISBN " + isbn + " is not on loan");
+                throw new SQLException("Llibre amb l'ISBN " + isbn + " no està en prèstec");
         }
     }
 
     /** Tots els prèstecs, inclosos els ja retornats. Només l'usa
-     *  {@link BackupService#backupToSQL} — per a la UI i l'API, usar
-     *  {@link #getAllActiveLoans()} (exposat a través de
-     *  {@code ControladorPersistencia.getAllActiveLoans} i
-     *  {@code ControladorDomini.getAllActiveLoans}). */
+     *  {@link ServeiCopiaSeguretat#copiaSegToSQL} — per a la UI i l'API, usar
+     *  {@link #obtenirActiveLoans()} (exposat a través de
+     *  {@code ControladorPersistencia.obtenirAllActiveLoans} i
+     *  {@code ControladorDomini.obtenirAllActiveLoans}). */
     public List<persistencia.PrestecRow> obtenirAll() {
         List<persistencia.PrestecRow> rows = new ArrayList<>();
         try {
@@ -120,8 +120,8 @@ public class PrestecDao {
         return 0;
     }
 
-    public List<OverdueLoan> obtenirOverdue(int daysThreshold) {
-        List<OverdueLoan> rows = new ArrayList<>();
+    public List<PrestecEndarrerit> obtenirOverdue(int daysThreshold) {
+        List<PrestecEndarrerit> rows = new ArrayList<>();
         try {
             java.sql.Date cutoff = java.sql.Date.valueOf(
                 java.time.LocalDate.now().minusDays(daysThreshold));
@@ -133,7 +133,7 @@ public class PrestecDao {
                 ps.setDate(1, cutoff);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next())
-                        rows.add(OverdueLoan.fromStrings(rs.getString(1), rs.getString(2), rs.getString(3)));
+                        rows.add(PrestecEndarrerit.fromStrings(rs.getString(1), rs.getString(2), rs.getString(3)));
                 }
             }
         } catch (SQLException e) {

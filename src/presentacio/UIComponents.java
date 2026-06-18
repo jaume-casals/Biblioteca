@@ -16,18 +16,19 @@ import javax.swing.plaf.basic.BasicButtonUI;
 import herramienta.UITheme;
 
 /**
- * presentacio-layer factory for theme-aware Swing components.
+ * Fàbrica de la capa de presentacio per a components Swing sensibles al tema.
  *
- * <p>All presentacio code should call into this class instead of touching
- * {@link UITheme} styling fields directly, so that swapping to a different
- * look-and-feel does not require touching every panel/control.
+ * <p>Tot el codi de presentacio hauria de cridar aquesta classe en lloc de
+ * tocar directament els camps d'estil de {@link UITheme}, de manera que
+ * canviar a un altre look-and-feel no obligui a tocar cada panell/control.
  *
- * <p>The styling bodies (button / label / panel / field / cardBorder) were
- * moved here from {@code herramienta.UITheme} during the session-11 build
- * fix so {@code UITheme} only owns the theme state (colors, fonts,
- * UIManager keys) and {@code UIComponents} owns the panel-layer style
- * application.  Field/colors that drive the look still come from
- * {@link UITheme}; the methods here just apply them.
+ * <p>Els cossos d'estil (button / label / panel / field / cardBorder) es
+ * van moure aquí des de {@code herramienta.UITheme} durant la
+ * correcció de build de la sessió 11 perquè {@code UITheme} només
+ * posseeixi l'estat del tema (colors, fonts, claus UIManager) i
+ * {@code UIComponents} posseeixi l'aplicació d'estils a la capa de
+ * panell. Els camps i colors que defineixen l'aspecte continuen venint
+ * de {@link UITheme}; els mètodes d'aquí simplement els apliquen.
  */
 public final class UIComponents {
 

@@ -5,7 +5,7 @@ import domini.Llibre;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Thin coordinator for {@link GaleriaCobertesPanel} book list updates. */
+/** Coordinador prim per a les actualitzacions de la llista de llibres del {@link GaleriaCobertesPanel}. */
 public class ControladorGaleria {
 
     private final PanelGaleriaCobertes panel;

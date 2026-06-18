@@ -1,10 +1,10 @@
 package herramienta;
 
 /**
- * Typed read/write view of the small "filter / defaults" sub-store of
- * {@link Config} (currently just {@code defaultImgDir}; the preset
- * save/delete APIs remain on {@link Config} directly because they span
- * 17 keys at once).
+ * Vista tipada de lectura/escriptura del petit sub-emmagatzematge "filtre / valors
+ * per defecte" de {@link Config} (actualment només {@code defaultImgDir}; les
+ * API de desar/eliminar preset es queden a {@link Config} directament perquè
+ * abasten 17 claus d'una sola vegada).
  */
 public final class ConfiguracioFiltre {
     private ConfiguracioFiltre() {}

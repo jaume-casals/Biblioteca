@@ -18,20 +18,20 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import herramienta.Configuracio;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 /**
- * Settings dialog.  Each visual section lives in its own class under
- * {@code presentacio.config.*}; this class wires them into a single
- * vertical column and exposes the public ctor / {@link #reloadFromConfig}
- * API that callers depend on.
+ * Diàleg de configuració. Cada secció visual viu a la seva pròpia classe
+ * sota {@code presentacio.config.*}; aquesta classe les connecta en una
+ * única columna vertical i exposa el ctor públic / API
+ * {@link #reloadFromConfig} que els callers necessiten.
  */
 public class ConfiguracioDialog extends JDialog {
 
-    private final BibliotecaWriter cd;
+    private final EscritorBiblioteca cd;
     private final ConfiguracioDialogListener listener;
 
-    public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, BibliotecaWriter cd) {
+    public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, EscritorBiblioteca cd) {
         super(parent, herramienta.I18n.t("modal_settings"), true);
         if (cd == null) throw new IllegalArgumentException("ConfiguracioDialog requires non-null cd");
         this.cd = cd;
@@ -92,7 +92,7 @@ public class ConfiguracioDialog extends JDialog {
             JPanel.WHEN_IN_FOCUSED_WINDOW);
     }
 
-    /** Refresh form fields from {@link Config} (e.g. after external/API changes). */
+    /** Refresca els camps del formulari des de {@link Configuracio} (p. ex. després de canvis externs o de l'API). */
     public void reloadFromConfig() {
         Configuracio.reload();
         JPanel root = (JPanel) getContentPane();

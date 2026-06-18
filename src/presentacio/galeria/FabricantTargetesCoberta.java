@@ -33,14 +33,16 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
- * Builds the visual card panels that fill the gallery.
+ * Construeix els panells visuals de targeta que omplen la galeria.
  *
- * <p>Each card owns its own paint path (card body, footer, progress bar,
- * stars) and is wired to a {@link Listener} so the host panel can stay
- * in sync with selection / focus / open events.
+ * <p>Cada targeta té el seu propi camí de pintat (cos de targeta, peu,
+ * barra de progrés, estrelles) i està connectada a un
+ * {@link AmfitrioTargeta} perquè el panell amfitrió es mantingui
+ * sincronitzat amb els esdeveniments de selecció / focus / obertura.
  *
- * <p>The card receives the {@link CoverImageService} so async image loads
- * update the card's paint reference on the EDT.
+ * <p>La targeta rep el {@link ServeiImatgesCoberta} perquè les càrregues
+ * d'imatge asíncrones actualitzin la referència de pintat de la targeta
+ * a l'EDT.
  */
 public final class FabricantTargetesCoberta {
 
@@ -60,21 +62,24 @@ public final class FabricantTargetesCoberta {
     private static final int SDY = 5;
 
     /**
-     * Host-side state + callbacks shared by every card built by this factory.
+     * Estat + callbacks de la banda de l'amfitrió compartits per cada
+     * targeta construïda per aquesta fàbrica.
      *
-     * <p>Replaces the former 7-method {@code Listener} interface (tot.txt MEDIUM
-     * finding): the host ({@code GaleriaCobertesPanel}) builds a single
-     * {@code CardHost} that captures its live selection / focus state plus
-     * three callback consumers, and passes it to every card. The card's
-     * mouse adapter reads {@link #selectedISBNs()} / {@link #focusedIdx()} /
-     * {@link #currentLlibres()} for read-only access, mutates
-     * {@link #focusedIdx()} via the int[] wrapper, and dispatches
-     * {@link #onCardClicked}, {@link #onCardRightClicked}, and
-     * {@link #onSelectionMutated} on user input.
+     * <p>Substitueix l'antiga interfície {@code Listener} de 7 mètodes
+     * (troballa MEDIUM de tot.txt): l'amfitrió ({@code PanelGaleriaCobertes})
+     * construeix un sol {@code AmfitrioTargeta} que captura el seu estat
+     * viu de selecció / focus més tres consumidors de callback, i el passa
+     * a cada targeta. L'adaptador de ratolí de la targeta llegeix
+     * {@link #selectedISBNs()} / {@link #focusedIdx()} /
+     * {@link #currentLlibres()} per a accés de només lectura, muta
+     * {@link #focusedIdx()} via l'embolcall int[], i envia
+     * {@link #onCardClicked}, {@link #onCardRightClicked} i
+     * {@link #onSelectionMutated} en entrar l'usuari.
      *
-     * <p>The {@code int[]} wrapper for {@code focusedIdx} is the simplest
-     * mutable-int carrier that survives both lambda capture and per-card
-     * mouse-adapter mutation without resorting to {@code AtomicInteger}.
+     * <p>L'embolcall {@code int[]} per a {@code focusedIdx} és el
+     * portador d'enter mutable més senzill que sobreviu tant a la captura
+     * lambda com a la mutació de l'adaptador de ratolí per targeta sense
+     * recórrer a {@code AtomicInteger}.
      */
     public record AmfitrioTargeta(
             Set<Long> selectedISBNs,
@@ -154,10 +159,11 @@ public final class FabricantTargetesCoberta {
     }
 
     /**
-     * Read-only snapshot of everything {@link #paintCard} needs to draw a
-     * card. Carries the live references to {@code imgRef} and {@code hov}
-     * so the image-loader / mouse-Entered mutations are visible on the
-     * next paint.
+     * Instantaniània de només lectura de tot el que necessita
+     * {@link #paintCard} per dibuixar una targeta. Porta les referències
+     * vives a {@code imgRef} i {@code hov} perquè les mutacions del
+     * carregador d'imatges / mouse-Entered siguin visibles al següent
+     * pintat.
      */
     private record EstatTargeta(
             Llibre l,
@@ -170,11 +176,11 @@ public final class FabricantTargetesCoberta {
             String lang) {}
 
     /**
-     * Static card paint — extracted from the anonymous JPanel's
-     * paintComponent (per the tot.txt MEDIUM finding). All drawing
-     * parameters come from the {@link CardState} record; the only
-     * host interaction is the selection check. Testable in
-     * isolation by constructing a CardState and a mock CardHost.
+     * Pintat estàtic de targeta — extret del paintComponent del JPanel
+     * anònim (segons la troballa MEDIUM de tot.txt). Tots els paràmetres
+     * de dibuix venen del record {@link EstatTargeta}; l'única interacció
+     * amb l'amfitrió és la comprovació de selecció. Es pot provar
+     * aïlladament construint un EstatTargeta i un AmfitrioTargeta mock.
      */
     static void paintCard(Graphics2D g, EstatTargeta state, AmfitrioTargeta host) {
         Graphics2D g2 = (Graphics2D) g.create();
@@ -228,10 +234,11 @@ public final class FabricantTargetesCoberta {
     }
 
     /**
-     * Static mouse adapter — extracted from the inline MouseAdapter
-     * (per the tot.txt MEDIUM finding). Handles hover repaints and
-     * selection / right-click / double-click. The adapter is stateless
-     * beyond the references it captures at construction.
+     * Adaptador de ratolí estàtic — extret del MouseAdapter en línia
+     * (segons la troballa MEDIUM de tot.txt). Gestiona els repaints
+     * de hover i la selecció / clic dret / doble clic. L'adaptador
+     * no té estat més enllà de les referències que captura a la
+     * construcció.
      */
     private static final class AdaptadorRatxiTargeta extends MouseAdapter {
         private final JPanel card;

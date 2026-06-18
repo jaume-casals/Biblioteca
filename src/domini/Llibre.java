@@ -50,16 +50,17 @@ public class Llibre {
 	}
 
 	/**
-	 * Copy the canonical "updateable" fields (everything except the
-	 * per-language title, cover blob, autors list, notes, pages, etc.)
-	 * into {@code target}. The {@code autor} parameter is the joined
-	 * string from the validator / form; callers that have the parsed
-	 * list should call {@link #setAutors(java.util.List)} afterwards,
-	 * which OVERWRITES the joined string. The two-step order
-	 * (bind → setAutors) is intentional: bindUpdateableFields first
-	 * seeds the joined string so {@link #getAutors()} is consistent
-	 * immediately, then the list override lets the caller replace it
-	 * with the parsed result without the field-level split logic.
+	 * Copia els camps canònics "actualitzables" (tot menys el títol per
+	 * idioma, el blob de portada, la llista d'autors, les notes, les pàgines,
+	 * etc.) a {@code target}. El paràmetre {@code autor} és el string ja
+	 * concatenat provinent del validador / formulari; els consumidors que
+	 * disposen de la llista analitzada haurien de cridar
+	 * {@link #posarAutors(java.util.List)} a continuació, que SOBREESCRIURÀ
+	 * el string concatenat. L'ordre en dos passos (vinculació → posarAutors)
+	 * és deliberada: vincularUpdateableFields primer deixa preparat el string
+	 * concatenat de manera que {@link #obtenirAutors()} sigui consistent
+	 * immediatament; després la llista nova permet al consumidor substituir-
+	 * lo pel resultat analitzat sense la lògica de divisió a nivell de camp.
 	 */
 	public static Llibre vincularUpdateableFields(Llibre target, Long isbn, String nom, String autor,
 			Integer any, String descripcio, Double valoracio, Double preu, Boolean llegit, String imatge) {
@@ -131,12 +132,12 @@ public class Llibre {
 	public String obtenirNomEn() { return nomEn; }
 	public void posarNomEn(String v) { this.nomEn = nullIfBlankTrim(v); }
 
-	/** Returns {@code s.trim()} if {@code s} is non-null and not blank, else {@code null}. */
+	/** Retorna {@code s.trim()} si {@code s} no és null ni blanc; altrament {@code null}. */
 	private static String nullIfBlankTrim(String s) {
 		return (s != null && !s.isBlank()) ? s.trim() : null;
 	}
 
-	/** Returns the title for the given lang code ("ca","es","en"), falling back to nom. */
+	/** Retorna el títol per al codi d'idioma donat ("ca","es","en"), caient al nom si no hi és. */
 	public String obtenirDisplayNom(String lang) {
 		String alt = null;
 		if ("ca".equals(lang)) alt = nomCa;
@@ -152,7 +153,7 @@ public class Llibre {
 
 	public java.util.List<String> obtenirAutors() { return new java.util.ArrayList<>(autors); }
 
-	/** Used when loading multiple author rows from SQL (see {@link persistencia.LlibreDao#getAll}). */
+	/** Usat en carregar múltiples files d'autors des de SQL (veure {@link persistencia.LlibreDaoCore#obtenirAll}). */
 	public void afegirAutorNom(String nom) {
 		if (nom == null || nom.isBlank()) return;
 		autors.add(nom);
@@ -237,7 +238,7 @@ public class Llibre {
 	public void posarDataLectura(String dataLectura) { this.dataLectura = nullIfBlankTrim(dataLectura); }
 	public String obtenirIdioma() { return idioma; }
 	public void posarIdioma(String idioma) { this.idioma = nullIfBlankTrim(idioma); }
-	public String getFormat() { return format; }
+	public String obtenirFormat() { return format; }
 	public void posarFormat(String format) { this.format = nullIfBlankTrim(format); }
 	public String obtenirPaisOrigen() { return paisOrigen; }
 	public void posarPaisOrigen(String paisOrigen) { this.paisOrigen = nullIfBlankTrim(paisOrigen); }
@@ -267,8 +268,8 @@ public class Llibre {
 		return c;
 	}
 
-	public boolean esHeavyFieldsLoaded() { return heavyFieldsLoaded; }
-	public void posarHeavyFieldsLoaded(boolean heavyFieldsLoaded) { this.heavyFieldsLoaded = heavyFieldsLoaded; }
+	public boolean teCampsPesatsCarregats() { return heavyFieldsLoaded; }
+	public void posarCampsPesatsCarregats(boolean heavyFieldsLoaded) { this.heavyFieldsLoaded = heavyFieldsLoaded; }
 
 	@Override
 	public String toString() {

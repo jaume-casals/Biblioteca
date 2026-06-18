@@ -1,8 +1,8 @@
 package presentacio;
 
-/** Explicit callback interface for shelf-management actions (replaces raw Runnable). */
+/** Interfície explícita de callbacks per a accions de gestió de prestatgeries (substitueix Runnable en brut). */
 public interface GestioLlistesListener {
-    default void onShelvesChanged() {}
-    default void onShelfRenamed(int id, String newName) {}
-    default void onShelfDeleted(int id) {}
+    default void enCanviarPrestatgeries() {}
+    default void enReanomenarPrestatge(int id, String newName) {}
+    default void enEliminarPrestatge(int id) {}
 }

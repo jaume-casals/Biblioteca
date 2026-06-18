@@ -14,22 +14,23 @@ import herramienta.I18n;
 import persistencia.ControladorPersistencia;
 
 /**
- * Shelf ({@link Llista}) management and book↔shelf relation operations.
+ * Gestió de Prestatgeries ({@link Llista}) i operacions de relació llibre↔prestatge.
  *
- * <p>All single-DB mutations follow an atomic contract: the state
- * lock is held for the entire {@code pre-check → persistence →
- * in-memory mutate} sequence. This closes the race that existed
- * in the pre-facade {@code ControladorDomini}, where two threads
- * renaming the same shelf could both pass the pre-check, race the
- * DB (last-writer-wins), and then both mutate the in-memory map —
- * the second mutation was silently lost or the in-memory state
- * diverged from the DB.
+ * <p>Totes les mutacions individuals a la BBDD segueixen un contracte atòmic:
+ * el lock d'estat es manté durant tota la seqüència
+ * {@code pre-comprovació → persistència → mutació en memòria}. Això tanca la
+ * cursa que existia a l'antic {@code ControladorDomini} (abans de la divisió
+ * en façanes), en què dos fils reanonenant el mateix prestatge podien passar
+ * cadascun la pre-comprovació, competir per la BBDD (l'últim en escriure
+ * guanya), i tot seguit mutar tots dos el mapa en memòria — la segona
+ * mutació es perdia silenciosament o l'estat en memòria es desviava de la BBDD.
  *
- * <p>For the move-up / move-down helpers the lock is also held
- * across the two single-row updates
- * ({@link #swapLlistesOrdreLocked}); both writes are brief and the
- * caller already holds the lock, so a release-and-reacquire dance
- * would add complexity for negligible throughput gain.
+ * <p>Per als helpers de moure amunt / moure avall el lock també es manté
+ * durant les dues actualitzacions individuals
+ * ({@link #swapLlistesOrdreLocked}); ambdues escriptures són breus i el
+ * consumidor ja té el lock agafat, de manera que una operació
+ * d'alliberar i tornar a agafar afegiria complexitat per un guany de
+ * rendiment negligible.
  */
 public final class DelegatPrestatgeria {
 
@@ -43,7 +44,7 @@ public final class DelegatPrestatgeria {
 
     public Llista obtenirLlistaById(int id) throws Exception {
         Llista l = state.withLockReturning(() -> state.llistesById().get(id));
-        if (l == null) throw new BibliotecaException.NoTrobat("Shelf not found: " + id);
+        if (l == null) throw new BibliotecaException.NoTrobat("Prestatge no trobat: " + id);
         return l;
     }
 
@@ -127,11 +128,11 @@ public final class DelegatPrestatgeria {
                 state.persistence().actualitzarLlistaColor(id, color);
             } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
             Llista l = state.llistesById().get(id);
-            if (l != null) l.setColor(color);
+            if (l != null) l.posarColor(color);
         });
     }
 
-    /** Caller MUST hold the state lock. */
+    /** El consumidor HA DE tenir el lock d'estat agafat. */
     private int indexOfLlistaLocked(int id) {
         for (int i = 0; i < state.llistes().size(); i++)
             if (state.llistes().get(i).obtenirId() == id) return i;
@@ -139,14 +140,14 @@ public final class DelegatPrestatgeria {
     }
 
     /**
-     * Caller MUST hold the state lock. Holds it across the two DB
-     * updates as well — both are single-row writes so the lock is
-     * only held for milliseconds. The original code already
-     * followed this pattern; it is preserved here for consistency
-     * with the rest of the delegate and because the caller
-     * ({@link #moveLlistaUp} / {@link #moveLlistaDown}) is itself
-     * already inside a {@code withLock} block, making a
-     * release-and-reacquire dance unnecessarily complex.
+     * El consumidor HA DE tenir el lock d'estat agafat. El manté durant les
+     * dues actualitzacions de la BBDD també — totes dues són escriptures
+     * d'una sola fila, de manera que el lock només es manté durant
+     * mil·lisegons. El codi original ja seguia aquest patró; es preserva
+     * aquí per consistència amb la resta del delegat i perquè el consumidor
+     * ({@link #moureLlistaUp} / {@link #moureLlistaDown}) ja es troba dins
+     * d'un bloc {@code withLock}, cosa que fa innecessàriament complexa
+     * una operació d'alliberar i tornar a agafar.
      */
     private void swapLlistesOrdreLocked(int i, int j, int id) {
         int size = state.llistes().size();

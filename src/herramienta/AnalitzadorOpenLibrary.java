@@ -11,13 +11,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Pure-JSON parsing for OpenLibrary responses. Extracted from {@link OpenLibraryClient} so the
- * network path and the parsing logic can be tested independently.
+ * Anàlisi JSON pura per a respostes d'OpenLibrary. Extret de {@link ClientOpenLibrary}
+ * perquè el camí de xarxa i la lògica d'anàlisi es puguin provar independentment.
  */
 public final class AnalitzadorOpenLibrary {
     private AnalitzadorOpenLibrary() {}
 
-    /** Parse an {@code /api/books?bibkeys=ISBN:...&format=json&jscmd=data} response body. */
+    /** Analitza un cos de resposta {@code /api/books?bibkeys=ISBN:...&format=json&jscmd=data}. */
     public static Map<String, String> analitzarIsbnResponse(String json) {
         Map<String, String> r = new HashMap<>();
         JsonObject root = JsonParser.parseString(json).getAsJsonObject();

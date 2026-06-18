@@ -2,7 +2,7 @@ package herramienta;
 
 import java.util.Map;
 
-/** Typed view of preset-related {@link Config} keys. */
+/** Vista tipada de les claus de {@link Config} relacionades amb els presets. */
 public final class PresetStore {
     private PresetStore() {}
 

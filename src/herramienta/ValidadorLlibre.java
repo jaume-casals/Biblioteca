@@ -52,9 +52,9 @@ public class ValidadorLlibre {
 	}
 
 	/**
-	 * Validates and builds a Llibre.
-	 * Only isbn and nom are mandatory. All other fields accept null/blank and get
-	 * safe defaults (valoracio=0, preu=0, llegit=false, rest empty strings).
+	 * Valida i construeix un Llibre.
+	 * Només isbn i nom són obligatoris. Tots els altres camps accepten null/buit i
+	 * reben valors per defecte segurs (valoracio=0, preu=0, llegit=false, la resta cadenes buides).
 	 */
 	public static Llibre comprovarLlibre(Long isbn, String nom, String autor, Integer any, String descripcio,
 			Double valoracio, Double preu, Boolean llegit, String portada) {

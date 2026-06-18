@@ -77,7 +77,7 @@ public class ClientOpenLibrary {
 		if (!r.containsKey("title") && !r.containsKey("error")) {
 			try { mergeGoogleBooks(isbn, r); } catch (Exception e) {
 				java.util.logging.Logger.getLogger(ClientOpenLibrary.class.getName())
-					.log(java.util.logging.Level.FINE, "Google Books merge failed for ISBN " + isbn, e);
+					.log(java.util.logging.Level.FINE, "Ha fallat la fusió amb Google Books per a l'ISBN " + isbn, e);
 			}
 		}
 		return r;
@@ -171,7 +171,7 @@ public class ClientOpenLibrary {
 				}
 			}
 		} catch (Exception e) {
-			LOG.log(Level.FINE, "fetchCoverByISBN primary URL failed for " + isbn, e);
+			LOG.log(Level.FINE, "fetchCoverByISBN: ha fallat l'URL primària per a " + isbn, e);
 		} finally {
 			if (conn != null) {
 				try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
@@ -192,7 +192,7 @@ public class ClientOpenLibrary {
 			JsonObject gbRoot;
 			try { gbRoot = JsonParser.parseString(meta).getAsJsonObject(); }
 			catch (RuntimeException analitzarEx) {
-				LOG.log(Level.FINE, "fetchCoverByISBN google fallback: malformed JSON for " + isbn, analitzarEx);
+				LOG.log(Level.FINE, "fetchCoverByISBN fallback de Google: JSON mal format per a " + isbn, analitzarEx);
 				return null;
 			}
 			if (!gbRoot.has("items")) return null;
@@ -212,13 +212,13 @@ public class ClientOpenLibrary {
 			try (java.io.InputStream is = c2.getInputStream()) { result = is.readAllBytes(); }
 			c2.disconnect();
 		} catch (Exception e) {
-			LOG.log(Level.FINE, "fetchCoverByISBN google fallback failed for " + isbn, e);
+			LOG.log(Level.FINE, "Ha fallat el fallback de Google a fetchCoverByISBN per a " + isbn, e);
 		}
 		return result;
 	}
 
 	private static String fetchWithRetry(String url) throws java.io.IOException {
-		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw new java.io.IOException("Interrupted while rate-limiting", ie); }
+		try { rateLimit(); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw new java.io.IOException("Interromput durant la limitació de freqüència", ie); }
 		int retries = testMaxRetries >= 0 ? testMaxRetries : MAX_RETRIES;
 		long baseMs = testRetryBaseMs >= 0 ? testRetryBaseMs : RETRY_BASE_MS;
 		if (retries <= 0) return fetch(url);
@@ -232,12 +232,12 @@ public class ClientOpenLibrary {
 					try { Thread.sleep(baseMs * (1L << i)); }
 					catch (InterruptedException ie) {
 						Thread.currentThread().interrupt();
-						throw new java.io.IOException("Interrupted during retry backoff", ie);
+						throw new java.io.IOException("Interromput durant el retrocés entre reintents", ie);
 					}
 				}
 			}
 		}
-		throw last != null ? last : new java.io.IOException("No retries performed for " + url);
+		throw last != null ? last : new java.io.IOException("No s'han fet reintents per a " + url);
 	}
 
 	/**
@@ -256,7 +256,7 @@ public class ClientOpenLibrary {
 			JsonParser.parseString(body);
 			return body;
 		} catch (RuntimeException analitzarEx) {
-			throw new java.io.IOException("Malformed JSON from " + url + ": " + analitzarEx.getMessage(), analitzarEx);
+			throw new java.io.IOException("JSON mal format des de " + url + ": " + analitzarEx.getMessage(), analitzarEx);
 		}
 	}
 

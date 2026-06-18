@@ -19,18 +19,19 @@ import herramienta.Configuracio;
 import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.ConfiguracioFinestra;
-import interficie.BibliotecaWriter;
-import presentacio.listener.EnActualizarBBDD;
+import interficie.EscritorBiblioteca;
+import presentacio.listener.EnActualitzarBBDD;
 
 /**
- * Facade over the 6 sub-controllers (bookActions, bookIO, contextMenu, filter,
- * shelf, tablePage) for the main screen. MostrarBibliotecaControl owns the
- * table/list rendering; this class owns the top-level frame, menubar, and
- * orchestration.
+ * Façana sobre els 6 sub-controladors (bookActions, bookIO, contextMenu,
+ * filter, shelf, tablePage) per a la pantalla principal.
+ * MostrarBibliotecaControl posseeix el renderitzat de la taula/llista;
+ * aquesta classe posseeix el frame de nivell superior, la barra de menú
+ * i l'orquestració.
  */
-public class ControladorMarcPrincipal implements presentacio.listener.EnActualizarBBDD {
+public class ControladorMarcPrincipal implements presentacio.listener.EnActualitzarBBDD {
 
-	private final BibliotecaWriter cLlibres;
+	private final EscritorBiblioteca cLlibres;
 	private final PanelMostrarBiblioteca libraryPanel;
 	private final PanelMarcPrincipal panel;
 	private final JFrame frame;
@@ -47,7 +48,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 	 */
 	private static volatile ControladorMarcPrincipal instance;
 
-	private ControladorMarcPrincipal(PanelMarcPrincipal panel, BibliotecaWriter cd) {
+	private ControladorMarcPrincipal(PanelMarcPrincipal panel, EscritorBiblioteca cd) {
 		this.panel = panel;
 		this.libraryPanel = panel.obtenirMostrarBibliotecaPanel();
 		this.cLlibres = cd;
@@ -112,7 +113,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 				if (libraryPanel.esGaleriaMode()) {
 					libraryPanel.obtenirGaleria().selectAll();
 				} else {
-					JTable t = libraryPanel.getjTableBilio();
+					JTable t = libraryPanel.obtenirTaulaLlibres();
 					if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
 				}
 			}
@@ -150,9 +151,9 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 			}
 		});
 
-		libraryPanel.getjTableBilio().getInputMap(JComponent.WHEN_FOCUSED)
+		libraryPanel.obtenirTaulaLlibres().getInputMap(JComponent.WHEN_FOCUSED)
 				.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "eliminarFila");
-		libraryPanel.getjTableBilio().getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
+		libraryPanel.obtenirTaulaLlibres().getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
 				mostrarControl.eliminarFilaSeleccionada();
 			}
@@ -168,7 +169,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 			@Override protected void done() {
 				try { mostrarControl.posarTable(get()); }
 				catch (Exception e) { java.util.logging.Logger.getLogger(ControladorMarcPrincipal.class.getName())
-					.log(java.util.logging.Level.WARNING, "Failed to load initial library", e); }
+					.log(java.util.logging.Level.WARNING, "No s'ha pogut carregar la biblioteca inicial", e); }
 			}
 		}.execute();
 
@@ -198,7 +199,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 		});
 	}
 
-	public static ControladorMarcPrincipal getInstance(PanelMarcPrincipal panel, BibliotecaWriter cd) {
+	public static ControladorMarcPrincipal getInstance(PanelMarcPrincipal panel, EscritorBiblioteca cd) {
 		synchronized (ControladorMarcPrincipal.class) {
 			if (instance == null && panel != null) instance = new ControladorMarcPrincipal(panel, cd);
 			else if (instance != null && panel != null) throw new IllegalStateException("MainFrameControl already initialized");
@@ -213,9 +214,9 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 	public JFrame obtenirFrame() { return frame; }
 
 	private void obrirNouLlibreDialeg() {
-		presentacio.detalles.control.GuardarLlibresDialogoControl ctrl =
-			new presentacio.detalles.control.GuardarLlibresDialogoControl(
-				new presentacio.detalles.vista.GuardarLlibresDialogo(), this, cLlibres);
+		presentacio.detalles.control.ControladorDialegDesarLlibres ctrl =
+			new presentacio.detalles.control.ControladorDialegDesarLlibres(
+				new presentacio.detalles.vista.DialegDesarLlibres(), this, cLlibres);
 		ctrl.obtenirVista().setLocationRelativeTo(frame);
 		ctrl.obtenirVista().setVisible(true);
 	}
@@ -245,10 +246,10 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 			protected Void doInBackground() {
 				StringBuilder sb;
 				try {
-					List<persistencia.OverdueLoan> loans = cLlibres.obtenirAllOverdueLoans(30);
+					List<persistencia.PrestecEndarrerit> loans = cLlibres.obtenirAllOverdueLoans(30);
 					if (!loans.isEmpty()) {
 						sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
-						for (persistencia.OverdueLoan row : loans) {
+						for (persistencia.PrestecEndarrerit row : loans) {
 							sb.append("• ").append(row.nomPersona()).append(" → ").append(row.nomLlibre()).append(" (").append(row.dataPrestecDisplay()).append(")\n");
 						}
 						overdueMsg = sb.toString();
@@ -294,17 +295,18 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 	}
 
 	@Override
-	public void onBookUpdated(Llibre l, boolean esNew) {
+	public void enActualitzarLlibre(Llibre l, boolean esNew) {
 		if (esNew) assignToCurrentShelfIfNeeded(l);
 		mostrarControl.refrescarLlibre(l, esNew);
 	}
 
 	/**
-	 * If the user is currently viewing a specific shelf, add a newly created
-	 * book to that shelf so it shows up immediately.  No-op when:
-	 *  - the book is not new (this helper is for {@code isNew} only),
-	 *  - the user is on "All books" (no shelf filter),
-	 *  - the add fails (caller already handled the user-facing error).
+	 * Si l'usuari està veient una prestatgeria específica, afegeix un llibre
+	 * acabat de crear a aquesta prestatgeria perquè aparegui immediatament.
+	 * No-op quan:
+	 *  - el llibre no és nou (aquest helper és només per a {@code isNew}),
+	 *  - l'usuari és a "Tots els llibres" (sense filtre de prestatgeria),
+	 *  - l'addició falla (el ja ha gestionat l'error visible a l'usuari).
 	 */
 	private void assignToCurrentShelfIfNeeded(Llibre l) {
 		Integer llistaId = mostrarControl.obtenirCurrentLlistaId();
@@ -317,7 +319,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualiz
 	}
 
 	@Override
-	public void onBookDeleted(Llibre l) {
+	public void enEliminarLlibre(Llibre l) {
 		mostrarControl.eliminarFila(l);
 	}
 

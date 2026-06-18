@@ -1,12 +1,12 @@
 package herramienta.csv;
 
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 import java.util.Map;
 
 public interface CsvImportStrategy {
     /** Nom curt per a logs i missatges d'error (p.ex. "Goodreads", "LibraryThing", "Natiu"). */
-    String getName();
+    String obtenirNom();
     boolean potHandle(String headerRow);
-    /** Returns true if the row was imported, false if skipped (e.g. duplicate). Throws on parse error. */
-    boolean analitzarLine(String[] cols, Map<String, Integer> hMap, BibliotecaWriter cd) throws domini.BibliotecaException;
+    /** Retorna cert si la fila s'ha importat, fals si s'ha omès (p.ex. duplicat). Llança en error d'anàlisi. */
+    boolean analitzarLine(String[] cols, Map<String, Integer> hMap, EscritorBiblioteca cd) throws domini.BibliotecaException;
 }

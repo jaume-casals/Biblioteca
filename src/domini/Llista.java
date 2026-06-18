@@ -16,7 +16,7 @@ public class Llista {
 
     public int obtenirOrdre() { return ordre; }
     public void posarOrdre(int ordre) { this.ordre = ordre; }
-    public String getColor() { return color; }
+    public String obtenirColor() { return color; }
 
     /** Font única de veritat per a la validació de colors; null significa "sense color / netejar". */
     public static boolean esValidColor(String color) {
@@ -24,12 +24,12 @@ public class Llista {
     }
 
     /**
-     * Setter no comprovat — crida primer {@link #isValidColor(String)} quan
+     * Setter no comprovat — crida primer {@link #esValidColor(String)} quan
      * el valor provingui d'entrada de l'usuari. Els camins de càrrega del
      * DAO el fan servir directament amb valors que ja s'han validat en
      * escriure.
      */
-    public void setColor(String color) { this.color = color; }
+    public void posarColor(String color) { this.color = color; }
 
     public int obtenirId() { return id; }
     public String obtenirNom() { return nom; }

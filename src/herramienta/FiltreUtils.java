@@ -40,13 +40,13 @@ public class FiltreUtils {
     }
 
     /**
-     * Single source of truth for the in-memory filter predicate. SQL path in
-     * {@code LlibreDao.search} mirrors this — when adding a new field to
-     * {@link LlibreFilter}, also extend the SQL builder there.
+     * Única font de veritat per al predicat de filtre en memòria. El camí SQL
+     * a {@code LlibreSearchDao.search} el reflecteix — quan afegeixis un camp
+     * nou a {@link LlibreFilter}, estén també el constructor SQL allà.
      *
-     * <p>{@code tagISBNs} and {@code llistaISBNs} are pre-computed ISBN sets
-     * supplied by the caller (they require DB lookups) so this method stays
-     * pure and side-effect-free.
+     * <p>{@code tagISBNs} i {@code llistaISBNs} són conjunts d'ISBN precalculats
+     * subministrats pel consumidor (requereixen cerques a la BBDD) de manera
+     * que aquest mètode es manté pur i sense efectes secundaris.
      */
     public static boolean matches(Llibre l, LlibreFilter f, Set<Long> tagISBNs, Set<Long> llistaISBNs) {
         if (f.obtenirAutor() != null && !matchString(f.obtenirAutor(), l.obtenirAutor())) return false;
@@ -63,7 +63,7 @@ public class FiltreUtils {
         if (llistaISBNs != null && !llistaISBNs.contains(l.obtenirISBN())) return false;
         if (f.obtenirEditorial() != null && !matchString(f.obtenirEditorial(), l.obtenirEditorial())) return false;
         if (f.obtenirSerie()     != null && !matchString(f.obtenirSerie(),     l.obtenirSerie()))     return false;
-        if (f.getFormat()    != null && !f.getFormat().equalsIgnoreCase(l.getFormat()))   return false;
+        if (f.obtenirFormat()    != null && !f.obtenirFormat().equalsIgnoreCase(l.obtenirFormat()))   return false;
         if (f.obtenirIdioma()    != null && !matchString(f.obtenirIdioma(),    l.obtenirIdioma()))    return false;
         return true;
     }

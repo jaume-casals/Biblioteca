@@ -11,7 +11,7 @@ import java.util.function.BiConsumer;
 
 import javax.swing.JButton;
 
-/** Attaches drag-to-shelf drop targets; keeps DnD logic out of {@link LeftSidebarPanel}. */
+/** Adjunta les destinacions d'arrossegar a prestatgeria; manté la lògica de DnD fora de {@link PanellBarraEsquerra}. */
 final class GestorArrossegarSoltarPrestatgeria {
 
     private GestorArrossegarSoltarPrestatgeria() {}

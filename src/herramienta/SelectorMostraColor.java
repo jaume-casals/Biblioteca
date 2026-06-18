@@ -10,16 +10,16 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-/** Compact shelf-color picker using a fixed palette (no full {@code JColorChooser}). */
+/** Selector compacte de color de prestatge amb una paleta fixa (sense el {@code JColorChooser} complet). */
 public final class SelectorMostraColor {
 
     /**
-     * Default shelf color when none has been assigned. Shared by
-     * {@link #chooseHex} (when the caller passes {@code null}) and
-     * {@code GestioLlistesDialog.onColorLlista} (when the existing
-     * shelf has no color). Lifting it to a single constant makes
-     * the policy "new shelf starts blue" easy to change in one
-     * place (per the tot.txt MEDIUM finding on the shared default).
+     * Color per defecte del prestatge quan no se n'ha assignat cap. Compartit
+     * per {@link #chooseHex} (quan el consumidor passa {@code null}) i
+     * {@code GestioLlistesDialeg.onColorLlista} (quan el prestatge existent
+     * no té color). Apujar-lo a una sola constant fa que la política
+     * "prestatge nou comença en blau" sigui fàcil de canviar en un sol
+     * lloc (segons el finding MEDIUM de tot.txt sobre el valor per defecte compartit).
      */
     public static final String DEFAULT_HEX = "#3498DB";
 
@@ -30,7 +30,7 @@ public final class SelectorMostraColor {
 
     private SelectorMostraColor() {}
 
-    /** @return chosen color hex (#RRGGBB) or {@code null} if cancelled */
+    /** @return hex del color escollit (#RRGGBB) o {@code null} si es cancel·la */
     public static String chooseHex(java.awt.Component parent, Color initial, String titleKey) {
         final Color[] chosen = { initial != null ? initial : Color.decode(DEFAULT_HEX) };
         JPanel grid = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));

@@ -30,7 +30,7 @@ public class PanelTaulaCentral extends JPanel {
 	private static final String CARD_TAULA = "TAULA";
 	private static final String CARD_GALERIA = "GALERIA";
 
-	private JTable jTableBilio;
+	private JTable taulaLlibres;
 	private JScrollPane scrollPaneJTable;
 	private JPanel paginationPanel;
 	private JButton btnPaginaAnterior;
@@ -66,7 +66,7 @@ public class PanelTaulaCentral extends JPanel {
 		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
 		scrollPaneJTable.getVerticalScrollBar().setUnitIncrement(16);
 
-		jTableBilio = new JTable() {
+		taulaLlibres = new JTable() {
 			// Etiqueta caché reutilitzada pel renderer de capçalera
 			// (assignació única) — el renderer per defecte crea un JLabel
 			// nou per cel·la per render, cosa que es malgasta en taules
@@ -99,24 +99,24 @@ public class PanelTaulaCentral extends JPanel {
 				return fm().stringWidth(text) > r.width ? text : null;
 			}
 		};
-		jTableBilio.setDefaultEditor(Object.class, null);
-		jTableBilio.setAutoCreateRowSorter(true);
-		jTableBilio.getTableHeader().setReorderingAllowed(false);
-		jTableBilio.setBackground(UITheme.palette().bgPanel());
-		jTableBilio.setSelectionBackground(UITheme.palette().accent());
-		jTableBilio.setSelectionForeground(Color.WHITE);
-		jTableBilio.setGridColor(UITheme.palette().tableGrid());
-		jTableBilio.setRowHeight(32);
-		jTableBilio.setFont(UITheme.fontBase());
-		jTableBilio.setShowGrid(true);
-		jTableBilio.setIntercellSpacing(new Dimension(0, 1));
-		jTableBilio.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+		taulaLlibres.setDefaultEditor(Object.class, null);
+		taulaLlibres.setAutoCreateRowSorter(true);
+		taulaLlibres.getTableHeader().setReorderingAllowed(false);
+		taulaLlibres.setBackground(UITheme.palette().bgPanel());
+		taulaLlibres.setSelectionBackground(UITheme.palette().accent());
+		taulaLlibres.setSelectionForeground(Color.WHITE);
+		taulaLlibres.setGridColor(UITheme.palette().tableGrid());
+		taulaLlibres.setRowHeight(32);
+		taulaLlibres.setFont(UITheme.fontBase());
+		taulaLlibres.setShowGrid(true);
+		taulaLlibres.setIntercellSpacing(new Dimension(0, 1));
+		taulaLlibres.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
 		String[] headerTips = {I18n.t("tip_col_cover"), I18n.t("tip_col_isbn"), I18n.t("tip_col_title"), I18n.t("tip_col_author"),
 			I18n.t("tip_col_year"), I18n.t("tip_col_rating"), I18n.t("tip_col_price") + " (" + herramienta.Configuracio.getCurrencySymbol() + ")",
 			I18n.t("tip_col_read"), I18n.t("tip_col_progress"), I18n.t("tip_col_details")};
 
-		jTableBilio.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
+		taulaLlibres.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
 			// Reutilitzat a totes les cel·les de la capçalera. El renderer
 			// per defecte assigna un JLabel nou per cel·la per event de
 			// desplaçament; amb 10 columnes i 30 files visibles, són 300
@@ -148,10 +148,10 @@ public class PanelTaulaCentral extends JPanel {
 				return lbl;
 			}
 		});
-		scrollPaneJTable.setViewportView(jTableBilio);
+		scrollPaneJTable.setViewportView(taulaLlibres);
 
-		jTableBilio.setDragEnabled(true);
-		jTableBilio.setTransferHandler(new TransferHandler() {
+		taulaLlibres.setDragEnabled(true);
+		taulaLlibres.setTransferHandler(new TransferHandler() {
 			@Override
 			public int getSourceActions(javax.swing.JComponent c) { return COPY; }
 			@Override
@@ -159,7 +159,7 @@ public class PanelTaulaCentral extends JPanel {
 				JTable t = (JTable) c;
 				StringBuilder sb = new StringBuilder();
 				for (int row : t.getSelectedRows()) {
-					Object v = t.getValueAt(row, presentacio.BibliotecaTableModel.COL_ISBN);
+					Object v = t.getValueAt(row, presentacio.ModelTaulaBiblioteca.COL_ISBN);
 					if (v != null) { if (sb.length() > 0) sb.append(","); sb.append(v); }
 				}
 				return new StringSelection(sb.toString());
@@ -197,11 +197,11 @@ public class PanelTaulaCentral extends JPanel {
 	public void aplicarTheme() {
 		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
-		jTableBilio.setBackground(UITheme.palette().bgPanel());
-		jTableBilio.setForeground(UITheme.palette().textDark());
-		jTableBilio.setSelectionBackground(UITheme.palette().accent());
-		jTableBilio.setSelectionForeground(Color.WHITE);
-		jTableBilio.setGridColor(UITheme.palette().tableGrid());
+		taulaLlibres.setBackground(UITheme.palette().bgPanel());
+		taulaLlibres.setForeground(UITheme.palette().textDark());
+		taulaLlibres.setSelectionBackground(UITheme.palette().accent());
+		taulaLlibres.setSelectionForeground(Color.WHITE);
+		taulaLlibres.setGridColor(UITheme.palette().tableGrid());
 		javax.swing.UIManager.put("Table.alternateRowColor", UITheme.palette().tableAlt());
 
 		paginationPanel.setBackground(UITheme.palette().bgMain());
@@ -233,7 +233,7 @@ public class PanelTaulaCentral extends JPanel {
 	public JButton obtenirBtnPaginaSeguent()      { return btnPaginaSeguent; }
 	public JLabel  obtenirLblPagina()             { return lblPagina; }
 	public JPanel  obtenirPaginationPanel()       { return paginationPanel; }
-	public JTable  getjTableBilio()           { return jTableBilio; }
+	public JTable  obtenirTaulaLlibres()           { return taulaLlibres; }
 	public JScrollPane obtenirScrollPaneJTable()  { return scrollPaneJTable; }
 	public PanelGaleriaCobertes obtenirGaleria()  { return galeria; }
 }

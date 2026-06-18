@@ -2,23 +2,25 @@ package herramienta;
 
 import domini.Llista;
 import domini.Tag;
-import interficie.ShelfWriter;
-import interficie.TagWriter;
+import interficie.EscritorPrestatgeria;
+import interficie.EscritorEtiqueta;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Maps incoming external IDs (from CSV/JSON exports) to the locally-assigned IDs of shelves
- * and tags, creating new entries when no name match exists. Replaces duplicated remap loops in
- * {@code ImportExportRouter.importJson} and {@code BookImporter.importJSON}.
+ * Mapeja IDs externs entrants (d'exportacions CSV/JSON) als IDs assignats
+ * localment de prestatgeries i etiquetes, creant noves entrades quan no
+ * existeix cap coincidència per nom. Substitueix els bucles de remapeig
+ * duplicats a {@code ImportExportRouter.importJson} i
+ * {@code ImportadorLlibres.importJSON}.
  */
 public final class RelationRemapper {
 
     public static final class RemapejadorIdPrestatgeria {
-        private final ShelfWriter cd;
+        private final EscritorPrestatgeria cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public RemapejadorIdPrestatgeria(ShelfWriter cd) {
+        public RemapejadorIdPrestatgeria(EscritorPrestatgeria cd) {
             this.cd = cd;
             for (Llista l : cd.obtenirAllLlistes()) byNom.put(l.obtenirNom(), l.obtenirId());
         }
@@ -32,9 +34,9 @@ public final class RelationRemapper {
     }
 
     public static final class RemapejadorIdEtiqueta {
-        private final TagWriter cd;
+        private final EscritorEtiqueta cd;
         private final Map<String, Integer> byNom = new HashMap<>();
-        public RemapejadorIdEtiqueta(TagWriter cd) {
+        public RemapejadorIdEtiqueta(EscritorEtiqueta cd) {
             this.cd = cd;
             for (Tag t : cd.obtenirAllTags()) byNom.put(t.obtenirNom(), t.obtenirId());
         }

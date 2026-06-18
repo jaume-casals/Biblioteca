@@ -24,7 +24,7 @@ public class LlistaDao {
                 while (rs.next()) {
                     Llista l = new Llista(rs.getInt(1), rs.getString(2));
                     l.posarOrdre(rs.getInt(3));
-                    l.setColor(rs.getString(4));
+                    l.posarColor(rs.getString(4));
                     llistes.add(l);
                 }
             }
@@ -69,7 +69,7 @@ public class LlistaDao {
     // getCount() es podria servir dels resultats de getAllCounts() en
     // una optimització futura per evitar una anada i tornada a la BBDD
     // per prestatgeria.
-    public int getCount(int llistaId) {
+    public int obtenirRecompte(int llistaId) {
         try {
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT COUNT(*) FROM llibre_llista WHERE llista_id = ?")) {
@@ -178,17 +178,17 @@ public class LlistaDao {
             llista.posarValoracioLlibre((Double) row[2]);
             llista.posarLlegitLlibre((Boolean) row[3]);
             llista.posarOrdre((Integer) row[4]);
-            llista.setColor((String) row[5]);
+            llista.posarColor((String) row[5]);
             llistes.add(llista);
         }
         return llistes;
     }
 
     /**
-     * Com a {@link #getLlistesForLlibre}, però retorna cada fila com a
-     * {@link domini.LlibreLlistaContext} — el valoració/llegit per llibre
+     * Com a {@link #obtenirLlistesForLlibre}, però retorna cada fila com a
+     * {@link domini.LlibreLlistaContext} — la valoració/llegit per llibre
      * viatja al context, no pas al {@link Llista}. Preferit sobre
-     * {@code getLlistesForLlibre} per a noves crides; l'API anterior
+     * {@code obtenirLlistesForLlibre} per a noves crides; l'API anterior
      * existeix per compat.
      */
     public java.util.List<domini.LlibreLlistaContext> obtenirLlistesForLlibreContext(long isbn) {
@@ -208,8 +208,8 @@ public class LlistaDao {
     }
 
     /**
-     * Single SQL query shared by {@link #getLlistesForLlibre} and
-     * {@link #getLlistesForLlibreContext}. Columns in the result row:
+     * Consulta SQL única compartida per {@link #obtenirLlistesForLlibre} i
+     * {@link #obtenirLlistesForLlibreContext}. Columnes a la fila de resultat:
      * 0=id, 1=nom, 2=valoracio, 3=llegit, 4=ordre, 5=color.
      */
     private java.util.List<Object[]> queryLlistesForLlibreRaw(long isbn) {

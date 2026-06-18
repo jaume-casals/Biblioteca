@@ -14,7 +14,7 @@ import domini.LlibreLlistaContext;
 import domini.EspecificacioOrdenacio;
 import persistencia.ConnectionConfig;
 import persistencia.ControladorPersistencia;
-import persistencia.ServerConect;
+import persistencia.ConnexioServidor;
 
 /**
  * Regression tests for domini/persistencia fixes (ISBN long, migrations, tag cache, filters).
@@ -115,7 +115,7 @@ class DominiPersistenciaJUnit5Test {
 
     @Test
     void sanitizeH2ProfileRejectsPathSeparators() throws Exception {
-        var method = ServerConect.class.getDeclaredMethod("sanitizeH2Profile", String.class);
+        var method = ConnexioServidor.class.getDeclaredMethod("sanitizeH2Profile", String.class);
         method.setAccessible(true);
         var wrapped = assertThrows(java.lang.reflect.InvocationTargetException.class,
             () -> method.invoke(null, "../evil"));
@@ -126,8 +126,8 @@ class DominiPersistenciaJUnit5Test {
     private static boolean autorColumnExists(ControladorPersistencia cp) throws Exception {
         var scField = ControladorPersistencia.class.getDeclaredField("sc");
         scField.setAccessible(true);
-        ServerConect sc = (ServerConect) scField.get(cp);
-        try (Statement st = sc.getConnection().createStatement();
+        ConnexioServidor sc = (ConnexioServidor) scField.get(cp);
+        try (Statement st = sc.obtenirConnexio().createStatement();
              ResultSet rs = st.executeQuery(
                  "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
                  "WHERE UPPER(TABLE_NAME) = 'LLIBRE' AND UPPER(COLUMN_NAME) = 'AUTOR'")) {

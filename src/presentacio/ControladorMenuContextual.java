@@ -4,10 +4,10 @@ import domini.Llibre;
 import herramienta.DialegError;
 import herramienta.FormatOptions;
 import herramienta.I18n;
-import presentacio.detalles.control.DetallesLlibrePanelControl;
-import presentacio.detalles.control.GuardarLlibresDialogoControl;
-import presentacio.detalles.vista.GuardarLlibresDialogo;
-import presentacio.listener.OnLlibreDelete;
+import presentacio.detalles.control.ControladorPanellDetallsLlibre;
+import presentacio.detalles.control.ControladorDialegDesarLlibres;
+import presentacio.detalles.vista.DialegDesarLlibres;
+import presentacio.listener.EnEliminarLlibre;
 
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -21,15 +21,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** Table and gallery context menus, batch edit, duplicate, loan. */
+/** Menús contextuals de taula i galeria, edició per lots, duplicar, prèstec. */
 class ControladorMenuContextual {
 
-    private final LibraryViewState state;
-    private final LibraryScreenHost host;
+    private final EstatVistaBiblioteca state;
+    private final AmfitrioPantallaBiblioteca host;
     private final ControladorPrestatgeria shelfCtrl;
     private final ControladorAccionsLlibre bookActionsCtrl;
 
-    ControladorMenuContextual(LibraryViewState state, LibraryScreenHost host,
+    ControladorMenuContextual(EstatVistaBiblioteca state, AmfitrioPantallaBiblioteca host,
                           ControladorPrestatgeria shelfCtrl, ControladorAccionsLlibre bookActionsCtrl) {
         this.state = state;
         this.host = host;
@@ -41,11 +41,11 @@ class ControladorMenuContextual {
         return new MouseAdapter() {
             private void maybeShow(MouseEvent e) {
                 if (!e.isPopupTrigger()) return;
-                JTable table = state.vista.getjTableBilio();
+                JTable table = state.vista.obtenirTaulaLlibres();
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0) return;
                 if (!table.isRowSelected(row)) table.setRowSelectionInterval(row, row);
-                Object isbnVal = table.getValueAt(row, BibliotecaTableModel.COL_ISBN);
+                Object isbnVal = table.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN);
                 if (!(isbnVal instanceof String)) return;
                 String isbnStr = (String) isbnVal;
 
@@ -76,9 +76,9 @@ class ControladorMenuContextual {
                     JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selectedRows.length));
                     List<Long> batchIsbns = new ArrayList<>();
                     for (int r : selectedRows) {
-                        Object v = table.getValueAt(r, BibliotecaTableModel.COL_ISBN);
+                        Object v = table.getValueAt(r, ModelTaulaBiblioteca.COL_ISBN);
                         if (v instanceof String s) {
-                            try { batchIsbns.add(Long.parseLong(s)); } catch (NumberFormatException nfe) { /* skip malformed row */ }
+                            try { batchIsbns.add(Long.parseLong(s)); } catch (NumberFormatException nfe) { /* salta la fila mal formada */ }
                         }
                     }
                     itemBatchEdit.addActionListener(ev -> batchEdit(batchIsbns));
@@ -98,7 +98,7 @@ class ControladorMenuContextual {
                             state.cd.retornarLlibre(isbnLong);
                             state.loanedISBNs = state.cd.obtenirLoanedISBNs();
                             host.tableCtrl().posarLoanedISBNs(state.loanedISBNs);
-                            state.vista.getjTableBilio().repaint();
+                            state.vista.obtenirTaulaLlibres().repaint();
                         } catch (Exception ex) { new DialegError(ex).mostrarErrorMessage(); }
                     });
                     menu.add(itemRetornar);
@@ -133,7 +133,7 @@ class ControladorMenuContextual {
         itemObrir.setEnabled(selected.size() == 1);
         itemObrir.addActionListener(ev -> {
             try {
-                DetallesLlibrePanelControl d = new DetallesLlibrePanelControl(
+                ControladorPanellDetallsLlibre d = new ControladorPanellDetallsLlibre(
                     selected.get(0), state.enActualizarBBDD, state.cd);
                 d.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
                 d.obtenirDetallesLlibrePanel().setVisible(true);
@@ -181,11 +181,11 @@ class ControladorMenuContextual {
         for (long isbn : isbns) {
             try {
                 Llibre l = state.cd.obtenirLlibre(isbn);
-                OnLlibreDelete.EsborrarEvent ev = new OnLlibreDelete.EsborrarEvent(l, true);
-                state.enActualizarBBDD.onBookDeleting(ev);
-                if (!OnLlibreDelete.hauriaProceed(ev)) continue;
+                EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
+                state.enActualizarBBDD.enEliminantLlibre(ev);
+                if (!EnEliminarLlibre.hauriaProceed(ev)) continue;
                 state.undoBuffer.push(l);
-                if (state.undoBuffer.size() > LibraryViewState.UNDO_MAX) state.undoBuffer.removeLast();
+                if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
                 state.cd.eliminarLlibre(l);
                 bookActionsCtrl.eliminarFila(l);
             } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
@@ -242,8 +242,8 @@ class ControladorMenuContextual {
         try {
             Llibre src = state.cd.obtenirLlibre(Long.parseLong(isbnStr));
             Llibre copy = Llibre.copyOf(src);
-            GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
-            new GuardarLlibresDialogoControl(dialeg, null, state.cd);
+            DialegDesarLlibres dialeg = new DialegDesarLlibres();
+            new ControladorDialegDesarLlibres(dialeg, null, state.cd);
             dialeg.obtenirTextNom().setText(copy.obtenirNom() != null ? copy.obtenirNom() : "");
             dialeg.obtenirTextAutor().setText(copy.obtenirAutor() != null ? copy.obtenirAutor() : "");
             dialeg.obtenirTextAny().setText(copy.obtenirAny() != null && copy.obtenirAny() != 0 ? String.valueOf(copy.obtenirAny()) : "");
@@ -274,7 +274,7 @@ class ControladorMenuContextual {
             state.cd.prestarLlibre(isbn, nom.trim());
             state.loanedISBNs = state.cd.obtenirLoanedISBNs();
             host.tableCtrl().posarLoanedISBNs(state.loanedISBNs);
-            state.vista.getjTableBilio().repaint();
+            state.vista.obtenirTaulaLlibres().repaint();
             JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_loan_done", nom.trim()),
                 I18n.t("dlg_loan_done_title"), JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }

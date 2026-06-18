@@ -5,7 +5,7 @@ import java.awt.Component;
 import java.awt.Graphics;
 import javax.swing.Icon;
 
-/** Color helpers (hex format/parse, swatch icon) used by shelf-color dialogs and theme code. */
+/** Utilitats de color (format/anàlisi hex, icona de mostra) usades pels diàlegs de color de prestatge i el codi de tema. */
 public final class UtilitatsColor {
     private UtilitatsColor() {}
 
@@ -29,7 +29,7 @@ public final class UtilitatsColor {
         } catch (NumberFormatException e) { return null; }
     }
 
-    /** Small rounded-rectangle swatch icon for shelf-color display. */
+    /** Icona de mostra amb rectangle arrodonit petit per a la visualització del color del prestatge. */
     public static Icon colorSwatch(Color c) {
         return new Icon() {
             @Override public int getIconWidth()  { return 14; }

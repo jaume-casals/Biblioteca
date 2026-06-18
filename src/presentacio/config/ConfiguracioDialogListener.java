@@ -1,9 +1,9 @@
 package presentacio.config;
 
-/** Callbacks fired by the settings dialog. Replaces raw Runnable parameters. */
+/** Callbacks que dispara el diàleg de configuració. Substitueix els paràmetres Runnable en brut. */
 public interface ConfiguracioDialogListener {
-    default void onThemeChange()   {}
-    default void onProfileSwitch() {}
-    default void onFontChange()    {}
-    default void onRefreshData()   {}
+    default void enCanviarTema()       {}
+    default void enCanviarPerfil()     {}
+    default void enCanviarLletra()     {}
+    default void enRefrescarDades()    {}
 }

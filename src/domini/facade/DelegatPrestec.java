@@ -8,11 +8,12 @@ import domini.BibliotecaException;
 import persistencia.PrestecRow;
 
 /**
- * Loan ({@link PrestecRow}) management and loan queries.
+ * Gestió de Préstecs ({@link PrestecRow}) i consultes sobre els préstecs.
  *
- * <p>All operations delegate to the persistence layer; loan state is
- * not held in memory (it lives entirely in the DB). Operations translate
- * {@link SQLException} into {@link BibliotecaException} for callers.
+ * <p>Totes les operacions deleguen a la capa de persistència; l'estat dels
+ * préstecs no es manté en memòria (viu enterament a la BBDD). Les operacions
+ * tradueixen {@link SQLException} en {@link BibliotecaException} per als
+ * consumidors.
  */
 public final class DelegatPrestec {
 
@@ -35,6 +36,6 @@ public final class DelegatPrestec {
     public Set<Long> obtenirLoanedISBNs() { return state.persistence().obtenirLoanedISBNs(); }
     public List<PrestecRow> obtenirAllActiveLoans() { return state.persistence().obtenirAllActiveLoans(); }
     public List<PrestecRow> obtenirLoansForIsbn(long isbn) { return state.persistence().obtenirLoansForIsbn(isbn); }
-    public List<persistencia.OverdueLoan> obtenirAllOverdueLoans(int daysThreshold) { return state.persistence().obtenirAllOverdueLoans(daysThreshold); }
+    public List<persistencia.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold) { return state.persistence().obtenirAllOverdueLoans(daysThreshold); }
     public int comptarLoans(long isbn) { return state.persistence().comptarLoans(isbn); }
 }

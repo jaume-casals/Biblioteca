@@ -2,7 +2,7 @@ package main;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Centralized application shutdown-hook registration. */
+    /** Registre centralitzat dels shutdown hooks de l'aplicació. */
 public final class ShutdownHooks {
     private static final AtomicInteger COUNTER = new AtomicInteger();
 

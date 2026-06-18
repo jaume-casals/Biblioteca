@@ -1,7 +1,7 @@
 package presentacio.galeria;
 
 import domini.Llibre;
-import interficie.BookReader;
+import interficie.LectorLlibre;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -19,22 +19,26 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Async loader + LRU cache of pre-scaled cover images.
+ * Carregador asíncron + memòria cau LRU d'imatges de coberta pre-escalades.
  *
- * <p>Keyed by {@link Llibre#getISBN()}. The cache value is the image already
- * scaled to the requested card dimensions, so the paint path can blit 1:1
- * without per-frame scaling work.
+ * <p>Indexada per {@link Llibre#getISBN()}. El valor de la memòria cau és
+ * la imatge ja escalada a les dimensions de targeta sol·licitades, de
+ * manera que el camí de pintat pot fer blit 1:1 sense treball
+ * d'escalat per frame.
  *
- * <p>Owns the single-threaded loader pool, the in-flight set, and the
- * crop-scale math. All access from the EDT is via {@link #submit(Llibre, int, int, Runnable)};
- * background loading and cache mutation run on the executor, with the
- * repaint callback marshalled back to the EDT.
+ * <p>Posseeix el pool de loader d'un sol fil, el conjunt en vol i la
+ * matemàtica de retall-escalat. Tot l'accés des de l'EDT és via
+ * {@link #submit(Llibre, int, int, Runnable)}; la càrrega en segon
+ * pla i la mutació de la memòria cau s'executen a l'executor, amb el
+ * callback de repaint enviat de tornada a l'EDT.
  *
- * <p>The LRU is protected by a {@link ReentrantReadWriteLock} so EDT reads
- * (the paint path, dominant) run concurrently while writes (cache miss →
- * load) take an exclusive lock. The previous {@code Collections.synchronizedMap}
- * wrapper serialised every {@code get()} against every other {@code get()},
- * which stalled the EDT on a 200-card repaint (per the tot.txt LOW finding).
+ * <p>La LRU està protegida per un {@link ReentrantReadWriteLock} de
+ * manera que les lectures EDT (el camí de pintat, dominant) s'executen
+ * concurrentment mentre que les escriptures (cache miss → load)
+ * prenen un lock exclusiu. L'embolcall anterior
+ * {@code Collections.synchronizedMap} serialitzava cada {@code get()}
+ * contra cada altre {@code get()}, cosa que blocava l'EDT en un
+ * repaint de 200 targetes (segons la troballa LOW de tot.txt).
  */
 public final class ServeiImatgesCoberta {
 
@@ -60,21 +64,23 @@ public final class ServeiImatgesCoberta {
 
     private final Set<Long> loading = ConcurrentHashMap.newKeySet();
 
-    private volatile BookReader cd;
+    private volatile LectorLlibre cd;
 
     public ServeiImatgesCoberta() {
         main.ShutdownHooks.register(this::shutdown);
     }
 
-    public void posarCd(BookReader cd) {
+    public void posarCd(LectorLlibre cd) {
         this.cd = cd;
     }
 
     /**
-     * Return the cached image for {@code isbn} at the current zoom, or {@code null}
-     * if not yet loaded. The caller (card paint) must tolerate a {@code null}
-     * return — the loader's onLoaded callback will repaint. Read-locked so
-     * concurrent EDT repaints on a 200-card gallery do not serialise.
+     * Retorna la imatge en caché per a {@code isbn} al zoom actual, o
+     * {@code null} si encara no s'ha carregat. El caller (pintat de
+     * targeta) ha de tolerar un retorn {@code null} — el callback
+     * onLoaded del carregador farà el repaint. Bloquejat en lectura
+     * perquè els repaints EDT concurrents en una galeria de 200
+     * targetes no es serialitzin.
      */
     public BufferedImage obtenirCached(long isbn) {
         cacheLock.readLock().lock();
@@ -86,9 +92,10 @@ public final class ServeiImatgesCoberta {
     }
 
     /**
-     * Invalidate all cached images. Called when the zoom level changes
-     * (pre-scaled images are now the wrong size) or on theme switch
-     * if the gradient palette needs to be re-applied.
+     * Invalida totes les imatges en caché. Es crida quan canvia el
+     * nivell de zoom (les imatges pre-escalades ara tenen la mida
+     * incorrecta) o en canviar de tema si cal re-aplicar la paleta
+     * de gradient.
      */
     public void clear() {
         cacheLock.writeLock().lock();
@@ -101,10 +108,12 @@ public final class ServeiImatgesCoberta {
     }
 
     /**
-     * Schedule background load + crop-scale for {@code l}. The {@code onLoaded}
-     * callback runs on the EDT after the image lands in the cache (or the
-     * load fails). The callback is also fired immediately if the image is
-     * already cached, so callers can treat it as "image is ready, please repaint".
+     * Planifica la càrrega en segon pla + retall-escalat per a {@code l}.
+     * El callback {@code onLoaded} s'executa a l'EDT després que la
+     * imatge arribi a la memòria cau (o la càrrega falli). El callback
+     * també es dispara immediatament si la imatge ja està en caché,
+     * de manera que els callers el poden tractar com "la imatge està
+     * a punt, si us plau, repaint".
      */
     public void submit(Llibre l, int w, int h, Runnable onLoaded) {
         long isbn = l.obtenirISBN();
@@ -135,7 +144,7 @@ public final class ServeiImatgesCoberta {
         });
     }
 
-    /** Read-locked containment check (used by submit() before scheduling). */
+    /** Comprovació de contenció amb lock de lectura (usada per submit() abans de programar). */
     private boolean containsCached(long isbn) {
         cacheLock.readLock().lock();
         try {
@@ -145,7 +154,7 @@ public final class ServeiImatgesCoberta {
         }
     }
 
-    /** Visible for tests / future tooling: drain the executor on shutdown. */
+    /** Visible per a tests / eines futures: buida l'executor en tancar. */
     public void shutdown() {
         imageLoader.shutdownNow();
     }
@@ -161,7 +170,7 @@ public final class ServeiImatgesCoberta {
     /** Llegeix els bytes de la coberta d'un llibre. Prova primer amb el blob
      *  en memòria, després amb el camí, i finalment carrega des de la BBDD
      *  via {@code cd}. */
-    public static byte[] carregarCoverBytes(Llibre l, BookReader cd) {
+    public static byte[] carregarCoverBytes(Llibre l, LectorLlibre cd) {
         byte[] blob = l.obtenirImatgeBlob();
         if (blob == null && l.teBlob() && cd != null)
             blob = cd.obtenirLlibreBlob(l.obtenirISBN());
@@ -196,7 +205,7 @@ public final class ServeiImatgesCoberta {
     private BufferedImage carregarRaw(Llibre l) {
         byte[] blob = l.obtenirImatgeBlob();
         if (blob == null && l.teBlob()) {
-            BookReader writer = this.cd;
+            LectorLlibre writer = this.cd;
             if (writer != null) blob = writer.obtenirLlibreBlob(l.obtenirISBN());
             else blob = domini.ControladorDomini.getInstance().obtenirLlibreBlob(l.obtenirISBN());
         }

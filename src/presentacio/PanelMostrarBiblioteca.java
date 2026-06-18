@@ -23,7 +23,7 @@ import herramienta.ConfiguracioUi;
 public class PanelMostrarBiblioteca extends JPanel {
 
 	private final JComboBox<Object> comboLlistes;
-	private final LeftSidebarPanel leftSidebar;
+	private final PanellBarraEsquerra leftSidebar;
 	private final PanelBarraSuperior topBar;
 	private final PanelCalaixFiltre filtrarDrawer;
 	private final PanelTaulaCentral centerTable;
@@ -34,7 +34,7 @@ public class PanelMostrarBiblioteca extends JPanel {
 
 		comboLlistes = new JComboBox<>();
 
-		leftSidebar = new LeftSidebarPanel(comboLlistes, this::aplicarTheme);
+		leftSidebar = new PanellBarraEsquerra(comboLlistes, this::aplicarTheme);
 		add(leftSidebar, BorderLayout.WEST);
 
 		JPanel rightArea = new JPanel(new BorderLayout(0, 0));
@@ -79,13 +79,15 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public void mostrarTaula() { centerTable.mostrarTaula(); }
 
 	/**
-	 * Order matters: (1) update palette-derived fields first, (2) sub-panel
-	 * pre-LaF overrides, (3) install L&F (resets all defaults), (4) re-apply
-	 * UIManager overrides on top of L&F, (5) updateComponentTreeUI, (6)
-	 * sub-panel post-LaF overrides for things the L&F reset.
+	 * L'ordre importa: (1) actualitza primer els camps derivats de la
+	 * paleta, (2) overrides pre-LaF dels sub-panells, (3) instal·la el
+	 * L&F (reestableix tots els valors per defecte), (4) re-aplica els
+	 * overrides del UIManager a sobre del L&F, (5) updateComponentTreeUI,
+	 * (6) overrides post-LaF dels sub-panells per a allò que el L&F ha
+	 * reestablert.
 	 */
 	public void aplicarTheme() {
-		UITheme.rebuildFonts(herramienta.FontSize.fromKey(herramienta.Configuracio.obtenirFontSize()));
+		UITheme.rebuildFonts(herramienta.MidaLletra.fromKey(herramienta.Configuracio.obtenirFontSize()));
         ConfiguracioUi.posarTheme(UITheme.obtenirTheme());
 
 		setBackground(UITheme.palette().bgMain());
@@ -152,13 +154,13 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public JTextField obtenirValoracioMax()       { return filtrarDrawer.obtenirValoracioMax(); }
 	public JTextField obtenirPreuMin()            { return filtrarDrawer.obtenirPreuMin(); }
 	public JTextField obtenirPreuMax()            { return filtrarDrawer.obtenirPreuMax(); }
-	public JTable  getjTableBilio()           { return centerTable.getjTableBilio(); }
+	public JTable  obtenirTaulaLlibres()           { return centerTable.obtenirTaulaLlibres(); }
 	public JPanel  obtenirPanelFiltros()          { return filtrarDrawer.obtenirPanelFiltros(); }
 	public JScrollPane obtenirScrollPaneJTable()  { return centerTable.obtenirScrollPaneJTable(); }
 	public JScrollPane obtenirScrolpaneFiltro()   { return filtrarDrawer.obtenirScrolpaneFiltro(); }
-	public JCheckBox getchckbxLlegit()        { return filtrarDrawer.getchckbxLlegit(); }
-	public JCheckBox getchckbxNoLlegit()      { return filtrarDrawer.getchckbxNoLlegit(); }
-	public JButton getbtnFiltrar()            { return filtrarDrawer.getbtnFiltrar(); }
+	public JCheckBox obtenirCasellaLlegit()        { return filtrarDrawer.obtenirCasellaLlegit(); }
+	public JCheckBox obtenirCasellaNoLlegit()      { return filtrarDrawer.obtenirCasellaNoLlegit(); }
+	public JButton obtenirBtnFiltrar()            { return filtrarDrawer.obtenirBtnFiltrar(); }
 	public JButton obtenirBtnQuitarFiltros()     { return filtrarDrawer.obtenirBtnQuitarFiltros(); }
 	public JComboBox<Object> obtenirComboLlistes(){ return comboLlistes; }
 	public JButton obtenirBtnGestioLlistes()      { return leftSidebar.obtenirBtnGestioLlistes(); }
@@ -178,6 +180,6 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public JButton obtenirBtnToggleFiltres()      { return topBar.obtenirBtnToggleFiltres(); }
 	public JButton obtenirBtnToggleVista()        { return topBar.obtenirBtnToggleVista(); }
 	public JButton obtenirBtnGroupSeries()        { return topBar.obtenirBtnGroupSeries(); }
-	public FormFieldRegistry obtenirFilterRegistry() { return filtrarDrawer.obtenirRegistry(); }
+	public RegistreCampsFormulari obtenirFilterRegistry() { return filtrarDrawer.obtenirRegistry(); }
 	public PanelGaleriaCobertes obtenirGaleria()  { return centerTable.obtenirGaleria(); }
 }

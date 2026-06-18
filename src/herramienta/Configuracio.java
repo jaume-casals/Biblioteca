@@ -50,7 +50,7 @@ public class Configuracio {
     /** Etiqueta de domini usada per encaminar una clau al sub-store correcte en lectura/escriptura. */
     public enum Domini { UI, DB, WINDOW, FILTER }
 
-    /** Internal: write a key into a specific domain store. */
+    /** Intern: escriu una clau en un store de domini concret. */
     static void putIn(Domini d, String key, String val) {
         switch (d) {
             case UI:     UI_STORE.put(key, val); break;
@@ -60,7 +60,7 @@ public class Configuracio {
         }
     }
 
-    /** Internal: read a key from a specific domain store. */
+    /** Intern: llegeix una clau d'un store de domini concret. */
     static String obtenirFrom(Domini d, String key) {
         switch (d) {
             case UI:     return UI_STORE.get(key);
@@ -172,7 +172,7 @@ public class Configuracio {
                 }
             });
         } catch (IOException e) {
-            LOG.log(java.util.logging.Level.WARNING, "Config load failed", e);
+            LOG.log(java.util.logging.Level.WARNING, "Ha fallat la càrrega de la configuració", e);
         }
     }
 
@@ -266,7 +266,7 @@ public class Configuracio {
     private static final java.util.Set<String> VALID_FONT_SIZES = java.util.Set.of("small", "medium", "large");
     public static String obtenirFontSize() { return props.getOrDefault("fontSize", "medium"); }
     public static void posarFontSize(String size) {
-        if (!VALID_FONT_SIZES.contains(size)) throw new IllegalArgumentException("Invalid fontSize: " + size + ". Must be small, medium or large.");
+        if (!VALID_FONT_SIZES.contains(size)) throw new IllegalArgumentException("Mida de lletra no vàlida: " + size + ". Ha de ser petita, mitjana o gran.");
         props.put("fontSize", size); save();
     }
 
@@ -477,7 +477,7 @@ public class Configuracio {
 
     private static void save() {
         if (pendingSave != null) pendingSave.cancel(false);
-        pendingSave = SAVE_SCHEDULER.schedule(() -> doSave(currentFile(), "Config save failed: "), 300, TimeUnit.MILLISECONDS);
+        pendingSave = SAVE_SCHEDULER.schedule(() -> doSave(currentFile(), "Ha fallat el desament de la configuració: "), 300, TimeUnit.MILLISECONDS);
     }
 
     public static void buidarNow() {
@@ -485,7 +485,7 @@ public class Configuracio {
             pendingSave.cancel(false);
             pendingSave = null;
         }
-        doSave(currentFile(), "Config flush failed: ");
+        doSave(currentFile(), "Ha fallat el buidatge de la configuració: ");
     }
 
     private static void doSave(File f, String errPrefix) {

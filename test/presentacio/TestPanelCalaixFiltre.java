@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Locks the public surface of {@link FilterDrawerPanel} after the R1
  * declarative-registry refactor: every one of the 32 public getters
  * must still return a live, non-null Swing component, and the
- * underlying {@link FormFieldRegistry} must be consistent with the
+ * underlying {@link RegistreCampsFormulari} must be consistent with the
  * getters.
  */
 class TestPanelCalaixFiltre {
@@ -44,10 +44,10 @@ class TestPanelCalaixFiltre {
         assertThat(p.obtenirPreuMin()).isNotNull();
         assertThat(p.obtenirPreuMax()).isNotNull();
 
-        assertThat(p.getchckbxLlegit()).isNotNull();
-        assertThat(p.getchckbxNoLlegit()).isNotNull();
+        assertThat(p.obtenirCasellaLlegit()).isNotNull();
+        assertThat(p.obtenirCasellaNoLlegit()).isNotNull();
 
-        assertThat(p.getbtnFiltrar()).isNotNull();
+        assertThat(p.obtenirBtnFiltrar()).isNotNull();
         assertThat(p.obtenirBtnQuitarFiltros()).isNotNull();
 
         assertThat(p.obtenirComboTagFilter()).isNotNull();
@@ -91,15 +91,15 @@ class TestPanelCalaixFiltre {
     @DisplayName("Checkbox getters return JCheckBox instances")
     void checkboxGettersReturnCheckBoxes() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        assertThat(p.getchckbxLlegit()).isInstanceOf(JCheckBox.class);
-        assertThat(p.getchckbxNoLlegit()).isInstanceOf(JCheckBox.class);
+        assertThat(p.obtenirCasellaLlegit()).isInstanceOf(JCheckBox.class);
+        assertThat(p.obtenirCasellaNoLlegit()).isInstanceOf(JCheckBox.class);
     }
 
     @Test
     @DisplayName("Button getters return JButton instances")
     void buttonGettersReturnButtons() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        assertThat(p.getbtnFiltrar()).isInstanceOf(JButton.class);
+        assertThat(p.obtenirBtnFiltrar()).isInstanceOf(JButton.class);
         assertThat(p.obtenirBtnBackupBD()).isInstanceOf(JButton.class);
         assertThat(p.obtenirBtnExportCSV()).isInstanceOf(JButton.class);
     }
@@ -162,14 +162,14 @@ class TestPanelCalaixFiltre {
     @DisplayName("Llegit/NoLlegit checkboxes start unchecked and can be toggled")
     void checkboxesToggle() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        assertThat(p.getchckbxLlegit().isSelected()).isFalse();
-        assertThat(p.getchckbxNoLlegit().isSelected()).isFalse();
+        assertThat(p.obtenirCasellaLlegit().isSelected()).isFalse();
+        assertThat(p.obtenirCasellaNoLlegit().isSelected()).isFalse();
 
-        p.getchckbxLlegit().setSelected(true);
-        assertThat(p.getchckbxLlegit().isSelected()).isTrue();
+        p.obtenirCasellaLlegit().setSelected(true);
+        assertThat(p.obtenirCasellaLlegit().isSelected()).isTrue();
 
-        p.getchckbxNoLlegit().setSelected(true);
-        assertThat(p.getchckbxNoLlegit().isSelected()).isTrue();
+        p.obtenirCasellaNoLlegit().setSelected(true);
+        assertThat(p.obtenirCasellaNoLlegit().isSelected()).isTrue();
     }
 
     @Test
@@ -184,7 +184,7 @@ class TestPanelCalaixFiltre {
     @DisplayName("Registry specs cover the 32 public getters (1:1 mapping)")
     void registryCoversAllGetters() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        FormFieldRegistry r = p.obtenirRegistry();
+        RegistreCampsFormulari r = p.obtenirRegistry();
         assertThat(r.has("textISBN")).isTrue();
         assertThat(r.has("textNom")).isTrue();
         assertThat(r.has("textAutor")).isTrue();
@@ -226,8 +226,8 @@ class TestPanelCalaixFiltre {
     @DisplayName("Registry text-specs cover exactly the 12 filter inputs that trigger filtrar()")
     void registryTextSpecsCoverFiltrarInputs() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        var textSpecs = p.obtenirRegistry().specsOfKind(FormFieldRegistry.Tipus.TEXT);
-        var keys = textSpecs.stream().map(FormFieldRegistry.Camp::key).toList();
+        var textSpecs = p.obtenirRegistry().specsOfKind(RegistreCampsFormulari.Tipus.TEXT);
+        var keys = textSpecs.stream().map(RegistreCampsFormulari.Camp::key).toList();
         assertThat(keys).containsExactlyInAnyOrder(
             "textISBN", "textNom", "textAutor",
             "anyMin", "anyMax",
@@ -240,13 +240,13 @@ class TestPanelCalaixFiltre {
     @DisplayName("Registry specsOfKind returns the right typed lists")
     void registrySpecsByKind() {
         PanelCalaixFiltre p = new PanelCalaixFiltre();
-        var checks = p.obtenirRegistry().specsOfKind(FormFieldRegistry.Tipus.CHECK);
+        var checks = p.obtenirRegistry().specsOfKind(RegistreCampsFormulari.Tipus.CHECK);
         assertThat(checks).hasSize(2);
-        assertThat(checks.stream().map(FormFieldRegistry.Camp::key))
+        assertThat(checks.stream().map(RegistreCampsFormulari.Camp::key))
             .containsExactlyInAnyOrder("chckbxLlegit", "chckbxNoLlegit");
 
-        var combos = p.obtenirRegistry().specsOfKind(FormFieldRegistry.Tipus.COMBO);
-        assertThat(combos.stream().map(FormFieldRegistry.Camp::key))
+        var combos = p.obtenirRegistry().specsOfKind(RegistreCampsFormulari.Tipus.COMBO);
+        assertThat(combos.stream().map(RegistreCampsFormulari.Camp::key))
             .containsExactlyInAnyOrder("comboPresets", "comboTagFilter", "filterFormat");
     }
 }

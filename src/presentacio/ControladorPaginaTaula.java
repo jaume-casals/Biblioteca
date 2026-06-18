@@ -2,33 +2,34 @@ package presentacio;
 
 import domini.Llibre;
 import herramienta.I18n;
-import interficie.BookReader;
+import interficie.LectorLlibre;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
 /**
- * Manages pagination state for the book table.
- * <p>Two pagination modes exist:
+ * Gestiona l'estat de paginació de la taula de llibres.
+ * <p>Hi ha dos modes de paginació:
  * <ul>
- *   <li><b>In-memory</b> ({@code useDBPagination=false}): the full library is held in a
- *       list and sliced by {@link #PAGE_SIZE}.</li>
- *   <li><b>DB-level</b> ({@code useDBPagination=true}): pages are fetched from the database
- *       via {@code getLlibresPage(offset, limit)}; this activates when the library exceeds
- *       {@code ControladorDomini.isLargeLibrary()}.</li>
+ *   <li><b>En memòria</b> ({@code useDBPagination=false}): tota la biblioteca
+ *       es manté en una llista i es talla per {@link #PAGE_SIZE}.</li>
+ *   <li><b>A nivell de BBDD</b> ({@code useDBPagination=true}): les pàgines
+ *       s'obtenen de la base de dades via
+ *       {@code getLlibresPage(offset, limit)}; s'activa quan la biblioteca
+ *       supera {@code ControladorDomini.isLargeLibrary()}.</li>
  * </ul>
- * <p>The pagination model ({@code currentPage}, {@code paginatedMode},
- * {@code useDBPagination}) is read by the enclosing
- * {@link MostrarBibliotecaControl} via getter methods; direct field access by
- * other classes is discouraged.
+ * <p>El model de paginació ({@code currentPage}, {@code paginatedMode},
+ * {@code useDBPagination}) el llegeix el {@link ControladorMostrarBiblioteca}
+ * contenidor via mètodes getter; l'accés directe al camp des d'altres
+ * classes no és recomanable.
  */
 class ControladorPaginaTaula {
 
     // PAGE_SIZE is unrelated to ControladorDomini.SQL_FILTER_THRESHOLD (2000); pagination kicks in at 100 rows, SQL-filter at 2000 books.
     static final int PAGE_SIZE = 100;
 
-    private final PaginationModel model = new PaginationModel();
-    private final PaginationView paginationView;
+    private final ModelPaginacio model = new ModelPaginacio();
+    private final VistaPaginacio paginationView;
 
     int obtenirCurrentPage() { return model.obtenirCurrentPage(); }
     void posarCurrentPage(int p) { model.posarCurrentPage(p); }
@@ -39,15 +40,15 @@ class ControladorPaginaTaula {
     void invalidateCache() { model.invalidateCache(); }
 
     private final PanelMostrarBiblioteca vista;
-    private final BookReader cd;
+    private final LectorLlibre cd;
     private final Consumer<java.util.List<Llibre>> posarTable;
 
-    ControladorPaginaTaula(PanelMostrarBiblioteca vista, BookReader cd,
+    ControladorPaginaTaula(PanelMostrarBiblioteca vista, LectorLlibre cd,
                         Consumer<java.util.List<Llibre>> posarTable) {
         this.vista = vista;
         this.cd = cd;
         this.posarTable = posarTable;
-        this.paginationView = new PaginationView(vista);
+        this.paginationView = new VistaPaginacio(vista);
     }
 
     void mostrarPage(int page, java.util.List<Llibre> biblio) {

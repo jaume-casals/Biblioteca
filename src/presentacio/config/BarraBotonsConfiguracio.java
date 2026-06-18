@@ -20,9 +20,9 @@ import javax.swing.JTextField;
 import static herramienta.I18n.t;
 
 /**
- * Save / cancel button bar. Pulls field values from the tagged input
- * children of the section panels and persists them through
- * {@link Config} in a single batch.
+ * Barra de botons de desar/cancel·lar. Recull els valors dels camps
+ * dels fills d'entrada etiquetats dels panells de secció i els
+ * persisteix a través de {@link Configuracio} en un sol lot.
  */
 public final class BarraBotonsConfiguracio {
     private BarraBotonsConfiguracio() {}
@@ -87,7 +87,7 @@ public final class BarraBotonsConfiguracio {
                 try { ConfiguracioUi.posarDefaultValoracio(Double.parseDouble(txtDefVal.getText().trim())); }
                 catch (NumberFormatException ignored) {}
             });
-            if (listener != null) listener.onThemeChange();
+            if (listener != null) listener.enCanviarTema();
             String newDbType = external ? "mariadb" : "h2";
             boolean dbTypeChanged = !newDbType.equals(anteriorDbType);
             if (dbTypeChanged) {

@@ -10,7 +10,7 @@ import javax.swing.border.EmptyBorder;
 import herramienta.I18n;
 import herramienta.UITheme;
 
-/** Main window content (library table + status bar). Frame chrome lives in {@link MainFrameControl}. */
+/** Contingut de la finestra principal (taula de biblioteca + barra d'estat). La cromoteca del frame viu a {@link MainFrameControl}. */
 public class PanelMarcPrincipal extends JPanel {
 
 	private final PanelMostrarBiblioteca mostrarBibliotecaPanel = new PanelMostrarBiblioteca();

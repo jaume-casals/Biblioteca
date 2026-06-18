@@ -5,7 +5,7 @@ package presentacio;
 import presentacio.UIComponents;
 import domini.Llibre;
 import herramienta.I18n;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -122,7 +122,7 @@ public class AjudaEstadistiques {
         };
     }
 
-    public static javax.swing.JPanel buildTagCloud(List<Llibre> books, BibliotecaWriter cd) {
+    public static javax.swing.JPanel buildTagCloud(List<Llibre> books, EscritorBiblioteca cd) {
         javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 8, 6));
         panel.setBackground(herramienta.UITheme.palette().bgPanel());
         panel.setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_tab_tags")));
@@ -219,10 +219,11 @@ public class AjudaEstadistiques {
     }
 
     /**
-     * Builds the "General" stats tab: goal progress + text summary + per-shelf table.
-     * All view construction lives here so the controller stays slim.
+     * Construeix la pestanya d'estadístiques "General": progrés d'objectius
+     * + resum de text + taula per prestatgeria. Tota la construcció de la
+     * vista viu aquí perquè el controlador es mantingui prim.
      */
-    public static javax.swing.JPanel buildGeneralTab(List<Llibre> global, EstadistiquesLlibre globalStats, BibliotecaWriter cd) {
+    public static javax.swing.JPanel buildGeneralTab(List<Llibre> global, EstadistiquesLlibre globalStats, EscritorBiblioteca cd) {
         String summary = buildStatsSummary(globalStats, I18n.t("lbl_all_library"));
 
         javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
@@ -247,7 +248,7 @@ public class AjudaEstadistiques {
         return tab;
     }
 
-    private static javax.swing.JScrollPane buildShelfTable(List<Llibre> global, BibliotecaWriter cd) {
+    private static javax.swing.JScrollPane buildShelfTable(List<Llibre> global, EscritorBiblioteca cd) {
         java.util.Map<Long, Llibre> byIsbn = new java.util.HashMap<>();
         for (Llibre l : global) byIsbn.put(l.obtenirISBN(), l);
         java.util.Map<Integer, java.util.List<Llibre>> shelfBooks = new java.util.HashMap<>();

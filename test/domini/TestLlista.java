@@ -33,9 +33,9 @@ class TestLlista {
     @DisplayName("default color is null; setter accepts any string")
     void colorSetter() {
         Llista l = new Llista(1, "x");
-        assertThat(l.getColor()).isNull();
-        l.setColor("#aabbcc");
-        assertThat(l.getColor()).isEqualTo("#aabbcc");
+        assertThat(l.obtenirColor()).isNull();
+        l.posarColor("#aabbcc");
+        assertThat(l.obtenirColor()).isEqualTo("#aabbcc");
     }
 
     // ── setNom validation ───────────────────────────────────────────────
@@ -124,7 +124,7 @@ class TestLlista {
     void toMapExposesAll() {
         Llista l = new Llista(3, "Favorits");
         l.posarOrdre(2);
-        l.setColor("#abc");
+        l.posarColor("#abc");
         var m = l.toMap();
         assertThat(m).containsEntry("id", 3);
         assertThat(m).containsEntry("nom", "Favorits");

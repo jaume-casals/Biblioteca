@@ -4,7 +4,7 @@ import javax.swing.JComboBox;
 import javax.swing.JTextField;
 import java.util.List;
 
-/** Common entry point for autocompletion on text fields and combo boxes. */
+/** Punt d'entrada comú per a l'autocompletat en camps de text i quadres combinats. */
 public final class Completer {
     private Completer() {}
 

@@ -3,7 +3,7 @@ package presentacio;
 import domini.Llista;
 import herramienta.DialegError;
 import herramienta.I18n;
-import interficie.ShelfWriter;
+import interficie.EscritorPrestatgeria;
 
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
@@ -12,14 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Shelf (llista) combo, drag-to-shelf, and list membership actions. */
+/** Combo de prestatgeria (llista), arrossegar-a-prestatgeria i accions de pertinença a llista. */
 class ControladorPrestatgeria {
 
-    private final LibraryViewState state;
-    private final LibraryScreenHost host;
+    private final EstatVistaBiblioteca state;
+    private final AmfitrioPantallaBiblioteca host;
     private final ControladorMostrarBiblioteca coordinator;
 
-    ControladorPrestatgeria(LibraryViewState state, LibraryScreenHost host, ControladorMostrarBiblioteca coordinator) {
+    ControladorPrestatgeria(EstatVistaBiblioteca state, AmfitrioPantallaBiblioteca host, ControladorMostrarBiblioteca coordinator) {
         this.state = state;
         this.host = host;
         this.coordinator = coordinator;
@@ -145,9 +145,9 @@ class ControladorPrestatgeria {
                 boolean isSelected, boolean cellHasFocus) {
             javax.swing.Icon icon = null;
             if (value instanceof Llista ll) {
-                if (ll.getColor() != null) {
+                if (ll.obtenirColor() != null) {
                     try {
-                        final java.awt.Color c = java.awt.Color.decode(ll.getColor());
+                        final java.awt.Color c = java.awt.Color.decode(ll.obtenirColor());
                         icon = COLOR_ICON_CACHE.computeIfAbsent(c, color -> new javax.swing.Icon() {
                             public int getIconWidth()  { return 12; }
                             public int getIconHeight() { return 12; }
@@ -202,10 +202,10 @@ class ControladorPrestatgeria {
         Llista sel = pickLlista(I18n.t("dlg_add_to_list_msg", rows.length));
         if (sel == null) return;
         int ok = 0, skip = 0;
-        JTable t = state.vista.getjTableBilio();
+        JTable t = state.vista.obtenirTaulaLlibres();
         for (int row : rows) {
             try {
-                long isbn = Long.parseLong((String) t.getValueAt(row, BibliotecaTableModel.COL_ISBN));
+                long isbn = Long.parseLong((String) t.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN));
                 state.cd.afegirLlibreToLlista(isbn, sel.obtenirId(), 0.0, false);
                 ok++;
             } catch (Exception ignored) { skip++; }
@@ -233,7 +233,7 @@ class ControladorPrestatgeria {
     }
 
     void obrirGestioLlistes() {
-        new DialegGestioLlistes(SwingUtilities.getWindowAncestor(state.vista), coordinator, (ShelfWriter) state.cd)
+        new DialegGestioLlistes(SwingUtilities.getWindowAncestor(state.vista), coordinator, (EscritorPrestatgeria) state.cd)
             .setVisible(true);
     }
 }

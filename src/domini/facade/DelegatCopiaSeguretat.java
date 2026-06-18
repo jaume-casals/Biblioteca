@@ -11,10 +11,10 @@ import domini.Tag;
 import herramienta.ServeiCopiaSeguretat;
 
 /**
- * Backup, restore, and clear-all. Touches all three state lists; the
- * snapshot is taken atomically under the state lock; the file I/O runs
- * outside the lock (the original code did the same — I/O is not held
- * against concurrent state reads).
+ * Còpia de seguretat, restauració i buidat total. Toca les tres llistes
+ * d'estat; la captura es fa atòmicament sota el lock d'estat; l'I/O de
+ * fitxers s'executa fora del lock (el codi original feia el mateix —
+ * l'I/O no es reté contra lectures concurrents de l'estat).
  */
 public final class DelegatCopiaSeguretat {
 
@@ -40,7 +40,7 @@ public final class DelegatCopiaSeguretat {
      *   <li>Pren una captura atòmica de {@code bib}, {@code llistes},
      *       {@code tags} sota el lock (còpies defensives; les mutacions
      *       posteriors a la captura no afecten la còpia).</li>
-     *   <li>Lliura la captura a {@link BackupService#backupToSQL} sense
+     *   <li>Lliura la captura a {@link herramienta.ServeiCopiaSeguretat#copiaSegToSQL} sense
      *       tenir el lock agafat.</li>
      * </ol>
      */
@@ -80,7 +80,7 @@ public final class DelegatCopiaSeguretat {
         synchronized (state.lock()) {
             targets = new java.util.HashMap<>();
             for (Llibre l : state.bib()) {
-                if (!l.esHeavyFieldsLoaded()) targets.put(l.obtenirISBN(), l);
+                if (!l.teCampsPesatsCarregats()) targets.put(l.obtenirISBN(), l);
             }
         }
         if (targets.isEmpty()) return;
@@ -127,9 +127,9 @@ public final class DelegatCopiaSeguretat {
                 try { state.persistence().executarSQLFile(backup); }
                 catch (Exception ex) { throw new BibliotecaException(
                     herramienta.I18n.t("dlg_restore_rollback_failed", backup.getAbsolutePath())
-                    + "\n\nOriginal error: " + e.getMessage()
-                    + "\nRollback error: " + ex.getMessage(), ex); }
-                throw new BibliotecaException("Restore failed: " + e.getMessage(), e);
+                    + "\n\nError original: " + e.getMessage()
+                    + "\nError de recuperació: " + ex.getMessage(), ex); }
+                throw new BibliotecaException("Ha fallat la restauració: " + e.getMessage(), e);
             }
         } catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
         // La captura post-restauració es fa SENSE el lock d'estat — les

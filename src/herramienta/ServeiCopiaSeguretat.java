@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** BackupService llegeix totes les dades de ControladorPersistencia per produir volcats SQL.
+/** ServeiCopiaSeguretat llegeix totes les dades de ControladorPersistencia per produir volcats SQL.
  *  Es construeix amb cp (no cd) perquè cp és la font única de veritat per a les dades de
  *  còpia — totes les files provenen de consultes al DAO, no de la memòria cau en memòria.
  *  Això evita una desincronia on cd.allLlibres() podria endarrerir-se respecte
@@ -104,7 +104,7 @@ public class ServeiCopiaSeguretat {
             // Propaga els errors de BBDD sorollosament — una BBDD
             // corrupta afecta totes les operacions, no només les còpies.
             LOG.log(Level.SEVERE, "Backup automàtic fallat (SQL)", sqle);
-            throw new RuntimeException("Auto-backup SQL failure", sqle);
+            throw new RuntimeException("Ha fallat la còpia SQL automàtica", sqle);
         } catch (RuntimeException re) {
             // Propaga els errors de runtime inesperats (NPE, IllegalState, …).
             // Segons el finding: no els capturis en silenci.
@@ -195,7 +195,7 @@ public class ServeiCopiaSeguretat {
         // ara només requereix tocar LlibreFieldBindings.COLUMNS_INSERT
         // + forInsert() (segons el finding MEDIUM de tot.txt sobre la
         // deriva de llistes de columnes). La columna literal
-        // `imatge_blob` s'exclou aquí perquè el BackupService NO
+        // `imatge_blob` s'exclou aquí perquè el ServeiCopiaSeguretat NO
         // incrusta els bytes de coberta al volcats SQL (veure el
         // Javadoc de la classe).
         Object[] vals = persistencia.LlibreFieldBindings.forInsert(l);
@@ -261,7 +261,7 @@ public class ServeiCopiaSeguretat {
         pw.print(',');
         pw.print(ll.obtenirOrdre());
         pw.print(',');
-        pw.print(sqlNullable(ll.getColor()));
+        pw.print(sqlNullable(ll.obtenirColor()));
         pw.println(");");
     }
 

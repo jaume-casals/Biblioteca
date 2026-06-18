@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** LRU cover icons for table + gallery (shared across main screen). */
+/** Icones de coberta LRU per a taula i galeria (compartides a la pantalla principal). */
 public final class MemoriaImatgesCoberta {
-    /** Cached marker: no cover available (avoids re-fetch on every repaint). */
+    /** Marca en caché: no hi ha coberta disponible (evita tornar a obtenir a cada repaint). */
     public static final ImageIcon NO_COVER = new ImageIcon(
         new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB));
 

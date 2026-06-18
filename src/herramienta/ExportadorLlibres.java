@@ -3,8 +3,8 @@ package herramienta;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import interficie.BibliotecaReader;
-import interficie.ShelfReader;
+import interficie.LectorBiblioteca;
+import interficie.LectorPrestatgeria;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -15,11 +15,11 @@ public class ExportadorLlibres {
 
     private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
 
-    public static void exportarCSV(File f, List<Llibre> view, ShelfReader cd) throws Exception {
+    public static void exportarCSV(File f, List<Llibre> view, LectorPrestatgeria cd) throws Exception {
         domini.AnalitzadorPrestatgeria.exportarToCsv(f, view, cd);
     }
 
-    public static void exportarJSON(File f, BibliotecaReader cd) throws Exception {
+    public static void exportarJSON(File f, LectorBiblioteca cd) throws Exception {
         // Càrrega en lot de les dades relacionals per evitar N+1
         java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
         for (persistencia.LlibreLlistaRow r : cd.obtenirAllLlibreLlistaRows())
@@ -88,27 +88,28 @@ public class ExportadorLlibres {
         "table{border-collapse:collapse;width:100%}th,td{border:1px solid #4c1d95;padding:8px 12px;text-align:left}" +
         "th{background:#0f3460;color:#a78bfa}tr:nth-child(even){background:#16213e}";
 
-    public static void exportarHTML(File f, List<Llibre> view, ShelfReader cd,
+    public static void exportarHTML(File f, List<Llibre> view, LectorPrestatgeria cd,
             boolean groupByShelf, boolean tableView) throws Exception {
         exportarHTML(f, view, cd, groupByShelf, tableView, null);
     }
 
     /**
-     * Extended HTML export with an explicit cover-inclusion flag and
-     * pre-loaded cover bytes. The simpler overload above omits covers
-     * (renders a 📖 placeholder for every book) and is the safe default
-     * for libraries with more than {@link #LARGE_LIBRARY_COVER_THRESHOLD}
-     * books — base64-encoding a 50 KB cover per book produces ~50 MB
-     * of HTML for 1 000 books, which most browsers handle poorly.
+     * Exportació HTML ampliada amb un indicador explícit d'inclusió de coberta
+     * i bytes de coberta precarregats. La sobrecàrrega més senzilla de sobre
+     * omet les cobertes (renderitza un marcador 📖 per a cada llibre) i és
+     * el valor per defecte segur per a biblioteques amb més de
+     * {@link #LARGE_LIBRARY_COVER_THRESHOLD} llibres — codificar en base64 una
+     * coberta de 50 KB per llibre produeix ~50 MB d'HTML per a 1 000 llibres,
+     * que la majoria de navegadors gestionen malament.
      *
-     * <p>When {@code coverBlobs} is non-null it must contain one entry
-     * per book in {@code view} (same order). A {@code null} entry means
-     * "no cover available, render the placeholder". Callers that opt in
-     * to covers must populate the array from a background thread (the
-     * underlying {@code CoverService.getCachedBytes} and
-     * {@code cd.getLlibreBlob} do disk + DB I/O).
+     * <p>Quan {@code coverBlobs} no és null ha de contenir una entrada per
+     * llibre a {@code view} (mateix ordre). Una entrada {@code null} significa
+     * "no hi ha coberta disponible, renderitza el marcador". Els consumidors
+     * que opten per incloure cobertes han d'omplir el mapa des d'un fil en
+     * segon pla (les operacions subjacents {@code ServeiCoberta.obtenirCachedBytes}
+     * i {@code cd.obtenirLlibreBlob} fan I/O de disc + BBDD).
      */
-    public static void exportarHTML(File f, List<Llibre> view, ShelfReader cd,
+    public static void exportarHTML(File f, List<Llibre> view, LectorPrestatgeria cd,
             boolean groupByShelf, boolean tableView,
             java.util.Map<Long, byte[]> coverBlobs) throws Exception {
         try (PrintWriter pw = new PrintWriter(
@@ -119,9 +120,9 @@ public class ExportadorLlibres {
         }
     }
 
-    /** Above this many books, the caller should pre-load covers off the
-     *  EDT and pass them in, or skip covers entirely (the default
-     *  3-arg overload does this). */
+    /** Per sobre d'aquest nombre de llibres, el consumidor hauria de precarregar
+     *  les cobertes fora de l'EDT i passar-les, o ometre les cobertes del tot
+     *  (la sobrecàrrega per defecte de 3 args ho fa). */
     static final int LARGE_LIBRARY_COVER_THRESHOLD = 100;
 
     private static void escriureHtmlHeader(PrintWriter pw) {
@@ -132,7 +133,7 @@ public class ExportadorLlibres {
         pw.println("<h1>" + Escapers.html(I18n.t("export_html_heading")) + "</h1>");
     }
 
-    private static void escriureHtmlBody(PrintWriter pw, List<Llibre> view, ShelfReader cd,
+    private static void escriureHtmlBody(PrintWriter pw, List<Llibre> view, LectorPrestatgeria cd,
             boolean groupByShelf, boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         if (groupByShelf) {
             escriureHtmlGroupedByShelf(pw, view, cd, tableView, coverBlobs);
@@ -142,7 +143,7 @@ public class ExportadorLlibres {
         }
     }
 
-    private static void escriureHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, ShelfReader cd,
+    private static void escriureHtmlGroupedByShelf(PrintWriter pw, List<Llibre> view, LectorPrestatgeria cd,
             boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         List<Llista> llistes = cd.obtenirAllLlistes();
         java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
@@ -308,7 +309,7 @@ public class ExportadorLlibres {
         m.put("dataCompra", l.obtenirDataCompra());
         m.put("dataLectura", l.obtenirDataLectura());
         m.put("idioma", l.obtenirIdioma());
-        m.put("format", l.getFormat());
+        m.put("format", l.obtenirFormat());
         m.put("paisOrigen", l.obtenirPaisOrigen());
         java.util.List<java.util.Map<String, Object>> llistes = new java.util.ArrayList<>();
         for (persistencia.LlibreLlistaRow row : llistaRows) {
@@ -325,8 +326,8 @@ public class ExportadorLlibres {
         return m;
     }
 
-    /** Wraps {@link Escapers#json(String)} in double quotes and renders
-     *  {@code null} as the JSON literal {@code null}. */
+    /** Embolcalla {@link Escapers#json(String)} entre cometes dobles i renderitza
+     *  {@code null} com el literal JSON {@code null}. */
     private static String jsonStr(String s) {
         if (s == null) return "null";
         return '"' + Escapers.json(s) + '"';

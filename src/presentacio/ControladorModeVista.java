@@ -6,21 +6,21 @@ import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.UITheme;
 import herramienta.ConfiguracioUi;
-import presentacio.detalles.control.DetallesLlibrePanelControl;
+import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 
 import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import java.util.Comparator;
 
-/** Gallery vs table view, series grouping, and title bar. */
+/** Vista galeria vs taula, agrupació per sèrie i barra de títol. */
 class ControladorModeVista {
 
-    private final LibraryViewState state;
-    private final LibraryScreenHost host;
+    private final EstatVistaBiblioteca state;
+    private final AmfitrioPantallaBiblioteca host;
     private final ControladorMenuContextual contextMenuCtrl;
 
-    ControladorModeVista(LibraryViewState state, LibraryScreenHost host,
+    ControladorModeVista(EstatVistaBiblioteca state, AmfitrioPantallaBiblioteca host,
                        ControladorAccionsLlibre bookActionsCtrl, ControladorMenuContextual contextMenuCtrl) {
         this.state = state;
         this.host = host;
@@ -36,7 +36,7 @@ class ControladorModeVista {
         state.vista.obtenirGaleria().posarCd(state.cd);
         state.vista.obtenirGaleria().posarOnCardClick(l -> {
             try {
-                DetallesLlibrePanelControl detalles = new DetallesLlibrePanelControl(l, state.enActualizarBBDD, state.cd);
+                ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(l, state.enActualizarBBDD, state.cd);
                 detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
                 detalles.obtenirDetallesLlibrePanel().setVisible(true);
             } catch (Exception e) {
@@ -58,8 +58,8 @@ class ControladorModeVista {
 
     void restaurarSort() {
         int savedSortCol = Configuracio.obtenirSortColumn();
-        if (savedSortCol >= 0 && savedSortCol < state.vista.getjTableBilio().getColumnCount()) {
-            javax.swing.RowSorter<?> sorter = state.vista.getjTableBilio().getRowSorter();
+        if (savedSortCol >= 0 && savedSortCol < state.vista.obtenirTaulaLlibres().getColumnCount()) {
+            javax.swing.RowSorter<?> sorter = state.vista.obtenirTaulaLlibres().getRowSorter();
             if (sorter != null) {
                 javax.swing.SortOrder order = "DESCENDING".equals(Configuracio.getSortOrder())
                     ? javax.swing.SortOrder.DESCENDING : javax.swing.SortOrder.ASCENDING;
@@ -100,7 +100,7 @@ class ControladorModeVista {
     }
 
     void actualitzarTitleBar() {
-        JTable t = state.vista.getjTableBilio();
+        JTable t = state.vista.obtenirTaulaLlibres();
         int shown = t.getRowCount();
         int total = state.biblio != null ? state.biblio.size() : 0;
         java.awt.Window w = SwingUtilities.getWindowAncestor(state.vista);

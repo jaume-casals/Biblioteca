@@ -18,7 +18,7 @@ import javax.swing.SwingWorker;
 
 import static herramienta.I18n.t;
 
-/** Database section: type / host / user / password + test-connection button. */
+/** Secció de base de dades: tipus / host / usuari / contrasenya + botó de provar connexió. */
 public final class SeccioDbConfiguracio {
     private SeccioDbConfiguracio() {}
 
@@ -83,7 +83,7 @@ public final class SeccioDbConfiguracio {
             btnTestConn.setText(t("btn_test_connection") + "…");
             new SwingWorker<Void, Void>() {
                 @Override protected Void doInBackground() throws Exception {
-                    java.sql.Connection conn = persistencia.ServerConect.testConnection(testProps, passSnapshot);
+                    java.sql.Connection conn = persistencia.ConnexioServidor.testConnection(testProps, passSnapshot);
                     conn.close();
                     return null;
                 }

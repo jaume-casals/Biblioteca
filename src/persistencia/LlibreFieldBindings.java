@@ -7,29 +7,28 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 /**
- * Single source of truth for the 25+ shared fields between {@code Llibre}
- * {@code INSERT} and {@code UPDATE} statements.  The DAO used to spell
- * out the same 25 line set of {@code ps.setXxx(N, ll.getYyy())} calls in
- * three places (insert, update, plus a slightly-different shape in
- * {@code BackupService.writeLlibreINSERT}).  This class centralises the
- * <i>value list</i> per SQL so all callers stay in lockstep when a new
- * column is added.
+ * Única font de veritat per als més de 25 camps compartits entre les sentències
+ * {@code INSERT} i {@code UPDATE} de {@code Llibre}. El DAO abans escrivia el
+ * mateix conjunt de 25 línies de crides {@code ps.setXxx(N, ll.getYyy())} a
+ * tres llocs (insert, update, més una forma lleugerament diferent a
+ * {@code ServeiCopiaSeguretat.escriureLlibreINSERT}). Aquesta classe centralitza la
+ * <i>llista de valors</i> per SQL de manera que tots els consumidors es mantinguin
+ * sincronitzats quan s'afegeix una columna nova.
  *
- * <p>Each value can be:
+ * <p>Cada valor pot ser:
  * <ul>
- *   <li>A boxed primitive / String / byte[] / java.sql.Date — bound as-is.</li>
- *   <li>{@code null} — bound as SQL NULL of the inferred type.</li>
- *   <li>{@link Null} with a specific SQL type — bound as typed NULL.</li>
+ *   <li>Un primitiu encaixat / String / byte[] / java.sql.Date — vinculat tal qual.</li>
+ *   <li>{@code null} — vinculat com a SQL NULL del tipus inferit.</li>
+ *   <li>{@link Nul} amb un tipus SQL concret — vinculat com a NULL tipat.</li>
  * </ul>
- * Type coercion mirrors the previous inline behaviour (empty string
- * instead of NULL for short text fields; boxed-default for null
- * numerics).
+ * La coerció de tipus reflecteix el comportament anterior (string buit en lloc
+ * de NULL per a camps de text curts; valor per defecte encaixat per a numèrics nuls).
  */
 public final class LlibreFieldBindings {
 
     private LlibreFieldBindings() {}
 
-    /** Marker for a SQL NULL of a specific JDBC type. */
+    /** Marcador per a un SQL NULL d'un tipus JDBC concret. */
     public static final class Nul {
         public final int sqlType;
         public Nul(int sqlType) { this.sqlType = sqlType; }
@@ -41,17 +40,17 @@ public final class LlibreFieldBindings {
     private static String sOrEmpty(String v) { return v == null ? "" : v; }
 
     /**
-     * Single value-list builder used by both {@link #forInsert(Llibre)}
-     * and {@link #forUpdate(Llibre)}.  The two SQLs differ only in:
+     * Constructor de llista de valors únic usat tant per {@link #forInsert(Llibre)}
+     * com per {@link #forUpdate(Llibre)}. Les dues SQL difereixen només en:
      * <ul>
-     *   <li>Whether the {@code ISBN} column is included (INSERT only).</li>
-     *   <li>Whether the {@code imatge_blob} column is included
-     *       (INSERT only).</li>
+     *   <li>Si la columna {@code ISBN} s'inclou (només INSERT).</li>
+     *   <li>Si la columna {@code imatge_blob} s'inclou
+     *       (només INSERT).</li>
      * </ul>
-     * This is the entire delta — same order, same value coercion
-     * helpers, same bind contract. The previous implementation had
-     * two near-identical 25/27-line arrays that drifted out of sync
-     * the moment a column was added (the tot.txt HIGH finding on
+     * Aquest és tot el delta — mateix ordre, mateixos ajudants de coerció de valors,
+     * mateix contracte de vinculació. La implementació anterior tenia
+     * dos arrays gairebé idèntics de 25/27 línies que es desvanllaven quan
+     * s'afegia una columna (el finding HIGH de tot.txt sobre
      * {@code LlibreDaoCore}).
      */
     public static Object[] forLlibre(Llibre ll, boolean includeIsbn, boolean includeBlob) {
@@ -74,7 +73,7 @@ public final class LlibreFieldBindings {
         vals.add(dateOrNull(ll.obtenirDataCompra()));
         vals.add(dateOrNull(ll.obtenirDataLectura()));
         vals.add(sOrNull(ll.obtenirIdioma()));
-        vals.add(sOrNull(ll.getFormat()));
+        vals.add(sOrNull(ll.obtenirFormat()));
         vals.add(ll.esDesitjat());
         vals.add(sOrNull(ll.obtenirPaisOrigen()));
         vals.add(sOrNull(ll.obtenirEstat()));
@@ -86,18 +85,18 @@ public final class LlibreFieldBindings {
         return vals.toArray();
     }
 
-    /** 27-value list for the INSERT (includes {@code ISBN} and
+    /** Llista de 27 valors per a l'INSERT (inclou {@code ISBN} i
      *  {@code imatge_blob}). */
     public static Object[] forInsert(Llibre ll) { return forLlibre(ll, true, true); }
 
-    /** 25-value list for the UPDATE (no {@code imatge_blob}, no
-     *  {@code ISBN}). The caller appends the WHERE-clause ISBN. */
+    /** Llista de 25 valors per a l'UPDATE (sense {@code imatge_blob}, sense
+     *  {@code ISBN}). El consumidor afegeix l'ISBN de la clàusula WHERE. */
     public static Object[] forUpdate(Llibre ll) { return forLlibre(ll, false, false); }
 
-    /** 27-column list for the INSERT, in the same order as
-     *  {@link #forInsert(Llibre)}. Used by {@code BackupService}
-     *  to generate the SQL column list without re-typing the names
-     *  (per the tot.txt MEDIUM finding on INSERT column-list drift). */
+    /** Llista de 27 columnes per a l'INSERT, en el mateix ordre que
+     *  {@link #forInsert(Llibre)}. Usada per {@code ServeiCopiaSeguretat}
+     *  per generar la llista de columnes SQL sense reescriure els noms
+     *  (segons el finding MEDIUM de tot.txt sobre la deriva de la llista de columnes d'INSERT). */
     public static final String[] COLUMNS_INSERT = {
         "ISBN", "nom", "any", "descripcio", "valoracio", "preu", "llegit", "imatge",
         "imatge_blob", "notes", "pagines", "pagines_llegides", "editorial", "serie",
@@ -105,8 +104,8 @@ public final class LlibreFieldBindings {
         "pais_origen", "estat", "exemplars", "llengua_original", "nom_ca", "nom_es", "nom_en"
     };
 
-    /** Render the column list as a single comma-separated SQL fragment
-     *  (e.g. {@code "`ISBN`,`nom`,`any`,..."}) for use in an INSERT. */
+    /** Genera la llista de columnes com un únic fragment SQL separat per comes
+     *  (p.ex. {@code "`ISBN`,`nom`,`any`,..."}) per usar en un INSERT. */
     public static String inserirColumnsSql() {
         StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 12);
         for (int i = 0; i < COLUMNS_INSERT.length; i++) {
@@ -116,8 +115,8 @@ public final class LlibreFieldBindings {
         return sb.toString();
     }
 
-    /** Render the placeholder list for a 27-value INSERT
-     *  (e.g. {@code "?,?,?,...,?"}). */
+    /** Genera la llista de placeholders per a un INSERT de 27 valors
+     *  (p.ex. {@code "?,?,?,...,?"}). */
     public static String inserirPlaceholders() {
         StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 2);
         for (int i = 0; i < COLUMNS_INSERT.length; i++) {
@@ -133,8 +132,8 @@ public final class LlibreFieldBindings {
         catch (IllegalArgumentException e) { return new Nul(Types.DATE); }
     }
 
-    /** Binds a single value to the PreparedStatement, with the type-aware
-     *  null handling the old inline code used to do per call. */
+    /** Vincula un sol valor al PreparedStatement, amb el tractament de null
+     *  conscient del tipus que l'antic codi inline feia a cada crida. */
     public static void bind(PreparedStatement ps, int idx, Object value) throws SQLException {
         if (value == null) {
             ps.setNull(idx, Types.VARCHAR);

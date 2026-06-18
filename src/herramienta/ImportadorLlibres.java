@@ -4,7 +4,7 @@ import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
 import herramienta.csv.UtilitatsCsv;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 public class ImportadorLlibres {
 
@@ -28,7 +28,7 @@ public class ImportadorLlibres {
      *  veure el tall. */
     private static final int MAX_NOTES_CHARS = 10_000;
 
-    public static ResultatImportacio importarCSV(java.io.File file, BibliotecaWriter cd) {
+    public static ResultatImportacio importarCSV(java.io.File file, EscritorBiblioteca cd) {
         int ok = 0, skipped = 0, err = 0;
         java.util.List<String> errors = new java.util.ArrayList<>();
         java.util.List<herramienta.csv.CsvImportStrategy> strategies = java.util.List.of(
@@ -75,11 +75,11 @@ public class ImportadorLlibres {
         return new ResultatImportacio(ok, skipped, err, errors);
     }
 
-    public static ResultatImportacio importarJSON(java.io.File file, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio importarJSON(java.io.File file, EscritorBiblioteca cd) throws Exception {
         return JsonImporter.run(file, cd);
     }
 
-    public static ResultatImportacio importarCalibre(java.io.File dbFile, String sqlite3, BibliotecaWriter cd) throws Exception {
+    public static ResultatImportacio importarCalibre(java.io.File dbFile, String sqlite3, EscritorBiblioteca cd) throws Exception {
         String sql = "SELECT b.id, b.title, GROUP_CONCAT(a.name, ', '), i.val, p.name, b.pubdate, b.rating, b.comment, b.series_index, s.name FROM books b LEFT JOIN books_authors_link ba ON b.id=ba.book LEFT JOIN authors a ON ba.author=a.id LEFT JOIN identifiers i ON b.id=i.book AND i.type='isbn' LEFT JOIN publishers p ON b.id=(SELECT book FROM books_publishers_link WHERE book=b.id LIMIT 1) LEFT JOIN books_series_link bs ON b.id=bs.book LEFT JOIN series s ON bs.series=s.id GROUP BY b.id;";
         Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, "-separator", "\t", dbFile.getAbsolutePath(), sql});
         Thread stderrDrain = new Thread(() -> {
@@ -98,10 +98,10 @@ public class ImportadorLlibres {
                 try {
                     String[] c = line.split("\t", -1);
                     if (c.length < 10) {
-                        throw new IllegalArgumentException("Calibre row has " + c.length
-                            + " tab-separated field(s) (expected 10). The book title or a "
-                            + "GROUP_CONCAT field likely contains an embedded tab — "
-                            + "row cannot be parsed safely.");
+                        throw new IllegalArgumentException("La fila de Calibre té " + c.length
+                            + " camp(s) separats per tabulació (n'ha de tenir 10). El títol del llibre o un "
+                            + "camp GROUP_CONCAT probablement conté un tabulador incrustat — "
+                            + "la fila no es pot analitzar de manera segura.");
                     }
                     String isbnRaw = c.length > 3 ? c[3].replaceAll("[^0-9]", "") : "";
                     if (isbnRaw.isEmpty() || isbnRaw.length() < 10) { skipped++; continue; }

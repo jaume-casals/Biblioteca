@@ -4,15 +4,15 @@ import java.awt.Container;
 import javax.swing.JComponent;
 
 /**
- * Shared utilities for {@code presentacio.config.*} sections.
- * Each section panel tags its input children with a {@code ClientProperty
- * ("id", ...)} so the dialog can look them up by name in
- * {@link #reloadFromConfig(Container, String)}.
+ * Utilitats compartides per a les seccions de {@code presentacio.config.*}.
+ * Cada panell de secció etiqueta els seus fills d'entrada amb un
+ * {@code ClientProperty ("id", ...)} perquè el diàleg els pugui cercar
+ * per nom a {@link #reloadFromConfig(Container, String)}.
  */
 public final class SeccionsConfiguracio {
     private SeccionsConfiguracio() {}
 
-    /** Locate a tagged child by id. Recurses into nested containers. */
+    /** Localitza un fill etiquetat per id. Recorre recursivament els contenidors niats. */
     public static JComponent cercarById(Container root, String id) {
         for (java.awt.Component c : root.getComponents()) {
             if (c instanceof JComponent jc && id.equals(jc.getClientProperty("id"))) return jc;

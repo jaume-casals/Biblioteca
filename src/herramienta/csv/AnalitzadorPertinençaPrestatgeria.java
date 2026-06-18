@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Parses the native CSV "shelves" column: a string like
+ * Analitza la columna "shelves" del CSV natiu: una cadena com
  * <pre>NameA|7.5|true;NameB|0|false</pre>
- * into {@link Entry} records.
+ * en registres {@link Entrada}.
  */
 public final class AnalitzadorPertinençaPrestatgeria {
     public record Entrada(String name, double valoracio, boolean llegit) {}

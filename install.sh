@@ -29,7 +29,7 @@ cp "${DIR}/lib/"*.jar       "${INST_APP}/lib/"
 # Launcher script
 cat > "${INST_BIN}/biblioteca" << LAUNCHER
 #!/usr/bin/env bash
-exec java -Xmx512m -cp "\${HOME}/.local/share/Biblioteca/biblioteca.jar" main.Ejecutable "\$@"
+exec java -Xmx512m -cp "\${HOME}/.local/share/Biblioteca/biblioteca.jar" main.Executable "\$@"
 LAUNCHER
 chmod +x "${INST_BIN}/biblioteca"
 

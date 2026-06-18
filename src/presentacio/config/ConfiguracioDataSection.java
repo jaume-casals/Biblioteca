@@ -3,7 +3,7 @@ package presentacio.config;
 import herramienta.Configuracio;
 import herramienta.ConfiguracioDb;
 import herramienta.UITheme;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -16,7 +16,7 @@ import javax.swing.SwingWorker;
 
 import static herramienta.I18n.t;
 
-/** Data section: DB size display, clear-library button, profile picker. */
+/** Secció de dades: visualització de mida de BBDD, botó de buidar biblioteca, selector de perfil. */
 public final class ConfiguracioDataSection {
     private ConfiguracioDataSection() {}
 
@@ -24,7 +24,7 @@ public final class ConfiguracioDataSection {
         return name == null ? "" : name.trim().replaceAll("[^a-zA-Z0-9_-]", "_");
     }
 
-    public static JPanel build(JDialog owner, BibliotecaWriter cd, ConfiguracioDialogListener listener) {
+    public static JPanel build(JDialog owner, EscritorBiblioteca cd, ConfiguracioDialogListener listener) {
         JPanel panel = new JPanel();
         panel.setBackground(UITheme.palette().bgPanel());
         GroupLayout gl = new GroupLayout(panel);
@@ -76,7 +76,7 @@ public final class ConfiguracioDataSection {
             if (r2 != JOptionPane.YES_OPTION) return;
             try {
                 cd.netejarAll();
-                if (listener != null) listener.onRefreshData();
+                if (listener != null) listener.enRefrescarDades();
                 JOptionPane.showMessageDialog(owner, t("dlg_clear_done"),
                     t("dlg_clear_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 owner.dispose();

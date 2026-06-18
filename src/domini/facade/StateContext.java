@@ -10,17 +10,17 @@ import domini.Tag;
 import persistencia.ControladorPersistencia;
 
 /**
- * Shared in-memory state for the {@link domini.ControladorDomini} facade.
+ * Estat compartit en memòria per a la façana {@link domini.ControladorDomini}.
  *
- * <p>Package-private to {@code domini.facade}; only the delegates and the
- * facade itself touch this. Exposes the lock, the three backing lists
- * ({@code bib}, {@code llistes}, {@code tags}), the id-index maps
- * ({@code llistesById}, {@code tagsById}), and the persistence reference.
+ * <p>Package-private a {@code domini.facade}; només els delegats i la
+ * pròpia façana hi accedeixen. Exposa el lock, les tres llistes de suport
+ * ({@code bib}, {@code llistes}, {@code tags}), els mapes d'índex per id
+ * ({@code llistesById}, {@code tagsById}) i la referència a la persistència.
  *
- * <p>All reads and writes of the backing lists MUST go through the
- * {@link #lock} so the lists and the id-index maps stay in sync. The
- * {@link #withLock} and {@link #withLockReturning} helpers are the
- * canonical way to do that.
+ * <p>Totes les lectures i escriptures de les llistes de suport HAN DE passar
+ * pel {@link #lock} perquè les llistes i els mapes d'índex per id es
+ * mantinguin sincronitzats. Els helpers {@link #withLock} i
+ * {@link #withLockReturning} són la manera canònica de fer-ho.
  */
 public final class StateContext {
 
@@ -46,30 +46,30 @@ public final class StateContext {
         rebuildIdIndexesLocked();
     }
 
-    /** The monitor used by {@link #withLock} / {@link #withLockReturning}.
-     *  Package-private (no public accessor): every delegate in
-     *  {@code domini.facade} goes through {@code withLock(...)} so
-     *  there is no reason for a caller to acquire the lock directly.
-     *  The package-private access is preserved for the facade
-     *  package (e.g. tests that need a raw {@code synchronized
-     *  (state.lock) { ... }}) but the public surface stays
-     *  clean. */
+    /** El monitor utilitzat per {@link #withLock} / {@link #withLockReturning}.
+     *  Package-private (sense getter públic): cada delegat de
+     *  {@code domini.facade} passa per {@code withLock(...)} de manera
+     *  que no hi ha cap raó perquè un consumidor agafi el lock directament.
+     *  L'accés package-private es preserva per al paquet de la façana
+     *  (p.ex. tests que necessiten un {@code synchronized (state.lock) { ... }}
+     *  directe), però la superfície pública es manté neta. */
     Object lock() { return lock; }
     public ControladorPersistencia persistence() { return cp; }
-    /** Returns the live backing list. Callers MUST hold {@link #lock()} before
-     *  reading or mutating; iterating without the lock risks
-     *  {@link java.util.ConcurrentModificationException} and mutating without
-     *  the lock can desync the list from the id-index maps. Prefer
-     *  {@link #withLock} / {@link #withLockReturning} for read+copy patterns. */
+    /** Retorna la llista de suport viva. Els consumidors HAN DE tenir
+     *  {@link #lock()} agafat abans de llegir o mutar; iterar sense el lock
+     *  pot provocar {@link java.util.ConcurrentModificationException} i
+     *  mutar sense el lock pot desincronitzar la llista respecte dels
+     *  mapes d'índex per id. Per a patrons de lectura + còpia, preferiu
+     *  {@link #withLock} / {@link #withLockReturning}. */
     public ArrayList<Llibre> bib() { return bib; }
-    /** See {@link #bib()} for the locking contract. */
+    /** Consulta {@link #bib()} per al contracte de lock. */
     public ArrayList<Llista> llistes() { return llistes; }
-    /** See {@link #bib()} for the locking contract. */
+    /** Consulta {@link #bib()} per al contracte de lock. */
     public ArrayList<Tag> tags() { return tags; }
     public Map<Integer, Llista> llistesById() { return llistesById; }
     public Map<Integer, Tag> tagsById() { return tagsById; }
 
-    /** Replace all three backing lists atomically (used by restoreFromSQL). */
+    /** Substitueix les tres llistes de suport atòmicament (usat per restaurarFromSQL). */
     public void replaceAll(ArrayList<Llibre> newBib,
                            ArrayList<Llista> newLlistes,
                            ArrayList<Tag> newTags) {
@@ -81,12 +81,13 @@ public final class StateContext {
         }
     }
 
-    /** Clear all three backing lists and the id-index maps (used by clearAll).
-     *  Mirrors {@link #replaceAll(ArrayList, ArrayList, ArrayList)}'s contract
-     *  by going through {@link #rebuildIdIndexesLocked()} for consistency
-     *  (today the two paths clear the maps directly, but the centralised
-     *  call makes future additions — e.g. a new id-index map — a single
-     *  line change rather than a two-line search). */
+    /** Buida les tres llistes de suport i els mapes d'índex per id (usat per netejarAll).
+     *  Reflecteix el contracte de {@link #replaceAll(ArrayList, ArrayList, ArrayList)}
+     *  passant per {@link #rebuildIdIndexesLocked()} per consistència
+     *  (avui els dos camins buiden els mapes directament, però la crida
+     *  centralitzada fa que futures addicions — p.ex. un nou mapa d'índex
+     *  per id — siguin un canvi d'una sola línia en lloc d'una cerca de
+     *  dues línies). */
     public void netejarAll() {
         synchronized (lock) {
             bib.clear();
@@ -96,7 +97,7 @@ public final class StateContext {
         }
     }
 
-    /** Rebuild id-index maps from the current backing lists. Must be called under lock. */
+    /** Reconstrueix els mapes d'índex per id a partir de les llistes de suport actuals. S'ha de cridar amb el lock agafat. */
     private void rebuildIdIndexesLocked() {
         llistesById.clear();
         for (Llista l : llistes) llistesById.put(l.obtenirId(), l);
@@ -104,12 +105,12 @@ public final class StateContext {
         for (Tag t : tags) tagsById.put(t.obtenirId(), t);
     }
 
-    /** Run {@code action} while holding the state lock. */
+    /** Executa {@code action} amb el lock d'estat agafat. */
     public void withLock(Runnable action) {
         synchronized (lock) { action.run(); }
     }
 
-    /** Run {@code action} while holding the state lock; return its result. */
+    /** Executa {@code action} amb el lock d'estat agafat; en retorna el resultat. */
     public <T> T withLockReturning(java.util.function.Supplier<T> action) {
         synchronized (lock) { return action.get(); }
     }

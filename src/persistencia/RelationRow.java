@@ -1,9 +1,9 @@
 package persistencia;
 
 /**
- * Marker for book-relation row records: {@link LlibreLlistaRow}, {@link LlibreTagRow},
- * {@link LlibreAutorRow}. Permits cross-cutting handlers (export/import, audit dumps)
- * to dispatch generically.
+ * Marcador per a registres de files de relacions de llibres: {@link LlibreLlistaRow}, {@link LlibreTagRow},
+ * {@link LlibreAutorRow}. Permet que els gestors transversals (exportació/importació, buidats d'auditoria)
+ * facin el despatx de manera genèrica.
  */
 public interface RelationRow {
     long isbn();

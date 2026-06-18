@@ -68,7 +68,7 @@ make run
 
 ```bat
 scripts\compile.bat
-java -cp bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar main.Ejecutable
+java -cp bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar main.Executable
 ```
 
 > Totes les dependències estan incloses a `lib/` — no cal `apt`, `brew` ni cap gestió de paquets externa.
@@ -153,7 +153,7 @@ Aplica el patró **MVC en tres capes** amb separació clara de responsabilitats:
 │                 facade → StateContext (lock) → delegates     │
 ├─────────────────────────────────────────────────────────────┤
 │  persistencia/  JDBC — ControladorPersistencia → DAO         │
-│                 ServerConect, migracions, H2/MariaDB         │
+│                 ConnexioServidor, migracions, H2/MariaDB         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -214,11 +214,11 @@ L'aplicació desa la configuració de forma asíncrona (`ScheduledExecutorServic
 ```
 .
 ├── src/
-│   ├── main/          Punt d'entrada (Ejecutable.main)
+│   ├── main/          Punt d'entrada (Executable.main)
 │   ├── presentacio/   Panells Swing + controls (BookActions, Filter, ContextMenu, ...)
 │   ├── domini/        Llibre, LlibreFilter, SortSpec, Llista, Tag, ControladorDomini
 │   │   └── facade/    BookDelegate, ShelfDelegate, StatsDelegate, BackupDelegate, ...
-│   ├── persistencia/  ControladorPersistencia, ServerConect, DAO, migracions
+│   ├── persistencia/  ControladorPersistencia, ConnexioServidor, DAO, migracions
 │   ├── herramienta/   Config, UITheme, I18n, LlibreValidator, BookImporter, CoverService
 │   └── interficie/    Interfícies de callback (EnActualizarBBDD, LibraryEvents)
 ├── lib/               Dependències empaquetades (H2, MariaDB, Gson, JUnit, Mockito)

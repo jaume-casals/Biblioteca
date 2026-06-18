@@ -3,7 +3,7 @@ package herramienta.export;
 import domini.Llibre;
 import domini.Llista;
 import herramienta.csv.UtilitatsCsv;
-import interficie.BibliotecaReader;
+import interficie.LectorBiblioteca;
 import persistencia.LlibreLlistaRow;
 
 import java.io.PrintWriter;
@@ -14,16 +14,16 @@ import java.util.Map;
 
 import static java.util.stream.Collectors.joining;
 
-/** Shared Goodreads-compatible CSV export used by API and Swing. */
+/** Exportació CSV compatible amb Goodreads compartida, usada per API i Swing. */
 public final class GoodreadsExportService {
     private GoodreadsExportService() {}
 
-    public static String exportarToCsv(BibliotecaReader cd) throws Exception {
+    public static String exportarToCsv(LectorBiblioteca cd) throws Exception {
         // Sobrecàrrega de String conservada per compatibilitat enrere
         // amb els pocs consumidors existents que llegeixen l'exportació
         // sencera a memòria. Per a biblioteques de 10k llibres això
         // assigna ~10 MB transitòriament; la sobrecàrrega de streaming
-        // {@link #exportToCsv(BibliotecaWriter, PrintWriter)} és el
+        // {@link #exportToCsv(EscritorBiblioteca, PrintWriter)} és el
         // camí recomanat per a codi nou.
         java.io.StringWriter sw = new java.io.StringWriter();
         try (PrintWriter pw = new PrintWriter(sw)) {
@@ -38,7 +38,7 @@ public final class GoodreadsExportService {
      * ~10x més ràpida (sense assignació del document complet) i ~20x
      * més amigable amb el heap.
      */
-    public static void exportarToCsv(BibliotecaReader cd, PrintWriter pw) throws Exception {
+    public static void exportarToCsv(LectorBiblioteca cd, PrintWriter pw) throws Exception {
         pw.println("Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
                  + "Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publicación Year,"
                  + "Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,"
@@ -78,7 +78,7 @@ public final class GoodreadsExportService {
             pw.print(myRating); pw.print(',');
             pw.print(',');
             pw.print(UtilitatsCsv.csvQ(l.obtenirEditorial() != null ? l.obtenirEditorial() : "")); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.getFormat() != null ? l.getFormat() : "")); pw.print(',');
+            pw.print(UtilitatsCsv.csvQ(l.obtenirFormat() != null ? l.obtenirFormat() : "")); pw.print(',');
             pw.print(l.obtenirPagines() > 0 ? l.obtenirPagines() : ""); pw.print(',');
             pw.print(any != null && any > 0 ? any : ""); pw.print(',');
             pw.print(any != null && any > 0 ? any : ""); pw.print(',');

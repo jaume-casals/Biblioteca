@@ -11,18 +11,18 @@ import herramienta.ImportadorLlibres;
 import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.ClientOpenLibrary;
-import interficie.BibliotecaWriter;
-import presentacio.detalles.control.GuardarLlibresDialogoControl;
-import presentacio.detalles.vista.GuardarLlibresDialogo;
+import interficie.EscritorBiblioteca;
+import presentacio.detalles.control.ControladorDialegDesarLlibres;
+import presentacio.detalles.vista.DialegDesarLlibres;
 
 public class ControladorImportacio {
 
     private final Component parent;
-    private final BibliotecaWriter cd;
+    private final EscritorBiblioteca cd;
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
 
-    public ControladorImportacio(Component parent, BibliotecaWriter cd,
+    public ControladorImportacio(Component parent, EscritorBiblioteca cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
         this.parent = parent;
         this.cd = cd;
@@ -33,7 +33,7 @@ public class ControladorImportacio {
     public void importarCSV() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_title"), "CSV files", "csv");
         if (f == null) return;
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() {
@@ -71,7 +71,7 @@ public class ControladorImportacio {
             JOptionPane.showMessageDialog(parent, I18n.t("dlg_calibre_no_sqlite3"),
                 I18n.t("dlg_calibre_choose_title"), JOptionPane.ERROR_MESSAGE); return;
         }
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_calibre_choose_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_calibre_choose_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
@@ -95,7 +95,7 @@ public class ControladorImportacio {
     public void importarJSON() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_json_title"), "JSON files", "json");
         if (f == null) return;
-        LoadingDialog loading = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_json_title"));
+        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_json_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
@@ -145,8 +145,8 @@ public class ControladorImportacio {
             if (ans != JOptionPane.YES_OPTION) return;
         }
 
-        GuardarLlibresDialogo dialeg = new GuardarLlibresDialogo();
-        new GuardarLlibresDialogoControl(dialeg, null, cd);
+        DialegDesarLlibres dialeg = new DialegDesarLlibres();
+        new ControladorDialegDesarLlibres(dialeg, null, cd);
         dialeg.obtenirTextISBN().setText(isbn);
 
         final String finalIsbn = isbn;

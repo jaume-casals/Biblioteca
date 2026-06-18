@@ -139,6 +139,6 @@ class SchemaClearOrderTest {
     private static Connection extractConnection(ControladorPersistencia cp) throws Exception {
         var scField = ControladorPersistencia.class.getDeclaredField("sc");
         scField.setAccessible(true);
-        return ((ServerConect) scField.get(cp)).getConnection();
+        return ((ConnexioServidor) scField.get(cp)).obtenirConnexio();
     }
 }

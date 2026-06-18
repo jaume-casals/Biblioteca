@@ -24,7 +24,7 @@
 # ── Java: Book detail panel ───────────────────────────────────────────────────
 # ── Java: About dialog ────────────────────────────────────────────────────────
 # ── Java: Import/export CSV ───────────────────────────────────────────────────
-lbl_csv_files,CSV files,CSV files,CSV files
+lbl_csv_files,Fitxers CSV,CSV files,CSV files
 # ── Java: Misc ────────────────────────────────────────────────────────────────
 # ── HTML: Filter placeholders ─────────────────────────────────────────────────
 # ── Java: GestioLlistesDialog ─────────────────────────────────────────────────

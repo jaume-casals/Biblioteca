@@ -1,7 +1,7 @@
 package herramienta.csv;
 
 import domini.Llista;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,7 +26,7 @@ public final class ShelvesHelper {
      * @param shelfName nom del prestatge; si és null o blank, retorna null
      * @return la {@link Llista} trobada o creada, o null si {@code shelfName} és buit
      */
-    public static Llista cercarOrCreateShelf(BibliotecaWriter cd, Map<String, Llista> cache, String shelfName) {
+    public static Llista cercarOCrearPrestatge(EscritorBiblioteca cd, Map<String, Llista> cache, String shelfName) {
         if (shelfName == null || shelfName.isBlank()) return null;
         if (cache == null) {
             cache = new HashMap<>();
@@ -51,10 +51,10 @@ public final class ShelvesHelper {
      * @param valoracio valoració dins del prestatge
      * @param llegit    estat de lectura dins del prestatge
      */
-    public static void afegirBookToShelf(BibliotecaWriter cd, Map<String, Llista> cache,
+    public static void afegirLlibreAPrestatge(EscritorBiblioteca cd, Map<String, Llista> cache,
                                       long isbn, String shelfName,
                                       double valoracio, boolean llegit) {
-        Llista llista = cercarOrCreateShelf(cd, cache, shelfName);
+        Llista llista = cercarOCrearPrestatge(cd, cache, shelfName);
         if (llista == null) return;
         cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);
     }

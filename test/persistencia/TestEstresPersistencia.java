@@ -53,8 +53,8 @@ class TestEstresPersistencia {
             // Reutilitza la connexió del singleton per passar per l'esquema real
             var scField = ControladorPersistencia.class.getDeclaredField("sc");
             scField.setAccessible(true);
-            persistencia.ServerConect sc = (persistencia.ServerConect) scField.get(cp);
-            c = sc.getConnection();
+            persistencia.ConnexioServidor sc = (persistencia.ConnexioServidor) scField.get(cp);
+            c = sc.obtenirConnexio();
             c.setAutoCommit(false);
             try (PreparedStatement ps = c.prepareStatement(
                     "INSERT INTO llibre (ISBN, nom, `any`, descripcio, valoracio, preu, llegit, imatge, " +

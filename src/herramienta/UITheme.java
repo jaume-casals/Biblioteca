@@ -19,12 +19,12 @@ public class UITheme {
 
     private UITheme() {}
 
-    /** Typed read-only view of the runtime theme palette.  A fresh snapshot
-     *  is returned by {@link #palette()} on every call so the record reflects
-     *  the current state of the mutable Color statics (which are still the
-     *  single source of truth — they get re-assigned by {@link #setTheme}
-     *  and the theme appliers).  Migration target: callers do
-     *  {@code UITheme.palette().bgMain} instead of {@code UITheme.palette().bgMain()}. */
+    /** Vista tipada de només lectura de la paleta de temes en temps d'execució.
+     *  {@link #palette()} retorna una instantània nova a cada crida de manera
+     *  que el registre reflecteix l'estat actual dels estàtics mutables de Color
+     *  (que continuen sent l'única font de veritat — es reassignen a {@link #posarTheme}
+     *  i els aplicadors de tema). Objectiu de migració: els consumidors fan
+     *  {@code UITheme.palette().bgMain} en lloc de {@code UITheme.palette().bgMain()}. */
     public record Paleta(
             java.awt.Color bgMain,
             java.awt.Color bgPanel,
@@ -51,9 +51,9 @@ public class UITheme {
             java.awt.Color cercarHighlightBg,
             java.awt.Color cercarHighlightFg) {}
 
-    /** Snapshot the current Color state into an immutable Palette record.
-     *  Callers should prefer {@code UITheme.palette().xxx} over the raw
-     *  {@code UITheme.XXX} field accesses. */
+    /** Captura l'estat actual de Color en un registre Paleta immutable.
+     *  Els consumidors haurien de preferir {@code UITheme.palette().xxx} sobre
+     *  els accessos als camps crus {@code UITheme.XXX}. */
     public static Paleta palette() {
         return new Paleta(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
                 BORDER_CLR, HEADER_BG, HEADER_FG, TABLE_GRID, TABLE_ALT,
@@ -109,9 +109,9 @@ public class UITheme {
     public static final Color DANGER = new Color(0xC0392B);
     public static final Color GREEN  = new Color(0x117A65);
 
-    /** Search-highlight palette entries — used by the SearchHighlightRenderer.
-     *  Theme-independent: the highlight should pop on any background, so the
-     *  amber bg / black fg combo is shared across all themes. */
+    /** Entrades de paleta per al destacat de cerca — usades pel RenderitzadorDestacatCerca.
+     *  Independent del tema: el destacat ha de destacar sobre qualsevol fons, de manera
+     *  que la combinació àmbar fons / negre primer pla és compartida per tots els temes. */
     public static final Color SEARCH_HIGHLIGHT_BG = new Color(0xF39C12);
     public static final Color SEARCH_HIGHLIGHT_FG = new Color(0x000000);
 
@@ -193,18 +193,19 @@ public class UITheme {
     public static volatile Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
 
     /**
-     * Base font, rebuilt by {@link #rebuildFonts(String)} when the configured
-     * font size changes. Held as {@code private static volatile} so external
-     * code must go through {@link #fontBase()} to read the current value,
-     * preventing races with {@code rebuildFonts} on the EDT.
+     * Lletra base, reconstruïda per {@link #rebuildFonts(String)} quan canvia
+     * la mida de lletra configurada. Mantinguda com a {@code private static volatile}
+     * perquè el codi extern hagi de passar per {@link #fontBase()} per llegir el
+     * valor actual, evitant curses amb {@code rebuildFonts} a l'EDT.
      */
     private static volatile Font FONT_BASE  = new Font("SansSerif", Font.PLAIN, 13);
 
     /**
-     * Bold base font, rebuilt by {@link #rebuildFonts(String)} when the
-     * configured font size changes. Held as {@code private static volatile}
-     * so external code must go through {@link #fontBold()} to read the
-     * current value, preventing races with {@code rebuildFonts} on the EDT.
+     * Lletra base en negreta, reconstruïda per {@link #rebuildFonts(String)}
+     * quan canvia la mida de lletra configurada. Mantinguda com a
+     * {@code private static volatile} perquè el codi extern hagi de passar
+     * per {@link #fontBold()} per llegir el valor actual, evitant curses
+     * amb {@code rebuildFonts} a l'EDT.
      */
     private static volatile Font FONT_BOLD  = new Font("SansSerif", Font.BOLD,  13);
 
@@ -213,8 +214,9 @@ public class UITheme {
 
     static { posarTheme(Tema.LIGHT); }
 
-    /** Pair with {@link Config}'s shutdown hook to release the cached Font
-     *  instances at JVM exit (belt-and-suspenders for the static-state pattern). */
+    /** Aparella amb el ganxo de tancada de {@link Configuracio} per alliberar les
+     *  instàncies de Font en caché a la sortida de la JVM (cinturó i tirants per
+     *  al patró d'estat estàtic). */
     private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
         new java.util.concurrent.atomic.AtomicBoolean(false);
     static {
@@ -298,12 +300,12 @@ public class UITheme {
         aplicarUIManager();
     }
 
-    /** Compat — maps to LIGHT or DARK. */
+    /** Compatibilitat — mapeja a LIGHT o DARK. */
     public static void posarDark(boolean dark) {
         posarTheme(dark ? Tema.DARK : Tema.LIGHT);
     }
 
-    public static void rebuildFonts(FontSize size) {
+    public static void rebuildFonts(MidaLletra size) {
         if (!java.awt.EventQueue.isDispatchThread() && !java.awt.GraphicsEnvironment.isHeadless())
             java.util.logging.Logger.getLogger(UITheme.class.getName())
                 .warning("[UITheme] rebuildFonts() called off EDT — font changes must happen on the EDT");
@@ -316,9 +318,9 @@ public class UITheme {
         UIManager.put("defaultFont", FONT_BASE);
     }
 
-    /** Backwards-compat overload — accepts the legacy "small"/"medium"/"large" key. */
+    /** Sobrecàrrega de compatibilitat enrere — accepta la clau heretada "small"/"medium"/"large". */
     public static void rebuildFonts(String size) {
-        rebuildFonts(FontSize.fromKey(size));
+        rebuildFonts(MidaLletra.fromKey(size));
     }
 
     public static void aplicarUIManager() {
@@ -364,10 +366,10 @@ public class UITheme {
     }
 
     /**
-     * Release the cached Font instances so the JVM can reclaim them
-     * sooner at shutdown. Called automatically once via a JVM shutdown
-     * hook (paired with {@link Config}'s) and safe to call manually
-     * (idempotent, no-op if already cleared).
+     * Allibera les instàncies de Font en caché perquè la JVM les pugui
+     * recuperar més aviat en tancar. Es crida automàticament un cop via
+     * un ganxo de tancada de la JVM (aprellat amb el de {@link Configuracio})
+     * i és segur cridar-la manualment (idempotent, no-op si ja s'ha buidat).
      */
     public static synchronized void shutdown() {
         if (shutdownDone) return;

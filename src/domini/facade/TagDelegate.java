@@ -10,11 +10,12 @@ import domini.Tag;
 import herramienta.I18n;
 
 /**
- * Tag ({@link Tag}) management and book↔tag relation operations.
+ * Gestió d'Etiquetes ({@link Tag}) i operacions de relació llibre↔etiqueta.
  *
- * <p>All methods follow the same contract: mutate the persistence layer
- * first, then update the in-memory tag list + id-index map atomically
- * under the {@link StateContext#lock() state lock}.
+ * <p>Tots els mètodes segueixen el mateix contracte: muta primer la capa de
+ * persistència, després actualitza la llista d'etiquetes en memòria i el
+ * mapa d'índex per id atòmicament sota el
+ * {@link StateContext#lock() lock d'estat}.
  */
 public final class TagDelegate {
 
@@ -28,7 +29,7 @@ public final class TagDelegate {
 
     public Tag obtenirTagById(int id) throws Exception {
         Tag t = state.withLockReturning(() -> state.tagsById().get(id));
-        if (t == null) throw new BibliotecaException.NoTrobat("Tag not found: " + id);
+        if (t == null) throw new BibliotecaException.NoTrobat("Etiqueta no trobada: " + id);
         return t;
     }
 

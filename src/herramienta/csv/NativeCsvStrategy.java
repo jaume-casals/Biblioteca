@@ -3,12 +3,12 @@ package herramienta.csv;
 import domini.Llibre;
 import herramienta.I18n;
 import herramienta.ValidadorLlibre;
-import interficie.BibliotecaWriter;
+import interficie.EscritorBiblioteca;
 
 import java.util.Map;
 
 public class NativeCsvStrategy implements CsvImportStrategy {
-    @Override public String getName() { return "Natiu"; }
+    @Override public String obtenirNom() { return "Natiu"; }
 
     private static final int COL_ISBN   = 0;
     private static final int COL_NOM   = 1;
@@ -29,7 +29,7 @@ public class NativeCsvStrategy implements CsvImportStrategy {
     }
 
     @Override
-    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, BibliotecaWriter cd)
+    public boolean analitzarLine(String[] c, Map<String, Integer> hMap, EscritorBiblioteca cd)
             throws domini.BibliotecaException {
         if (c.length < 4) throw new domini.BibliotecaException(I18n.t("csv_row_too_short"));
         String isbnRaw = c[COL_ISBN].trim();

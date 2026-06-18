@@ -11,7 +11,7 @@ import herramienta.DialegError;
 import herramienta.I18n;
 import herramienta.ClientOpenLibrary;
 import herramienta.UITheme;
-import presentacio.detalles.vista.GuardarLlibresDialogo;
+import presentacio.detalles.vista.DialegDesarLlibres;
 
 public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.ResultatCerca, Void> {
 
@@ -28,12 +28,12 @@ public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.Res
     private final String isbn;
     private final String titol;
     private final String autor;
-    private final GuardarLlibresDialogo vista;
+    private final DialegDesarLlibres vista;
     private final byte[] existingBlob;
     private final Consumer<byte[]> onCoverFound;
 
     public TascaCercaOpenLibrary(String isbn, String titol, String autor,
-                                  GuardarLlibresDialogo vista,
+                                  DialegDesarLlibres vista,
                                   byte[] existingBlob,
                                   Consumer<byte[]> onCoverFound) {
         this.isbn = isbn;

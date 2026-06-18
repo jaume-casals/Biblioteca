@@ -41,7 +41,7 @@ public final class JarLocator {
     /**
      * Tria la primera estratègia que troba un directori amb JARs.
      * Retorna {@code null} si cap funciona — el caller ({@code
-     * ServerConect.loadDriverFromLib}) llança un
+     * ConnexioServidor.loadDriverFromLib}) llança un
      * {@code ClassNotFoundException} amb el diag log. L'antic
      * fallback ({@code new File(user.dir, "lib")}) emmascarava
      * el problema retornant un directori existent però sense el

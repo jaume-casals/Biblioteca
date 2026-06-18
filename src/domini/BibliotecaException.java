@@ -5,7 +5,7 @@ package domini;
  * deliberada</em>: els handlers de Swing (ActionListener, KeyListener, etc.)
  * no poden llançar checked, i forçar tots els llocs a declarar-la
  * pol·luiria totes les signatures. Els codis (Code) i les subclasses
- * (NotFound, Duplicate, Validation) permeten als API routers distingir
+ * (NoTrobat, Duplicat, Validacio) permeten als API routers distingir
  * 404 / 409 / 400 sense dependre del missatge en català.
  */
 public class BibliotecaException extends RuntimeException {

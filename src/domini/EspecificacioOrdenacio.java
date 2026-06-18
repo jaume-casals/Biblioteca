@@ -4,13 +4,14 @@ import java.util.Comparator;
 import java.util.Map;
 
 /**
- * Pagination-aware sort specification, extracted from LlibreFilter so that
- * filter criteria stay pure data while sort is a separate pagination concern.
+ * Especificació d'ordenació conscient de la paginació, extreta de LlibreFilter perquè
+ * els criteris de filtre es mantinguin com a dades pures mentre l'ordenació és una
+ * preocupació de paginació separada.
  *
- * <p>Single source of truth for both SQL fragment and in-memory comparator
- * per sortable column. The {@link #COLUMNS} map is the canonical registry —
- * adding a new column is a one-line edit (per the tot.txt LOW finding on
- * the parallel {@code SQL_COLS} / {@code COMPARATORS} maps).
+ * <p>Única font de veritat tant per al fragment SQL com per al comparador en memòria
+ * de cada columna ordenable. El mapa {@link #COLUMNS} és el registre canònic —
+ * afegir una columna nova és un canvi d'una sola línia (segons el finding LOW de
+ * tot.txt sobre els mapes paral·lels {@code SQL_COLS} / {@code COMPARATORS}).
  */
 public final class EspecificacioOrdenacio {
     public static final String COL_ISBN = "ISBN";
@@ -19,10 +20,10 @@ public final class EspecificacioOrdenacio {
     public static final String COL_VALORACIO = "valoracio";
     public static final String COL_PREU = "preu";
 
-    /** Canonical registry: one entry per sortable column. */
+    /** Registre canònic: una entrada per columna ordenable. */
     public record Columna(String key, String sqlFragment, Comparator<Llibre> cmp) {}
 
-    /** ISBN-ascending comparator; nulls sort first to match binarySearch behavior. */
+    /** Comparador ISBN ascendent; els nuls s'ordenen primer per coincidir amb el comportament de binarySearch. */
     public static final Comparator<Llibre> ISBN_COMPARATOR = (a, b) -> {
         Long ia = a.obtenirISBN(), ib = b.obtenirISBN();
         if (ia == null && ib == null) return 0;
@@ -42,12 +43,12 @@ public final class EspecificacioOrdenacio {
     private final String column;
     private final boolean ascending;
 
-    /**
-     * Unknown / null column names are tolerated and silently coerced to
-     * {@link #COL_ISBN}. The fallback lives here (not in the call site)
-     * so the policy of "unknown → ISBN" is in one place. toSql() and
-     * {@link #comparator(String)} both honour the fallback.
-     */
+/**
+ * Els noms de columna desconeguts o nuls es toleren i es transformen silenciosament a
+ * {@link #COL_ISBN}. El recau aquí (no al punt de crida) perquè la política
+ * "desconegut → ISBN" estigui en un sol lloc. toSql() i
+ * {@link #comparator(String)} respecten tots dos el recau.
+ */
     public EspecificacioOrdenacio(String column, boolean ascending) {
         this.column = (column != null && COLUMNS.containsKey(column)) ? column : COL_ISBN;
         this.ascending = ascending;
@@ -58,31 +59,31 @@ public final class EspecificacioOrdenacio {
     public String column() { return column; }
     public boolean ascending() { return ascending; }
 
-    /** SQL ORDER BY expression fragment, e.g. "l.`ISBN` ASC" */
+    /** Fragment d'expressió SQL ORDER BY, p.ex. "l.`ISBN` ASC" */
     public String toSql() {
         Columna c = COLUMNS.get(column);
         return (c != null ? c.sqlFragment() : "l.`ISBN`") + (ascending ? " ASC" : " DESC");
     }
 
-    /**
-     * In-memory comparator for the column. Falls back to
-     * {@link #ISBN_COMPARATOR} for unknown columns so callers don't
-     * have to repeat the null-coalesce. Null column is treated as
-     * unknown (same coercion the constructor applies).
-     */
+/**
+ * Comparador en memòria per a la columna. Recau a
+ * {@link #ISBN_COMPARATOR} per a columnes desconegudes perquè els consumidors
+ * no hagin de repetir el coalesce de nuls. Una columna nul·la es tracta com
+ * a desconeguda (mateixa coerció que aplica el constructor).
+ */
     public static Comparator<Llibre> comparator(String column) {
         if (column == null) return ISBN_COMPARATOR;
         Columna c = COLUMNS.get(column);
         return c != null ? c.cmp() : ISBN_COMPARATOR;
     }
 
-    /** Read-only view of all in-memory comparators keyed by SortSpec column name. */
+    /** Vista de només lectura de tots els comparadors en memòria indexats pel nom de columna de l'SortSpec. */
     public static Map<String, Comparator<Llibre>> comparators() {
         java.util.Map<String, Comparator<Llibre>> out = new java.util.HashMap<>();
         for (Columna c : COLUMNS.values()) out.put(c.key(), c.cmp());
         return out;
     }
 
-    /** Read-only view of the canonical column registry. */
+    /** Vista de només lectura del registre canònic de columnes. */
     public static Map<String, Columna> columns() { return COLUMNS; }
 }
