@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Executable",
+            "request": "launch",
+            "mainClass": "main.Executable",
+            "projectName": "biblioteca",
+            "javaHome": "/usr/lib/jvm/java-21-temurin-jdk",
+            "vmArgs": "-cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:."
+        }
+    ]
+}

@@ -53,3 +53,10 @@ lib/jqwik-*.jar
 lib/jazzer-*.jar
 
 .jqwik-database
+
+# Restructured build outputs (2026-06-21)
+target/                                  # Maven output (pom.xml archived to build/maven-legacy/)
+build/audit/                             # scripts/audit_redo.py output
+build/fuzz/crashes/                      # archived crash-* files
+.loop-lib/                               # local loop-agent artifacts (mvn distribution, etc.)
+.config/                                 # local-only IDE / agent config

@@ -1,0 +1,52 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile",
+            "type": "shell",
+            "command": "make clean compile",
+            "group": { "kind": "build", "isDefault": true },
+            "presentation": { "reveal": "silent", "panel": "shared" },
+            "problemMatcher": {
+                "owner": "java",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.+\\.java):(\\d+):\\s+error:\\s+(.*)$",
+                    "file": 1, "line": 2, "message": 3
+                }
+            }
+        },
+        {
+            "label": "run-web",
+            "type": "shell",
+            "command": "make clean compile && java -cp 'bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar:.' main.Ejecutable --web",
+            "group": { "kind": "build", "isDefault": false },
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "run-swing",
+            "type": "shell",
+            "command": "make clean compile && java -cp 'bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar:.' main.Ejecutable --swing",
+            "group": "none",
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "run",
+            "type": "shell",
+            "command": "make compile && java -cp 'bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:lib/javalin-6.3.0.jar:lib/kotlin-stdlib-2.0.21.jar:.' main.Ejecutable",
+            "group": "none",
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "make test",
+            "group": { "kind": "test", "isDefault": true },
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        }
+    ]
+}

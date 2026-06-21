@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! command -v java >/dev/null 2>&1; then
     echo "Error: Java is not installed. Please install Java 21 or later." >&2
@@ -20,7 +20,7 @@ INST_DKT="${HOME}/.local/share/applications"
 echo "Installing Biblioteca to ${INST_APP}..."
 mkdir -p "${INST_APP}/lib" "${INST_BIN}" "${INST_DKT}"
 
-cp "${DIR}/biblioteca-fat.jar" "${INST_APP}/biblioteca.jar"
+cp "${DIR}/build/artifacts/biblioteca-fat.jar" "${INST_APP}/biblioteca.jar"
 cp "${DIR}/lib/"*.jar       "${INST_APP}/lib/"
 
 # Copy icon if available

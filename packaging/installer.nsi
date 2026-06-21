@@ -13,7 +13,7 @@
 !define UNREG_KEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\Biblioteca"
 
 Name            "${APP_NAME} ${APP_VERSION}"
-OutFile         "../install.exe"
+OutFile         "../build/artifacts/install.exe"
 InstallDir      "${INST_DIR}"
 InstallDirRegKey HKLM "${UNREG_KEY}" "InstallLocation"
 RequestExecutionLevel admin

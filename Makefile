@@ -130,10 +130,10 @@ populate: compile
 
 # ---------- INSTALLERS ----- #
 #
-# make jar               → biblioteca.jar (slim, needs lib/ alongside)
-# make fat-jar           → biblioteca-fat.jar (all deps embedded)
+# make jar               → build/artifacts/biblioteca.jar (slim, needs lib/ alongside)
+# make fat-jar           → build/artifacts/biblioteca-fat.jar (all deps embedded)
 # make icon              → packaging/Biblioteca.ico (needs: ImageMagick)
-# make installer-windows → install.exe   (needs: Launch4j + makensis)
+# make installer-windows → build/artifacts/install.exe   (needs: Launch4j + makensis)
 # make installer-linux   → *.rpm / *.deb (needs: jpackage from JDK 17+)
 #
 # Launch4j (cross-compile JAR → Windows EXE):
@@ -163,8 +163,9 @@ LAUNCH4J_JAVA_HOME := $(shell \
 
 # ── slim JAR (manifest points to external lib/ JARs) ─────────────────────────
 jar: compile
-	@jar cfm biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar\n\n') -C bin .
-	@echo "Built biblioteca.jar"
+	@mkdir -p build/artifacts
+	@jar cfm build/artifacts/biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar\n\n') -C bin .
+	@echo "Built build/artifacts/biblioteca.jar"
 
 # ── fat JAR (all deps bundled, standalone) ────────────────────────────────────
 fat-jar: compile
@@ -179,9 +180,10 @@ fat-jar: compile
 	@# Remove JAR signature files — they break fat JARs
 	@rm -f /tmp/_bib_fat/META-INF/*.SF /tmp/_bib_fat/META-INF/*.DSA \
 	       /tmp/_bib_fat/META-INF/*.RSA /tmp/_bib_fat/META-INF/*.EC
-	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/biblioteca-fat.jar main.Executable .
+	@mkdir -p $(CURDIR)/build/artifacts
+	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/build/artifacts/biblioteca-fat.jar main.Executable .
 	@rm -rf /tmp/_bib_fat
-	@echo "Built biblioteca-fat.jar ($$(du -sh $(CURDIR)/biblioteca-fat.jar | cut -f1))"
+	@echo "Built build/artifacts/biblioteca-fat.jar ($$(du -sh $(CURDIR)/build/artifacts/biblioteca-fat.jar | cut -f1))"
 
 # ── icon: SVG → multi-size ICO via ImageMagick ───────────────────────────────
 icon: packaging/icon.svg
@@ -222,7 +224,7 @@ installer-windows: fat-jar icon
 	@cd packaging && makensis installer.nsi
 	@echo ""
 	@echo "═══════════════════════════════════════════════"
-	@echo "  install.exe ready  ($$(du -sh install.exe | cut -f1))"
+	@echo "  build/artifacts/install.exe ready  ($$(du -sh build/artifacts/install.exe | cut -f1))"
 	@echo "═══════════════════════════════════════════════"
 
 # ── Standalone Windows .exe with bundled JRE via jpackage ──────────────────────
@@ -233,7 +235,7 @@ jpackage-win: fat-jar icon
 	@jpackage \
 	    --type app-image \
 	    --input . \
-	    --main-jar biblioteca-fat.jar \
+	    --main-jar build/artifacts/biblioteca-fat.jar \
 	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
@@ -259,7 +261,7 @@ installer-win-standalone: fat-jar icon
 	@jpackage \
 	    --type app-image \
 	    --input . \
-	    --main-jar biblioteca-fat.jar \
+	    --main-jar build/artifacts/biblioteca-fat.jar \
 	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
@@ -307,7 +309,7 @@ installer-linux: fat-jar icon
 	@rm -rf /tmp/_bib_pkg && mkdir -p /tmp/_bib_pkg
 	@jpackage \
 	    --input . \
-	    --main-jar biblioteca-fat.jar \
+	    --main-jar build/artifacts/biblioteca-fat.jar \
 	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \
@@ -319,7 +321,7 @@ installer-linux: fat-jar icon
 	    --linux-shortcut 2>/dev/null || \
 	jpackage \
 	    --input . \
-	    --main-jar biblioteca-fat.jar \
+	    --main-jar build/artifacts/biblioteca-fat.jar \
 	    --main-class main.Executable \
 	    --name Biblioteca \
 	    --app-version 1.0 \

@@ -174,7 +174,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--help":
         print(__doc__)
         return
-    out_path = ROOT / "audit_redo.tsv"
+    out_path = ROOT / "build" / "audit" / "audit_redo.tsv"
     count = {"BLOCK": 0, "LINE": 0, "STRING": 0}
     total = 0
     with out_path.open("w", encoding="utf-8") as f:

@@ -1,0 +1,17 @@
+{
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/usr/lib/jvm/java-21-temurin-jdk",
+            "default": true
+        },
+        {
+            "name": "JavaSE-17",
+            "path": "/usr/lib/jvm/java-17-temurin-jdk"
+        }
+    ],
+    "java.home": "/usr/lib/jvm/java-21-temurin-jdk",
+    "java.jdt.ls.java.home": "/usr/lib/jvm/java-21-temurin-jdk",
+    "java.debug.settings.onBuildFailureProceed": true,
+    "java.configuration.updateBuildConfiguration": "automatic"
+}
