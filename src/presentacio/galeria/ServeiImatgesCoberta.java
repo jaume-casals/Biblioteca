@@ -117,7 +117,17 @@ public final class ServeiImatgesCoberta {
      */
     public void submit(Llibre l, int w, int h, Runnable onLoaded) {
         long isbn = l.obtenirISBN();
-        if (containsCached(isbn)) {
+        cacheLock.readLock().lock();
+        boolean alreadyCached;
+        try {
+            // Un sol get() — la memòria cau mai emmagatzema valors null,
+            // de manera que la prova de presència equival a !=null (finding
+            // LOW de tot.txt: un containsKey+get són dues cerques).
+            alreadyCached = imageCache.get(isbn) != null;
+        } finally {
+            cacheLock.readLock().unlock();
+        }
+        if (alreadyCached) {
             onLoaded.run();
             return;
         }
@@ -142,16 +152,6 @@ public final class ServeiImatgesCoberta {
                 }
             });
         });
-    }
-
-    /** Comprovació de contenció amb lock de lectura (usada per submit() abans de programar). */
-    private boolean containsCached(long isbn) {
-        cacheLock.readLock().lock();
-        try {
-            return imageCache.containsKey(isbn);
-        } finally {
-            cacheLock.readLock().unlock();
-        }
     }
 
     /** Visible per a tests / eines futures: buida l'executor en tancar. */
@@ -187,8 +187,8 @@ public final class ServeiImatgesCoberta {
      *  nul·les o no es poden descodificar. */
     public static javax.swing.ImageIcon scaledCover(byte[] data) {
         if (data == null) return null;
-        try {
-            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(data));
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(data)) {
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(bais);
             if (img == null) return null;
             int h = 46;
             int w = Math.max(1, (int)(img.getWidth() * (h / (double) img.getHeight())));
@@ -210,20 +210,22 @@ public final class ServeiImatgesCoberta {
             else blob = domini.ControladorDomini.getInstance().obtenirLlibreBlob(l.obtenirISBN());
         }
         if (blob != null) {
-            try {
-                BufferedImage img = ImageIO.read(new ByteArrayInputStream(blob));
+            // try-with-resources garanteix el tancament del flux encara
+            // que ImageIO.read() llenci (no ho fa en el camí feliç).
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(blob)) {
+                BufferedImage img = ImageIO.read(bais);
                 if (img != null) return img;
             } catch (Exception ignored) { }
         }
         String path = l.obtenirImatge();
         if (path != null && !path.isEmpty()) {
-            try {
-                File f = new File(path);
-                if (f.exists()) {
-                    BufferedImage img = ImageIO.read(f);
+            File f = new File(path);
+            if (f.exists()) {
+                try (javax.imageio.stream.ImageInputStream iis = ImageIO.createImageInputStream(f)) {
+                    BufferedImage img = ImageIO.read(iis);
                     if (img != null) return img;
-                }
-            } catch (Exception ignored) { }
+                } catch (Exception ignored) { }
+            }
         }
         return null;
     }

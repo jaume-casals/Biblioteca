@@ -127,7 +127,7 @@ public final class DelegatLlibre {
     public void eliminarLlibreByIsbn(Long ISBN) {
         if (ISBN == null) throw new BibliotecaException.Validacio("ISBN no pot ser null");
         state.withLock(() -> {
-            int p = Collections.binarySearch(state.bib(), cercarKey(ISBN), ISBN_COMPARATOR);
+            int p = binarySearchByIsbn(state.bib(), ISBN);
             if (p < 0) throw new BibliotecaException.NoTrobat("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
             try {
                 state.persistence().eliminarLlibre(ISBN);
@@ -151,13 +151,12 @@ public final class DelegatLlibre {
     }
 
     public boolean existsLlibre(long ISBN) {
-        return state.withLockReturning(() ->
-            Collections.binarySearch(state.bib(), cercarKey(ISBN), ISBN_COMPARATOR) >= 0);
+        return state.withLockReturning(() -> binarySearchByIsbn(state.bib(), ISBN) >= 0);
     }
 
     public Llibre obtenirLlibre(long ISBN) {
         return state.withLockReturning(() -> {
-            int idx = Collections.binarySearch(state.bib(), cercarKey(ISBN), ISBN_COMPARATOR);
+            int idx = binarySearchByIsbn(state.bib(), ISBN);
             if (idx < 0)
                 throw new BibliotecaException.NoTrobat("No existeix el llibre amb ISBN " + ISBN);
             Llibre l = state.bib().get(idx);
@@ -199,7 +198,7 @@ public final class DelegatLlibre {
 
     public void posarLlibreBlob(long isbn, byte[] blob) {
         state.withLock(() -> {
-            int pos = Collections.binarySearch(state.bib(), cercarKey(isbn), ISBN_COMPARATOR);
+            int pos = binarySearchByIsbn(state.bib(), isbn);
             if (pos < 0)
                 throw new BibliotecaException.NoTrobat("El llibre amb ISBN " + isbn + " no existeix a la biblioteca");
             try {
@@ -259,8 +258,17 @@ public final class DelegatLlibre {
         list.sort(cmp);
     }
 
-    private static Llibre cercarKey(long isbn) {
-        return Llibre.builder().isbn(isbn).nom("").autor("").any(0)
-            .descripcio("").valoracio(0.0).preu(0.0).llegit(false).imatge("").build();
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static int compareByIsbn(Object l, long isbn) {
+        Long i = ((Llibre) l).obtenirISBN();
+        return i == null ? -1 : Long.compare(i, isbn);
+    }
+
+    private static int binarySearchByIsbn(ArrayList<Llibre> bib, long isbn) {
+        return Collections.binarySearch(bib, (Object) isbn, (l, k) -> compareByIsbn(l, (long) k));
+    }
+
+    private static int binarySearchByIsbn(ArrayList<Llibre> bib, Long isbn) {
+        return binarySearchByIsbn(bib, isbn == null ? -1L : isbn);
     }
 }

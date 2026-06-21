@@ -100,14 +100,22 @@ public class LlibreDaoCore {
      * i sense camps pesats (descripcio / notes). La fan servir {@link #getAll}
      * i qualsevol consumidor que vulgui una fila barata.
      */
-    static final String LLIBRE_COLUMNS_L_LIGHT = buildSelect(/*prefixed*/ true, /*heavy*/ false);
+    static final String LLIBRE_COLUMNS_L_LIGHT = buildSelect(/*prefixed*/ true, /*heavy*/ false, java.util.Collections.emptyMap());
     /** Mateixa forma que {@link #LLIBRE_COLUMNS_L_LIGHT} però amb descripcio + notes inclosos. */
-    static final String LLIBRE_COLUMNS_L = buildSelect(true, true);
+    static final String LLIBRE_COLUMNS_L = buildSelect(true, true, java.util.Collections.emptyMap());
     /** Sense prefix d'àlies (per a consultes sense àlies al FROM — cap avui, es conserva per completesa). */
     @SuppressWarnings("unused")
-    static final String LLIBRE_COLUMNS = buildSelect(false, true);
+    static final String LLIBRE_COLUMNS = buildSelect(false, true, java.util.Collections.emptyMap());
+    /** Forma per a {@link persistencia.LlistaDao#obtenirLlibres}: projecta la
+     *  taula {@code llibre} amb els camps {@code valoracio} i {@code llegit}
+     *  sobreescrits des de {@code llibre_llista} (la fila de la unió). */
+    static final String LLIBRE_COLUMNS_L_SHELF = buildSelect(true, true, java.util.Map.of(
+        Columna.VALORACIO, "ll.valoracio AS valoracio",
+        Columna.LLEGIT,    "ll.llegit    AS llegit"
+    ));
 
-    private static String buildSelect(boolean prefixed, boolean includeHeavy) {
+    private static String buildSelect(boolean prefixed, boolean includeHeavy,
+                                      java.util.Map<Columna, String> overrides) {
         StringBuilder sb = new StringBuilder(512);
         for (Columna c : Columna.values()) {
             if (c.heavy && !includeHeavy) continue;
@@ -116,9 +124,9 @@ public class LlibreDaoCore {
             // una crida independent de LlibreBlobDao) se salten aquí.
             if (c.selectFragment == null) continue;
             if (sb.length() > 0) sb.append(", ");
+            String frag = overrides.getOrDefault(c, c.selectFragment);
             // Tots els valors de Column.selectFragment ja porten el
             // prefix `l.`; per a la vista sense prefix l'esborrem.
-            String frag = c.selectFragment;
             if (!prefixed) frag = frag.replace("l.", "");
             sb.append(frag);
         }
@@ -288,10 +296,18 @@ public class LlibreDaoCore {
         try {
             String url = con.getMetaData().getURL();
             if (url != null && url.startsWith("jdbc:h2:")) {
-                String path = url.replaceFirst("jdbc:h2:", "").replaceAll(";.*", "").trim().replaceAll("\\s+", "");
+                // URI + substring up to the first ';' preserva espais i noms
+                // de perfil com "my library"; trim() neteja el que hi hagi
+                // als extrems. S'evita replaceAll("\\s+", "") perquè
+                // s'empassava espais interiors i la ruta resultant no
+                // corresponia al fitxer .mv.db real.
+                String path = url.replaceFirst("jdbc:h2:", "");
+                int semi = path.indexOf(';');
+                if (semi >= 0) path = path.substring(0, semi);
+                path = path.trim();
                 if (path.startsWith("mem:") || path.startsWith("mem/")) return -1;
-                if (path.startsWith("file:")) path = path.substring(5).trim().replaceAll("\\s+", "");
-                if (path.startsWith("~")) path = (System.getProperty("user.home") + path.substring(1)).trim().replaceAll("\\s+", "");
+                if (path.startsWith("file:")) path = path.substring(5).trim();
+                if (path.startsWith("~")) path = (System.getProperty("user.home") + path.substring(1)).trim();
                 java.io.File f = new java.io.File(path + ".mv.db");
                 return f.exists() ? f.length() : -1;
             }

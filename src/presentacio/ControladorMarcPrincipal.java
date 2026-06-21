@@ -287,8 +287,14 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 						I18n.t("alert_overdue_loans_title"), javax.swing.JOptionPane.WARNING_MESSAGE);
 				}
 				if (goalMsg != null) {
-					javax.swing.JOptionPane.showMessageDialog(frame, goalMsg,
-						I18n.t("alert_goal_pace_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
+					// Cua el segon diàleg en un invokeLater perquè l'usuari
+					// pugui dismissar cada alerta per separat en lloc de
+					// trobar-se dos JOptionPane apilats (segons el finding
+					// MEDIUM de tot.txt).
+					final String g = goalMsg;
+					javax.swing.SwingUtilities.invokeLater(() ->
+						javax.swing.JOptionPane.showMessageDialog(frame, g,
+							I18n.t("alert_goal_pace_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE));
 				}
 			}
 		}.execute();

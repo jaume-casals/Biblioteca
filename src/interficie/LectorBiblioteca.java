@@ -6,8 +6,6 @@ import java.util.List;
 
 public interface LectorBiblioteca extends LectorLlibre, LectorPrestatgeria, LectorEtiqueta, LectorPrestec {
 
-    byte[] obtenirLlibreBlob(long isbn);
-
     long obtenirDbSizeBytes();
     List<String> obtenirDistinctValues(String column);
     List<String> obtenirDistinctAutorNames();

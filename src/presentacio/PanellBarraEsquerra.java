@@ -190,7 +190,7 @@ public class PanellBarraEsquerra extends JPanel {
 		bottom.add(makeSidebarSep());
 
 		btnSortir = makeSidebarBtn(I18n.t("btn_sortir_sidebar"));
-		btnSortir.setForeground(new Color(0xFF8080));
+		btnSortir.setForeground(UITheme.palette().danger());
 		btnSortir.setToolTipText(I18n.t("tip_sortir_sidebar"));
 		btnSortir.addActionListener(e -> {
 			if (javax.swing.JOptionPane.showConfirmDialog(this,
@@ -278,7 +278,7 @@ public class PanellBarraEsquerra extends JPanel {
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
 			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 		}
-		btnSortir.setForeground(new Color(0xFF8080));
+		btnSortir.setForeground(UITheme.palette().danger());
 		for (JButton btn : sidebarShelfBtnMap.values()) {
 			UIComponents.styleSidebarButton(btn);
 			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));

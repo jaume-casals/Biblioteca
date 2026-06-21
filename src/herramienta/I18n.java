@@ -625,9 +625,29 @@ public class I18n {
                 System.err.println("[I18n] Key '" + key + "' has no placeholder for " + args.length + " arg(s)");
             }
         }
-        for (int i = 0; i < args.length; i++)
-            raw = raw.replace("{" + i + "}", String.valueOf(args[i]));
-        return raw;
+        // Substitució basada en Matcher.quoteReplacement perquè un valor
+        // d'arg que contingui literalment "{1}" no injecti placeholders
+        // addicionals en iteracions posteriors del bucle. La versió
+        // anterior amb raw.replace("{" + i + "}", String.valueOf(args[i]))
+        // mutava `raw` en cada pas i permetia que un args[k] que contingués
+        // "{j}" amb j > k corrompés la sortida quan s'iterava sobre j.
+        if (args.length == 0) return raw;
+        // Construeix un regex alternatiu que captura totes les posicions
+        // d'arg presents a la plantilla en una sola passada.
+        StringBuilder alt = new StringBuilder();
+        for (int i = 0; i < args.length; i++) {
+            if (i > 0) alt.append('|');
+            alt.append("\\{").append(i).append("\\}");
+        }
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(alt.toString());
+        java.util.regex.Matcher m = p.matcher(raw);
+        StringBuffer sb = new StringBuffer(raw.length() + 32);
+        while (m.find()) {
+            int idx = Integer.parseInt(m.group().substring(1, m.group().length() - 1));
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(String.valueOf(args[idx])));
+        }
+        m.appendTail(sb);
+        return sb.toString();
     }
 
     /** Localize JOptionPane button labels after a language change. */

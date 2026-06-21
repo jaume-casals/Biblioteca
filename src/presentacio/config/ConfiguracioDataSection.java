@@ -57,14 +57,7 @@ public final class ConfiguracioDataSection {
         }.execute();
 
         JButton btnBuidar = new JButton(t("btn_clear_library"));
-        btnBuidar.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        btnBuidar.setBackground(UITheme.palette().danger());
-        btnBuidar.setForeground(java.awt.Color.WHITE);
-        btnBuidar.setFont(UITheme.fontBold());
-        btnBuidar.setFocusPainted(false);
-        btnBuidar.setBorderPainted(false);
-        btnBuidar.setOpaque(true);
-        btnBuidar.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        UIComponents.styleDangerButton(btnBuidar);
         btnBuidar.addActionListener(e -> {
             int r1 = JOptionPane.showConfirmDialog(owner,
                 t("dlg_confirm_clear_1"),

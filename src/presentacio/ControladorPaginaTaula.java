@@ -60,20 +60,41 @@ class ControladorPaginaTaula {
             return;
         }
         if (model.esUseDBPagination() && cd.esLargeLibrary()) {
-            if (model.obtenirCachedTotalCount() < 0) model.posarCachedTotalCount(cd.comptarLlibresDB());
-            int totalCount = model.obtenirCachedTotalCount();
-            if (totalCount <= PAGE_SIZE) {
-                model.posarPaginatedMode(false);
-                paginationView.hide();
-                posarTable.accept(new ArrayList<>(cd.obtenirLlibresPage(0, PAGE_SIZE)));
-                return;
-            }
-            int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
-            page = Math.max(0, Math.min(page, totalPages - 1));
-            model.posarCurrentPage(page);
-            model.posarPaginatedMode(true);
-            posarTable.accept(new ArrayList<>(cd.obtenirLlibresPage(page * PAGE_SIZE, PAGE_SIZE)));
-            paginationView.apply(page, totalPages);
+            final int requestedPage = page;
+            new javax.swing.SwingWorker<PageLoad, Void>() {
+                @Override protected PageLoad doInBackground() {
+                    if (model.obtenirCachedTotalCount() < 0) {
+                        model.posarCachedTotalCount(cd.comptarLlibresDB());
+                    }
+                    int totalCount = model.obtenirCachedTotalCount();
+                    if (totalCount <= PAGE_SIZE) {
+                        ArrayList<Llibre> rows = new ArrayList<>(cd.obtenirLlibresPage(0, PAGE_SIZE));
+                        return new PageLoad(false, 0, 1, rows);
+                    }
+                    int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
+                    int p = Math.max(0, Math.min(requestedPage, totalPages - 1));
+                    ArrayList<Llibre> rows = new ArrayList<>(cd.obtenirLlibresPage(p * PAGE_SIZE, PAGE_SIZE));
+                    return new PageLoad(true, p, totalPages, rows);
+                }
+                @Override protected void done() {
+                    if (isCancelled()) return;
+                    try {
+                        PageLoad r = get();
+                        if (!r.paginated) {
+                            model.posarPaginatedMode(false);
+                            paginationView.hide();
+                            posarTable.accept(r.rows);
+                        } else {
+                            model.posarCurrentPage(r.page);
+                            model.posarPaginatedMode(true);
+                            posarTable.accept(r.rows);
+                            paginationView.apply(r.page, r.totalPages);
+                        }
+                    } catch (Exception ex) {
+                        new herramienta.DialegError(ex).mostrarErrorMessage();
+                    }
+                }
+            }.execute();
             return;
         }
         if (biblio.size() <= PAGE_SIZE) {
@@ -92,4 +113,6 @@ class ControladorPaginaTaula {
         posarTable.accept(new ArrayList<>(biblio.subList(from, to)));
         paginationView.apply(page, totalPages);
     }
+
+    private record PageLoad(boolean paginated, int page, int totalPages, ArrayList<Llibre> rows) {}
 }

@@ -26,8 +26,6 @@ public class ControladorExportacio {
      *  CoverService). El guard de concurrència al voltant de
      *  {@link #fetchMissingCovers(JButton)} continua evitant el doble
      *  clic al botó. */
-    private static final java.util.concurrent.ExecutorService COVER_POOL =
-        herramienta.ServeiCoberta.WRITE_POOL;
     private static final java.util.concurrent.atomic.AtomicBoolean COVER_FETCH_RUNNING =
         new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -35,6 +33,11 @@ public class ControladorExportacio {
     private final EscritorBiblioteca cd;
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
+
+    private static Frame windowFrame(Component parent) {
+        java.awt.Window w = SwingUtilities.getWindowAncestor(parent);
+        return w instanceof Frame f ? f : null;
+    }
 
     public ControladorExportacio(Component parent, EscritorBiblioteca cd,
             Supplier<List<Llibre>> currentBooks, Runnable onDataChanged) {
@@ -48,7 +51,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.csv", "csv", "CSV files");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -68,7 +71,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.json", "json", "JSON files");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_json_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_json_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -93,7 +96,7 @@ public class ControladorExportacio {
         java.io.File chosen = chooseExportFile("biblioteca.html", "html", "HTML files", "htm");
         if (chosen == null) return;
         final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_export_html_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_html_title"));
         loading.show();
         new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
@@ -115,70 +118,88 @@ public class ControladorExportacio {
 
     public void fetchMissingCovers(JButton fetchBtn) {
         if (!COVER_FETCH_RUNNING.compareAndSet(false, true)) return;
-        ArrayList<Llibre> all = new ArrayList<>(cd.obtenirAllLlibres());
-        List<Llibre> missing = all.stream()
-            .filter(l -> !l.teBlob() && l.obtenirImatgeBlob() == null)
-            .collect(java.util.stream.Collectors.toList());
-        if (missing.isEmpty()) {
-            COVER_FETCH_RUNNING.set(false);
-            JOptionPane.showMessageDialog(parent,
-                I18n.t("dlg_fetch_portades_all_done"), I18n.t("dlg_fetch_portades_title"), JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        int total = missing.size();
-        JProgressBar bar = new JProgressBar(0, total);
-        bar.setStringPainted(true);
-        JLabel lbl = new JLabel(I18n.t("dlg_fetch_portades_progress", 0, total));
-        JPanel p = new JPanel(new java.awt.BorderLayout(8, 8));
-        p.add(lbl, java.awt.BorderLayout.NORTH);
-        p.add(bar, java.awt.BorderLayout.CENTER);
-        JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_fetch_portades_title"),
-            java.awt.Dialog.ModalityType.MODELESS);
-        dlg.setContentPane(p);
-        dlg.pack(); dlg.setSize(360, 90);
-        dlg.setLocationRelativeTo(parent);
-        dlg.setVisible(true);
-        if (fetchBtn != null) fetchBtn.setEnabled(false);
-        java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger fetched = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger missingCover = new java.util.concurrent.atomic.AtomicInteger(0);
-        try {
-            for (Llibre l : missing) {
-                herramienta.ServeiCoberta.submitCoverFetch(cd, String.valueOf(l.obtenirISBN()), stored -> {
-                    if (stored) fetched.incrementAndGet();
-                    else missingCover.incrementAndGet();
-                    int d = done.incrementAndGet();
-                    SwingUtilities.invokeLater(() -> {
-                        bar.setValue(d);
-                        lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
-                        if (d >= total) {
-                            dlg.dispose();
-                            if (fetchBtn != null) fetchBtn.setEnabled(true);
-                            // Distingeix "descarregada" de "no tenia
-                            // coberta a OpenLibrary" — l'antiga cadena
-                            // deia "0 de 10", cosa que l'usuari va
-                            // malinterpretar com a error (segons el
-                            // finding MEDIUM de tot.txt).
-                            int noCover = missingCover.get();
-                            if (noCover == 0) {
-                                JOptionPane.showMessageDialog(parent,
-                                    I18n.t("dlg_fetch_portades_done", fetched.get(), total),
-                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
-                            } else {
-                                JOptionPane.showMessageDialog(parent,
-                                    I18n.t("dlg_fetch_portades_done_partial", fetched.get(), total, noCover),
-                                    I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
-                            }
-                            onDataChanged.run();
-                            COVER_FETCH_RUNNING.set(false);
-                        }
-                    });
-                });
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                ArrayList<Llibre> all = new ArrayList<>(cd.obtenirAllLlibres());
+                return all.stream()
+                    .filter(l -> !l.teBlob() && l.obtenirImatgeBlob() == null)
+                    .collect(java.util.stream.Collectors.toList());
             }
-        } catch (RuntimeException ex) {
-            COVER_FETCH_RUNNING.set(false);
-            throw ex;
-        }
+            @Override protected void done() {
+                if (isCancelled()) {
+                    COVER_FETCH_RUNNING.set(false);
+                    return;
+                }
+                List<Llibre> missing;
+                try {
+                    missing = get();
+                } catch (Exception e) {
+                    COVER_FETCH_RUNNING.set(false);
+                    new DialegError(e).mostrarErrorMessage();
+                    return;
+                }
+                if (missing.isEmpty()) {
+                    COVER_FETCH_RUNNING.set(false);
+                    JOptionPane.showMessageDialog(parent,
+                        I18n.t("dlg_fetch_portades_all_done"), I18n.t("dlg_fetch_portades_title"), JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                int total = missing.size();
+                JProgressBar bar = new JProgressBar(0, total);
+                bar.setStringPainted(true);
+                JLabel lbl = new JLabel(I18n.t("dlg_fetch_portades_progress", 0, total));
+                JPanel p = new JPanel(new java.awt.BorderLayout(8, 8));
+                p.add(lbl, java.awt.BorderLayout.NORTH);
+                p.add(bar, java.awt.BorderLayout.CENTER);
+                JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_fetch_portades_title"),
+                    java.awt.Dialog.ModalityType.MODELESS);
+                dlg.setContentPane(p);
+                dlg.pack(); dlg.setSize(360, 90);
+                dlg.setLocationRelativeTo(parent);
+                dlg.setVisible(true);
+                if (fetchBtn != null) fetchBtn.setEnabled(false);
+                java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger(0);
+                java.util.concurrent.atomic.AtomicInteger fetched = new java.util.concurrent.atomic.AtomicInteger(0);
+                java.util.concurrent.atomic.AtomicInteger missingCover = new java.util.concurrent.atomic.AtomicInteger(0);
+                try {
+                    for (Llibre l : missing) {
+                        herramienta.ServeiCoberta.submitCoverFetch(cd, String.valueOf(l.obtenirISBN()), stored -> {
+                            if (stored) fetched.incrementAndGet();
+                            else missingCover.incrementAndGet();
+                            int d = done.incrementAndGet();
+                            SwingUtilities.invokeLater(() -> {
+                                bar.setValue(d);
+                                lbl.setText(I18n.t("dlg_fetch_portades_progress", d, total));
+                                if (d >= total) {
+                                    dlg.dispose();
+                                    if (fetchBtn != null) fetchBtn.setEnabled(true);
+                                    // Distingeix "descarregada" de "no tenia
+                                    // coberta a OpenLibrary" — l'antiga cadena
+                                    // deia "0 de 10", cosa que l'usuari va
+                                    // malinterpretar com a error (segons el
+                                    // finding MEDIUM de tot.txt).
+                                    int noCover = missingCover.get();
+                                    if (noCover == 0) {
+                                        JOptionPane.showMessageDialog(parent,
+                                            I18n.t("dlg_fetch_portades_done", fetched.get(), total),
+                                            I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                    } else {
+                                        JOptionPane.showMessageDialog(parent,
+                                            I18n.t("dlg_fetch_portades_done_partial", fetched.get(), total, noCover),
+                                            I18n.t("dlg_fetch_portades_done_title"), JOptionPane.INFORMATION_MESSAGE);
+                                    }
+                                    onDataChanged.run();
+                                    COVER_FETCH_RUNNING.set(false);
+                                }
+                            });
+                        });
+                    }
+                } catch (RuntimeException ex) {
+                    COVER_FETCH_RUNNING.set(false);
+                    throw ex;
+                }
+            }
+        }.execute();
     }
 
     private java.io.File chooseExportFile(String defaultName, String primaryExt, String desc, String... extraExts) {

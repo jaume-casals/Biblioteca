@@ -77,12 +77,17 @@ public final class EspecificacioOrdenacio {
         return c != null ? c.cmp() : ISBN_COMPARATOR;
     }
 
-    /** Vista de només lectura de tots els comparadors en memòria indexats pel nom de columna de l'SortSpec. */
-    public static Map<String, Comparator<Llibre>> comparators() {
+    /** Mapa de comparadors en memòria calculat un sol cop; es consumeix a {@link DelegatLlibre#SORT_BY} */
+    private static final Map<String, Comparator<Llibre>> COMPARATORS = comparisadorsLocked();
+
+    private static Map<String, Comparator<Llibre>> comparisadorsLocked() {
         java.util.Map<String, Comparator<Llibre>> out = new java.util.HashMap<>();
         for (Columna c : COLUMNS.values()) out.put(c.key(), c.cmp());
         return out;
     }
+
+    /** Vista de només lectura de tots els comparadors en memòria indexats pel nom de columna de l'SortSpec. */
+    public static Map<String, Comparator<Llibre>> comparators() { return COMPARATORS; }
 
     /** Vista de només lectura del registre canònic de columnes. */
     public static Map<String, Columna> columns() { return COLUMNS; }

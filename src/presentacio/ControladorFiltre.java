@@ -58,7 +58,7 @@ class ControladorFiltre {
         vista.obtenirSearchBar().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             private javax.swing.Timer debounce;
             private void scheduleSearch() {
-                if (debounce != null && debounce.isRunning()) debounce.stop();
+                if (debounce != null) debounce.stop();
                 debounce = new javax.swing.Timer(DEBOUNCE_MS, e -> {
                     aplicarSearchBar();
                     vista.obtenirTaulaLlibres().repaint();

@@ -59,8 +59,13 @@ public class Llista {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Llista)) return false;
-        return this.id == ((Llista) o).id;
+        if (!(o instanceof Llista other)) return false;
+        // Les instàncies transitòries (id=0) s'identifiquen pel nom, igual
+        // que a hashCode(). Sense aquesta branca, dos "new Llista(0, 'A')"
+        // i "new Llista(0, 'B')" serien equals() però farien hash a cubs
+        // diferents, trencant el contracte equal→hashCode als HashSet/Map.
+        if (id == 0 || other.id == 0) return java.util.Objects.equals(nom, other.nom);
+        return id == other.id;
     }
 
     @Override

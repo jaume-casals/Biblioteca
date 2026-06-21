@@ -13,6 +13,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JTable;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -177,25 +179,43 @@ class ControladorMenuContextual {
             : I18n.t("dlg_confirm_galeria_delete_n", llibres.size());
         if (JOptionPane.showConfirmDialog(state.vista, msg, I18n.t("dlg_confirm_delete_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
-        List<Long> isbns = llibres.stream().map(Llibre::obtenirISBN).collect(Collectors.toList());
-        for (long isbn : isbns) {
-            try {
-                Llibre l = state.cd.obtenirLlibre(isbn);
-                EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
-                state.enActualizarBBDD.enEliminantLlibre(ev);
-                if (!EnEliminarLlibre.hauriaProceed(ev)) continue;
-                state.undoBuffer.push(l);
-                if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
-                state.cd.eliminarLlibre(l);
-                bookActionsCtrl.eliminarFila(l);
-            } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-        }
-        ArrayList<Llibre> toShow = host.pageCtrl().esPaginatedMode()
-            ? new ArrayList<>(state.biblio.subList(
-                host.pageCtrl().obtenirCurrentPage() * ControladorPaginaTaula.PAGE_SIZE,
-                Math.min((host.pageCtrl().obtenirCurrentPage() + 1) * ControladorPaginaTaula.PAGE_SIZE, state.biblio.size())))
-            : new ArrayList<>(state.biblio);
-        state.vista.obtenirGaleria().actualitzarLlibres(toShow);
+        final List<Long> isbns = llibres.stream().map(Llibre::obtenirISBN).collect(Collectors.toList());
+        new SwingWorker<Void, Void>() {
+            @Override protected Void doInBackground() {
+                for (long isbn : isbns) {
+                    try {
+                        Llibre l = state.cd.obtenirLlibre(isbn);
+                        EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
+                        state.enActualizarBBDD.enEliminantLlibre(ev);
+                        if (!EnEliminarLlibre.hauriaProceed(ev)) continue;
+                        state.undoBuffer.push(l);
+                        if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                        state.cd.eliminarLlibre(l);
+                    } catch (Exception e) {
+                        SwingUtilities.invokeLater(() -> new DialegError(e).mostrarErrorMessage());
+                    }
+                }
+                return null;
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                for (long isbn : isbns) {
+                    Llibre found = null;
+                    if (state.biblio != null) {
+                        for (Llibre l : state.biblio) {
+                            if (l.obtenirISBN() == isbn) { found = l; break; }
+                        }
+                    }
+                    if (found != null) bookActionsCtrl.eliminarFila(found);
+                }
+                ArrayList<Llibre> toShow = host.pageCtrl().esPaginatedMode()
+                    ? new ArrayList<>(state.biblio.subList(
+                        host.pageCtrl().obtenirCurrentPage() * ControladorPaginaTaula.PAGE_SIZE,
+                        Math.min((host.pageCtrl().obtenirCurrentPage() + 1) * ControladorPaginaTaula.PAGE_SIZE, state.biblio.size())))
+                    : new ArrayList<>(state.biblio);
+                state.vista.obtenirGaleria().actualitzarLlibres(toShow);
+            }
+        }.execute();
     }
 
     void batchEdit(List<Long> isbns) {
@@ -204,10 +224,15 @@ class ControladorMenuContextual {
         String[] llegitOpts = {noChange, I18n.t("filter_llegit_chk"), I18n.t("filter_no_llegit_chk")};
         javax.swing.JComboBox<String> comboFormat = new javax.swing.JComboBox<>(formatejarOpts);
         javax.swing.JComboBox<String> comboLlegit = new javax.swing.JComboBox<>(llegitOpts);
-        List<domini.Llista> llistes = state.cd.obtenirAllLlistes();
-        String[] llistaOpts = new String[llistes.size() + 1];
-        llistaOpts[0] = I18n.t("batch_no_add_list");
-        for (int i = 0; i < llistes.size(); i++) llistaOpts[i + 1] = llistes.get(i).obtenirNom();
+        final List<domini.Llista> llistes;
+        final String[] llistaOpts;
+        {
+            List<domini.Llista> tmp = state.cd.obtenirAllLlistes();
+            llistes = tmp;
+            llistaOpts = new String[tmp.size() + 1];
+            llistaOpts[0] = I18n.t("batch_no_add_list");
+            for (int i = 0; i < tmp.size(); i++) llistaOpts[i + 1] = tmp.get(i).obtenirNom();
+        }
         javax.swing.JComboBox<String> comboLlista = new javax.swing.JComboBox<>(llistaOpts);
         Object[] fields = {
             I18n.t("batch_field_format"), comboFormat,
@@ -217,53 +242,73 @@ class ControladorMenuContextual {
         int result = JOptionPane.showConfirmDialog(state.vista, fields,
             I18n.t("dlg_batch_edit_title", isbns.size()), JOptionPane.OK_CANCEL_OPTION);
         if (result != JOptionPane.OK_OPTION) return;
-        String selFormat = (String) comboFormat.getSelectedItem();
-        int llegitIdx = comboLlegit.getSelectedIndex();
-        int selLlistaIdx = comboLlista.getSelectedIndex();
-        domini.Llista selLlista = selLlistaIdx > 0 ? llistes.get(selLlistaIdx - 1) : null;
-        for (long isbn : isbns) {
-            try {
-                Llibre l = state.cd.obtenirLlibre(isbn);
-                if (l == null) continue;
-                if (!noChange.equals(selFormat)) l.posarFormat(selFormat);
-                if (llegitIdx == 1) l.posarLlegit(true);
-                else if (llegitIdx == 2) l.posarLlegit(false);
-                state.cd.actualitzarLlibre(l);
-                if (selLlista != null) {
-                    try { state.cd.afegirLlibreToLlista(isbn, selLlista.obtenirId(), 0.0, false); }
-                    catch (Exception ignored) {}
+        final String selFormat = (String) comboFormat.getSelectedItem();
+        final int llegitIdx = comboLlegit.getSelectedIndex();
+        final int selLlistaIdx = comboLlista.getSelectedIndex();
+        final domini.Llista selLlista = selLlistaIdx > 0 ? llistes.get(selLlistaIdx - 1) : null;
+        final List<Long> toEdit = isbns;
+        new SwingWorker<Void, Void>() {
+            @Override protected Void doInBackground() {
+                for (long isbn : toEdit) {
+                    try {
+                        Llibre l = state.cd.obtenirLlibre(isbn);
+                        if (l == null) continue;
+                        if (!noChange.equals(selFormat)) l.posarFormat(selFormat);
+                        if (llegitIdx == 1) l.posarLlegit(true);
+                        else if (llegitIdx == 2) l.posarLlegit(false);
+                        state.cd.actualitzarLlibre(l);
+                        if (selLlista != null) {
+                            try { state.cd.afegirLlibreToLlista(isbn, selLlista.obtenirId(), 0.0, false); }
+                            catch (Exception ignored) {}
+                        }
+                    } catch (Exception e) {
+                        SwingUtilities.invokeLater(() -> new DialegError(e).mostrarErrorMessage());
+                    }
                 }
-            } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-        }
-        host.refrescarAll();
+                return null;
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                host.refrescarAll();
+            }
+        }.execute();
     }
 
     void duplicarLlibre(String isbnStr) {
-        try {
-            Llibre src = state.cd.obtenirLlibre(Long.parseLong(isbnStr));
-            Llibre copy = Llibre.copyOf(src);
-            DialegDesarLlibres dialeg = new DialegDesarLlibres();
-            new ControladorDialegDesarLlibres(dialeg, null, state.cd);
-            dialeg.obtenirTextNom().setText(copy.obtenirNom() != null ? copy.obtenirNom() : "");
-            dialeg.obtenirTextAutor().setText(copy.obtenirAutor() != null ? copy.obtenirAutor() : "");
-            dialeg.obtenirTextAny().setText(copy.obtenirAny() != null && copy.obtenirAny() != 0 ? String.valueOf(copy.obtenirAny()) : "");
-            dialeg.obtenirTextDescripcio().setText(copy.obtenirDescripcio() != null ? copy.obtenirDescripcio() : "");
-            dialeg.obtenirTextValoracio().setText(copy.obtenirValoracio() != null && copy.obtenirValoracio() != 0.0 ? String.valueOf(copy.obtenirValoracio()) : "");
-            dialeg.obtenirTextPreu().setText(copy.obtenirPreu() != null && copy.obtenirPreu() != 0.0 ? String.valueOf(copy.obtenirPreu()) : "");
-            dialeg.obtenirTextEditorial().setText(copy.obtenirEditorial());
-            dialeg.obtenirTextSerie().setText(copy.obtenirSerie());
-            dialeg.obtenirTextVolum().setText(copy.obtenirVolum() > 0 ? String.valueOf(copy.obtenirVolum()) : "");
-            dialeg.obtenirTextIdioma().setText(copy.obtenirIdioma() != null ? copy.obtenirIdioma() : "");
-            dialeg.obtenirChckLlegit().setSelected(Boolean.TRUE.equals(copy.obtenirLlegit()));
-            dialeg.obtenirChckDesitjat().setSelected(copy.esDesitjat());
-            dialeg.obtenirTextISBN().setText("");
-            dialeg.obtenirTextISBN().requestFocusInWindow();
-            dialeg.setLocationRelativeTo(state.vista);
-            dialeg.setVisible(true);
-            host.refrescarAll();
-        } catch (Exception e) {
-            new DialegError(e).mostrarErrorMessage();
-        }
+        new SwingWorker<Llibre, Void>() {
+            @Override protected Llibre doInBackground() {
+                return state.cd.obtenirLlibre(Long.parseLong(isbnStr));
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                Llibre src;
+                try { src = get(); }
+                catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                    return;
+                }
+                Llibre copy = Llibre.copyOf(src);
+                DialegDesarLlibres dialeg = new DialegDesarLlibres();
+                new ControladorDialegDesarLlibres(dialeg, null, state.cd);
+                dialeg.obtenirTextNom().setText(copy.obtenirNom() != null ? copy.obtenirNom() : "");
+                dialeg.obtenirTextAutor().setText(copy.obtenirAutor() != null ? copy.obtenirAutor() : "");
+                dialeg.obtenirTextAny().setText(copy.obtenirAny() != null && copy.obtenirAny() != 0 ? String.valueOf(copy.obtenirAny()) : "");
+                dialeg.obtenirTextDescripcio().setText(copy.obtenirDescripcio() != null ? copy.obtenirDescripcio() : "");
+                dialeg.obtenirTextValoracio().setText(copy.obtenirValoracio() != null && copy.obtenirValoracio() != 0.0 ? String.valueOf(copy.obtenirValoracio()) : "");
+                dialeg.obtenirTextPreu().setText(copy.obtenirPreu() != null && copy.obtenirPreu() != 0.0 ? String.valueOf(copy.obtenirPreu()) : "");
+                dialeg.obtenirTextEditorial().setText(copy.obtenirEditorial());
+                dialeg.obtenirTextSerie().setText(copy.obtenirSerie());
+                dialeg.obtenirTextVolum().setText(copy.obtenirVolum() > 0 ? String.valueOf(copy.obtenirVolum()) : "");
+                dialeg.obtenirTextIdioma().setText(copy.obtenirIdioma() != null ? copy.obtenirIdioma() : "");
+                dialeg.obtenirChckLlegit().setSelected(Boolean.TRUE.equals(copy.obtenirLlegit()));
+                dialeg.obtenirChckDesitjat().setSelected(copy.esDesitjat());
+                dialeg.obtenirTextISBN().setText("");
+                dialeg.obtenirTextISBN().requestFocusInWindow();
+                dialeg.setLocationRelativeTo(state.vista);
+                dialeg.setVisible(true);
+                host.refrescarAll();
+            }
+        }.execute();
     }
 
     void prestarLlibre(long isbn) {

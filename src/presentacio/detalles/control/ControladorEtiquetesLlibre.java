@@ -2,10 +2,12 @@ package presentacio.detalles.control;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -68,8 +70,20 @@ public class ControladorEtiquetesLlibre {
         try {
             cd.afegirTag(nom);
             vista.obtenirTxtNovaEtiqueta().setText("");
-            allTagsCache = new ArrayList<>(cd.obtenirAllTags());
-            reloadComboAdd();
+            new SwingWorker<List<Tag>, Void>() {
+                @Override protected List<Tag> doInBackground() {
+                    return cd.obtenirAllTags();
+                }
+                @Override protected void done() {
+                    if (isCancelled()) return;
+                    try {
+                        allTagsCache = new ArrayList<>(get());
+                        reloadComboAdd();
+                    } catch (Exception ex) {
+                        new DialegError(ex).mostrarErrorMessage();
+                    }
+                }
+            }.execute();
         } catch (Exception ex) {
             new DialegError(ex).mostrarErrorMessage();
         }
@@ -92,8 +106,15 @@ public class ControladorEtiquetesLlibre {
         }
         try {
             cd.afegirLlibreToTag(llibre.obtenirISBN(), tag.obtenirId());
+            // Bumpar les memòries cau locals evita una recàrrega completa
+            // (3 SQLs a doInBackground) per a un canvi d'una sola fila.
+            tagsCache.add(tag);
+            if (vista.obtenirFilterField().getText().trim().isEmpty()
+                || tag.obtenirNom().toLowerCase().contains(vista.obtenirFilterField().getText().trim().toLowerCase())) {
+                displayedTags.add(tag);
+            }
             bumpCount(tag.obtenirId());
-            reload();
+            vista.actualitzarTable(displayedTags, tagCounts);
         } catch (Exception ex) {
             new DialegError(ex).mostrarErrorMessage();
         }
@@ -105,8 +126,11 @@ public class ControladorEtiquetesLlibre {
         Tag target = displayedTags.get(row);
         try {
             cd.eliminarLlibreFromTag(llibre.obtenirISBN(), target.obtenirId());
+            // Bumpar les memòries cau locals en lloc de recarregar-ho tot.
+            tagsCache.removeIf(t -> t.obtenirId() == target.obtenirId());
+            displayedTags.removeIf(t -> t.obtenirId() == target.obtenirId());
             dropCount(target.obtenirId());
-            reload();
+            vista.actualitzarTable(displayedTags, tagCounts);
         } catch (Exception ex) {
             new DialegError(ex).mostrarErrorMessage();
         }
@@ -141,21 +165,35 @@ public class ControladorEtiquetesLlibre {
     }
 
     private void reload() {
-        tagsCache = new ArrayList<>(cd.obtenirTagsForLlibre(llibre.obtenirISBN()));
-        allTagsCache = new ArrayList<>(cd.obtenirAllTags());
-        computeTagCounts();
-        displayedTags = new ArrayList<>(tagsCache);
-        reloadComboAdd();
-        vista.actualitzarTable(displayedTags, tagCounts);
-        vista.obtenirFilterField().setText("");
+        new SwingWorker<ReloadData, Void>() {
+            @Override protected ReloadData doInBackground() {
+                ArrayList<Tag> forLlibre = new ArrayList<>(cd.obtenirTagsForLlibre(llibre.obtenirISBN()));
+                ArrayList<Tag> all = new ArrayList<>(cd.obtenirAllTags());
+                Map<Integer, Integer> counts = new HashMap<>();
+                for (LlibreTagRow row : cd.obtenirAllLlibreTagRows()) {
+                    counts.merge(row.tagId(), 1, Integer::sum);
+                }
+                return new ReloadData(forLlibre, all, counts);
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    ReloadData d = get();
+                    tagsCache = d.forLlibre();
+                    allTagsCache = d.all();
+                    tagCounts = d.counts();
+                    displayedTags = new ArrayList<>(tagsCache);
+                    reloadComboAdd();
+                    vista.actualitzarTable(displayedTags, tagCounts);
+                    vista.obtenirFilterField().setText("");
+                } catch (Exception ex) {
+                    new DialegError(ex).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
-    private void computeTagCounts() {
-        tagCounts = new HashMap<>();
-        for (LlibreTagRow row : cd.obtenirAllLlibreTagRows()) {
-            tagCounts.merge(row.tagId(), 1, Integer::sum);
-        }
-    }
+    private record ReloadData(ArrayList<Tag> forLlibre, ArrayList<Tag> all, Map<Integer, Integer> counts) {}
 
     private void reloadComboAdd() {
         vista.actualitzarComboAdd(allTagsCache);

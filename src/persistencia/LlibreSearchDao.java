@@ -25,6 +25,7 @@ public class LlibreSearchDao {
 
     public ArrayList<Llibre> search(LlibreFilter f, int offset, int pageSize) {
         if (pageSize < 0) throw new IllegalArgumentException("pageSize must be >= 0 (0 means no limit); got " + pageSize);
+        if (offset < 0) throw new IllegalArgumentException("offset must be >= 0; got " + offset);
         ArrayList<Llibre> result = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT DISTINCT " + LlibreDaoCore.LLIBRE_COLUMNS_L + " FROM llibre l");
@@ -71,7 +72,11 @@ public class LlibreSearchDao {
         EspecificacioOrdenacio sort = f.obtenirSort();
         if (sort == null) sort = EspecificacioOrdenacio.defaultAsc();
         sql.append(" ORDER BY ").append(sort.toSql());
-        if (pageSize > 0) sql.append(" LIMIT ").append(pageSize).append(" OFFSET ").append(offset);
+        if (pageSize > 0) {
+            sql.append(" LIMIT ? OFFSET ?");
+            params.add(pageSize);
+            params.add(offset);
+        }
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 vincularParam(ps, i + 1, params.get(i));

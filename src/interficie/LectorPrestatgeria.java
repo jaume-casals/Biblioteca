@@ -8,7 +8,7 @@ import java.util.Map;
 
 public interface LectorPrestatgeria {
     List<Llista> obtenirAllLlistes();
-    Llista obtenirLlistaById(int id) throws Exception;
+    Llista obtenirLlistaById(int id) throws domini.BibliotecaException.NoTrobat;
     int obtenirCountInLlista(int llistaId);
     Map<Integer, Integer> obtenirAllCountsInLlistes();
     List<Llibre> obtenirLlibresInLlista(int llistaId);

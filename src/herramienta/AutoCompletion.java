@@ -22,7 +22,7 @@ import javax.swing.text.PlainDocument;
 
 public class AutoCompletion extends PlainDocument {
 
-	private JComboBox<String> comboBox;
+	private final JComboBox<String> comboBox;
 	private ComboBoxModel<String> model;
 	private JTextComponent editor;
 	private boolean selecting = false;
@@ -76,12 +76,14 @@ public class AutoCompletion extends PlainDocument {
 		}
 	}
 
+	@Override
 	public void remove(int offs, int len) throws BadLocationException {
 		if (selecting)
 			return;
 		super.remove(offs, len);
 	}
 
+	@Override
 	public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
 		if (selecting)
 			return;

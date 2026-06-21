@@ -72,8 +72,8 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
             Llibre l = model.obtenirBookAt(modelRow);
             if (l == null) return this;
             long isbn = l.obtenirISBN();
-            if (coverCache.containsKey(isbn)) {
-                ImageIcon cached = coverCache.get(isbn);
+            ImageIcon cached = coverCache.get(isbn);
+            if (cached != null) {
                 if (cached != MemoriaImatgesCoberta.NO_COVER) setIcon(cached);
                 return this;
             }

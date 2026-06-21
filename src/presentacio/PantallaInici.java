@@ -17,6 +17,12 @@ public class PantallaInici {
             t.setDaemon(true);
             return t;
         });
+    static {
+        // El singleton SCHEDULER s'allibera en tancar la JVM per evitar
+        // tasques programades orfes quan l'aplicació es tanca (segons el
+        // finding MEDIUM de tot.txt).
+        main.ShutdownHooks.register(() -> SCHEDULER.shutdownNow());
+    }
 
     private final JDialog dialog;
     private long mostrarTime = 0;
@@ -35,7 +41,7 @@ public class PantallaInici {
             BorderFactory.createEmptyBorder(20, 30, 20, 30)));
 
         JLabel lbl = new JLabel(I18n.t("splash_loading"), SwingConstants.CENTER);
-        lbl.setFont(UITheme.FONT_TITLE);
+        lbl.setFont(UITheme.fontTitle());
         lbl.setForeground(UITheme.palette().accent());
 
         JProgressBar bar = new JProgressBar();

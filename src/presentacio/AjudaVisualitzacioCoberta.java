@@ -30,7 +30,7 @@ public final class AjudaVisualitzacioCoberta {
                     .getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH));
             }
             @Override protected void done() {
-                if (target == null) return;
+                if (isCancelled() || target == null) return;
                 try {
                     ImageIcon icon = get();
                     if (icon != null) {

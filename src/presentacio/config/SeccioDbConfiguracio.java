@@ -62,7 +62,7 @@ public final class SeccioDbConfiguracio {
         txtPass.putClientProperty("id", "txtPass");
 
         JLabel lblDbNote = new JLabel(t("lbl_db_restart"));
-        lblDbNote.setFont(UITheme.FONT_SMALL);
+        lblDbNote.setFont(UITheme.fontSmall());
         lblDbNote.setForeground(UITheme.palette().textMid());
 
         JButton btnTestConn = new JButton(t("btn_test_connection"));
@@ -83,8 +83,11 @@ public final class SeccioDbConfiguracio {
             btnTestConn.setText(t("btn_test_connection") + "…");
             new SwingWorker<Void, Void>() {
                 @Override protected Void doInBackground() throws Exception {
-                    java.sql.Connection conn = persistencia.ConnexioServidor.testConnection(testProps, passSnapshot);
-                    conn.close();
+                    try (java.sql.Connection conn = persistencia.ConnexioServidor.testConnection(testProps, passSnapshot)) {
+                        // try-with-resources garanteix el tancament fins i tot
+                        // si la prova llença després d'obrir la connexió
+                        // (segons el finding MEDIUM de tot.txt).
+                    }
                     return null;
                 }
                 @Override protected void done() {

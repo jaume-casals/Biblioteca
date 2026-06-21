@@ -55,7 +55,7 @@ public class DialegError {
 
     private static void escriureToLog(String titol, String missatge, String detalls) {
         try {
-            Path logFile = Path.of(System.getProperty("user.home"), ".biblioteca", "errors.log");
+            Path logFile = Configuracio.bibliotecaDir().resolve("errors.log");
             logFile.getParent().toFile().mkdirs();
             java.io.File f = logFile.toFile();
             if (f.exists() && f.length() > MAX_LOG_BYTES) {
@@ -70,7 +70,9 @@ public class DialegError {
                 bw.write("---");
                 bw.newLine();
             }
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            LOG.log(java.util.logging.Level.WARNING, "Error escrivint el registre d'errors", e);
+        }
     }
 
     public void mostrarErrorMessage() {
@@ -162,7 +164,7 @@ public class DialegError {
         textArea.setEditable(false);
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
-        textArea.setFont(UITheme.FONT_SMALL);
+        textArea.setFont(UITheme.fontSmall());
         textArea.setBackground(UITheme.palette().bgPanel());
         textArea.setForeground(UITheme.palette().textDark());
         textArea.setCaretColor(UITheme.palette().textDark());

@@ -27,14 +27,6 @@ public class ControladorPanellDetallsLlibre {
 	private byte[] pendingBlob;
 	private javax.swing.SwingWorker<byte[], Void> imageWorker;
 	private javax.swing.SwingWorker<Void, Void> heavyFieldsWorker;
-	private static final java.util.concurrent.ExecutorService IMAGE_EXECUTOR =
-		java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-			Thread t = new Thread(r, "image-loader");
-			t.setDaemon(true);
-			return t;
-		});
-	private static final java.util.concurrent.atomic.AtomicBoolean SHUTDOWN_HOOK_REGISTERED =
-		new java.util.concurrent.atomic.AtomicBoolean(false);
 
 	private static final int IMG_W = 200;
 	private static final int MAX_DESCRIPTION_CHARS = 120;
@@ -50,7 +42,6 @@ public class ControladorPanellDetallsLlibre {
 
 	public ControladorPanellDetallsLlibre(Llibre l, EnActualitzarBBDD enActualizarBBDD, EscritorBiblioteca cd) {
 		this.vista = new PanellDetallsLlibre();
-		registrarExecutorShutdownHook();
 
 		this.vista.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override public void windowClosing(java.awt.event.WindowEvent e) {
@@ -214,16 +205,6 @@ public class ControladorPanellDetallsLlibre {
 		this.vista.obtenirLabelIcono().setIcon(icon != null ? icon : presentacio.MemoriaImatgesCoberta.NO_COVER);
 	}
 
-	public static void shutdownImageExecutor() {
-		IMAGE_EXECUTOR.shutdownNow();
-	}
-
-	private static void registrarExecutorShutdownHook() {
-		if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
-			main.ShutdownHooks.register(ControladorPanellDetallsLlibre::shutdownImageExecutor);
-		}
-	}
-
 	private void seleccionarImatge() {
 		File f = herramienta.UITheme.chooseImageFile(this.vista);
 		if (f != null) {
@@ -306,38 +287,58 @@ public class ControladorPanellDetallsLlibre {
 			EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(llibre, true);
 			enActualizarBBDD.enEliminantLlibre(ev);
 			if (!EnEliminarLlibre.hauriaProceed(ev)) return;
-			try {
-				cLlibres.eliminarLlibre(llibre);
-				enActualizarBBDD.enEliminarLlibre(llibre);
-				vista.dispose();
-			} catch (Exception e) {
-				new DialegError(e).mostrarErrorMessage();
-			}
+			new javax.swing.SwingWorker<Void, Void>() {
+				@Override protected Void doInBackground() throws Exception {
+					cLlibres.eliminarLlibre(llibre);
+					return null;
+				}
+				@Override protected void done() {
+					try {
+						get();
+						enActualizarBBDD.enEliminarLlibre(llibre);
+						vista.dispose();
+					} catch (Exception e) {
+						new DialegError(e).mostrarErrorMessage();
+					}
+				}
+			}.execute();
 		}
 	}
 
 	private class GestorHistorial {
 		void mostrarHistorialPrestecs(Llibre l) {
-			java.util.List<persistencia.PrestecRow> loans = cLlibres.obtenirLoansForIsbn(l.obtenirISBN());
-			if (loans.isEmpty()) {
-				javax.swing.JOptionPane.showMessageDialog(vista,
-					I18n.t("dlg_no_prestecs_msg"),
-					I18n.t("dlg_historial_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
-			String[] cols = {I18n.t("col_persona"), I18n.t("col_data_prestec"), I18n.t("col_retornat")};
-			Object[][] data = new Object[loans.size()][3];
-			for (int i = 0; i < loans.size(); i++) {
-				data[i][0] = loans.get(i).nomPersona();
-				data[i][1] = loans.get(i).dataPrestec() != null ? loans.get(i).dataPrestec().toString() : "";
-				data[i][2] = loans.get(i).retornat() ? I18n.t("yes_lbl") : I18n.t("no_lbl");
-			}
-			javax.swing.JTable tbl = new javax.swing.JTable(data, cols);
-			tbl.setEnabled(false);
-			javax.swing.JScrollPane sp = new javax.swing.JScrollPane(tbl);
-			sp.setPreferredSize(new java.awt.Dimension(400, Math.min(200, loans.size() * 25 + 40)));
-			javax.swing.JOptionPane.showMessageDialog(vista, sp,
-				I18n.t("dlg_historial_title") + " — " + l.obtenirDisplayNom(herramienta.Configuracio.obtenirLang()), javax.swing.JOptionPane.PLAIN_MESSAGE);
+			new javax.swing.SwingWorker<java.util.List<persistencia.PrestecRow>, Void>() {
+				@Override protected java.util.List<persistencia.PrestecRow> doInBackground() {
+					return cLlibres.obtenirLoansForIsbn(l.obtenirISBN());
+				}
+				@Override protected void done() {
+					if (isCancelled()) return;
+					try {
+						java.util.List<persistencia.PrestecRow> loans = get();
+						if (loans.isEmpty()) {
+							javax.swing.JOptionPane.showMessageDialog(vista,
+								I18n.t("dlg_no_prestecs_msg"),
+								I18n.t("dlg_historial_title"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
+							return;
+						}
+						String[] cols = {I18n.t("col_persona"), I18n.t("col_data_prestec"), I18n.t("col_retornat")};
+						Object[][] data = new Object[loans.size()][3];
+						for (int i = 0; i < loans.size(); i++) {
+							data[i][0] = loans.get(i).nomPersona();
+							data[i][1] = loans.get(i).dataPrestec() != null ? loans.get(i).dataPrestec().toString() : "";
+							data[i][2] = loans.get(i).retornat() ? I18n.t("yes_lbl") : I18n.t("no_lbl");
+						}
+						javax.swing.JTable tbl = new javax.swing.JTable(data, cols);
+						tbl.setEnabled(false);
+						javax.swing.JScrollPane sp = new javax.swing.JScrollPane(tbl);
+						sp.setPreferredSize(new java.awt.Dimension(400, Math.min(200, loans.size() * 25 + 40)));
+						javax.swing.JOptionPane.showMessageDialog(vista, sp,
+							I18n.t("dlg_historial_title") + " — " + l.obtenirDisplayNom(herramienta.Configuracio.obtenirLang()), javax.swing.JOptionPane.PLAIN_MESSAGE);
+					} catch (Exception e) {
+						new DialegError(e).mostrarErrorMessage();
+					}
+				}
+			}.execute();
 		}
 	}
 
@@ -399,24 +400,39 @@ public class ControladorPanellDetallsLlibre {
 						a.posarPaginesLlegides(a.obtenirPagines());
 						vista.obtenirTextPaginesLlegides().setText(String.valueOf(a.obtenirPagines()));
 					}
-					a.posarImatgeBlob(pendingBlob);
-					ValidadorLlibre.validarExtrasAll(a.obtenirEditorial(), a.obtenirSerie(), a.obtenirIdioma(), a.obtenirFormat(), a.obtenirPaisOrigen(), a.obtenirEstat());
-					// El camp ISBN està permanentment desactivat (veure
-					// setEditMode), de manera que a.getISBN() sempre és
-					// igual a llibre.getISBN(). L'antiga branca "ISBN
-					// canviat" — que eliminava i tornava a afegir el llibre
-					// per satisfer la restricció de clau única a la taula
-					// principal — és inabastable i s'ha eliminat.
-					cLlibres.actualitzarLlibre(a);
-					enActualizarBBDD.enActualitzarLlibre(a, false);
-					posarEditMode(false);
-					vista.obtenirBtnEditar().setText(I18n.t("btn_edit_java"));
-					vista.setTitle(I18n.t("dlg_book_detail_title", a.obtenirDisplayNom(herramienta.Configuracio.obtenirLang())));
-				} catch (Exception e) {
-					new DialegError(e).mostrarErrorMessage();
-				}
+				a.posarImatgeBlob(pendingBlob);
+				ValidadorLlibre.validarExtrasAll(a.obtenirEditorial(), a.obtenirSerie(), a.obtenirIdioma(), a.obtenirFormat(), a.obtenirPaisOrigen(), a.obtenirEstat());
+				// El camp ISBN està permanentment desactivat (veure
+				// setEditMode), de manera que a.getISBN() sempre és
+				// igual a llibre.getISBN(). L'antiga branca "ISBN
+				// canviat" — que eliminava i tornava a afegir el llibre
+				// per satisfer la restricció de clau única a la taula
+				// principal — és inabastable i s'ha eliminat.
+				final Llibre toSave = a;
+				vista.obtenirBtnEditar().setEnabled(false);
+				new javax.swing.SwingWorker<Void, Void>() {
+					@Override protected Void doInBackground() throws Exception {
+						cLlibres.actualitzarLlibre(toSave);
+						return null;
+					}
+					@Override protected void done() {
+						vista.obtenirBtnEditar().setEnabled(true);
+						try {
+							get();
+							enActualizarBBDD.enActualitzarLlibre(toSave, false);
+							posarEditMode(false);
+							vista.obtenirBtnEditar().setText(I18n.t("btn_edit_java"));
+							vista.setTitle(I18n.t("dlg_book_detail_title", toSave.obtenirDisplayNom(herramienta.Configuracio.obtenirLang())));
+						} catch (Exception e) {
+							new DialegError(e).mostrarErrorMessage();
+						}
+					}
+				}.execute();
+			} catch (Exception e) {
+				new DialegError(e).mostrarErrorMessage();
 			}
 		}
+	}
 	}
 
 	private void posarEditMode(boolean enabled) {

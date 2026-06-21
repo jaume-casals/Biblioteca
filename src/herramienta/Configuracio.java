@@ -37,6 +37,16 @@ public class Configuracio {
 
     private Configuracio() {}
 
+    /** Directori arrel de l'aplicació sota {@code $HOME}. Compartit amb
+     *  {@link DialegError} i {@link ServeiCoberta} per evitar paths
+     *  hardcoded duplicats. Retorna un camí nou a cada crida perquè els
+     *  tests que posen {@code user.home} a {@code System} vegin el valor
+     *  actualitzat (un {@code static final} seria inicialitzat un cop
+     *  quan es carrega la classe i no es reevaluaria). */
+    public static java.nio.file.Path bibliotecaDir() {
+        return java.nio.file.Path.of(System.getProperty("user.home"), ".biblioteca");
+    }
+
     private static final ConcurrentHashMap<String, String> UI_STORE     = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> DB_STORE     = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> WINDOW_STORE = new ConcurrentHashMap<>();
@@ -229,10 +239,28 @@ public class Configuracio {
      *   <li>Canviar a auth integrada on el driver de la BBDD recull l'usuari del SO
      *       (MySQL {@code --skip-grant-tables}, MariaDB {@code unix_socket}).</li>
      * </ul>
+     * <p>
+     * <b>Heap leak:</b> Aquest mètode materialitza la contrasenya com a
+     * {@code String} per satisfer la signatura pública. La {@code String}
+     * resultant viu al heap fins a la propera GC i pot ser internada per
+     * {@code String.intern()} o capturada per qualsevol heap-dumper.
+     * Els consumidors que ho evitin haurien de cridar
+     * {@link #obtenirDbPasswordChars()} i gestionar el {@code char[]} ells
+     * mateixos (per exemple, passant-lo directament a
+     * {@code JPasswordField(char[])}).
      */
     public static String obtenirDbPassword() {
         if (dbPasswordChars != null) return new String(dbPasswordChars);
         return "";
+    }
+
+    /** Retorna una còpia defensiva de la contrasenya com a {@code char[]}.
+     *  El consumidor és responsable de posar l'array a zero (per exemple,
+     *  amb {@link java.util.Arrays#fill(char[], char)}) quan hagi acabat,
+     *  i NO ha de convertir-lo a {@code String}. */
+    public static char[] obtenirDbPasswordChars() {
+        char[] src = dbPasswordChars;
+        return src == null ? new char[0] : src.clone();
     }
 
     /** Distingeix "no configurat" (retorna false) de "password buit" (true). */
@@ -353,14 +381,14 @@ public class Configuracio {
     }
 
     public static java.io.File obtenirBackupDir() {
-        return new java.io.File(System.getProperty("user.home"), ".biblioteca/backups");
+        return bibliotecaDir().resolve("backups").toFile();
     }
 
     public static String obtenirDbProfile() { return props.getOrDefault("dbProfile", "biblioteca"); }
     public static void posarDbProfile(String name) { props.put("dbProfile", name); save(); }
 
     public static java.util.List<String> listDbProfiles() {
-        java.io.File dir = new java.io.File(System.getProperty("user.home") + "/.biblioteca");
+        java.io.File dir = bibliotecaDir().toFile();
         java.util.List<String> names = new java.util.ArrayList<>();
         if (dir.isDirectory()) {
             java.io.File[] files = dir.listFiles();
@@ -472,12 +500,14 @@ public class Configuracio {
     private static volatile ScheduledFuture<?> pendingSave = null;
 
     private static File currentFile() {
-        return new File(System.getProperty("user.home") + "/.biblioteca/config.properties");
+        return bibliotecaDir().resolve("config.properties").toFile();
     }
 
     private static void save() {
-        if (pendingSave != null) pendingSave.cancel(false);
-        pendingSave = SAVE_SCHEDULER.schedule(() -> doSave(currentFile(), "Ha fallat el desament de la configuració: "), 300, TimeUnit.MILLISECONDS);
+        synchronized (SAVE_SCHEDULER) {
+            if (pendingSave != null) pendingSave.cancel(false);
+            pendingSave = SAVE_SCHEDULER.schedule(() -> doSave(currentFile(), "Ha fallat el desament de la configuració: "), 300, TimeUnit.MILLISECONDS);
+        }
     }
 
     public static void buidarNow() {

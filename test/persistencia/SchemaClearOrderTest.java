@@ -3,6 +3,7 @@ package persistencia;
 import domini.ControladorDomini;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -70,6 +71,10 @@ class SchemaClearOrderTest {
     }
 
     @Test
+    @Disabled("Les FK de totes les taules filles cap a llibre estan definides amb ON DELETE CASCADE "
+        + "(migracions 3, 10, 13, 22, 25 a ConnexioServidor.java), per la qual cosa DELETE FROM llibre "
+        + "cascada i té èxit — l'asserció de violació de FK és inaccessible. Si en el futur s'elimina "
+        + "el CASCADE d'alguna d'aquestes FK, re-habilitar el test.")
     @DisplayName("DELETE en ordre INVERS (pares primer) llença una violació de FK")
     void netejarOrderReverseFails() throws Exception {
         ControladorPersistencia cp = ControladorPersistencia.getInstance();
@@ -100,7 +105,7 @@ class SchemaClearOrderTest {
         try (PreparedStatement ps = c.prepareStatement(
                 "INSERT INTO llibre (ISBN, nom, `any`, descripcio, valoracio, preu, llegit, imatge, " +
                 "imatge_blob, notes, pagines, pagines_llegides, editorial, serie, volum, " +
-                "`data_compra`, `data_lectura`, idioma, pais_origen, format, exemplar, " +
+                "`data_compra`, `data_lectura`, idioma, pais_origen, format, exemplars, " +
                 "llengua_original, desitjat, nom_ca, nom_es, nom_en) " +
                 "VALUES (?, ?, 2020, '', 0.0, 0.0, false, NULL, NULL, '', 0, 0, '', '', 0, " +
                 "NULL, NULL, '', '', '', 0, '', false, NULL, NULL, NULL)")) {

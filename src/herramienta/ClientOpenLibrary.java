@@ -205,12 +205,19 @@ public class ClientOpenLibrary {
 			JsonObject imageLinks = volumeInfo.getAsJsonObject("imageLinks");
 			if (!imageLinks.has("thumbnail")) return null;
 			String thumbUrl = imageLinks.get("thumbnail").getAsString().replace("http://", "https://");
-			HttpURLConnection c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
-			c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
-			c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
-			if (c2.getResponseCode() != 200) { c2.disconnect(); return null; }
-			try (java.io.InputStream is = c2.getInputStream()) { result = is.readAllBytes(); }
-			c2.disconnect();
+			HttpURLConnection c2 = null;
+			try {
+				c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
+				c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
+				c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
+				if (c2.getResponseCode() != 200) return null;
+				try (java.io.InputStream is = c2.getInputStream()) { result = is.readAllBytes(); }
+			} finally {
+				if (c2 != null) {
+					try { if (c2.getErrorStream() != null) c2.getErrorStream().close(); } catch (Exception ignored) {}
+					c2.disconnect();
+				}
+			}
 		} catch (Exception e) {
 			LOG.log(Level.FINE, "Ha fallat el fallback de Google a fetchCoverByISBN per a " + isbn, e);
 		}
@@ -267,38 +274,33 @@ public class ClientOpenLibrary {
 		} catch (IllegalArgumentException e) {
 			throw new java.io.IOException("Malformed URL: " + url, e);
 		}
-		conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-		conn.setReadTimeout(READ_TIMEOUT_MS);
-		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
-		int code = conn.getResponseCode();
-		if (code != 200) {
-			try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
+		try {
+			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			conn.setReadTimeout(READ_TIMEOUT_MS);
+			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
+			int code = conn.getResponseCode();
+			if (code != 200) {
+				try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
+				throw new java.io.IOException("HTTP " + code);
+			}
+			try (java.io.InputStream is = conn.getInputStream()) {
+				return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+			}
+		} finally {
 			conn.disconnect();
-			throw new java.io.IOException("HTTP " + code);
 		}
-		try (java.io.InputStream is = conn.getInputStream()) {
-			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-		} finally { conn.disconnect(); }
 	}
 
 	private static String jsonStr(JsonObject obj, String key) {
-		if (!obj.has(key) || obj.get(key).isJsonNull()) return null;
-		JsonElement e = obj.get(key);
-		return e.isJsonPrimitive() ? e.getAsString() : null;
+		return JsonHelpers.jsonStr(obj, key);
 	}
 
 	private static String jsonStrNested(JsonObject obj, String key, String subKey) {
-		if (!obj.has(key) || !obj.get(key).isJsonObject()) return null;
-		return jsonStr(obj.getAsJsonObject(key), subKey);
+		return JsonHelpers.jsonStrNested(obj, key, subKey);
 	}
 
 	private static String jsonArrayFirstField(JsonObject obj, String arrayKey, String fieldKey) {
-		if (!obj.has(arrayKey) || !obj.get(arrayKey).isJsonArray()) return null;
-		JsonArray arr = obj.getAsJsonArray(arrayKey);
-		if (arr.isEmpty()) return null;
-		JsonElement first = arr.get(0);
-		if (!first.isJsonObject()) return null;
-		return jsonStr(first.getAsJsonObject(), fieldKey);
+		return JsonHelpers.jsonArrayFirstField(obj, arrayKey, fieldKey);
 	}
 
 	private static String encode(String s) {

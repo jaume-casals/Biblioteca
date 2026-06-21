@@ -1,11 +1,15 @@
 package domini;
 
 import herramienta.csv.UtilitatsCsv;
+import persistencia.LlibreLlistaRow;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,21 +40,17 @@ public final class AnalitzadorPrestatgeria {
         return "true".equalsIgnoreCase(s) || "1".equals(s);
     }
 
-    public static void exportarToCsv(File f, List<Llibre> view, interficie.LectorPrestatgeria cd) throws Exception {
-        java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
-        for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
-        java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
-            llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
-
+    public static void exportarToCsv(File f, List<Llibre> view,
+                                     Map<Integer, Llista> llistaById,
+                                     Map<Long, List<LlibreLlistaRow>> llistaRows) throws IOException {
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("ISBN,Nom,Autor,Any,Descripcio,Valoracio,Preu,Llegit,Portada,Llistes");
             for (Llibre l : view) {
                 try {
-                    List<persistencia.LlibreLlistaRow> rows = llistaRows.getOrDefault(l.obtenirISBN(), java.util.Collections.emptyList());
+                    List<LlibreLlistaRow> rows = llistaRows.getOrDefault(l.obtenirISBN(), Collections.emptyList());
                     StringBuilder llistesStr = new StringBuilder();
-                    for (persistencia.LlibreLlistaRow row : rows) {
+                    for (LlibreLlistaRow row : rows) {
                         Llista ll = llistaById.get(row.llistaId());
                         if (ll == null) continue;
                         if (llistesStr.length() > 0) llistesStr.append(';');
@@ -61,7 +61,7 @@ public final class AnalitzadorPrestatgeria {
                         l.obtenirISBN(), esc(l.obtenirNom()), esc(l.obtenirAutor()), l.obtenirAny(),
                         esc(l.obtenirDescripcio()), l.obtenirValoracio(), l.obtenirPreu(), l.obtenirLlegit(),
                         esc(l.obtenirImatge()), llistesStr);
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     LOG.log(Level.WARNING, "ShelfParser.exportToCsv: skipped ISBN " + l.obtenirISBN(), e);
                 }
             }

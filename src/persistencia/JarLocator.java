@@ -129,9 +129,10 @@ public final class JarLocator {
     }
 
     private static File recordAndReturn(File lib, StringBuilder diag, Predicate<File> teJars) {
-        String label = teJars.test(lib) ? " HAS_JARS"
+        boolean has = teJars.test(lib);
+        String label = has ? " HAS_JARS"
             : lib.isDirectory() ? " no-jars" : " missing";
         diag.append(lib.getAbsolutePath()).append(label).append("\n");
-        return teJars.test(lib) ? lib : null;
+        return has ? lib : null;
     }
 }

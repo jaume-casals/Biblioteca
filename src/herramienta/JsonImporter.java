@@ -20,8 +20,10 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Importador JSON compartit per {@link ImportadorLlibres#importJSON(File, EscritorBiblioteca)}.
@@ -42,15 +44,22 @@ public final class JsonImporter {
     public static ResultatImportacio run(JsonObject root, EscritorBiblioteca cd) throws Exception {
         int ok = 0, skipped = 0, err = 0;
         List<String> errDetails = new ArrayList<>();
+        List<Tag> existingTags = cd.obtenirAllTags();
+        Map<String, Tag> tagByNom = new HashMap<>();
+        for (Tag t : existingTags) tagByNom.put(t.obtenirNom(), t);
+        List<Llista> existingLlistes = cd.obtenirAllLlistes();
+        Map<String, Llista> llistaByNom = new HashMap<>();
+        for (Llista l : existingLlistes) llistaByNom.put(l.obtenirNom(), l);
+        Set<Long> existingIsbns = null;
         Map<Integer, Integer> tagIdMap = new HashMap<>();
         if (root.has("tags")) {
             for (JsonElement te : root.getAsJsonArray("tags")) {
                 JsonObject to = te.getAsJsonObject();
                 int oldId = to.get("id").getAsInt();
                 String nom = to.get("nom").getAsString();
-                Tag existing = cd.obtenirAllTags().stream().filter(t -> t.obtenirNom().equals(nom)).findFirst().orElse(null);
+                Tag existing = tagByNom.get(nom);
                 if (existing != null) { tagIdMap.put(oldId, existing.obtenirId()); }
-                else { Tag nt = cd.afegirTag(nom); tagIdMap.put(oldId, nt.obtenirId()); }
+                else { Tag nt = cd.afegirTag(nom); tagIdMap.put(oldId, nt.obtenirId()); tagByNom.put(nom, nt); }
             }
         }
         Map<Integer, Integer> llistaIdMap = new HashMap<>();
@@ -59,17 +68,19 @@ public final class JsonImporter {
                 JsonObject lo = le.getAsJsonObject();
                 int oldId = lo.get("id").getAsInt();
                 String nom = lo.get("nom").getAsString();
-                Llista existing = cd.obtenirAllLlistes().stream().filter(l -> l.obtenirNom().equals(nom)).findFirst().orElse(null);
+                Llista existing = llistaByNom.get(nom);
                 if (existing != null) { llistaIdMap.put(oldId, existing.obtenirId()); }
-                else { Llista nl = cd.afegirLlista(nom); llistaIdMap.put(oldId, nl.obtenirId()); }
+                else { Llista nl = cd.afegirLlista(nom); llistaIdMap.put(oldId, nl.obtenirId()); llistaByNom.put(nom, nl); }
             }
         }
         if (root.has("llibres")) {
+            existingIsbns = new HashSet<>();
+            for (Llibre l : cd.obtenirAllLlibres()) existingIsbns.add(l.obtenirISBN());
             for (JsonElement be : root.getAsJsonArray("llibres")) {
                 try {
                     JsonObject bo = be.getAsJsonObject();
                     long isbn = bo.get("isbn").getAsLong();
-                    if (cd.existsLlibre(isbn)) { skipped++; continue; }
+                    if (existingIsbns.contains(isbn)) { skipped++; continue; }
                     String nom = bo.has("nom") && !bo.get("nom").isJsonNull() ? bo.get("nom").getAsString() : "";
                     String autor = bo.has("autor") && !bo.get("autor").isJsonNull() ? bo.get("autor").getAsString() : "";
                     int any = bo.has("any") ? bo.get("any").getAsInt() : 0;
@@ -118,9 +129,10 @@ public final class JsonImporter {
                     ok++;
                 } catch (Exception e) {
                     err++;
-                    errDetails.add(e.getMessage());
+                    String msg = e.getMessage();
+                    errDetails.add(msg != null ? msg : e.getClass().getSimpleName());
                     Logger.getLogger(JsonImporter.class.getName())
-                        .log(Level.FINE, "No s'ha pogut importar l'entrada del llibre: " + e.getMessage(), e);
+                        .log(Level.FINE, "No s'ha pogut importar l'entrada del llibre: " + msg, e);
                 }
             }
         }

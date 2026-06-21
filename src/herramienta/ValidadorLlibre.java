@@ -10,11 +10,20 @@ public class ValidadorLlibre {
 			Double valoracio, Double preu, Boolean llegit, String portada) {
 		if (isbnStr == null || isbnStr.isBlank())
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
-		String trimmed = normalizeIsbn13(isbnStr.trim());
-		String digits = trimmed.replaceAll("[^0-9]", "");
-		if (digits.length() != 13 && digits.length() != 10)
+		String trimmed = isbnStr.trim();
+		String rawDigits = trimmed.replaceAll("[^0-9X]", "").toUpperCase(java.util.Locale.ROOT);
+		if (rawDigits.length() != 13 && rawDigits.length() != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
-		// Validació del dígit de control ISBN-13 (només camí d'entrada de l'usuari)
+		// Validació del dígit de control ISBN-10 ABANS de la normalització
+		// a ISBN-13 — la versió anterior convertia primer i mai no veia el
+		// dígit de control incorrecte, produint un ISBN-13 amb un dígit
+		// de control "recalculat correctament" que emmascarava l'error
+		// d'entrada.
+		if (rawDigits.length() == 10 && !isValidIsbn10(rawDigits))
+			throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
+		String normalized = normalizeIsbn13(trimmed);
+		String digits = normalized.replaceAll("[^0-9]", "");
+		// Validació del dígit de control ISBN-13 (camí d'entrada de l'usuari)
 		if (digits.length() == 13) {
 			int sum = 0;
 			for (int i = 0; i < 12; i++) sum += (digits.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
@@ -26,6 +35,22 @@ public class ValidadorLlibre {
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 		}
+	}
+
+	/** Comprova el dígit de control ISBN-10 (suma ponderada × (10 - posició),
+	 *  mòd 11). El dígit de control pot ser 'X' (que representa 10). */
+	private static boolean isValidIsbn10(String digits) {
+		int sum = 0;
+		for (int i = 0; i < 9; i++) {
+			char c = digits.charAt(i);
+			if (c < '0' || c > '9') return false;
+			sum += (c - '0') * (10 - i);
+		}
+		int check = (11 - sum % 11) % 11;
+		char last = digits.charAt(9);
+		if (last == 'X') return check == 10;
+		if (last < '0' || last > '9') return false;
+		return (last - '0') == check;
 	}
 
 	private static String normalizeIsbn13(String isbn) {

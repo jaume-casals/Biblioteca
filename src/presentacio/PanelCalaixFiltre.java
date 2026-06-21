@@ -102,29 +102,27 @@ public class PanelCalaixFiltre extends JPanel {
 		setBackground(UITheme.palette().bgMain());
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UITheme.palette().borderClr()));
 
-		JPanel presetBar = new JPanel(null);
+		JPanel presetBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
 		presetBar.setBackground(UITheme.palette().bgMain());
-		presetBar.setPreferredSize(new Dimension(0, 38));
 
 		JLabel lblPresets = new JLabel(I18n.t("lbl_preset_colon"));
 		UIComponents.styleLabel(lblPresets);
-		lblPresets.setBounds(8, 9, 50, 20);
 		presetBar.add(lblPresets);
 
 		registry.comboBox("comboPresets").setFont(UITheme.fontBase());
-		registry.comboBox("comboPresets").setBounds(62, 6, 150, 26);
+		registry.comboBox("comboPresets").setPreferredSize(new Dimension(150, 26));
 		presetBar.add(registry.comboBox("comboPresets"));
 
 		UIComponents.styleAccentButton(registry.button("btnCarregaPreset"));
-		registry.button("btnCarregaPreset").setBounds(216, 6, 75, 26);
+		registry.button("btnCarregaPreset").setPreferredSize(new Dimension(75, 26));
 		presetBar.add(registry.button("btnCarregaPreset"));
 
 		UIComponents.styleSecondaryButton(registry.button("btnDesaPreset"));
-		registry.button("btnDesaPreset").setBounds(295, 6, 65, 26);
+		registry.button("btnDesaPreset").setPreferredSize(new Dimension(65, 26));
 		presetBar.add(registry.button("btnDesaPreset"));
 
 		UIComponents.styleSecondaryButton(registry.button("btnEsborraPreset"));
-		registry.button("btnEsborraPreset").setBounds(364, 6, 75, 26);
+		registry.button("btnEsborraPreset").setPreferredSize(new Dimension(75, 26));
 		presetBar.add(registry.button("btnEsborraPreset"));
 
 		add(presetBar, BorderLayout.NORTH);
@@ -316,7 +314,7 @@ public class PanelCalaixFiltre extends JPanel {
 		UIComponents.styleField(max);
 		min.setPreferredSize(new Dimension(min.getPreferredSize().width, 28));
 		max.setPreferredSize(new Dimension(max.getPreferredSize().width, 28));
-		JLabel dash = new JLabel("\u2013");
+		JLabel dash = new JLabel(I18n.t("filter_dash"));
 		dash.setForeground(UITheme.palette().textMid());
 		p.add(lbl);
 		p.add(min);

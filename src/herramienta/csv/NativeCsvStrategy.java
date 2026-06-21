@@ -28,6 +28,11 @@ public class NativeCsvStrategy implements CsvImportStrategy {
         return cols.length >= 2;
     }
 
+    /** Cache de nomLlista → Llista, compartida entre files. Es construeix
+     *  peregosament a la primera fila i es reutilitza per a totes les
+     *  següents dins la mateixa importació. */
+    private java.util.Map<String, domini.Llista> llistaCache;
+
     @Override
     public boolean analitzarLine(String[] c, Map<String, Integer> hMap, EscritorBiblioteca cd)
             throws domini.BibliotecaException {
@@ -58,15 +63,21 @@ public class NativeCsvStrategy implements CsvImportStrategy {
             c.length > COL_PORTADA ? c[COL_PORTADA] : "");
         cd.afegirLlibre(l);
         if (c.length > COL_LLISTES && !c[COL_LLISTES].isBlank()) {
+            if (llistaCache == null) {
+                llistaCache = new java.util.HashMap<>();
+                for (domini.Llista ll : cd.obtenirAllLlistes()) llistaCache.put(ll.obtenirNom(), ll);
+            }
             for (String entry : c[COL_LLISTES].split(";")) {
                 String[] parts = entry.split("\\|", 3);
                 if (parts.length < 1 || parts[0].isBlank()) continue;
                 String nomLlista = parts[0].trim();
                 double val = parts.length > 1 ? UtilitatsCsv.analitzarDoubleOrZero(parts[1]) : 0.0;
                 boolean llegitLl = parts.length > 2 && analitzarBool(parts[2].trim());
-                domini.Llista llista = cd.obtenirAllLlistes().stream()
-                    .filter(ll -> ll.obtenirNom().equals(nomLlista)).findFirst().orElse(null);
-                if (llista == null) llista = cd.afegirLlista(nomLlista);
+                domini.Llista llista = llistaCache.get(nomLlista);
+                if (llista == null) {
+                    llista = cd.afegirLlista(nomLlista);
+                    llistaCache.put(nomLlista, llista);
+                }
                 cd.afegirLlibreToLlista(isbn, llista.obtenirId(), val, llegitLl);
             }
         }

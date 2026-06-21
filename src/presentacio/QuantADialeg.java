@@ -88,7 +88,7 @@ public class QuantADialeg extends JDialog {
 		licText.setLineWrap(true);
 		licText.setWrapStyleWord(true);
 		licText.setEditable(false);
-		licText.setFont(UITheme.FONT_SMALL);
+		licText.setFont(UITheme.fontSmall());
 		licText.setBackground(UITheme.palette().bgMain());
 		licText.setForeground(UITheme.palette().textMid());
 		licText.setBorder(new EmptyBorder(6, 8, 6, 8));

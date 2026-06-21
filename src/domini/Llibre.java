@@ -1,5 +1,9 @@
 package domini;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class Llibre {
 
 	private Long isbn;
@@ -28,7 +32,7 @@ public class Llibre {
 	private String estat = null;
 	private int exemplars = 1;
 	private String llenguaOriginal = null;
-	private java.util.List<String> autors = new java.util.ArrayList<>();
+	private List<String> autors = new ArrayList<>();
 	private String nomCa = null;
 	private String nomEs = null;
 	private String nomEn = null;
@@ -146,12 +150,9 @@ public class Llibre {
 		return (alt != null && !alt.isBlank()) ? alt : nom;
 	}
 
-	public String obtenirAutor() {
-		if (!autors.isEmpty()) return String.join(", ", autors);
-		return autor != null ? autor : "";
-	}
+	public String obtenirAutor() { return autor != null ? autor : ""; }
 
-	public java.util.List<String> obtenirAutors() { return new java.util.ArrayList<>(autors); }
+	public List<String> obtenirAutors() { return Collections.unmodifiableList(autors); }
 
 	/** Usat en carregar múltiples files d'autors des de SQL (veure {@link persistencia.LlibreDaoCore#obtenirAll}). */
 	public void afegirAutorNom(String nom) {
@@ -160,8 +161,8 @@ public class Llibre {
 		autor = String.join(", ", autors);
 	}
 
-	public void posarAutors(java.util.List<String> autors) {
-		this.autors = autors != null ? new java.util.ArrayList<>(autors) : new java.util.ArrayList<>();
+	public void posarAutors(List<String> autors) {
+		this.autors = autors != null ? new ArrayList<>(autors) : new ArrayList<>();
 		this.autor = this.autors.isEmpty() ? "" : String.join(", ", this.autors);
 	}
 

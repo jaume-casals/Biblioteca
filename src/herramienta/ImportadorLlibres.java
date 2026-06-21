@@ -38,8 +38,8 @@ public class ImportadorLlibres {
         try (java.io.Reader reader = new java.io.BufferedReader(
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
             herramienta.csv.Rfc4180Reader br = new herramienta.csv.Rfc4180Reader(reader);
-            if (!br.hasNext()) return new ResultatImportacio(0, 0, 0, java.util.Collections.emptyList());
             String[] headerRow = br.next();
+            if (headerRow == null) return new ResultatImportacio(0, 0, 0, java.util.Collections.emptyList());
             // Elimina un BOM UTF-8 de la PRIMERA cel·la de la capçalera
             // perquè la coincidència d'estratègia (que concatena la fila)
             // no vegi un "﻿" inicial.
@@ -82,6 +82,9 @@ public class ImportadorLlibres {
     public static ResultatImportacio importarCalibre(java.io.File dbFile, String sqlite3, EscritorBiblioteca cd) throws Exception {
         String sql = "SELECT b.id, b.title, GROUP_CONCAT(a.name, ', '), i.val, p.name, b.pubdate, b.rating, b.comment, b.series_index, s.name FROM books b LEFT JOIN books_authors_link ba ON b.id=ba.book LEFT JOIN authors a ON ba.author=a.id LEFT JOIN identifiers i ON b.id=i.book AND i.type='isbn' LEFT JOIN publishers p ON b.id=(SELECT book FROM books_publishers_link WHERE book=b.id LIMIT 1) LEFT JOIN books_series_link bs ON b.id=bs.book LEFT JOIN series s ON bs.series=s.id GROUP BY b.id;";
         Process proc = Runtime.getRuntime().exec(new String[]{sqlite3, "-separator", "\t", dbFile.getAbsolutePath(), sql});
+        // Inicia el drenatge de stderr ABANS de llegir stdout perquè
+        // el buffer (64 KB a Linux) no es pugui omplir i bloquejar el
+        // procés fill mentre el fil encara no s'ha programat.
         Thread stderrDrain = new Thread(() -> {
             try { proc.getErrorStream().transferTo(java.io.OutputStream.nullOutputStream()); }
             catch (Exception ignored) {}
@@ -146,6 +149,12 @@ public class ImportadorLlibres {
             proc.destroyForcibly();
             throw new Exception("El procés sqlite3 ha superat el temps d'espera de 30 segons");
         }
+        // Comprova el codi de sortida del procés — la versió anterior
+        // ignorava el valor i informava èxit encara que sqlite3 hagués
+        // fallat (per exemple, metadades corruptes), fent que el
+        // consumidor processés una sortida parcial sense saber-ho.
+        if (proc.exitValue() != 0)
+            throw new Exception("sqlite3 ha sortit amb codi " + proc.exitValue());
         return new ResultatImportacio(ok, skipped, err, errors);
     }
 

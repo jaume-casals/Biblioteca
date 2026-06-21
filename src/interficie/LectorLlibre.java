@@ -6,14 +6,10 @@ import java.util.List;
 
 public interface LectorLlibre {
     List<Llibre> obtenirAllLlibres();
-    Llibre obtenirLlibre(long isbn) throws Exception;
+    Llibre obtenirLlibre(long isbn) throws domini.BibliotecaException.NoTrobat;
     default java.util.Optional<Llibre> cercarLlibre(long isbn) {
         try { return java.util.Optional.ofNullable(obtenirLlibre(isbn)); }
-        catch (Exception e) {
-            if (e instanceof domini.BibliotecaException.NoTrobat) return java.util.Optional.empty();
-            if (e instanceof RuntimeException) throw (RuntimeException) e;
-            throw new RuntimeException("Unexpected checked exception in findLlibre(" + isbn + ")", e);
-        }
+        catch (domini.BibliotecaException.NoTrobat e) { return java.util.Optional.empty(); }
     }
     int getSize();
     boolean existsLlibre(long isbn);

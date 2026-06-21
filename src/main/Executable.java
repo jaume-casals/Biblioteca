@@ -21,6 +21,16 @@ public class Executable {
     private static final Logger LOG = Logger.getLogger(Executable.class.getName());
     private static PantallaInici splashRef;
 
+    /** Tanca la pantalla d'inici (si n'hi ha) passant pel EDT quan
+     *  l'invocador no hi és. Sense això, una excepció no capturada en
+     *  un fil de fons pot manipular un component Swing fora de l'EDT
+     *  i llançar IllegalComponentStateException. */
+    private static void hideSplashSafely() {
+        if (splashRef == null) return;
+        if (EventQueue.isDispatchThread()) splashRef.forceHide();
+        else EventQueue.invokeLater(() -> { if (splashRef != null) splashRef.forceHide(); });
+    }
+
     public static void main(String[] args) throws Exception {
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             // Primer el missatge, després el throwable — el logger
@@ -28,7 +38,7 @@ public class Executable {
             // missatge) i el resultat es llegeix com
             // "Uncaught … <cause>".
             LOG.log(Level.SEVERE, "Excepció no capturada al fil " + t.getName(), e);
-            if (splashRef != null) splashRef.forceHide();
+            hideSplashSafely();
             if (java.awt.GraphicsEnvironment.isHeadless()) {
                 System.err.println("Error fatal: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 System.exit(1);
@@ -75,7 +85,7 @@ public class Executable {
                     } catch (RuntimeException e) {
                         final String msg = e.getMessage();
                         LOG.log(Level.SEVERE, "No s'ha pogut inicialitzar ControladorDomini", e);
-                        if (splashRef != null) splashRef.forceHide();
+                        hideSplashSafely();
                         EventQueue.invokeLater(() -> {
                             javax.swing.JOptionPane.showMessageDialog(null, msg);
                             System.exit(1);
@@ -89,6 +99,12 @@ public class Executable {
                             ControladorMarcPrincipal.getInstance(vista, cdRef.get()).setVisible(true);
                         } catch (Exception e) {
                             LOG.log(Level.SEVERE, "No s'ha pogut iniciar el marc principal", e);
+                            // Superfície l'error via DialegError perquè
+                            // l'usuari vegi què ha fallat en lloc d'una
+                            // pantalla en blanc amb el procés penjat.
+                            hideSplashSafely();
+                            new DialegError(e).mostrarErrorMessage();
+                            System.exit(1);
                         }
                     });
                 });

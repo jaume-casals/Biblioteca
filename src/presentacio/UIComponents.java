@@ -56,6 +56,17 @@ public final class UIComponents {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    public static void styleDangerButton(JButton btn) {
+        btn.setUI(new BasicButtonUI());
+        btn.setBackground(UITheme.palette().danger());
+        btn.setForeground(Color.WHITE);
+        btn.setFont(UITheme.fontBold());
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setOpaque(true);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
     public static void styleSidebarButton(JButton btn) {
         btn.setUI(new BasicButtonUI());
         btn.setBackground(UITheme.palette().sidebarBg());
@@ -69,7 +80,7 @@ public final class UIComponents {
     }
 
     public static void styleLabel(JLabel lbl) {
-        lbl.setFont(UITheme.FONT_LABEL);
+        lbl.setFont(UITheme.fontLabel());
         lbl.setForeground(UITheme.palette().textMid());
     }
 

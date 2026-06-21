@@ -82,17 +82,14 @@ public final class StateContext {
     }
 
     /** Buida les tres llistes de suport i els mapes d'índex per id (usat per netejarAll).
-     *  Reflecteix el contracte de {@link #replaceAll(ArrayList, ArrayList, ArrayList)}
-     *  passant per {@link #rebuildIdIndexesLocked()} per consistència
-     *  (avui els dos camins buiden els mapes directament, però la crida
-     *  centralitzada fa que futures addicions — p.ex. un nou mapa d'índex
-     *  per id — siguin un canvi d'una sola línia en lloc d'una cerca de
-     *  dues línies). */
+     *  Delega a {@link #replaceAll(ArrayList, ArrayList, ArrayList)} amb llistes
+     *  buides perquè ambdós camins comparteixin un sol cos — futures addicions
+     *  (p.ex. un nou mapa d'índex per id) són un canvi d'una sola línia. */
     public void netejarAll() {
         synchronized (lock) {
-            bib.clear();
-            llistes.clear();
-            tags.clear();
+            this.bib = new ArrayList<>();
+            this.llistes = new ArrayList<>();
+            this.tags = new ArrayList<>();
             rebuildIdIndexesLocked();
         }
     }

@@ -27,7 +27,7 @@ public final class TagDelegate {
 
     public List<Tag> obtenirAllTags() { return new ArrayList<>(state.tags()); }
 
-    public Tag obtenirTagById(int id) throws Exception {
+    public Tag obtenirTagById(int id) throws domini.BibliotecaException.NoTrobat {
         Tag t = state.withLockReturning(() -> state.tagsById().get(id));
         if (t == null) throw new BibliotecaException.NoTrobat("Etiqueta no trobada: " + id);
         return t;

@@ -8,6 +8,11 @@ import java.util.Map;
 
 public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
+    /** Cache de shelfName → Llista, compartida entre files per evitar
+     *  re-construir-la per a cada llibre (10k llibres = 10k HashMap
+     *  innecessaris a la versió anterior). */
+    private java.util.Map<String, domini.Llista> shelfCache;
+
     @Override public String obtenirNom() { return "Goodreads"; }
 
     @Override
@@ -65,7 +70,6 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
         String bookshelves = UtilitatsCsv.colVal(hMap, c, "Bookshelves");
         if (!bookshelves.isEmpty()) {
-            java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : bookshelves.split(",")) {
                 domini.Llista llista = ShelvesHelper.cercarOCrearPrestatge(cd, shelfCache, s.trim());
                 if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);

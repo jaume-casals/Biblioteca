@@ -88,22 +88,27 @@ public class UITheme {
     public static boolean esDark() { return currentTheme.dark; }
 
     // ── Palette (updated by setDark) ─────────────────────────────────────────
-    public static Color BG_MAIN;
-    public static Color BG_PANEL;
-    public static Color ACCENT;
-    public static Color ACCENT_ALT;
-    public static Color TEXT_DARK;
-    public static Color TEXT_MID;
-    public static Color BORDER_CLR;
-    public static Color HEADER_BG;
-    public static Color HEADER_FG;
-    public static Color TABLE_GRID;
-    public static Color TABLE_ALT;
+    // Tots els camps de paleta són private volatile — l'única porta pública
+    // és {@link #palette()}, que retorna una instantània nova a cada crida
+    // i per tant reflecteix sempre l'estat actual. Això evita que un lector
+    // fora de l'EDT observi un estat parcial durant un canvi de tema
+    // (BG_MAIN ja fosc mentre BG_PANEL encara és clar).
+    private static volatile Color BG_MAIN;
+    private static volatile Color BG_PANEL;
+    private static volatile Color ACCENT;
+    private static volatile Color ACCENT_ALT;
+    private static volatile Color TEXT_DARK;
+    private static volatile Color TEXT_MID;
+    private static volatile Color BORDER_CLR;
+    private static volatile Color HEADER_BG;
+    private static volatile Color HEADER_FG;
+    private static volatile Color TABLE_GRID;
+    private static volatile Color TABLE_ALT;
 
     // Derivats — usats pels helpers d'estil de UIComponents (estil de la capa de panell).
-    public static Color SECONDARY_BTN_BG;
-    public static Color FIELD_BG;
-    static Color NIMBUS_BLUE_GREY;
+    private static volatile Color SECONDARY_BTN_BG;
+    private static volatile Color FIELD_BG;
+    private static volatile Color NIMBUS_BLUE_GREY;
 
     // ── Fixed colors (theme-independent) ─────────────────────────────────────
     public static final Color DANGER = new Color(0xC0392B);
@@ -116,12 +121,12 @@ public class UITheme {
     public static final Color SEARCH_HIGHLIGHT_FG = new Color(0x000000);
 
     // ── Sidebar colors (updated by setDark) ───────────────────────────────────
-    public static Color SIDEBAR_BG;
-    public static Color SIDEBAR_ACCENT;
-    public static Color SIDEBAR_HOVER_BG;
-    public static Color SIDEBAR_TEXT;
-    public static Color SIDEBAR_TEXT_MID;
-    public static Color SIDEBAR_SEL_BG;
+    private static volatile Color SIDEBAR_BG;
+    private static volatile Color SIDEBAR_ACCENT;
+    private static volatile Color SIDEBAR_HOVER_BG;
+    private static volatile Color SIDEBAR_TEXT;
+    private static volatile Color SIDEBAR_TEXT_MID;
+    private static volatile Color SIDEBAR_SEL_BG;
 
     // ── Light palette (warm library theme) ───────────────────────────────────
     private static final Color L_BG_MAIN        = new Color(0xF5F3EE);
@@ -188,9 +193,18 @@ public class UITheme {
     private static final Color OC_NIMBUS_BG     = new Color(0x0077A8);
 
     // ── Fonts (rebuilt by rebuildFonts) ──────────────────────────────────────
-    public static volatile Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
-    public static volatile Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
-    public static volatile Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+    // Font privats amb accessors — la font pot ser nul·la després de
+    // {@link #shutdown()}, per la qual cosa els accessors retornen
+    // {@link #FONT_FALLBACK} quan és el cas.
+    private static volatile Font FONT_LABEL = new Font("SansSerif", Font.BOLD,  12);
+    private static volatile Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  18);
+    private static volatile Font FONT_SMALL = new Font("SansSerif", Font.PLAIN, 11);
+
+    private static final Font FONT_FALLBACK = new Font("SansSerif", Font.PLAIN, 12);
+
+    public static Font fontLabel() { Font f = FONT_LABEL; return f != null ? f : FONT_FALLBACK; }
+    public static Font fontTitle() { Font f = FONT_TITLE; return f != null ? f : FONT_FALLBACK; }
+    public static Font fontSmall() { Font f = FONT_SMALL; return f != null ? f : FONT_FALLBACK; }
 
     /**
      * Lletra base, reconstruïda per {@link #rebuildFonts(String)} quan canvia
@@ -212,7 +226,11 @@ public class UITheme {
     public static Font fontBase() { return FONT_BASE; }
     public static Font fontBold() { return FONT_BOLD; }
 
-    static { posarTheme(Tema.LIGHT); }
+    static {
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            posarTheme(Tema.LIGHT);
+        }
+    }
 
     /** Aparella amb el ganxo de tancada de {@link Configuracio} per alliberar les
      *  instàncies de Font en caché a la sortida de la JVM (cinturó i tirants per

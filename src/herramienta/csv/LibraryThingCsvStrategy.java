@@ -8,6 +8,12 @@ import java.util.Map;
 
 public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
+    /** Caches per a prestatges i tags, compartides entre files per evitar
+     *  re-construir-les per a cada llibre (10k llibres = 10k HashMap
+     *  innecessaris). */
+    private java.util.Map<String, domini.Llista> shelfCache;
+    private java.util.Map<String, domini.Tag> tagMap;
+
     @Override public String obtenirNom() { return "LibraryThing"; }
 
     @Override
@@ -63,7 +69,6 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
         String collections = UtilitatsCsv.colVal(hMap, c, "Collections");
         if (!collections.isEmpty()) {
-            java.util.Map<String, domini.Llista> shelfCache = new java.util.HashMap<>();
             for (String s : collections.split(",")) {
                 domini.Llista llista = ShelvesHelper.cercarOCrearPrestatge(cd, shelfCache, s.trim());
                 if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, false);
@@ -72,8 +77,10 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
 
         String tags = UtilitatsCsv.colVal(hMap, c, "Tags");
         if (!tags.isEmpty()) {
-            java.util.Map<String, domini.Tag> tagMap = new java.util.HashMap<>();
-            for (domini.Tag tg : cd.obtenirAllTags()) tagMap.put(tg.obtenirNom(), tg);
+            if (tagMap == null) {
+                tagMap = new java.util.HashMap<>();
+                for (domini.Tag tg : cd.obtenirAllTags()) tagMap.put(tg.obtenirNom(), tg);
+            }
             for (String t : tags.split(",")) {
                 String nomTag = t.trim();
                 if (nomTag.isEmpty()) continue;

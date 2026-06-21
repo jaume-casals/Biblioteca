@@ -157,12 +157,12 @@ public class PanelTaulaCentral extends JPanel {
 			@Override
 			protected Transferable createTransferable(javax.swing.JComponent c) {
 				JTable t = (JTable) c;
-				StringBuilder sb = new StringBuilder();
+				java.util.List<String> isbns = new java.util.ArrayList<>();
 				for (int row : t.getSelectedRows()) {
 					Object v = t.getValueAt(row, presentacio.ModelTaulaBiblioteca.COL_ISBN);
-					if (v != null) { if (sb.length() > 0) sb.append(","); sb.append(v); }
+					if (v != null) isbns.add(v.toString());
 				}
-				return new StringSelection(sb.toString());
+				return new StringSelection(String.join(",", isbns));
 			}
 		});
 	}

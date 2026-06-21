@@ -160,17 +160,28 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
 
     public void refresh() {
         pageCtrl.posarCurrentPage(0);
-        if (state.currentLlistaId != null) {
-            state.biblio = new ArrayList<>(state.cd.obtenirLlibresInLlista(state.currentLlistaId));
-            pageCtrl.posarUseDBPagination(false);
-        } else {
-            // Lleuger — els textos, notes i coberta pesats es carreguen
-            // de manera mandrosa des de ControladorPanellDetallsLlibre via
-            // loadHeavyFields() quan l'usuari obre el diàleg de detalls.
-            state.biblio = new ArrayList<>(state.cd.obtenirAllLlibresSummary());
-            pageCtrl.posarUseDBPagination(state.cd.esLargeLibrary());
-        }
-        filtrarCtrl.quitarFiltros();
+        final Integer currentLlistaId = state.currentLlistaId;
+        new javax.swing.SwingWorker<java.util.List<Llibre>, Void>() {
+            @Override protected java.util.List<Llibre> doInBackground() {
+                return currentLlistaId != null
+                    ? state.cd.obtenirLlibresInLlista(currentLlistaId)
+                    : state.cd.obtenirAllLlibresSummary();
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    state.biblio = new ArrayList<>(get());
+                    if (currentLlistaId == null) {
+                        pageCtrl.posarUseDBPagination(state.cd.esLargeLibrary());
+                    } else {
+                        pageCtrl.posarUseDBPagination(false);
+                    }
+                    filtrarCtrl.quitarFiltros();
+                } catch (Exception e) {
+                    new herramienta.DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     public void undoDelete() { bookActionsCtrl.undoDelete(); }

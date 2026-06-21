@@ -518,3 +518,4 @@ val_must_be_int,"{0} ha de ser un nombre enter vàlid.","{0} debe ser un número
 val_must_be_number,"{0} ha de ser un nombre vàlid.","{0} debe ser un número válido.","{0} must be a valid number."
 lbl_filter_colon,Filtre:,Filtro:,Filter:
 tip_filter_tags,Filtra les etiquetes per nom,Filtrar etiquetas por nombre,Filter tags by name
+filter_dash,–,–,–

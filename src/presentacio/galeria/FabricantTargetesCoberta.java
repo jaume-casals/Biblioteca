@@ -364,14 +364,14 @@ public final class FabricantTargetesCoberta {
 
         JLabel lblT = new JLabel("<html><body style='width:" + (cardW - 22) + "px; margin:0; padding:0;'><b>"
             + htmlEsc(l.obtenirDisplayNom(lang)) + "</b></body></html>");
-        lblT.setFont(UITheme.FONT_SMALL.deriveFont(Font.BOLD));
+        lblT.setFont(UITheme.fontSmall().deriveFont(Font.BOLD));
         lblT.setForeground(UITheme.palette().textDark());
         lblT.setAlignmentX(0f);
         f.add(lblT);
         f.add(Box.createVerticalStrut(2));
 
         JLabel lblA = new JLabel(truncate(l.obtenirAutor(), 24));
-        lblA.setFont(UITheme.FONT_SMALL);
+        lblA.setFont(UITheme.fontSmall());
         lblA.setForeground(UITheme.palette().textMid());
         lblA.setAlignmentX(0f);
         f.add(lblA);
@@ -384,7 +384,7 @@ public final class FabricantTargetesCoberta {
         starsRow.add(starsLabel(val), BorderLayout.WEST);
         if (l.obtenirAny() != null && l.obtenirAny() > 0) {
             JLabel yr = new JLabel(String.valueOf(l.obtenirAny()));
-            yr.setFont(UITheme.FONT_SMALL);
+            yr.setFont(UITheme.fontSmall());
             yr.setForeground(UITheme.palette().textMid());
             starsRow.add(yr, BorderLayout.EAST);
         }

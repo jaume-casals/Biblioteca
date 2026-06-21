@@ -106,13 +106,8 @@ public class LlistaDao {
         ArrayList<Llibre> llibres = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT l.ISBN, l.nom, " +
-                    "(SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, " +
-                    "l.`any`, l.descripcio, ll.valoracio, l.preu, ll.llegit, l.imatge, " +
-                    "(l.imatge_blob IS NOT NULL) AS has_blob, l.notes, l.pagines, l.pagines_llegides, l.editorial, l.serie, " +
-                    "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, " +
-                    "l.nom_ca, l.nom_es, l.nom_en " +
-                    "FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN")) {
+                    "SELECT " + LlibreDaoCore.LLIBRE_COLUMNS_L_SHELF +
+                    " FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN")) {
                 ps.setInt(1, llistaId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) llibres.add(LlibreMapper.buildLlibre(rs));

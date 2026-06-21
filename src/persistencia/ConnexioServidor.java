@@ -197,6 +197,10 @@ public class ConnexioServidor {
 			}
 			runMigrations();
 		} catch (Exception e) {
+			// Si la connexió ja s'ha obert però runMigrations (o un pas
+			// posterior) falla, tanquem-la per no deixar viu un JDBC
+			// Connection que pot retenir el lock de fitxer H2.
+			tancarConnection();
 			throw new RuntimeException(I18n.t("err_db_connect") + " " + inicialitzarErrorKey(cfg.dbType()), e);
 		}
 	}
@@ -389,7 +393,11 @@ public class ConnexioServidor {
 		}
 		java.util.Properties props = new java.util.Properties();
 		if (user != null) props.setProperty("user", user);
-		if (password != null) props.setProperty("password", new String(password));
+		if (password != null) {
+			String pwd = new String(password);
+			java.util.Arrays.fill(password, '\0');
+			props.setProperty("password", pwd);
+		}
 		Connection c = driver.connect(url, props);
 		if (c == null) throw new Exception("El driver " + driverClass + " no ha acceptat l'URL: " + url);
 		return c;

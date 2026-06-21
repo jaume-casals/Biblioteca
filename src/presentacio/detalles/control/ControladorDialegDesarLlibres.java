@@ -141,12 +141,23 @@ public class ControladorDialegDesarLlibres {
 	private void carregarImatge(String path) {
 		selectedBlob = null;
 		if (path == null || path.isBlank()) { this.vista.obtenirLabelPreview().setIcon(null); return; }
-		try {
-			selectedBlob = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path));
-			this.vista.obtenirLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
-		} catch (Exception ignored) {
-			this.vista.obtenirLabelPreview().setIcon(null);
-		}
+		final String finalPath = path;
+		final DialegDesarLlibres target = this.vista;
+		new SwingWorker<byte[], Void>() {
+			@Override protected byte[] doInBackground() throws Exception {
+				return java.nio.file.Files.readAllBytes(java.nio.file.Path.of(finalPath));
+			}
+			@Override protected void done() {
+				if (isCancelled()) return;
+				try {
+					selectedBlob = get();
+					target.obtenirLabelPreview().setIcon(UITheme.scaledIcon(selectedBlob, 120));
+				} catch (Exception ignored) {
+					selectedBlob = null;
+					target.obtenirLabelPreview().setIcon(null);
+				}
+			}
+		}.execute();
 	}
 
 	private void seleccionarImatge() {
@@ -208,9 +219,25 @@ public class ControladorDialegDesarLlibres {
 			l.posarNomEn(nomEn.isEmpty() ? null : nomEn);
 			l.posarImatgeBlob(selectedBlob);
 			herramienta.ValidadorLlibre.validarExtrasAll(l.obtenirEditorial(), l.obtenirSerie(), l.obtenirIdioma(), l.obtenirFormat(), l.obtenirPaisOrigen(), l.obtenirEstat());
-			cLlibres.afegirLlibre(l);
-			vista.dispose();
-			if (callback != null) callback.enActualitzarLlibre(l, true);
+
+			vista.obtenirBtnGuardar().setEnabled(false);
+			final EnActualitzarBBDD cb = callback;
+			new SwingWorker<Void, Void>() {
+				@Override protected Void doInBackground() throws Exception {
+					cLlibres.afegirLlibre(l);
+					return null;
+				}
+				@Override protected void done() {
+					vista.obtenirBtnGuardar().setEnabled(true);
+					try {
+						get();
+						vista.dispose();
+						if (cb != null) cb.enActualitzarLlibre(l, true);
+					} catch (Exception e) {
+						new DialegError(e).mostrarErrorMessage();
+					}
+				}
+			}.execute();
 		} catch (Exception e) {
 			new DialegError(e).mostrarErrorMessage();
 		}

@@ -173,7 +173,19 @@ class ControladorPrestatgeria {
         javax.swing.JComboBox<Object> combo = state.vista.obtenirComboTagFilter();
         combo.removeAllItems();
         combo.addItem(I18n.t("lbl_all_tags"));
-        for (domini.Tag t : state.cd.obtenirAllTags()) combo.addItem(t);
+        new javax.swing.SwingWorker<java.util.List<domini.Tag>, Void>() {
+            @Override protected java.util.List<domini.Tag> doInBackground() {
+                return state.cd.obtenirAllTags();
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    for (domini.Tag t : get()) combo.addItem(t);
+                } catch (Exception ex) {
+                    new herramienta.DialegError(ex).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     Llista pickLlista(String prompt) {

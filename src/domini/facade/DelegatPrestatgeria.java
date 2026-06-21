@@ -40,9 +40,11 @@ public final class DelegatPrestatgeria {
         this.state = state;
     }
 
-    public List<Llista> obtenirAllLlistes() { return new ArrayList<>(state.llistes()); }
+    public List<Llista> obtenirAllLlistes() {
+        return state.withLockReturning(() -> new ArrayList<>(state.llistes()));
+    }
 
-    public Llista obtenirLlistaById(int id) throws Exception {
+    public Llista obtenirLlistaById(int id) throws domini.BibliotecaException.NoTrobat {
         Llista l = state.withLockReturning(() -> state.llistesById().get(id));
         if (l == null) throw new BibliotecaException.NoTrobat("Prestatge no trobat: " + id);
         return l;

@@ -34,7 +34,16 @@ public final class UtilitatsCsv {
                 sb.append(ch);
             }
         }
-        fields.add(sb.toString().trim());
+        // Si la línia acaba amb una cometa no tancada, el camp actual
+        // conté la "cometa d'obertura" inicial com a caràcter literal.
+        // L'eliminem per evitar que la columna contingui un '"' líder
+        // artificial (un CSV malformat esdevindria una sola columna
+        // enorme amb una cometa incrustada — el consumidor pot
+        // continuar detectant-ho per la presència del '"').
+        String trailing = sb.toString().trim();
+        if (inQuote && trailing.startsWith("\""))
+            trailing = trailing.substring(1).trim();
+        fields.add(trailing);
         return fields.toArray(new String[0]);
     }
 
@@ -98,6 +107,6 @@ public final class UtilitatsCsv {
 
     /** Retorna cert si ja existeix un llibre amb l'ISBN donat a la biblioteca (omet en importar). */
     public static boolean existsInLibrary(LectorLlibre cd, long isbn) {
-        try { cd.obtenirLlibre(isbn); return true; } catch (Exception e) { return false; }
+        return cd.existsLlibre(isbn);
     }
 }

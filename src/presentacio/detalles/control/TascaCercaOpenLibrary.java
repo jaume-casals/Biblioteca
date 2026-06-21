@@ -87,12 +87,15 @@ public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.Res
         // no un estil persistent). El Timer és d'un sol ús i es desa al
         // diàleg mitjançant una client property indexada pel botó, de
         // manera que un segon èxit no acumula dos timers.
+        javax.swing.Timer previous = (javax.swing.Timer) btn.getClientProperty("revertTimer");
+        if (previous != null && previous.isRunning()) previous.stop();
         javax.swing.Timer revert = new javax.swing.Timer(1500, ev -> {
             if (vista.isDisplayable()) {
                 btn.setBackground(UITheme.palette().accent());
             }
         });
         revert.setRepeats(false);
+        btn.putClientProperty("revertTimer", revert);
         revert.start();
         vista.obtenirProgressBar().setVisible(false);
         vista.obtenirTextISBN().setEditable(true);

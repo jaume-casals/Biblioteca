@@ -15,10 +15,12 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /** CRUD de llibres, diàlegs de detalls, estadístiques, vistes ràpides i desfer. */
@@ -110,27 +112,53 @@ class ControladorAccionsLlibre {
             try { isbns.add(Long.parseLong(cell.toString())); }
             catch (NumberFormatException nfe) { /* salta cel·les no numèriques */ }
         }
-        for (long isbn : isbns) {
-            try {
-                state.cd.cercarLlibre(isbn).ifPresent(l -> {
-                    EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
-                    state.enActualizarBBDD.enEliminantLlibre(ev);
-                    if (!EnEliminarLlibre.hauriaProceed(ev)) return;
-                    state.undoBuffer.push(l);
-                    // Limita la cua d'undoing a UNDO_MAX (20). Quan
-                    // l'usuari elimina més de UNDO_MAX llibres en un sol
-                    // lot, les entrades més antigues es descarten en
-                    // silenci — el límit és un topall de memòria, no un
-                    // contracte de "només els 20 primers". La pila
-                    // undo() n'és l'única consumidora.
-                    if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
-                    state.cd.eliminarLlibre(l);
-                    eliminarFila(l);
-                });
-            } catch (Exception e) {
-                new DialegError(e).mostrarErrorMessage();
+        final List<Long> toDelete = isbns;
+        new SwingWorker<Integer, Void>() {
+            @Override protected Integer doInBackground() {
+                int deleted = 0;
+                for (long isbn : toDelete) {
+                    try {
+                        state.cd.cercarLlibre(isbn).ifPresent(l -> {
+                            EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
+                            state.enActualizarBBDD.enEliminantLlibre(ev);
+                            if (!EnEliminarLlibre.hauriaProceed(ev)) return;
+                            state.undoBuffer.push(l);
+                            // Limita la cua d'undoing a UNDO_MAX (20). Quan
+                            // l'usuari elimina més de UNDO_MAX llibres en un sol
+                            // lot, les entrades més antigues es descarten en
+                            // silenci — el límit és un topall de memòria, no un
+                            // contracte de "només els 20 primers". La pila
+                            // undo() n'és l'única consumidora.
+                            if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                            state.cd.eliminarLlibre(l);
+                        });
+                        deleted++;
+                    } catch (Exception e) {
+                        SwingUtilities.invokeLater(() -> new DialegError(e).mostrarErrorMessage());
+                    }
+                }
+                return deleted;
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    int deleted = get();
+                    for (long isbn : toDelete) eliminarFilaPerIsbn(isbn);
+                } catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
+    }
+
+    void eliminarFilaPerIsbn(long isbn) {
+        Llibre target = null;
+        if (state.biblio != null) {
+            for (Llibre l : state.biblio) {
+                if (l.obtenirISBN() == isbn) { target = l; break; }
             }
         }
+        if (target != null) eliminarFila(target);
     }
 
     void eliminarFila(Llibre l) {
@@ -210,54 +238,107 @@ class ControladorAccionsLlibre {
         detalles.obtenirDetallesLlibrePanel().setVisible(true);
     }
 
+    private void mostrarVistaFiltrada(Predicate<Llibre> filter, String emptyMsg, String title) {
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                return state.cd.obtenirAllLlibres().stream()
+                    .filter(filter)
+                    .collect(Collectors.toList());
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    List<Llibre> result = get();
+                    if (result.isEmpty()) {
+                        JOptionPane.showMessageDialog(state.vista, emptyMsg, title,
+                            JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    state.biblio = result;
+                    host.pageCtrl().posarUseDBPagination(false);
+                    state.currentLlistaId = null;
+                    host.pageCtrl().posarCurrentPage(0);
+                    host.mostrarPage(0);
+                } catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
+    }
+
     private void mostrarAfegitsRecentment() {
-        ArrayList<Llibre> recents = new ArrayList<>(state.cd.obtenirRecentlyAdded());
-        if (recents.isEmpty()) {
-            JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_no_books_recent"),
-                I18n.t("dlg_recently_added_title"), JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        state.biblio = recents;
-        host.pageCtrl().posarUseDBPagination(false);
-        state.currentLlistaId = null;
-        host.pageCtrl().posarCurrentPage(0);
-        host.mostrarPage(0);
+        new SwingWorker<ArrayList<Llibre>, Void>() {
+            @Override protected ArrayList<Llibre> doInBackground() {
+                return new ArrayList<>(state.cd.obtenirRecentlyAdded());
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    ArrayList<Llibre> recents = get();
+                    if (recents.isEmpty()) {
+                        JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_no_books_recent"),
+                            I18n.t("dlg_recently_added_title"), JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    state.biblio = recents;
+                    host.pageCtrl().posarUseDBPagination(false);
+                    state.currentLlistaId = null;
+                    host.pageCtrl().posarCurrentPage(0);
+                    host.mostrarPage(0);
+                } catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     private void mostrarLlegitsRecentment() {
-        List<Llibre> llegits = state.cd.obtenirAllLlibres().stream()
-            .filter(l -> Boolean.TRUE.equals(l.obtenirLlegit()))
-            .collect(Collectors.toList());
-        if (llegits.isEmpty()) {
-            JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_no_read"), I18n.t("dlg_read_title"),
-                JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        state.biblio = llegits;
-        host.pageCtrl().posarUseDBPagination(false);
-        state.currentLlistaId = null;
-        host.pageCtrl().posarCurrentPage(0);
-        host.mostrarPage(0);
+        mostrarVistaFiltrada(l -> Boolean.TRUE.equals(l.obtenirLlegit()),
+            I18n.t("dlg_no_read"), I18n.t("dlg_read_title"));
     }
 
     private void mostrarDesitjats() {
-        state.biblio = state.cd.obtenirAllLlibres().stream()
-            .filter(l -> Boolean.TRUE.equals(l.esDesitjat()))
-            .collect(Collectors.toList());
-        host.pageCtrl().posarUseDBPagination(false);
-        state.currentLlistaId = null;
-        host.pageCtrl().posarCurrentPage(0);
-        host.mostrarPage(0);
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                return state.cd.obtenirAllLlibres().stream()
+                    .filter(l -> Boolean.TRUE.equals(l.esDesitjat()))
+                    .collect(Collectors.toList());
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    state.biblio = get();
+                    host.pageCtrl().posarUseDBPagination(false);
+                    state.currentLlistaId = null;
+                    host.pageCtrl().posarCurrentPage(0);
+                    host.mostrarPage(0);
+                } catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     private void mostrarEnCurs() {
-        state.biblio = state.cd.obtenirAllLlibres().stream()
-            .filter(l -> l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit()))
-            .collect(Collectors.toList());
-        host.pageCtrl().posarUseDBPagination(false);
-        state.currentLlistaId = null;
-        host.pageCtrl().posarCurrentPage(0);
-        host.mostrarPage(0);
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                return state.cd.obtenirAllLlibres().stream()
+                    .filter(l -> l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit()))
+                    .collect(Collectors.toList());
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    state.biblio = get();
+                    host.pageCtrl().posarUseDBPagination(false);
+                    state.currentLlistaId = null;
+                    host.pageCtrl().posarCurrentPage(0);
+                    host.mostrarPage(0);
+                } catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     void obrirConfiguracio() {

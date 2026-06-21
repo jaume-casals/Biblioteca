@@ -20,15 +20,43 @@ import java.util.*;
  */
 public class LectorBibliotecaEnMemoria implements LectorBiblioteca {
 
-    public final List<Llibre> books = new ArrayList<>();
-    public final List<Llista> llistes = new ArrayList<>();
-    public final List<Tag> tags = new ArrayList<>();
-    public final List<PrestecRow> loans = new ArrayList<>();
+    // Llistes privades — l'accés extern passa pels mètodes afegirXxx/
+    // eliminarXxx que mantenen l'índex {@code byIsbn} consistent. Un
+    // getter de només lectura ({@link #llibresReadOnly}) s'exposa per a
+    // les proves que volen iterar sense mutar.
+    private final List<Llibre> books = new ArrayList<>();
+    private final List<Llista> llistes = new ArrayList<>();
+    private final List<Tag> tags = new ArrayList<>();
+    private final List<PrestecRow> loans = new ArrayList<>();
     private final Map<Long, Llibre> byIsbn = new HashMap<>();
     private boolean byIsbnDirty = true;
 
+    /** Vista de només lectura de la llista de llibres. Útil per a proves
+     *  que iteren però no muten — qualsevol intent de modificar-la
+     *  llença {@link UnsupportedOperationException}. */
+    public List<Llibre> llibresReadOnly() { return Collections.unmodifiableList(books); }
+    public List<Llista> llistesReadOnly() { return Collections.unmodifiableList(llistes); }
+    public List<Tag>    tagsReadOnly()    { return Collections.unmodifiableList(tags); }
+    public List<PrestecRow> loansReadOnly() { return Collections.unmodifiableList(loans); }
+
+    /** Afegeix un llibre a la col·lecció i invalida l'índex per ISBN. */
+    public void addLlibre(Llibre l) {
+        books.add(l);
+        byIsbnDirty = true;
+    }
+    public void removeLlibre(Llibre l) {
+        books.remove(l);
+        byIsbnDirty = true;
+    }
+    public void addLlista(Llista l)   { llistes.add(l); }
+    public void removeLlista(Llista l){ llistes.remove(l); }
+    public void addTag(Tag t)         { tags.add(t); }
+    public void removeTag(Tag t)      { tags.remove(t); }
+    public void addLoan(PrestecRow r) { loans.add(r); }
+    public void removeLoan(PrestecRow r) { loans.remove(r); }
+
     @Override public List<Llibre> obtenirAllLlibres() { return new ArrayList<>(books); }
-    @Override public Llibre obtenirLlibre(long isbn) throws Exception {
+    @Override public Llibre obtenirLlibre(long isbn) throws domini.BibliotecaException.NoTrobat {
         if (byIsbnDirty) rebuildIndex();
         Llibre l = byIsbn.get(isbn);
         if (l == null) throw new domini.BibliotecaException.NoTrobat("No trobat: " + isbn);
@@ -71,9 +99,9 @@ public class LectorBibliotecaEnMemoria implements LectorBiblioteca {
             "LectorBibliotecaEnMemoria does not honour search criteria — use a real LectorBiblioteca (see class Javadoc).");
     }
     @Override public List<Llista> obtenirAllLlistes() { return new ArrayList<>(llistes); }
-    @Override public Llista obtenirLlistaById(int id) throws Exception {
+    @Override public Llista obtenirLlistaById(int id) throws domini.BibliotecaException.NoTrobat {
         for (Llista l : llistes) if (l.obtenirId() == id) return l;
-        throw new Exception("Prestatge no trobat: " + id);
+        throw new domini.BibliotecaException.NoTrobat("Prestatge no trobat: " + id);
     }
     @Override public int obtenirCountInLlista(int llistaId) { return 0; }
     @Override public Map<Integer, Integer> obtenirAllCountsInLlistes() { return new HashMap<>(); }
@@ -82,9 +110,9 @@ public class LectorBibliotecaEnMemoria implements LectorBiblioteca {
     @Override public List<Llista> obtenirLlistesForLlibre(long isbn) { return new ArrayList<>(); }
     @Override public List<domini.LlibreLlistaContext> obtenirLlistesForLlibreContext(long isbn) { return new ArrayList<>(); }
     @Override public List<Tag> obtenirAllTags() { return new ArrayList<>(tags); }
-    @Override public Tag obtenirTagById(int id) throws Exception {
+    @Override public Tag obtenirTagById(int id) throws domini.BibliotecaException.NoTrobat {
         for (Tag t : tags) if (t.obtenirId() == id) return t;
-        throw new Exception("Etiqueta no trobada: " + id);
+        throw new domini.BibliotecaException.NoTrobat("Etiqueta no trobada: " + id);
     }
     @Override public List<Tag> obtenirTagsForLlibre(long isbn) { return new ArrayList<>(); }
     @Override public List<LlibreTagRow> obtenirAllLlibreTagRows() { return new ArrayList<>(); }
@@ -110,7 +138,7 @@ public class LectorBibliotecaEnMemoria implements LectorBiblioteca {
         for (PrestecRow r : loans) if (r.isbn() == isbn) c++;
         return c;
     }
-    @Override public byte[] obtenirLlibreBlob(long isbn) { return null; }
+    @Override public byte[] obtenirLlibreBlob(long isbn) { return new byte[0]; }
     @Override public long obtenirDbSizeBytes() { return 0; }
     @Override public List<String> obtenirDistinctValues(String column) { return new ArrayList<>(); }
     @Override public List<String> obtenirDistinctAutorNames() { return new ArrayList<>(); }

@@ -33,7 +33,7 @@ public class ControladorImportacio {
     public void importarCSV() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_title"), "CSV files", "csv");
         if (f == null) return;
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() {
@@ -56,6 +56,11 @@ public class ControladorImportacio {
         }.execute();
     }
 
+    private static Frame windowFrame(Component parent) {
+        java.awt.Window w = SwingUtilities.getWindowAncestor(parent);
+        return w instanceof Frame f ? f : null;
+    }
+
     public void importarCalibre() {
         JFileChooser fc = new JFileChooser();
         fc.setDialogTitle(I18n.t("dlg_calibre_choose_title"));
@@ -71,7 +76,7 @@ public class ControladorImportacio {
             JOptionPane.showMessageDialog(parent, I18n.t("dlg_calibre_no_sqlite3"),
                 I18n.t("dlg_calibre_choose_title"), JOptionPane.ERROR_MESSAGE); return;
         }
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_calibre_choose_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_calibre_choose_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
@@ -95,7 +100,7 @@ public class ControladorImportacio {
     public void importarJSON() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_json_title"), "JSON files", "json");
         if (f == null) return;
-        DialegCarrega loading = new DialegCarrega((Frame) SwingUtilities.getWindowAncestor(parent), I18n.t("dlg_import_json_title"));
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_json_title"));
         loading.show();
         new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
@@ -129,7 +134,8 @@ public class ControladorImportacio {
         // lloc d'un error genèric d'"addLlibre" després d'haver escrit
         // totes les metadades (segons el finding MEDIUM de tot.txt).
         // L'usuari encara pot confirmar i forçar l'obertura del diàleg
-        // fent clic a "Sí".
+        // fent clic a "Sí". L'existència es consulta fora de l'EDT per
+        // evitar congelar la interfície en biblioteques grans.
         long parsedIsbn;
         try { parsedIsbn = Long.parseLong(isbn); }
         catch (NumberFormatException nfe) {
@@ -137,28 +143,49 @@ public class ControladorImportacio {
                 I18n.t("dlg_duplicate_title"), JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (cd.existsLlibre(parsedIsbn)) {
-            int ans = JOptionPane.showConfirmDialog(parent,
-                I18n.t("dlg_isbn_exists", parsedIsbn),
-                I18n.t("dlg_duplicate_title"),
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (ans != JOptionPane.YES_OPTION) return;
-        }
+        final long finalParsedIsbn = parsedIsbn;
+        final String finalIsbn = isbn;
+        new SwingWorker<Boolean, Void>() {
+            @Override protected Boolean doInBackground() {
+                return cd.existsLlibre(finalParsedIsbn);
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                boolean exists;
+                try { exists = get(); }
+                catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                    return;
+                }
+                if (exists) {
+                    int ans = JOptionPane.showConfirmDialog(parent,
+                        I18n.t("dlg_isbn_exists", finalParsedIsbn),
+                        I18n.t("dlg_duplicate_title"),
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    if (ans != JOptionPane.YES_OPTION) return;
+                }
+                obrirDialegDesrISBN(finalIsbn);
+            }
+        }.execute();
+    }
 
+    private void obrirDialegDesrISBN(String isbn) {
         DialegDesarLlibres dialeg = new DialegDesarLlibres();
         new ControladorDialegDesarLlibres(dialeg, null, cd);
         dialeg.obtenirTextISBN().setText(isbn);
 
-        final String finalIsbn = isbn;
-        java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
-        dialeg.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override public void windowClosed(java.awt.event.WindowEvent e) { cancelled.set(true); }
-        });
-        Thread fetchThread = new Thread(() -> {
-            java.util.Map<String, String> meta = ClientOpenLibrary.lookupByISBN(finalIsbn);
-            if (cancelled.get()) return;
-            SwingUtilities.invokeLater(() -> {
-                if (!dialeg.isVisible()) return;
+        new SwingWorker<java.util.Map<String, String>, Void>() {
+            @Override protected java.util.Map<String, String> doInBackground() {
+                return ClientOpenLibrary.lookupByISBN(isbn);
+            }
+            @Override protected void done() {
+                if (isCancelled() || !dialeg.isVisible()) return;
+                java.util.Map<String, String> meta;
+                try { meta = get(); }
+                catch (Exception e) {
+                    new DialegError(e).mostrarErrorMessage();
+                    return;
+                }
                 if (meta.containsKey("error")) {
                     JOptionPane.showMessageDialog(dialeg,
                         I18n.t("dlg_network_error") + "\n" + meta.get("error"),
@@ -174,11 +201,8 @@ public class ControladorImportacio {
                     dialeg.obtenirTextAutor().setText(autor);
                 if (any != null && !any.isEmpty() && dialeg.obtenirTextAny().getText().isEmpty())
                     dialeg.obtenirTextAny().setText(any);
-            });
-        });
-        fetchThread.setName("isbn-lookup");
-        fetchThread.setDaemon(true);
-        fetchThread.start();
+            }
+        }.execute();
 
         dialeg.setLocationRelativeTo(parent);
         dialeg.setVisible(true);

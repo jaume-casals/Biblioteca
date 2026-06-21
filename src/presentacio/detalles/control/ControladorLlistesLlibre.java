@@ -3,6 +3,7 @@ package presentacio.detalles.control;
 import java.util.ArrayList;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import domini.Llista;
@@ -135,27 +136,44 @@ public class ControladorLlistesLlibre {
     }
 
     private void reload() {
-        llistesCache = new ArrayList<>(cd.obtenirLlistesForLlibre(llibre.obtenirISBN()));
-        allLlistesCache = new ArrayList<>(cd.obtenirAllLlistes());
-        UtilitatsSwing.reloadComboPreserveSelection(vista.obtenirComboAdd(), allLlistesCache, Llista::obtenirId);
-        vista.obtenirTableModel().setRows(llistesCache);
-        if (vista.obtenirTableModel().getRowCount() > 0) {
-            vista.obtenirTable().setRowSelectionInterval(0, vista.obtenirTableModel().getRowCount() - 1);
-        }
-        // Reutilitza el mateix HashSet entre recàrregues (clear+addAll)
-        // perquè el SHELF_RENDERER capturat continuï apuntant a un set vàlid.
-        memberIds.clear();
-        for (Llista l : llistesCache) memberIds.add(l.obtenirId());
-        javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
-        for (Llista l : allLlistesCache) model.addElement(l);
-        vista.obtenirShelfCheckList().setModel(model);
-        java.util.List<Integer> memberIdx = new java.util.ArrayList<>();
-        for (int i = 0; i < allLlistesCache.size(); i++) {
-            if (memberIds.contains(allLlistesCache.get(i).obtenirId())) memberIdx.add(i);
-        }
-        int[] memberIdxArr = new int[memberIdx.size()];
-        for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
-        vista.obtenirShelfCheckList().setSelectedIndices(memberIdxArr);
-        vista.obtenirShelfCheckList().setCellRenderer(SHELF_RENDERER);
+        new SwingWorker<ReloadData, Void>() {
+            @Override protected ReloadData doInBackground() {
+                ArrayList<Llista> perLlibre = new ArrayList<>(cd.obtenirLlistesForLlibre(llibre.obtenirISBN()));
+                ArrayList<Llista> all = new ArrayList<>(cd.obtenirAllLlistes());
+                return new ReloadData(perLlibre, all);
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    ReloadData d = get();
+                    llistesCache = d.perLlibre();
+                    allLlistesCache = d.all();
+                    UtilitatsSwing.reloadComboPreserveSelection(vista.obtenirComboAdd(), allLlistesCache, Llista::obtenirId);
+                    vista.obtenirTableModel().setRows(llistesCache);
+                    if (vista.obtenirTableModel().getRowCount() > 0) {
+                        vista.obtenirTable().setRowSelectionInterval(0, vista.obtenirTableModel().getRowCount() - 1);
+                    }
+                    // Reutilitza el mateix HashSet entre recàrregues (clear+addAll)
+                    // perquè el SHELF_RENDERER capturat continuï apuntant a un set vàlid.
+                    memberIds.clear();
+                    for (Llista l : llistesCache) memberIds.add(l.obtenirId());
+                    javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
+                    for (Llista l : allLlistesCache) model.addElement(l);
+                    vista.obtenirShelfCheckList().setModel(model);
+                    java.util.List<Integer> memberIdx = new java.util.ArrayList<>();
+                    for (int i = 0; i < allLlistesCache.size(); i++) {
+                        if (memberIds.contains(allLlistesCache.get(i).obtenirId())) memberIdx.add(i);
+                    }
+                    int[] memberIdxArr = new int[memberIdx.size()];
+                    for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
+                    vista.obtenirShelfCheckList().setSelectedIndices(memberIdxArr);
+                    vista.obtenirShelfCheckList().setCellRenderer(SHELF_RENDERER);
+                } catch (Exception ex) {
+                    new DialegError(ex).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
+
+    private record ReloadData(ArrayList<Llista> perLlibre, ArrayList<Llista> all) {}
 }

@@ -45,11 +45,14 @@ public final class ServeiCoberta {
     @Deprecated
     public static final ExecutorService POOL = WRITE_POOL;
 
+    private static final java.util.logging.Logger LOG =
+        java.util.logging.Logger.getLogger(ServeiCoberta.class.getName());
+
     private static final Object L1_LOCK = new Object();
     private static final Map<String, byte[]> L1 = new java.util.LinkedHashMap<>(L1_MAX, 0.75f, true) {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, byte[]> eldest) { return size() > L1_MAX; }
     };
-    private static final Path DISK_DIR = Path.of(System.getProperty("user.home"), ".biblioteca", "covers");
+    private static Path diskDir() { return Configuracio.bibliotecaDir().resolve("covers"); }
 
     private ServeiCoberta() {}
 
@@ -61,13 +64,15 @@ public final class ServeiCoberta {
             if (mem != null) return mem;
         }
         try {
-            Path f = DISK_DIR.resolve(isbn + ".jpg");
+            Path f = diskDir().resolve(isbn + ".jpg");
             if (Files.isRegularFile(f)) {
                 byte[] disk = Files.readAllBytes(f);
                 synchronized (L1_LOCK) { putL1(isbn, disk); }
                 return disk;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            LOG.log(java.util.logging.Level.FINE, "obtenirCachedBytes: error llegint la caché al disc per a " + isbn, e);
+        }
         return null;
     }
 
@@ -83,21 +88,8 @@ public final class ServeiCoberta {
 
     /** Obté els bytes de la coberta per a {@code isbn}, desa el blob a la BBDD, invoca el callback en cas d'èxit. */
     public static void fetchAsync(EscritorLlibre cd, String isbn, Runnable onDone) {
-        byte[] cached = obtenirCachedBytes(isbn);
-        if (cached != null) {
-            escriureCoverAsync(cd, isbn, cached, onDone);
-            return;
-        }
-        FETCHER.submit(() -> {
-            byte[] data = null;
-            try { data = ClientOpenLibrary.fetchCoverByISBN(isbn); } catch (Exception ignored) {}
-            if (data != null && data.length > 0) {
-                cacheBytes(isbn, data);
-                escriureCoverAsync(cd, isbn, data, onDone);
-            } else if (onDone != null) {
-                onDone.run();
-            }
-        });
+        enqueueFetch(cd, isbn, () -> escriureCoverAsync(cd, isbn, /* data */ null, onDone),
+            cached -> escriureCoverAsync(cd, isbn, cached, onDone));
     }
 
     /** Envia una cerca de coberta i una escriptura a la BBDD per a
@@ -108,9 +100,21 @@ public final class ServeiCoberta {
      *  {@code true} si s'ha emmagatzemat una coberta, {@code false} si
      *  OL no tenia coberta o l'escriptura ha fallat. */
     public static void submitCoverFetch(interficie.EscritorBiblioteca cd, String isbn, java.util.function.Consumer<Boolean> onComplete) {
+        enqueueFetch(cd, isbn, () -> onComplete.accept(false),
+            cached -> submitWrite(cd, isbn, cached, onComplete));
+    }
+
+    /** Implementació comuna a {@link #fetchAsync} i {@link #submitCoverFetch}.
+     *  Consulta la caché (disc/L1); si encert, delega a {@code onCacheHit} amb
+     *  els bytes. Si falla, envia una cerca a OL a {@link #FETCHER}; quan torna,
+     *  desa a la caché i delega a {@code onFetched}. Si OL no retorna res,
+     *  delega a {@code onMiss}. */
+    private static void enqueueFetch(EscritorLlibre cd, String isbn,
+                                     Runnable onMiss,
+                                     java.util.function.Consumer<byte[]> onCacheHit) {
         byte[] cached = obtenirCachedBytes(isbn);
         if (cached != null) {
-            submitWrite(cd, isbn, cached, onComplete);
+            onCacheHit.accept(cached);
             return;
         }
         FETCHER.submit(() -> {
@@ -118,9 +122,9 @@ public final class ServeiCoberta {
             try { data = ClientOpenLibrary.fetchCoverByISBN(isbn); } catch (Exception ignored) {}
             if (data != null && data.length > 0) {
                 cacheBytes(isbn, data);
-                submitWrite(cd, isbn, data, onComplete);
+                onCacheHit.accept(data);
             } else {
-                onComplete.accept(false);
+                onMiss.run();
             }
         });
     }
@@ -158,17 +162,31 @@ public final class ServeiCoberta {
     public static void cacheBytes(String isbn, byte[] data) {
         putL1(isbn, data);
         try {
-            Path target = DISK_DIR.resolve(isbn + ".jpg");
-            // Salta l'escriptura al disc si ja hi ha una coberta
-            // anterior en caché al mateix camí. El contingut en bytes
-            // el fixa la resposta d'OpenLibrary, de manera que una
-            // nova cerca normalment dóna els mateixos bytes; reescriure
-            // seria malbaratament d'I/O + activitat de metadades del
-            // sistema de fitxers.
-            if (Files.exists(target) && Files.size(target) == data.length) return;
-            Files.createDirectories(DISK_DIR);
+            Path target = diskDir().resolve(isbn + ".jpg");
+            // Comprova el contingut per hash SHA-256 per evitar reescriure
+            // quan OpenLibrary re-encoda el JPEG (mateixa longitud però
+            // bytes diferents — la heurística anterior només comparava
+            // longitud, la qual cosa tractava dues imatges diferents com
+            // idèntiques).
+            if (Files.exists(target) && hashesMatch(target, data)) return;
+            Files.createDirectories(diskDir());
             Files.write(target, data);
         } catch (Exception ignored) {}
+    }
+
+    /** Compara el contingut d'un fitxer amb un buffer per SHA-256.
+     *  Missatges amb "isEqual" per evitar atacs de temporització
+     *  teòrics si el camí de caché s'exposés mai remotament. */
+    private static boolean hashesMatch(Path path, byte[] data) {
+        try {
+            byte[] disk = Files.readAllBytes(path);
+            java.security.MessageDigest md1 = java.security.MessageDigest.getInstance("SHA-256");
+            java.security.MessageDigest md2 = java.security.MessageDigest.getInstance("SHA-256");
+            return java.security.MessageDigest.isEqual(md1.digest(disk), md2.digest(data));
+        } catch (Exception e) {
+            LOG.log(java.util.logging.Level.FINE, "hashesMatch: no s'ha pogut comparar la caché de coberta", e);
+            return false;
+        }
     }
 
     private static void putL1(String isbn, byte[] data) {

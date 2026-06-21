@@ -14,10 +14,6 @@ import domini.facade.DelegatEstadistiques;
 import domini.facade.TagDelegate;
 import herramienta.ServeiCopiaSeguretat;
 import interficie.EscritorBiblioteca;
-import interficie.EscritorLlibre;
-import interficie.EscritorPrestec;
-import interficie.EscritorPrestatgeria;
-import interficie.EscritorEtiqueta;
 import persistencia.ControladorPersistencia;
 import persistencia.LecturaRow;
 import persistencia.LlibreLlistaRow;
@@ -39,12 +35,13 @@ import persistencia.PrestecRow;
  *       Préstec, Llibre, Estadístiques, CòpiaDeSeguretat.</li>
  * </ul>
  *
- * <p>L'API pública d'aquesta classe no canvia: cada mètode que existia
- * abans de la divisió continua existint, amb la mateixa signatura, les
- * mateixes excepcions i els mateixos efectes col·laterals. L'únic canvi
- * externament observable és el recompte de línies del fitxer (637 → ~150).
+ * <p>Implementa només {@link EscritorBiblioteca} — les sub-interfícies
+ * ({@code EscritorLlibre}, {@code EscritorPrestatgeria},
+ * {@code EscritorEtiqueta}, {@code EscritorPrestec}) s'hereten per la
+ * cadena {@code extends}, de manera que cada mètode d'escriptura es
+ * continua implementant exactament un cop aquí.
  */
-public class ControladorDomini implements EscritorBiblioteca, EscritorLlibre, EscritorPrestatgeria, EscritorEtiqueta, EscritorPrestec {
+public class ControladorDomini implements EscritorBiblioteca {
 
 	private static ControladorDomini inst;
 
@@ -125,7 +122,7 @@ public class ControladorDomini implements EscritorBiblioteca, EscritorLlibre, Es
 	// ── Shelf ─────────────────────────────────────────────────────────────────
 
 	public java.util.List<Llista> obtenirAllLlistes()                                                 { return shelves.obtenirAllLlistes(); }
-	public Llista obtenirLlistaById(int id) throws Exception                                          { return shelves.obtenirLlistaById(id); }
+	public Llista obtenirLlistaById(int id) throws domini.BibliotecaException.NoTrobat              { return shelves.obtenirLlistaById(id); }
 	public Llista afegirLlista(String nom)                                                           { return shelves.afegirLlista(nom); }
 	public void eliminarLlista(Llista llista)                                                       { shelves.eliminarLlista(llista); }
 	public void reanomenarLlista(int id, String newNom)                                               { shelves.reanomenarLlista(id, newNom); }
@@ -144,7 +141,7 @@ public class ControladorDomini implements EscritorBiblioteca, EscritorLlibre, Es
 	// ── Tag ───────────────────────────────────────────────────────────────────
 
 	public java.util.List<Tag> obtenirAllTags()                                                       { return tags.obtenirAllTags(); }
-	public Tag obtenirTagById(int id) throws Exception                                                { return tags.obtenirTagById(id); }
+	public Tag obtenirTagById(int id) throws domini.BibliotecaException.NoTrobat                    { return tags.obtenirTagById(id); }
 	public Tag afegirTag(String nom)                                                                 { return tags.afegirTag(nom); }
 	public void eliminarTag(Tag tag)                                                                { tags.eliminarTag(tag); }
 	public void reanomenarTag(int id, String newNom)                                                  { tags.reanomenarTag(id, newNom); }

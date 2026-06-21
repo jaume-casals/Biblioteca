@@ -84,8 +84,13 @@ public final class PopupZoomCoberta {
         BufferedImage scaled = zoomCache.get(isbn);
         if (scaled == null || scaled.getWidth() != pw || scaled.getHeight() != ph) {
             scaled = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_ARGB);
-            scaled.createGraphics().drawImage(
-                img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+            java.awt.Graphics2D g = scaled.createGraphics();
+            try {
+                g.drawImage(
+                    img.getScaledInstance(pw, ph, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+            } finally {
+                g.dispose();
+            }
             zoomCache.put(isbn, scaled);
         }
 

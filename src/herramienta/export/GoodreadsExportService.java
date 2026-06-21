@@ -39,11 +39,16 @@ public final class GoodreadsExportService {
      * més amigable amb el heap.
      */
     public static void exportarToCsv(LectorBiblioteca cd, PrintWriter pw) throws Exception {
-        pw.println("Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
-                 + "Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publicación Year,"
+        String header = "Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
+                 + "Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,"
                  + "Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,"
                  + "Read Count,Recommended For,Recommended By,Owned Copies,Original Purchase Date,"
-                 + "Condition,Condition Description,BCID");
+                 + "Condition,Condition Description,BCID";
+        // Comptem el nombre de columnes del header per tancar-les totes
+        // dinàmicament a la fila (la versió anterior tenia un literal
+        // hardcoded de 9 comes que es desfasava del recompte de capçalera).
+        int totalColumns = header.split(",", -1).length;
+        pw.println(header);
         Map<Integer, Llista> llistaById = new HashMap<>();
         for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
         Map<Long, List<Llista>> llibLlistes = new HashMap<>();
@@ -68,26 +73,39 @@ public final class GoodreadsExportService {
             Double val = l.obtenirValoracio();
             if (val != null && val > 0) myRating = (int) Math.floor(val / 2.0 + 0.5);
             Integer any = l.obtenirAny();
-            pw.print(rowId++); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirNom())); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); pw.print(',');
-            pw.print(',');
-            pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); pw.print(',');
-            pw.print(myRating); pw.print(',');
-            pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirEditorial() != null ? l.obtenirEditorial() : "")); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirFormat() != null ? l.obtenirFormat() : "")); pw.print(',');
-            pw.print(l.obtenirPagines() > 0 ? l.obtenirPagines() : ""); pw.print(',');
-            pw.print(any != null && any > 0 ? any : ""); pw.print(',');
-            pw.print(any != null && any > 0 ? any : ""); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirDataLectura() != null ? l.obtenirDataLectura() : "")); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "")); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(bookshelves)); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(shelf)); pw.print(',');
-            pw.print(UtilitatsCsv.csvQ(l.obtenirNotes() != null ? l.obtenirNotes() : "")); pw.print(',');
-            pw.println(",,,,,,,,");
+            // Nombre de columnes amb valor explícit que escrivim abans
+            // dels camps de cua buits. Si el header canvia, la secció
+            // d'emplenament s'adapta sense tocar aquest recompte.
+            int writtenValues = 0;
+            pw.print(rowId++); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirNom())); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); writtenValues++;
+            pw.print(','); pw.print(""); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); writtenValues++;
+            pw.print(','); pw.print(myRating); writtenValues++;
+            pw.print(','); pw.print(""); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirEditorial() != null ? l.obtenirEditorial() : "")); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirFormat() != null ? l.obtenirFormat() : "")); writtenValues++;
+            pw.print(','); pw.print(l.obtenirPagines() > 0 ? l.obtenirPagines() : ""); writtenValues++;
+            pw.print(','); pw.print(any != null && any > 0 ? any : ""); writtenValues++;
+            pw.print(','); pw.print(any != null && any > 0 ? any : ""); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirDataLectura() != null ? l.obtenirDataLectura() : "")); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "")); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(bookshelves)); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(shelf)); writtenValues++;
+            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirNotes() != null ? l.obtenirNotes() : "")); writtenValues++;
+            // Emplena les columnes restants amb valors buits. Un
+            // separador per cada columna restant; el PrintWriter escriu
+            // una fila acabada en coma seguida de salt de línia, que
+            // és una representació vàlida de "trailing empty fields"
+            // per a la majoria d'analitzadors CSV.
+            while (writtenValues < totalColumns) {
+                pw.print(',');
+                writtenValues++;
+            }
+            pw.println();
         }
     }
 }

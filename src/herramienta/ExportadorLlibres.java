@@ -16,7 +16,12 @@ public class ExportadorLlibres {
     private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
 
     public static void exportarCSV(File f, List<Llibre> view, LectorPrestatgeria cd) throws Exception {
-        domini.AnalitzadorPrestatgeria.exportarToCsv(f, view, cd);
+        java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
+        for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
+        java.util.Map<Long, java.util.List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (persistencia.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
+            llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
+        domini.AnalitzadorPrestatgeria.exportarToCsv(f, view, llistaById, llistaRows);
     }
 
     public static void exportarJSON(File f, LectorBiblioteca cd) throws Exception {
@@ -209,14 +214,19 @@ public class ExportadorLlibres {
             y += lineH;
             int start = pageIndex * perPage;
             int end   = Math.min(start + perPage, rows.size());
+            java.awt.FontMetrics fm = g.getFontMetrics();
+            java.text.BreakIterator grapheme = java.text.BreakIterator.getCharacterInstance();
             for (int r = start; r < end; r++) {
                 x = margin;
                 for (int c = 0; c < headers.length; c++) {
                     String val = rows.get(r)[c];
                     int maxW = colWidths[c] - 4;
-                    java.awt.FontMetrics fm = g.getFontMetrics();
-                    while (fm.stringWidth(val) > maxW && val.length() > 3)
-                        val = val.substring(0, val.length() - 4) + "…";
+                    grapheme.setText(val);
+                    while (val.length() > 1 && fm.stringWidth(val) > maxW) {
+                        int prev = grapheme.preceding(val.length());
+                        if (prev <= 0) break;
+                        val = val.substring(0, prev) + "…";
+                    }
                     g.drawString(val, x, y);
                     x += colWidths[c];
                 }
@@ -324,16 +334,5 @@ public class ExportadorLlibres {
         for (persistencia.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
         m.put("tags", tagIds);
         return m;
-    }
-
-    /** Embolcalla {@link Escapers#json(String)} entre cometes dobles i renderitza
-     *  {@code null} com el literal JSON {@code null}. */
-    private static String jsonStr(String s) {
-        if (s == null) return "null";
-        return '"' + Escapers.json(s) + '"';
-    }
-
-    private static String esc(String s) {
-        return s == null ? "" : s.replace("\"", "\"\"");
     }
 }

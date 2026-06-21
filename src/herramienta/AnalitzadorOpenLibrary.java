@@ -26,22 +26,31 @@ public final class AnalitzadorOpenLibrary {
             if (e.getValue().isJsonObject()) { book = e.getValue().getAsJsonObject(); break; }
         }
         if (book == null) return r;
-        put(r, "title",      jsonStr(book, "title"));
-        put(r, "descripcio", jsonStrNested(book, "description", "value"));
-        if (r.get("descripcio") == null) put(r, "descripcio", jsonStr(book, "description"));
-        String date = jsonStr(book, "publish_date");
+        put(r, "title",      JsonHelpers.jsonStr(book, "title"));
+        put(r, "descripcio", JsonHelpers.jsonStrNested(book, "description", "value"));
+        if (r.get("descripcio") == null) put(r, "descripcio", JsonHelpers.jsonStr(book, "description"));
+        String date = JsonHelpers.jsonStr(book, "publish_date");
         if (date != null) {
             Matcher m = Pattern.compile("\\b(\\d{4})\\b").matcher(date);
             if (m.find()) r.put("any", m.group(1));
         }
-        if (book.has("number_of_pages") && !book.get("number_of_pages").isJsonNull())
-            r.put("pagines", String.valueOf(book.get("number_of_pages").getAsInt()));
-        put(r, "editorial", jsonArrayFirstField(book, "publishers", "name"));
-        put(r, "autor",     jsonArrayFirstField(book, "authors",    "name"));
+        if (book.has("number_of_pages") && !book.get("number_of_pages").isJsonNull()) {
+            try {
+                long pages = book.get("number_of_pages").getAsLong();
+                if (pages >= 0 && pages <= Integer.MAX_VALUE)
+                    r.put("pagines", String.valueOf((int) pages));
+            } catch (NumberFormatException ignored) {
+                // El valor no és un nombre vàlid (per exemple,
+                // "320 p." en lloc de "320") — simplement no
+                // informem el recompte.
+            }
+        }
+        put(r, "editorial", JsonHelpers.jsonArrayFirstField(book, "publishers", "name"));
+        put(r, "autor",     JsonHelpers.jsonArrayFirstField(book, "authors",    "name"));
         if (book.has("languages")) {
             JsonArray langs = book.getAsJsonArray("languages");
             if (langs.size() > 0) {
-                String key = jsonStr(langs.get(0).getAsJsonObject(), "key");
+                String key = JsonHelpers.jsonStr(langs.get(0).getAsJsonObject(), "key");
                 if (key != null) r.put("idioma", key.replaceAll(".*/", ""));
             }
         }
@@ -49,19 +58,4 @@ public final class AnalitzadorOpenLibrary {
     }
 
     private static void put(Map<String, String> m, String k, String v) { if (v != null) m.put(k, v); }
-
-    private static String jsonStr(JsonObject obj, String key) {
-        return obj != null && obj.has(key) && obj.get(key).isJsonPrimitive() ? obj.get(key).getAsString() : null;
-    }
-
-    private static String jsonStrNested(JsonObject obj, String key, String subKey) {
-        if (obj == null || !obj.has(key) || !obj.get(key).isJsonObject()) return null;
-        return jsonStr(obj.getAsJsonObject(key), subKey);
-    }
-
-    private static String jsonArrayFirstField(JsonObject obj, String arrKey, String fieldKey) {
-        if (obj == null || !obj.has(arrKey) || !obj.get(arrKey).isJsonArray()) return null;
-        JsonArray a = obj.getAsJsonArray(arrKey);
-        return a.size() > 0 && a.get(0).isJsonObject() ? jsonStr(a.get(0).getAsJsonObject(), fieldKey) : null;
-    }
 }
