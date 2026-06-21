@@ -11,7 +11,7 @@ import herramienta.ui.DialegError;
 import herramienta.i18n.I18n;
 import herramienta.ui.UITheme;
 import persistencia.contract.EscritorLlibre;
-import presentacio.ControladorMarcPrincipal;
+import presentacio.controladors.ControladorMarcPrincipal;
 
 /**
  * Editor de cel·la per a la columna "llegit". Només persisteix el flag

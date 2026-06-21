@@ -131,7 +131,7 @@ public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.Res
             if (result.coverBlob != null && existingBlob == null) {
                 onCoverFound.accept(result.coverBlob);
                 javax.swing.ImageIcon icon = UITheme.scaledIcon(result.coverBlob, 120);
-                vista.obtenirLabelPreview().setIcon(icon != null ? icon : presentacio.MemoriaImatgesCoberta.NO_COVER);
+                vista.obtenirLabelPreview().setIcon(icon != null ? icon : presentacio.util.MemoriaImatgesCoberta.NO_COVER);
             }
         } catch (Exception e) {
             new DialegError(e).mostrarErrorMessage();

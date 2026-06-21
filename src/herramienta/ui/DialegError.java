@@ -178,7 +178,7 @@ public class DialegError {
         scroll.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
 
         JButton btnTancar = new JButton(I18n.t("btn_close"));
-        presentacio.UIComponents.styleSecondaryButton(btnTancar);
+        presentacio.util.UIComponents.styleSecondaryButton(btnTancar);
 
         JPanel btnPanel = new JPanel();
         btnPanel.setBackground(UITheme.palette().bgMain());

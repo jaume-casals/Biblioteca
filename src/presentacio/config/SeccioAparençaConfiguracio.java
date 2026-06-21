@@ -2,7 +2,7 @@ package presentacio.config;
 
 import herramienta.config.Configuracio;
 import herramienta.ui.UITheme;
-import presentacio.UIComponents;
+import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
 import javax.swing.JComboBox;

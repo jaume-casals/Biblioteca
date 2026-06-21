@@ -6,7 +6,7 @@ import herramienta.config.ConfiguracioFiltre;
 import herramienta.i18n.I18n;
 import herramienta.ui.UITheme;
 import herramienta.config.ConfiguracioUi;
-import presentacio.UIComponents;
+import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
 import javax.swing.JButton;

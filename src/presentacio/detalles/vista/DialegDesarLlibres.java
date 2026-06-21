@@ -2,7 +2,7 @@ package presentacio.detalles.vista;
 
 
 
-import presentacio.UIComponents;
+import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -28,9 +28,9 @@ import javax.swing.border.EmptyBorder;
 
 import herramienta.i18n.I18n;
 import herramienta.ui.UITheme;
-import presentacio.RegistreCampsFormulari;
-import presentacio.RegistreCampsFormulari.Camp;
-import presentacio.ConstructorGraellaFormulari;
+import presentacio.formularis.RegistreCampsFormulari;
+import presentacio.formularis.RegistreCampsFormulari.Camp;
+import presentacio.formularis.ConstructorGraellaFormulari;
 
 public class DialegDesarLlibres extends JDialog {
 

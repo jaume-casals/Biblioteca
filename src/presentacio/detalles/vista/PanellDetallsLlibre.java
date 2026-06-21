@@ -2,8 +2,8 @@ package presentacio.detalles.vista;
 
 
 
-import presentacio.RegistreCampsFormulari;
-import presentacio.UIComponents;
+import presentacio.formularis.RegistreCampsFormulari;
+import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;

@@ -11,8 +11,8 @@ import javax.swing.table.*;
 import domini.Llibre;
 import herramienta.ui.UITheme;
 import persistencia.contract.LectorLlibre;
-import presentacio.ModelTaulaBiblioteca;
-import presentacio.MemoriaImatgesCoberta;
+import presentacio.models.ModelTaulaBiblioteca;
+import presentacio.util.MemoriaImatgesCoberta;
 
 public class RenderitzadorCellaCoberta extends JLabel implements TableCellRenderer {
     private static final ExecutorService LOADER = Executors.newFixedThreadPool(4, r -> {

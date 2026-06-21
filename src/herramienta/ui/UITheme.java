@@ -360,7 +360,7 @@ public class UITheme {
         I18n.aplicarSwingOptionPane();
     }
 
-    // Els helpers d'estil viuen a presentacio.UIComponents (moviment
+    // Els helpers d'estil viuen a presentacio.util.UIComponents (moviment
     // de la sessió 11): la capa presentacio és l'única consumidora, i
     // la indirecta a través d'aquesta classe s'ha eliminat de manera
     // que UIComponents té la implementació real. Els dos camps

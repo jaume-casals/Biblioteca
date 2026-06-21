@@ -1606,7 +1606,7 @@ class BibliotecaJUnit5Test {
     void splashHideBeforeShow() {
         java.awt.GraphicsEnvironment ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
         if (ge.isHeadless()) return;
-        presentacio.PantallaInici splash = new presentacio.PantallaInici();
+        presentacio.panells.PantallaInici splash = new presentacio.panells.PantallaInici();
         // Calling hide() before show() should not throw and should be a no-op
         splash.hide();
         splash.forceHide();
@@ -1690,7 +1690,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("AboutDialog: /LICENSE resource is loadable and contains GPL text")
     void aboutDialogLicenseResource() {
-        try (var in = presentacio.QuantADialeg.class.getResourceAsStream("/LICENSE")) {
+        try (var in = presentacio.dialegs.QuantADialeg.class.getResourceAsStream("/LICENSE")) {
             assertThat(in).isNotNull();
             String text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertThat(text).contains("GNU General Public License");
@@ -1871,7 +1871,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("RegistreCampsFormulari links JLabel to field for accessibility")
     void formFieldRegistryLinkLabel() {
-        var registry = new presentacio.RegistreCampsFormulari();
+        var registry = new presentacio.formularis.RegistreCampsFormulari();
         javax.swing.JLabel lbl = new javax.swing.JLabel("ISBN");
         javax.swing.JTextField tf = new javax.swing.JTextField();
         registry.linkLabel(lbl, tf);
@@ -1881,7 +1881,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("ModelTaulaBiblioteca backs row count from book list")
     void bibliotecaTableModelSetBooks() {
-        var model = new presentacio.ModelTaulaBiblioteca();
+        var model = new presentacio.models.ModelTaulaBiblioteca();
         Llibre l = new Llibre(9780306406157L, "Test", "Author", 2020, "", 5.0, 10.0, true, "");
         model.posarBooks(java.util.List.of(l));
         assertThat(model.getRowCount()).isOne();
@@ -1932,7 +1932,7 @@ class BibliotecaJUnit5Test {
 @Test
     @DisplayName("MostrarBibliotecaControl: clearCoverCache is safe to call")
     void netejarCoverCacheSmoke() {
-        presentacio.ControladorMostrarBiblioteca.netejarCoverCache();
+        presentacio.controladors.ControladorMostrarBiblioteca.netejarCoverCache();
     }
 
     @Test
@@ -1953,9 +1953,9 @@ class BibliotecaJUnit5Test {
     @DisplayName("ValidadorFormulari: invalid field gets red border")
     void formValidatorInvalidBorder() {
         javax.swing.JTextField tf = new javax.swing.JTextField("bad");
-        presentacio.ValidadorFormulari.validarField(tf, false);
+        presentacio.formularis.ValidadorFormulari.validarField(tf, false);
         assertThat(tf.getBorder()).isNotNull();
-        presentacio.ValidadorFormulari.validarField(tf, true);
+        presentacio.formularis.ValidadorFormulari.validarField(tf, true);
     }
 
     @Test

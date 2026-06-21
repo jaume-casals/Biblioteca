@@ -10,6 +10,9 @@ import javax.swing.JTextField;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import presentacio.formularis.RegistreCampsFormulari;
+import presentacio.panells.PanelCalaixFiltre;
+
 /**
  * Locks the public surface of {@link FilterDrawerPanel} after the R1
  * declarative-registry refactor: every one of the 32 public getters

@@ -1288,14 +1288,14 @@ public class BibliotecaTest {
             books.add(ValidadorLlibre.comprovarLlibre(9780000000003L, "LotR", "Tolkien", 1954, "", 10.0, 25.0, true, ""));
             books.get(2).posarDataLectura("2024-01-10");
             books.add(ValidadorLlibre.comprovarLlibre(9780000000004L, "Dune", "Herbert", 1965, "", 7.0, 15.0, true, ""));
-            presentacio.AjudaEstadistiques.EstadistiquesLlibre stats = presentacio.AjudaEstadistiques.computeStats(books);
+            presentacio.util.AjudaEstadistiques.EstadistiquesLlibre stats = presentacio.util.AjudaEstadistiques.computeStats(books);
             assertEqual(4, stats.total);
             assertEqual(3L, stats.llegits);
             double avgR = (9.0 + 8.5 + 10.0 + 7.0) / 4.0;
             assertEqual(String.format("%.2f", avgR), String.format("%.2f", stats.avgValoracio));
             double avgP = (12.5 + 10.0 + 25.0 + 15.0) / 4.0;
             assertEqual(String.format("%.2f", avgP), String.format("%.2f", stats.avgPreu));
-            String summary = presentacio.AjudaEstadistiques.buildStatsSummary(stats, "TestScope");
+            String summary = presentacio.util.AjudaEstadistiques.buildStatsSummary(stats, "TestScope");
             assertEqual(true, summary.startsWith("TestScope\n"));
             assertEqual(true, summary.contains("4"));
             assertEqual(true, summary.contains("3"));
@@ -1308,7 +1308,7 @@ public class BibliotecaTest {
             books.add(ValidadorLlibre.comprovarLlibre(9780000000002L, "B", null, null, null, null, null, true, ""));
             books.get(1).posarDataLectura("2024-12-01");
             books.add(ValidadorLlibre.comprovarLlibre(9780000000003L, "C", null, null, null, null, null, false, ""));
-            presentacio.AjudaEstadistiques.EstadistiquesLlibre stats = presentacio.AjudaEstadistiques.computeStats(books);
+            presentacio.util.AjudaEstadistiques.EstadistiquesLlibre stats = presentacio.util.AjudaEstadistiques.computeStats(books);
             assertEqual(2L, stats.booksByReadYear.getOrDefault(2024, 0L).longValue());
             if (stats.booksByReadYear.containsKey(0)) {
                 assertEqual(0L, stats.booksByReadYear.get(0).longValue());
@@ -1735,7 +1735,7 @@ public class BibliotecaTest {
             Llibre l4 = ValidadorLlibre.comprovarLlibre(9780000000004L, "D", null, null, null, null, null, null, null);
             l4.posarLlegit(false);
             books.add(l4);
-            java.util.Map<Integer, Long> byYear = presentacio.AjudaEstadistiques.booksByReadYear(books);
+            java.util.Map<Integer, Long> byYear = presentacio.util.AjudaEstadistiques.booksByReadYear(books);
             assertEqual(2L, byYear.getOrDefault(2023, 0L));
             assertEqual(1L, byYear.getOrDefault(2024, 0L));
             assertEqual(0L, byYear.getOrDefault(2025, 0L));
@@ -1746,7 +1746,7 @@ public class BibliotecaTest {
             Llibre l = ValidadorLlibre.comprovarLlibre(9780000000001L, "A", null, 2022, null, null, null, null, null);
             l.posarLlegit(true);
             books.add(l);
-            java.util.Map<Integer, Long> byYear = presentacio.AjudaEstadistiques.booksByReadYear(books);
+            java.util.Map<Integer, Long> byYear = presentacio.util.AjudaEstadistiques.booksByReadYear(books);
             assertEqual(1L, byYear.getOrDefault(2022, 0L));
         });
 

@@ -203,7 +203,7 @@ public class ControladorPanellDetallsLlibre {
 
 	private void carregarImatgeBlob(byte[] data) {
 		javax.swing.ImageIcon icon = herramienta.ui.UITheme.scaledIcon(data, IMG_W);
-		this.vista.obtenirLabelIcono().setIcon(icon != null ? icon : presentacio.MemoriaImatgesCoberta.NO_COVER);
+		this.vista.obtenirLabelIcono().setIcon(icon != null ? icon : presentacio.util.MemoriaImatgesCoberta.NO_COVER);
 	}
 
 	private void seleccionarImatge() {

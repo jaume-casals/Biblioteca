@@ -7,7 +7,7 @@ import javax.swing.table.*;
 
 import domini.Llibre;
 import herramienta.ui.UITheme;
-import presentacio.ModelTaulaBiblioteca;
+import presentacio.models.ModelTaulaBiblioteca;
 
 public class RenderitzadorBarraProgres extends JProgressBar implements TableCellRenderer {
 

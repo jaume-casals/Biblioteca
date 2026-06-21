@@ -4,7 +4,7 @@ import herramienta.config.Configuracio;
 import herramienta.config.ConfiguracioDb;
 import herramienta.ui.UITheme;
 import persistencia.contract.EscritorBiblioteca;
-import presentacio.UIComponents;
+import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
 import javax.swing.JButton;

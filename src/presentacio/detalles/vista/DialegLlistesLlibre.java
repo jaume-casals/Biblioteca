@@ -2,7 +2,7 @@ package presentacio.detalles.vista;
 
 
 
-import presentacio.UIComponents;
+import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;

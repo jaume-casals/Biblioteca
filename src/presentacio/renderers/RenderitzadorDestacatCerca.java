@@ -8,12 +8,12 @@ import javax.swing.table.*;
 
 import domini.Llibre;
 import herramienta.ui.UITheme;
-import presentacio.ModelTaulaBiblioteca;
+import presentacio.models.ModelTaulaBiblioteca;
 
 public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
     private String cercarText = "";
     /** Referència al conjunt en caché — refrescada via {@link #setLoanedISBNs(Set)} des
-     *  de {@link presentacio.ControladorTaula} cada cop que es reassigna
+     *  de {@link presentacio.controladors.ControladorTaula} cada cop que es reassigna
      *  el {@code state.loanedISBNs} del host. Evita el despatx
      *  {@code Supplier.get()} per cel·la que requeria l'API anterior
      *  (la troballa MEDIUM de tot.txt va assenyalar 10 000 crides de

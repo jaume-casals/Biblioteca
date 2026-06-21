@@ -21,7 +21,7 @@ import herramienta.i18n.I18n;
 import herramienta.text.ValidadorLlibre;
 import herramienta.text.ParseHelpers;
 import herramienta.ui.UITheme;
-import presentacio.ValidadorFormulari;
+import presentacio.formularis.ValidadorFormulari;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.detalles.vista.DialegDesarLlibres;
 

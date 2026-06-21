@@ -6,9 +6,9 @@ import herramienta.config.Configuracio;
 import herramienta.ui.DialegError;
 import herramienta.config.MidaLletra;
 import herramienta.ui.UITheme;
-import presentacio.ControladorMarcPrincipal;
-import presentacio.PanelMarcPrincipal;
-import presentacio.PantallaInici;
+import presentacio.controladors.ControladorMarcPrincipal;
+import presentacio.panells.PanelMarcPrincipal;
+import presentacio.panells.PantallaInici;
 
 import java.awt.Color;
 import java.awt.EventQueue;
