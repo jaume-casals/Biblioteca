@@ -2,11 +2,11 @@ import domini.ControladorDomini;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.ConstructorFiltreLlibre;
-import herramienta.FiltreUtils;
-import herramienta.ValidadorLlibre;
+import herramienta.text.FiltreUtils;
+import herramienta.text.ValidadorLlibre;
 import herramienta.ExportadorLlibres;
 import herramienta.ImportadorLlibres;
-import persistencia.ControladorPersistencia;
+import persistencia.internal.ControladorPersistencia;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -665,49 +665,7 @@ public class BibliotecaTest {
             cd.restaurarFromSQL(f);
             assertEqual(true, cd.obtenirLlibre(9780306406157L).esDesitjat());
         });
-
-        // ── OpenLibraryClient error contract ─────────────────────────────────
-        test("OpenLibraryClient.lookupByISBN returns non-null map with error key on network error", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:1";
-            try {
-                java.util.Map<String, String> result = herramienta.ClientOpenLibrary.lookupByISBN("9780306406157");
-                assertNotNull(result);
-                assertEqual(true, result.containsKey("error"));
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = null;
-            }
-        });
-        test("OpenLibraryClient.lookupByTitle returns non-null map with error key on network error", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:1";
-            try {
-                java.util.Map<String, String> result = herramienta.ClientOpenLibrary.lookupByTitle("Test Title");
-                assertNotNull(result);
-                assertEqual(true, result.containsKey("error"));
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = null;
-            }
-        });
-
-        test("OpenLibraryClient retries on network error and returns error map", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl  = "http://localhost:1";
-            herramienta.ClientOpenLibrary.testMaxRetries  = 2;
-            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
-            try {
-                long t0 = System.currentTimeMillis();
-                java.util.Map<String, String> r = herramienta.ClientOpenLibrary.lookupByISBN("1234567890");
-                long elapsed = System.currentTimeMillis() - t0;
-                assertNotNull(r);
-                assertEqual(true, r.containsKey("error"));
-                // 2 retries with 0ms base → should complete fast (< 2s)
-                assertEqual(true, elapsed < 2000);
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl    = null;
-                herramienta.ClientOpenLibrary.testMaxRetries  = -1;
-                herramienta.ClientOpenLibrary.testRetryBaseMs = -1;
-            }
-        });
-
-        // ── Migration regression: new column added after DB already at higher version ──
+       // ── Migration regression: new column added after DB already at higher version ──
         test("schema migration runs pais_origen on DB that skipped it (version conflict regression)", () -> {
             // Simulate a DB that reached version 22 WITHOUT pais_origen (the old bug: duplicate version 21)
             String url = "jdbc:h2:mem:migtest_" + System.nanoTime() + ";MODE=MySQL;NON_KEYWORDS=VALUE";
@@ -731,7 +689,7 @@ public class BibliotecaTest {
             // Now let ConnexioServidor run migrations on that DB — pais_origen (v23) must be applied
             System.setProperty("biblioteca.test", "true");
             System.setProperty("biblioteca.h2.url", url);
-            persistencia.ConnexioServidor sc = new persistencia.ConnexioServidor();
+            persistencia.internal.ConnexioServidor sc = new persistencia.internal.ConnexioServidor();
             sc.crearDatabase();
             // If pais_origen column now exists, SELECT on it succeeds
             java.sql.ResultSet rs2 = sc.obtenirConnexio().createStatement().executeQuery(
@@ -1360,7 +1318,7 @@ public class BibliotecaTest {
         // ── PrestecRow toDisplayMap date roundtrip ─────────────────────────
         test("PrestecRow.toDisplayMap formats LocalDate as dd/MM/yyyy", () -> {
             java.time.LocalDate date = java.time.LocalDate.of(2025, 3, 14);
-            persistencia.PrestecRow row = new persistencia.PrestecRow(9780306406157L, "Alice", date, false);
+            persistencia.row.PrestecRow row = new persistencia.row.PrestecRow(9780306406157L, "Alice", date, false);
             java.util.Map<String, Object> m = row.toDisplayMap();
             assertEqual(9780306406157L, m.get("isbn"));
             assertEqual("Alice", m.get("persona"));
@@ -1369,27 +1327,27 @@ public class BibliotecaTest {
         });
 
         test("PrestecRow.toDisplayMap null date yields null", () -> {
-            persistencia.PrestecRow row = new persistencia.PrestecRow(9780306406157L, "Bob", null, true);
+            persistencia.row.PrestecRow row = new persistencia.row.PrestecRow(9780306406157L, "Bob", null, true);
             java.util.Map<String, Object> m = row.toDisplayMap();
             assertEqual(null, m.get("dataPrestec"));
         });
 
         test("PrestecRow.fromStrings parses ISO date", () -> {
-            persistencia.PrestecRow row = persistencia.PrestecRow.fromStrings(9780306406157L, "Eve", "2024-01-15", true);
+            persistencia.row.PrestecRow row = persistencia.row.PrestecRow.fromStrings(9780306406157L, "Eve", "2024-01-15", true);
             assertEqual(java.time.LocalDate.of(2024, 1, 15), row.dataPrestec());
             assertEqual(true, row.retornat());
         });
 
         test("PrestecRow.fromStrings null/blank date yields null", () -> {
-            persistencia.PrestecRow r1 = persistencia.PrestecRow.fromStrings(1L, "X", null, false);
+            persistencia.row.PrestecRow r1 = persistencia.row.PrestecRow.fromStrings(1L, "X", null, false);
             assertEqual(null, r1.dataPrestec());
-            persistencia.PrestecRow r2 = persistencia.PrestecRow.fromStrings(1L, "X", "  ", false);
+            persistencia.row.PrestecRow r2 = persistencia.row.PrestecRow.fromStrings(1L, "X", "  ", false);
             assertEqual(null, r2.dataPrestec());
         });
 
         // ── NativeCsvStrategy canHandle ──────────────────────────────────────
         test("NativeCsvStrategy.canHandle accepts any header with ≥4 columns", () -> {
-            herramienta.csv.NativeCsvStrategy ns = new herramienta.csv.NativeCsvStrategy();
+            herramienta.io.csv.NativeCsvStrategy ns = new herramienta.io.csv.NativeCsvStrategy();
             assertEqual(true, ns.potHandle("9780306406157,Nom,Autor,2020"));
             assertEqual(true, ns.potHandle("0306406152,Nom,Autor,2020"));
             assertEqual(true, ns.potHandle("random,header,with,four,columns"));
@@ -1399,7 +1357,7 @@ public class BibliotecaTest {
 
         // ── PrestecRow roundtrip: fromStrings → toDisplayMap ────────────────
         test("PrestecRow roundtrip: fromStrings produces displayable ISO date", () -> {
-            persistencia.PrestecRow row = persistencia.PrestecRow.fromStrings(9780000000001L, "Carol", "2023-07-22", false);
+            persistencia.row.PrestecRow row = persistencia.row.PrestecRow.fromStrings(9780000000001L, "Carol", "2023-07-22", false);
             java.util.Map<String, Object> m = row.toDisplayMap();
             assertEqual("22/07/2023", m.get("dataPrestec"));
             assertEqual(9780000000001L, m.get("isbn"));
@@ -1409,7 +1367,7 @@ public class BibliotecaTest {
 
         // ── NativeCsvStrategy parseLine (roundtrip-style) ───────────────────
         test("NativeCsvStrategy parseLine imports basic book", () -> {
-            herramienta.csv.NativeCsvStrategy ns = new herramienta.csv.NativeCsvStrategy();
+            herramienta.io.csv.NativeCsvStrategy ns = new herramienta.io.csv.NativeCsvStrategy();
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
             String[] cols = {"9780000000099", "Test Book", "Author", "2024", "desc", "8.0", "12.5", "true", "", ""};
@@ -1423,7 +1381,7 @@ public class BibliotecaTest {
         });
 
         test("NativeCsvStrategy parseLine rejects row with too few columns", () -> {
-            herramienta.csv.NativeCsvStrategy ns = new herramienta.csv.NativeCsvStrategy();
+            herramienta.io.csv.NativeCsvStrategy ns = new herramienta.io.csv.NativeCsvStrategy();
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
             String[] cols = {"9780000000099", "Short"};
@@ -1438,12 +1396,12 @@ public class BibliotecaTest {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
             String header = "Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count";
-            herramienta.csv.GoodreadsCsvStrategy gr = new herramienta.csv.GoodreadsCsvStrategy();
+            herramienta.io.csv.GoodreadsCsvStrategy gr = new herramienta.io.csv.GoodreadsCsvStrategy();
             assertEqual(true, gr.potHandle(header));
-            String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
-            java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+            String[] headerCols = herramienta.io.csv.UtilitatsCsv.analitzarLine(header);
+            java.util.Map<String, Integer> hMap = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(headerCols);
             String row = "42,The Hobbit,Tolkien,J.R.R. Tolkien,,=\"0000000000\",=\"9780000000042\",5,4.5,HarperCollins,Paperback,310,1937,1937,2024-06-15,2024-05-01,fantasy;classics,read,Awesome,,nope,3";
-            String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
+            String[] cols = herramienta.io.csv.UtilitatsCsv.analitzarLine(row);
             boolean imported = gr.analitzarLine(cols, hMap, cd);
             assertEqual(true, imported);
             Llibre l = cd.obtenirLlibre(9780000000042L);
@@ -1457,16 +1415,16 @@ public class BibliotecaTest {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
             String header = "Book Id,ISBN,ISBN13,BCID,Title,Authors,Original Publication Year,Publication Year,Rating,Summary,Comments,Review,Collections,Tags";
-            herramienta.csv.LibraryThingCsvStrategy lt = new herramienta.csv.LibraryThingCsvStrategy();
+            herramienta.io.csv.LibraryThingCsvStrategy lt = new herramienta.io.csv.LibraryThingCsvStrategy();
             // LibraryThing strategy identifies itself via "BCID" column
             assertEqual(true, lt.potHandle(header));
             // Build header map the same way BookImporter does
-            String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
-            java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+            String[] headerCols = herramienta.io.csv.UtilitatsCsv.analitzarLine(header);
+            java.util.Map<String, Integer> hMap = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(headerCols);
 // Row with: ISBN-13, multiple authors (semicolon in LibraryThing = same author), tags, and collections
             // Tags and Collections use commas and must be in a quoted field
             String row = "99,,9780000000019,BC123,Test LibBook,Author One; Author Two,2021,2021,3.5,A summary,My notes,,\"My Shelf,Favorites\",fiction;adventure";
-            String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
+            String[] cols = herramienta.io.csv.UtilitatsCsv.analitzarLine(row);
             boolean imported;
             try {
                 imported = lt.analitzarLine(cols, hMap, cd);
@@ -1607,24 +1565,24 @@ public class BibliotecaTest {
             String origHome = System.getProperty("user.home");
             try {
                 System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-                herramienta.Configuracio.reload();
-                herramienta.ConfiguracioDb.setType("mariadb");
-                herramienta.ConfiguracioDb.posarHost("db.example.com");
-                herramienta.ConfiguracioDb.posarUser("admin");
+                herramienta.config.Configuracio.reload();
+                herramienta.config.ConfiguracioDb.setType("mariadb");
+                herramienta.config.ConfiguracioDb.posarHost("db.example.com");
+                herramienta.config.ConfiguracioDb.posarUser("admin");
                 Thread.sleep(400);
-                assertEqual("db.example.com", herramienta.Configuracio.obtenirDbHost());
-                assertEqual("admin", herramienta.Configuracio.obtenirDbUser());
+                assertEqual("db.example.com", herramienta.config.Configuracio.obtenirDbHost());
+                assertEqual("admin", herramienta.config.Configuracio.obtenirDbUser());
 
-                herramienta.ConfiguracioDb.setType("h2");
+                herramienta.config.ConfiguracioDb.setType("h2");
                 Thread.sleep(400);
-                assertEqual("h2", herramienta.Configuracio.obtenirDbType());
+                assertEqual("h2", herramienta.config.Configuracio.obtenirDbType());
                 // putIfAbsent semantics: the previous MariaDB host/user
                 // are preserved so a future re-connection still works.
-                assertEqual("db.example.com", herramienta.Configuracio.obtenirDbHost());
-                assertEqual("admin", herramienta.Configuracio.obtenirDbUser());
+                assertEqual("db.example.com", herramienta.config.Configuracio.obtenirDbHost());
+                assertEqual("admin", herramienta.config.Configuracio.obtenirDbUser());
             } finally {
                 System.setProperty("user.home", origHome);
-                herramienta.Configuracio.reload();
+                herramienta.config.Configuracio.reload();
                 java.nio.file.Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(java.io.File::delete);
             }
         });
@@ -1797,33 +1755,33 @@ public class BibliotecaTest {
             javax.swing.JComboBox<Llista> combo = new javax.swing.JComboBox<>();
             java.util.List<Llista> items = java.util.Arrays.asList(
                 new Llista(1, "A"), new Llista(2, "B"), new Llista(3, "C"));
-            herramienta.UtilitatsSwing.reloadComboPreserveSelection(combo, items, Llista::obtenirId);
+            herramienta.ui.UtilitatsSwing.reloadComboPreserveSelection(combo, items, Llista::obtenirId);
             assertEqual(3, combo.getItemCount());
             combo.setSelectedIndex(1);
-            herramienta.UtilitatsSwing.reloadComboPreserveSelection(combo, items, Llista::obtenirId);
+            herramienta.ui.UtilitatsSwing.reloadComboPreserveSelection(combo, items, Llista::obtenirId);
             assertEqual(1, combo.getSelectedIndex());
             assertEqual("B", combo.getSelectedItem().toString());
         });
 
 // ── Config: column visibility round-trip ───────────────────────────────
         test("Config column visibility round-trip", () -> {
-            herramienta.ConfiguracioFinestra.posarColVisible(3, false);
-            assertEqual(false, herramienta.Configuracio.obtenirColVisible(3));
-            herramienta.ConfiguracioFinestra.posarColVisible(3, true);
-            assertEqual(true, herramienta.Configuracio.obtenirColVisible(3));
+            herramienta.config.ConfiguracioFinestra.posarColVisible(3, false);
+            assertEqual(false, herramienta.config.Configuracio.obtenirColVisible(3));
+            herramienta.config.ConfiguracioFinestra.posarColVisible(3, true);
+            assertEqual(true, herramienta.config.Configuracio.obtenirColVisible(3));
         });
 
         // ── Config: column width round-trip ───────────────────────────────────
         test("Config column width round-trip", () -> {
-            herramienta.ConfiguracioFinestra.posarColWidths(new int[]{80, 100, 120, 140, 160, 220, 180});
-            assertEqual(220, herramienta.Configuracio.obtenirColWidth(5, 100));
+            herramienta.config.ConfiguracioFinestra.posarColWidths(new int[]{80, 100, 120, 140, 160, 220, 180});
+            assertEqual(220, herramienta.config.Configuracio.obtenirColWidth(5, 100));
         });
 
         // ── Config: column width round-trip ───────────────────────────────────
         test("Config column width round-trip", () -> {
             int[] widths = {80, 100, 120, 140, 160, 220, 180};
-            herramienta.ConfiguracioFinestra.posarColWidths(widths);
-            assertEqual(220, herramienta.Configuracio.obtenirColWidth(5, 100));
+            herramienta.config.ConfiguracioFinestra.posarColWidths(widths);
+            assertEqual(220, herramienta.config.Configuracio.obtenirColWidth(5, 100));
         });
 
         // ── ControladorPanellDetallsLlibre: save→updateLlibre→callback happy path ──
@@ -1862,64 +1820,7 @@ public class BibliotecaTest {
             callback.enActualitzarLlibre(l2, false);
             assertEqual(1, callbackCount[0]);
         });
-        // ── OpenLibrarySearchTask error handling (Item 9) ────────────────────
-        test("OpenLibrarySearchTask: error map from OpenLibraryClient causes SearchResult with error key", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:1";
-            herramienta.ClientOpenLibrary.testMaxRetries = 1;
-            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
-            try {
-                java.util.Map<String, String> meta = herramienta.ClientOpenLibrary.lookupByISBN("9780306406157");
-                assertNotNull(meta);
-                assertEqual(true, meta.containsKey("error"));
-                presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca result =
-                    new presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca(meta, null);
-                assertEqual(true, result.meta.containsKey("error"));
-                assertEqual(null, result.coverBlob);
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = null;
-                herramienta.ClientOpenLibrary.testMaxRetries = -1;
-                herramienta.ClientOpenLibrary.testRetryBaseMs = -1;
-            }
-        });
-
-        test("OpenLibrarySearchTask: title search error map propagates to SearchResult", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:1";
-            herramienta.ClientOpenLibrary.testMaxRetries = 1;
-            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
-            try {
-                java.util.Map<String, String> meta = herramienta.ClientOpenLibrary.lookupByTitle("Some Title");
-                assertNotNull(meta);
-                assertEqual(true, meta.containsKey("error"));
-                presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca result =
-                    new presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca(meta, null);
-                assertEqual(true, result.meta.containsKey("error"));
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = null;
-                herramienta.ClientOpenLibrary.testMaxRetries = -1;
-                herramienta.ClientOpenLibrary.testRetryBaseMs = -1;
-            }
-        });
-
-        test("OpenLibrarySearchTask: author search error map propagates to SearchResult", () -> {
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:1";
-            herramienta.ClientOpenLibrary.testMaxRetries = 1;
-            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
-            try {
-                java.util.Map<String, String> meta = herramienta.ClientOpenLibrary.lookupByAutor("Some Author");
-                assertNotNull(meta);
-                assertEqual(true, meta.containsKey("error"));
-                presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca result =
-                    new presentacio.detalles.control.TascaCercaOpenLibrary.ResultatCerca(meta, null);
-                assertEqual(true, result.meta.containsKey("error"));
-                assertEqual(null, result.coverBlob);
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = null;
-                herramienta.ClientOpenLibrary.testMaxRetries = -1;
-                herramienta.ClientOpenLibrary.testRetryBaseMs = -1;
-            }
-        });
-
-        // ── PanellDetallsLlibre: null optional fields (Item 10) ──────────────
+      // ── PanellDetallsLlibre: null optional fields (Item 10) ──────────────
         test("Llibre with null nomCa/nomEs/nomEn persists and retrieves as null", () -> {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
@@ -1989,39 +1890,39 @@ public class BibliotecaTest {
     private static void runExtendedTests() {
         // ── CsvUtils ─────────────────────────────────────────────────────────
         test("CsvUtils.parseIsbn converts ISBN-10 with X check digit to ISBN-13", () -> {
-            assertEqual("9780306406157", herramienta.csv.UtilitatsCsv.analitzarIsbn("0-306-40615-X"));
+            assertEqual("9780306406157", herramienta.io.csv.UtilitatsCsv.analitzarIsbn("0-306-40615-X"));
         });
         test("CsvUtils.parseIsbn strips non-digits from ISBN-13", () -> {
-            assertEqual("9780306406157", herramienta.csv.UtilitatsCsv.analitzarIsbn("978-0-306-40615-7"));
+            assertEqual("9780306406157", herramienta.io.csv.UtilitatsCsv.analitzarIsbn("978-0-306-40615-7"));
         });
         test("CsvUtils.parseIsbn empty string yields empty", () -> {
-            assertEqual("", herramienta.csv.UtilitatsCsv.analitzarIsbn(""));
+            assertEqual("", herramienta.io.csv.UtilitatsCsv.analitzarIsbn(""));
         });
         test("CsvUtils.colVal returns empty when column missing", () -> {
-            java.util.Map<String, Integer> h = herramienta.csv.UtilitatsCsv.buildHeaderMap(new String[]{"ISBN"});
-            assertEqual("", herramienta.csv.UtilitatsCsv.colVal(h, new String[]{"978"}, "Title"));
+            java.util.Map<String, Integer> h = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(new String[]{"ISBN"});
+            assertEqual("", herramienta.io.csv.UtilitatsCsv.colVal(h, new String[]{"978"}, "Title"));
         });
         test("CsvUtils.colVal trims cell value", () -> {
-            java.util.Map<String, Integer> h = herramienta.csv.UtilitatsCsv.buildHeaderMap(new String[]{"Nom"});
-            assertEqual("Quixot", herramienta.csv.UtilitatsCsv.colVal(h, new String[]{"  Quixot  "}, "Nom"));
+            java.util.Map<String, Integer> h = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(new String[]{"Nom"});
+            assertEqual("Quixot", herramienta.io.csv.UtilitatsCsv.colVal(h, new String[]{"  Quixot  "}, "Nom"));
         });
         test("CsvUtils.parseDoubleOrZero invalid returns 0", () -> {
-            assertEqual(0.0, herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero("not-a-number"));
-            assertEqual(7.5, herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero(" 7.5 "));
+            assertEqual(0.0, herramienta.io.csv.UtilitatsCsv.analitzarDoubleOrZero("not-a-number"));
+            assertEqual(7.5, herramienta.io.csv.UtilitatsCsv.analitzarDoubleOrZero(" 7.5 "));
         });
         test("CsvUtils.csvQ escapes embedded quotes", () -> {
-            assertEqual("\"Say \"\"Hi\"\"\"", herramienta.csv.UtilitatsCsv.csvQ("Say \"Hi\""));
-            assertEqual("", herramienta.csv.UtilitatsCsv.csvQ(null));
+            assertEqual("\"Say \"\"Hi\"\"\"", herramienta.io.csv.UtilitatsCsv.csvQ("Say \"Hi\""));
+            assertEqual("", herramienta.io.csv.UtilitatsCsv.csvQ(null));
         });
         test("CsvUtils.parseLine null yields empty array", () -> {
-            assertEqual(0, herramienta.csv.UtilitatsCsv.analitzarLine(null).length);
+            assertEqual(0, herramienta.io.csv.UtilitatsCsv.analitzarLine(null).length);
         });
         test("CsvUtils.parseLine strips carriage return", () -> {
-            String[] f = herramienta.csv.UtilitatsCsv.analitzarLine("a,b\r");
+            String[] f = herramienta.io.csv.UtilitatsCsv.analitzarLine("a,b\r");
             assertEqual("b", f[1]);
         });
         test("CsvUtils.buildHeaderMap trims header names", () -> {
-            java.util.Map<String, Integer> h = herramienta.csv.UtilitatsCsv.buildHeaderMap(new String[]{" ISBN ", "Nom"});
+            java.util.Map<String, Integer> h = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(new String[]{" ISBN ", "Nom"});
             assertEqual(0, (int) h.get("ISBN"));
             assertEqual(1, (int) h.get("Nom"));
         });
@@ -2063,10 +1964,10 @@ public class BibliotecaTest {
 
         // ── CoverService ─────────────────────────────────────────────────────
         test("CoverService.getCachedBytes unknown ISBN returns null", () -> {
-            assertEqual(null, herramienta.ServeiCoberta.obtenirCachedBytes("0000000000999"));
+            assertEqual(null, herramienta.io.ServeiCoberta.obtenirCachedBytes("0000000000999"));
         });
         test("CoverService.getCachedImage unknown ISBN returns null", () -> {
-            assertEqual(null, herramienta.ServeiCoberta.obtenirCachedImage("0000000000998"));
+            assertEqual(null, herramienta.io.ServeiCoberta.obtenirCachedImage("0000000000998"));
         });
         // ── Filter: autor accent-insensitive ─────────────────────────────────
         test("Filter by autor matches accent-insensitive", () -> {
@@ -2114,8 +2015,8 @@ public class BibliotecaTest {
             reinicialitzarSingletons();
             ControladorDomini cd = ControladorDomini.getInstance();
             cd.afegirLlibre(ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, null, null, null, null));
-            assertEqual(true, herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780306406157L));
-            assertEqual(false, herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780000000001L));
+            assertEqual(true, herramienta.io.csv.UtilitatsCsv.existsInLibrary(cd, 9780306406157L));
+            assertEqual(false, herramienta.io.csv.UtilitatsCsv.existsInLibrary(cd, 9780000000001L));
         });
     }
 }

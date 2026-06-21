@@ -19,8 +19,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 public class QuantADialeg extends JDialog {
 
@@ -109,7 +109,7 @@ public class QuantADialeg extends JDialog {
 		btnSource.addActionListener(e -> {
 			try {
 				Desktop.getDesktop().browse(new URI(SOURCE_URL));
-			} catch (Exception ex) { new herramienta.DialegError(ex).mostrarErrorMessage(); }
+			} catch (Exception ex) { new herramienta.ui.DialegError(ex).mostrarErrorMessage(); }
 		});
 		main.add(btnSource);
 		main.add(Box.createVerticalStrut(8));

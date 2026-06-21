@@ -1,11 +1,11 @@
 package presentacio;
 
 import domini.Llibre;
-import herramienta.I18n;
-import herramienta.ConfiguracioUi;
-import herramienta.ConfiguracioFinestra;
-import interficie.EscritorBiblioteca;
-import interficie.EscritorLlibre;
+import herramienta.i18n.I18n;
+import herramienta.config.ConfiguracioUi;
+import herramienta.config.ConfiguracioFinestra;
+import persistencia.contract.EscritorBiblioteca;
+import persistencia.contract.EscritorLlibre;
 import presentacio.renderers.RenderitzadorCellaCoberta;
 import presentacio.renderers.EditorCasellaLlegit;
 import presentacio.renderers.RenderitzadorCasellaLlegit;

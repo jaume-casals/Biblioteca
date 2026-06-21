@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.Set;
 
 import domini.BibliotecaException;
-import persistencia.PrestecRow;
+import persistencia.row.PrestecRow;
 
+import persistencia.row.PrestecEndarrerit;
 /**
  * Gestió de Préstecs ({@link PrestecRow}) i consultes sobre els préstecs.
  *
@@ -36,6 +37,6 @@ public final class DelegatPrestec {
     public Set<Long> obtenirLoanedISBNs() { return state.persistence().obtenirLoanedISBNs(); }
     public List<PrestecRow> obtenirAllActiveLoans() { return state.persistence().obtenirAllActiveLoans(); }
     public List<PrestecRow> obtenirLoansForIsbn(long isbn) { return state.persistence().obtenirLoansForIsbn(isbn); }
-    public List<persistencia.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold) { return state.persistence().obtenirAllOverdueLoans(daysThreshold); }
+    public List<persistencia.row.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold) { return state.persistence().obtenirAllOverdueLoans(daysThreshold); }
     public int comptarLoans(long isbn) { return state.persistence().comptarLoans(isbn); }
 }

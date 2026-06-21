@@ -15,6 +15,7 @@ import domini.Llibre;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import persistencia.internal.LlibreFieldBindings;
 /**
  * Per-class unit tests for {@link LlibreFieldBindings}.
  * Verifies forInsert / forUpdate produce the expected value arrays and

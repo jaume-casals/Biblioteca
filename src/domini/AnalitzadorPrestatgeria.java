@@ -1,7 +1,7 @@
 package domini;
 
-import herramienta.csv.UtilitatsCsv;
-import persistencia.LlibreLlistaRow;
+import herramienta.io.csv.UtilitatsCsv;
+import persistencia.row.LlibreLlistaRow;
 
 import java.io.File;
 import java.io.IOException;

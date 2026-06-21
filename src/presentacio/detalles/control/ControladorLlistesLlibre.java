@@ -7,10 +7,10 @@ import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import domini.Llista;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.UtilitatsSwing;
-import interficie.EscritorPrestatgeria;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.ui.UtilitatsSwing;
+import persistencia.contract.EscritorPrestatgeria;
 import presentacio.detalles.vista.DialegLlistesLlibre;
 import presentacio.detalles.vista.ModelTaulaLlistesLlibre;
 

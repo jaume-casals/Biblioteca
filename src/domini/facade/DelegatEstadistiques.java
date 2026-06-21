@@ -8,11 +8,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import domini.Llibre;
-import persistencia.LlibreLlistaRow;
-import persistencia.LlibreTagRow;
-import persistencia.PrestecRow;
-import persistencia.LecturaRow;
+import persistencia.row.LlibreLlistaRow;
+import persistencia.row.LlibreTagRow;
+import persistencia.row.PrestecRow;
+import persistencia.row.LecturaRow;
 
+import persistencia.dao.TagDao;
 /**
  * Estadístiques de només lectura / consultes de valors diferenciats que
  * usen l'autocompletat, el panell d'estadístiques i {@code BackupService}.
@@ -26,7 +27,7 @@ public final class DelegatEstadistiques {
     /**
      * Columna en memòria → getter de Llibre, per al camí ràpid en memòria
      * de valors diferenciats. Cada entrada HA d'estar present a
-     * {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS} perquè la llista
+     * {@code persistencia.dao.TagDao.AUTOCOMPLETE_COLUMNS} perquè la llista
      * blanca de caiguda a SQL es mantingui sincronitzada.
      */
     private static final Map<String, Function<Llibre, String>> IN_MEMORY_EXTRACTORS = Map.of(
@@ -50,7 +51,7 @@ public final class DelegatEstadistiques {
      * Valors diferenciats per a l'autocompletat. Els camps String de
      * {@link Llibre} s'escanejen en memòria (biblioteca petita, ràpid);
      * la resta cau a {@code cp.getDistinctValues(column)} que consulta
-     * la llista blanca de {@code persistencia.TagDao.AUTOCOMPLETE_COLUMNS}.
+     * la llista blanca de {@code persistencia.dao.TagDao.AUTOCOMPLETE_COLUMNS}.
      *
      * <p>Llista buida si la columna no és ni als extractors en memòria
      * ni a la llista blanca SQL.

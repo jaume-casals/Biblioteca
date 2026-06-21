@@ -1,7 +1,7 @@
 package presentacio.galeria;
 
 import domini.Llibre;
-import herramienta.UITheme;
+import herramienta.ui.UITheme;
 
 import java.awt.BorderLayout;
 import java.awt.Component;

@@ -1,6 +1,6 @@
 package presentacio;
 
-import herramienta.I18n;
+import herramienta.i18n.I18n;
 
 /** Actualitza els widgets de paginació a {@link PanelMostrarBiblioteca}. */
 public class VistaPaginacio {

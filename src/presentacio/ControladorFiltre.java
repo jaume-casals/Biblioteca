@@ -3,9 +3,9 @@ package presentacio;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.Tag;
-import herramienta.Configuracio;
-import herramienta.FiltreUtils;
-import herramienta.I18n;
+import herramienta.config.Configuracio;
+import herramienta.text.FiltreUtils;
+import herramienta.i18n.I18n;
 
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
@@ -160,7 +160,7 @@ class ControladorFiltre {
                     } catch (java.util.concurrent.CancellationException ignored) {
                         // Substituït per un worker més nou; el nou és propietari del resultat.
                     } catch (Exception ex) {
-                        new herramienta.DialegError(ex).mostrarErrorMessage();
+                        new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                     }
                 }
             };

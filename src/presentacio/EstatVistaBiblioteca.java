@@ -1,7 +1,7 @@
 package presentacio;
 
 import domini.Llibre;
-import interficie.EscritorBiblioteca;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.listener.EnActualitzarBBDD;
 
 import java.util.ArrayDeque;

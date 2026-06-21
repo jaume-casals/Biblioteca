@@ -12,14 +12,15 @@ import domini.facade.DelegatPrestatgeria;
 import domini.facade.StateContext;
 import domini.facade.DelegatEstadistiques;
 import domini.facade.TagDelegate;
-import herramienta.ServeiCopiaSeguretat;
-import interficie.EscritorBiblioteca;
-import persistencia.ControladorPersistencia;
-import persistencia.LecturaRow;
-import persistencia.LlibreLlistaRow;
-import persistencia.LlibreTagRow;
-import persistencia.PrestecRow;
+import herramienta.io.ServeiCopiaSeguretat;
+import persistencia.contract.EscritorBiblioteca;
+import persistencia.internal.ControladorPersistencia;
+import persistencia.row.LecturaRow;
+import persistencia.row.LlibreLlistaRow;
+import persistencia.row.LlibreTagRow;
+import persistencia.row.PrestecRow;
 
+import persistencia.row.PrestecEndarrerit;
 /**
  * Façana singleton sobre l'estat en memòria de la biblioteca i la persistència.
  *
@@ -157,7 +158,7 @@ public class ControladorDomini implements EscritorBiblioteca {
 	public java.util.Set<Long> obtenirLoanedISBNs()                                                   { return loans.obtenirLoanedISBNs(); }
 	public java.util.List<PrestecRow> obtenirAllActiveLoans()                                         { return loans.obtenirAllActiveLoans(); }
 	public java.util.List<PrestecRow> obtenirLoansForIsbn(long isbn)                                  { return loans.obtenirLoansForIsbn(isbn); }
-	public java.util.List<persistencia.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold)          { return loans.obtenirAllOverdueLoans(daysThreshold); }
+	public java.util.List<persistencia.row.PrestecEndarrerit> obtenirAllOverdueLoans(int daysThreshold)          { return loans.obtenirAllOverdueLoans(daysThreshold); }
 	public int comptarLoans(long isbn)                                                              { return loans.comptarLoans(isbn); }
 
 	// ── Stats / autocomplete / backup payload ────────────────────────────────

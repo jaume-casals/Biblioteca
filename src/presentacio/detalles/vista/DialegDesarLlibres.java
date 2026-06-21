@@ -26,8 +26,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 import presentacio.RegistreCampsFormulari;
 import presentacio.RegistreCampsFormulari.Camp;
 import presentacio.ConstructorGraellaFormulari;
@@ -170,7 +170,7 @@ public class DialegDesarLlibres extends JDialog {
 		textNomEn      = reg.textField("textNomEn");
 
 		comboFormat    = reg.comboBox("comboFormat");
-		comboFormat.setModel(new javax.swing.DefaultComboBoxModel<>(herramienta.FormatOptions.withBlank()));
+		comboFormat.setModel(new javax.swing.DefaultComboBoxModel<>(herramienta.text.FormatOptions.withBlank()));
 		comboFormat.setBackground(UITheme.palette().bgMain());
 		comboFormat.setForeground(UITheme.palette().textDark());
 		comboFormat.setFont(UITheme.fontBase());
@@ -247,7 +247,7 @@ public class DialegDesarLlibres extends JDialog {
 
 		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
 		UIComponents.styleAccentButton(btnCercaInternet);
-		btnCercaInternet.setBackground(herramienta.UITheme.palette().green());
+		btnCercaInternet.setBackground(herramienta.ui.UITheme.palette().green());
 		btnCercaInternet.setForeground(java.awt.Color.WHITE);
 		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
 		south.add(btnCercaInternet, BorderLayout.CENTER);

@@ -9,7 +9,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JTextField;
 import javax.swing.border.Border;
 
-import herramienta.UITheme;
+import herramienta.ui.UITheme;
 
 /** Feedback visual de validació per a camps de formulari. */
 public final class ValidadorFormulari {

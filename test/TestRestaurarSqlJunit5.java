@@ -1,7 +1,7 @@
 import domini.ControladorDomini;
 import domini.Llibre;
-import herramienta.ValidadorLlibre;
-import persistencia.ControladorPersistencia;
+import herramienta.text.ValidadorLlibre;
+import persistencia.internal.ControladorPersistencia;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

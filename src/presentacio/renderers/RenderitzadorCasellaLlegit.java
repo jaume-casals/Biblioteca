@@ -5,8 +5,8 @@ import java.awt.Component;
 import javax.swing.*;
 import javax.swing.table.*;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 public class RenderitzadorCasellaLlegit extends JCheckBox implements TableCellRenderer {
     public RenderitzadorCasellaLlegit() {

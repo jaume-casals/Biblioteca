@@ -9,8 +9,8 @@ import javax.swing.*;
 import javax.swing.table.*;
 
 import domini.Llibre;
-import herramienta.UITheme;
-import interficie.LectorLlibre;
+import herramienta.ui.UITheme;
+import persistencia.contract.LectorLlibre;
 import presentacio.ModelTaulaBiblioteca;
 import presentacio.MemoriaImatgesCoberta;
 

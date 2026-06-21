@@ -5,20 +5,21 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import domini.Llibre;
-import interficie.EscritorBiblioteca;
-import interficie.EscritorPrestatgeria;
-import interficie.EscritorEtiqueta;
-import herramienta.DialegError;
-import herramienta.FieldAutoComplete;
-import herramienta.I18n;
-import herramienta.ValidadorLlibre;
-import herramienta.ParseHelpers;
+import persistencia.contract.EscritorBiblioteca;
+import persistencia.contract.EscritorPrestatgeria;
+import persistencia.contract.EscritorEtiqueta;
+import herramienta.ui.DialegError;
+import herramienta.text.FieldAutoComplete;
+import herramienta.i18n.I18n;
+import herramienta.text.ValidadorLlibre;
+import herramienta.text.ParseHelpers;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.listener.EnEliminarLlibre;
 import presentacio.detalles.vista.PanellDetallsLlibre;
 import presentacio.detalles.vista.DialegLlistesLlibre;
 import presentacio.detalles.vista.DialegEtiquetesLlibre;
 
+import persistencia.row.PrestecRow;
 public class ControladorPanellDetallsLlibre {
 
 	private final PanellDetallsLlibre vista;
@@ -131,7 +132,7 @@ public class ControladorPanellDetallsLlibre {
 		this.vista.obtenirTextSerie().setText(l.obtenirSerie() != null ? l.obtenirSerie() : "");
 		this.vista.obtenirTextVolum().setText(l.obtenirVolum() > 0 ? String.valueOf(l.obtenirVolum()) : "");
 		this.vista.obtenirTextDataCompra().setText(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "");
-		this.vista.obtenirTextDataLectura().setText(herramienta.UtilitatsData.formatejarDateForDisplay(l.obtenirDataLectura()));
+		this.vista.obtenirTextDataLectura().setText(herramienta.text.UtilitatsData.formatejarDateForDisplay(l.obtenirDataLectura()));
 		this.vista.obtenirTextIdioma().setText(l.obtenirIdioma() != null ? l.obtenirIdioma() : "");
 		this.vista.obtenirTextPaisOrigen().setText(l.obtenirPaisOrigen() != null ? l.obtenirPaisOrigen() : "");
 		this.vista.obtenirComboFormat().setSelectedItem(l.obtenirFormat() != null ? l.obtenirFormat() : "");
@@ -145,7 +146,7 @@ public class ControladorPanellDetallsLlibre {
 		this.vista.obtenirTextNomEs().setText(l.obtenirNomEs() != null ? l.obtenirNomEs() : "");
 		this.vista.obtenirTextNomEn().setText(l.obtenirNomEn() != null ? l.obtenirNomEn() : "");
 
-		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.obtenirDisplayNom(herramienta.Configuracio.obtenirLang())));
+		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.obtenirDisplayNom(herramienta.config.Configuracio.obtenirLang())));
 
 		this.vista.obtenirTextPaginesLlegides().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
@@ -201,12 +202,12 @@ public class ControladorPanellDetallsLlibre {
 	}
 
 	private void carregarImatgeBlob(byte[] data) {
-		javax.swing.ImageIcon icon = herramienta.UITheme.scaledIcon(data, IMG_W);
+		javax.swing.ImageIcon icon = herramienta.ui.UITheme.scaledIcon(data, IMG_W);
 		this.vista.obtenirLabelIcono().setIcon(icon != null ? icon : presentacio.MemoriaImatgesCoberta.NO_COVER);
 	}
 
 	private void seleccionarImatge() {
-		File f = herramienta.UITheme.chooseImageFile(this.vista);
+		File f = herramienta.ui.UITheme.chooseImageFile(this.vista);
 		if (f != null) {
 			this.vista.obtenirTextPortada().setText(f.getAbsolutePath());
 			carregarImatgeAsync(f.getAbsolutePath());
@@ -246,7 +247,7 @@ public class ControladorPanellDetallsLlibre {
 			g2.drawString(I18n.t("field_read") + ": " + (l.obtenirLlegit() ? I18n.t("yes_lbl") : I18n.t("no_lbl")), x, y += lineH);
 			if (l.obtenirPagines() > 0) g2.drawString(I18n.t("field_pages") + ": " + l.obtenirPagines(), x, y += lineH);
 			if (pendingBlob != null) {
-				javax.swing.ImageIcon icon = herramienta.UITheme.scaledIcon(pendingBlob, 120);
+				javax.swing.ImageIcon icon = herramienta.ui.UITheme.scaledIcon(pendingBlob, 120);
 				if (icon != null) icon.paintIcon(null, g2, (int)(w - 130), 10);
 			}
 			if (l.obtenirDescripcio() != null && !l.obtenirDescripcio().toString().isEmpty()) {
@@ -307,14 +308,14 @@ public class ControladorPanellDetallsLlibre {
 
 	private class GestorHistorial {
 		void mostrarHistorialPrestecs(Llibre l) {
-			new javax.swing.SwingWorker<java.util.List<persistencia.PrestecRow>, Void>() {
-				@Override protected java.util.List<persistencia.PrestecRow> doInBackground() {
+			new javax.swing.SwingWorker<java.util.List<persistencia.row.PrestecRow>, Void>() {
+				@Override protected java.util.List<persistencia.row.PrestecRow> doInBackground() {
 					return cLlibres.obtenirLoansForIsbn(l.obtenirISBN());
 				}
 				@Override protected void done() {
 					if (isCancelled()) return;
 					try {
-						java.util.List<persistencia.PrestecRow> loans = get();
+						java.util.List<persistencia.row.PrestecRow> loans = get();
 						if (loans.isEmpty()) {
 							javax.swing.JOptionPane.showMessageDialog(vista,
 								I18n.t("dlg_no_prestecs_msg"),
@@ -333,7 +334,7 @@ public class ControladorPanellDetallsLlibre {
 						javax.swing.JScrollPane sp = new javax.swing.JScrollPane(tbl);
 						sp.setPreferredSize(new java.awt.Dimension(400, Math.min(200, loans.size() * 25 + 40)));
 						javax.swing.JOptionPane.showMessageDialog(vista, sp,
-							I18n.t("dlg_historial_title") + " — " + l.obtenirDisplayNom(herramienta.Configuracio.obtenirLang()), javax.swing.JOptionPane.PLAIN_MESSAGE);
+							I18n.t("dlg_historial_title") + " — " + l.obtenirDisplayNom(herramienta.config.Configuracio.obtenirLang()), javax.swing.JOptionPane.PLAIN_MESSAGE);
 					} catch (Exception e) {
 						new DialegError(e).mostrarErrorMessage();
 					}
@@ -422,7 +423,7 @@ public class ControladorPanellDetallsLlibre {
 							enActualizarBBDD.enActualitzarLlibre(toSave, false);
 							posarEditMode(false);
 							vista.obtenirBtnEditar().setText(I18n.t("btn_edit_java"));
-							vista.setTitle(I18n.t("dlg_book_detail_title", toSave.obtenirDisplayNom(herramienta.Configuracio.obtenirLang())));
+							vista.setTitle(I18n.t("dlg_book_detail_title", toSave.obtenirDisplayNom(herramienta.config.Configuracio.obtenirLang())));
 						} catch (Exception e) {
 							new DialegError(e).mostrarErrorMessage();
 						}

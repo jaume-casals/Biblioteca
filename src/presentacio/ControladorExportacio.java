@@ -9,10 +9,10 @@ import javax.swing.*;
 
 import domini.Llibre;
 import herramienta.ExportadorLlibres;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.ClientOpenLibrary;
-import interficie.EscritorBiblioteca;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.api.ClientOpenLibrary;
+import persistencia.contract.EscritorBiblioteca;
 
 public class ControladorExportacio {
 
@@ -163,7 +163,7 @@ public class ControladorExportacio {
                 java.util.concurrent.atomic.AtomicInteger missingCover = new java.util.concurrent.atomic.AtomicInteger(0);
                 try {
                     for (Llibre l : missing) {
-                        herramienta.ServeiCoberta.submitCoverFetch(cd, String.valueOf(l.obtenirISBN()), stored -> {
+                        herramienta.io.ServeiCoberta.submitCoverFetch(cd, String.valueOf(l.obtenirISBN()), stored -> {
                             if (stored) fetched.incrementAndGet();
                             else missingCover.incrementAndGet();
                             int d = done.incrementAndGet();

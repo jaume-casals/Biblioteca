@@ -17,8 +17,8 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import herramienta.Configuracio;
-import interficie.EscritorBiblioteca;
+import herramienta.config.Configuracio;
+import persistencia.contract.EscritorBiblioteca;
 
 /**
  * Diàleg de configuració. Cada secció visual viu a la seva pròpia classe
@@ -32,7 +32,7 @@ public class ConfiguracioDialog extends JDialog {
     private final ConfiguracioDialogListener listener;
 
     public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, EscritorBiblioteca cd) {
-        super(parent, herramienta.I18n.t("modal_settings"), true);
+        super(parent, herramienta.i18n.I18n.t("modal_settings"), true);
         if (cd == null) throw new IllegalArgumentException("ConfiguracioDialog requires non-null cd");
         this.cd = cd;
         this.listener = listener;
@@ -56,7 +56,7 @@ public class ConfiguracioDialog extends JDialog {
             this.listener);
 
         JPanel content = new JPanel();
-        content.setBackground(herramienta.UITheme.palette().bgPanel());
+        content.setBackground(herramienta.ui.UITheme.palette().bgPanel());
         GroupLayout layout = new GroupLayout(content);
         content.setLayout(layout);
         layout.setAutoCreateGaps(true);

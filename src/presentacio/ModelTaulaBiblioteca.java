@@ -6,8 +6,8 @@ import java.util.List;
 import javax.swing.table.AbstractTableModel;
 
 import domini.Llibre;
-import herramienta.Configuracio;
-import herramienta.I18n;
+import herramienta.config.Configuracio;
+import herramienta.i18n.I18n;
 
 /** Model de taula per a la taula principal de llibres de la biblioteca. */
 public class ModelTaulaBiblioteca extends AbstractTableModel {

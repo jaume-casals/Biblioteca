@@ -22,8 +22,8 @@ import javax.swing.JTable;
 import javax.swing.TransferHandler;
 import javax.swing.table.DefaultTableCellRenderer;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 public class PanelTaulaCentral extends JPanel {
 
@@ -113,7 +113,7 @@ public class PanelTaulaCentral extends JPanel {
 		taulaLlibres.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
 		String[] headerTips = {I18n.t("tip_col_cover"), I18n.t("tip_col_isbn"), I18n.t("tip_col_title"), I18n.t("tip_col_author"),
-			I18n.t("tip_col_year"), I18n.t("tip_col_rating"), I18n.t("tip_col_price") + " (" + herramienta.Configuracio.getCurrencySymbol() + ")",
+			I18n.t("tip_col_year"), I18n.t("tip_col_rating"), I18n.t("tip_col_price") + " (" + herramienta.config.Configuracio.getCurrencySymbol() + ")",
 			I18n.t("tip_col_read"), I18n.t("tip_col_progress"), I18n.t("tip_col_details")};
 
 		taulaLlibres.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {

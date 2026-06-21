@@ -22,8 +22,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 /**
  * Calaix de la barra lateral que conté les entrades de filtre (camps de

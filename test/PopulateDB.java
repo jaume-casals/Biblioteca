@@ -1,6 +1,6 @@
 import domini.ControladorDomini;
 import domini.Llibre;
-import herramienta.ValidadorLlibre;
+import herramienta.text.ValidadorLlibre;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

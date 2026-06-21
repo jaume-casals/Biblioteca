@@ -94,16 +94,16 @@ public class RegistreCampsFormulari {
                     tf.setText(f.defaultText());
                     yield tf;
                 }
-                case CHECK  -> f.labelKey() == null ? new JCheckBox() : new JCheckBox(herramienta.I18n.t(f.labelKey()));
+                case CHECK  -> f.labelKey() == null ? new JCheckBox() : new JCheckBox(herramienta.i18n.I18n.t(f.labelKey()));
                 case COMBO  -> new JComboBox<>();
-                case BUTTON -> f.labelKey() == null ? new JButton() : new JButton(herramienta.I18n.t(f.labelKey()));
+                case BUTTON -> f.labelKey() == null ? new JButton() : new JButton(herramienta.i18n.I18n.t(f.labelKey()));
             };
             if (f.tooltipKey() != null) {
-                c.setToolTipText(herramienta.I18n.t(f.tooltipKey()));
+                c.setToolTipText(herramienta.i18n.I18n.t(f.tooltipKey()));
             }
             components.put(f.key(), c);
             if (f.labelKey() != null && f.kind() != Tipus.CHECK && f.kind() != Tipus.BUTTON) {
-                JLabel lbl = new JLabel(herramienta.I18n.t(f.labelKey()) + ":");
+                JLabel lbl = new JLabel(herramienta.i18n.I18n.t(f.labelKey()) + ":");
                 labels.put(f.key(), lbl);
             }
         }

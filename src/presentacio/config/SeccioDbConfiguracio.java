@@ -1,7 +1,7 @@
 package presentacio.config;
 
-import herramienta.Configuracio;
-import herramienta.UITheme;
+import herramienta.config.Configuracio;
+import herramienta.ui.UITheme;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -16,8 +16,9 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
-import static herramienta.I18n.t;
+import static herramienta.i18n.I18n.t;
 
+import persistencia.internal.ConnexioServidor;
 /** Secció de base de dades: tipus / host / usuari / contrasenya + botó de provar connexió. */
 public final class SeccioDbConfiguracio {
     private SeccioDbConfiguracio() {}
@@ -83,7 +84,7 @@ public final class SeccioDbConfiguracio {
             btnTestConn.setText(t("btn_test_connection") + "…");
             new SwingWorker<Void, Void>() {
                 @Override protected Void doInBackground() throws Exception {
-                    try (java.sql.Connection conn = persistencia.ConnexioServidor.testConnection(testProps, passSnapshot)) {
+                    try (java.sql.Connection conn = persistencia.internal.ConnexioServidor.testConnection(testProps, passSnapshot)) {
                         // try-with-resources garanteix el tancament fins i tot
                         // si la prova llença després d'obrir la connexió
                         // (segons el finding MEDIUM de tot.txt).

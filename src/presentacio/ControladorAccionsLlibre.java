@@ -4,10 +4,10 @@ package presentacio;
 import presentacio.config.ConfiguracioDialogListener;
 import domini.Llibre;
 import domini.Llista;
-import herramienta.Configuracio;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.config.Configuracio;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 import presentacio.listener.EnEliminarLlibre;
 

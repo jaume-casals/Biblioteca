@@ -1,0 +1,212 @@
+package herramienta.ui;
+
+import herramienta.config.Configuracio;
+import herramienta.i18n.I18n;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.io.*;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import javax.swing.*;
+
+public class DialegError {
+
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger(DialegError.class.getName());
+    private static final boolean IS_HEADLESS = GraphicsEnvironment.isHeadless();
+
+    private final String titol;
+    private final String missatge;
+    private final String detalls;
+    private final boolean esValidation;
+
+    public DialegError(Exception e) {
+        this(I18n.t("dlg_error_title"), e);
+    }
+
+    public DialegError(String titol, Exception e) {
+        this.esValidation = e instanceof IllegalArgumentException
+            || e instanceof domini.BibliotecaException.Validacio;
+        this.titol = esValidation ? I18n.t("dlg_validacio_title") : titol;
+
+        this.missatge = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+
+        if (esValidation) {
+            this.detalls = "";
+        } else {
+            StringBuilder sb = new StringBuilder();
+            if (e.getCause() != null && e.getCause().getMessage() != null)
+                sb.append("\n").append(I18n.t("err_causa")).append(" ").append(e.getCause().getMessage());
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            sb.append("\n\n").append(I18n.t("err_stack_trace")).append("\n").append(sw);
+            this.detalls = sb.toString();
+        }
+    }
+
+    public DialegError(String titol, String missatge) {
+        this.titol = titol;
+        this.missatge = missatge;
+        this.detalls = "";
+        this.esValidation = false;
+    }
+
+    private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private static final long MAX_LOG_BYTES = 1024 * 1024; // 1 MB
+
+    private static void escriureToLog(String titol, String missatge, String detalls) {
+        try {
+            Path logFile = Configuracio.bibliotecaDir().resolve("errors.log");
+            logFile.getParent().toFile().mkdirs();
+            java.io.File f = logFile.toFile();
+            if (f.exists() && f.length() > MAX_LOG_BYTES) {
+                Path old = logFile.resolveSibling("errors.log.1");
+                java.nio.file.Files.move(logFile, old,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(f, true), 4096)) {
+                bw.write("[" + LocalDateTime.now().format(LOG_FMT) + "] " + titol + ": " + missatge);
+                bw.newLine();
+                if (!detalls.isBlank()) { bw.write(detalls); bw.newLine(); }
+                bw.write("---");
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            LOG.log(java.util.logging.Level.WARNING, "Error escrivint el registre d'errors", e);
+        }
+    }
+
+    public void mostrarErrorMessage() {
+        if (Boolean.getBoolean("biblioteca.test")) return;
+        escriureToLog(titol, missatge, detalls);
+        if (IS_HEADLESS) {
+            LOG.warning("[" + titol + "] " + missatge);
+            return;
+        }
+        if (esValidation) mostrarValidationDialog();
+        else mostrarSystemErrorDialog();
+    }
+
+    // ── Validació (error de l'usuari) ──────────────────────────────────────────
+
+    private void mostrarValidationDialog() {
+        Color accent = UITheme.palette().sidebarAccent();
+
+        JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 11));
+        header.setBackground(accent);
+
+        JLabel iconLbl = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
+
+        JLabel titleLbl = new JLabel(titol);
+        titleLbl.setFont(UITheme.fontBold());
+        titleLbl.setForeground(Color.WHITE);
+
+        header.add(iconLbl);
+        header.add(titleLbl);
+
+        JLabel msgLbl = new JLabel(
+            "<html><body style='width:300px'>" + escHtml(missatge) + "</body></html>");
+        msgLbl.setFont(UITheme.fontBase());
+        msgLbl.setForeground(UITheme.palette().textDark());
+        msgLbl.setBorder(BorderFactory.createEmptyBorder(18, 22, 10, 22));
+
+        JButton btnOk = new JButton(I18n.t("btn_ok"));
+        btnOk.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btnOk.setBackground(accent);
+        btnOk.setForeground(Color.WHITE);
+        btnOk.setFont(UITheme.fontBold());
+        btnOk.setFocusPainted(false);
+        btnOk.setBorderPainted(false);
+        btnOk.setOpaque(true);
+        btnOk.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnOk.setPreferredSize(new Dimension(110, 32));
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 10));
+        btnPanel.setBackground(UITheme.palette().bgMain());
+        btnPanel.add(btnOk);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(UITheme.palette().bgMain());
+        content.add(msgLbl, BorderLayout.CENTER);
+        content.add(btnPanel, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle(titol);
+        dialog.setModal(true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(header, BorderLayout.NORTH);
+        dialog.add(content, BorderLayout.CENTER);
+        dialog.pack();
+        dialog.setMinimumSize(new Dimension(360, dialog.getHeight()));
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(false);
+
+        btnOk.addActionListener(ev -> dialog.dispose());
+        dialog.getRootPane().setDefaultButton(btnOk);
+        dialog.getRootPane().registerKeyboardAction(
+            ev -> dialog.dispose(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        dialog.setVisible(true);
+    }
+
+    // ── Error del sistema / tècnic ────────────────────────────────────────────
+
+    private void mostrarSystemErrorDialog() {
+        JLabel lblTitol = new JLabel(titol, SwingConstants.LEFT);
+        lblTitol.setFont(UITheme.fontBold());
+        lblTitol.setForeground(UITheme.palette().danger());
+        lblTitol.setBorder(BorderFactory.createEmptyBorder(8, 10, 4, 10));
+
+        String full = missatge + (detalls.isBlank() ? "" : detalls);
+        JTextArea textArea = new JTextArea(full);
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setFont(UITheme.fontSmall());
+        textArea.setBackground(UITheme.palette().bgPanel());
+        textArea.setForeground(UITheme.palette().textDark());
+        textArea.setCaretColor(UITheme.palette().textDark());
+        textArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        textArea.setCaretPosition(0);
+
+        JScrollPane scroll = new JScrollPane(textArea);
+        scroll.setPreferredSize(new Dimension(520, 220));
+        scroll.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+
+        JButton btnTancar = new JButton(I18n.t("btn_close"));
+        presentacio.UIComponents.styleSecondaryButton(btnTancar);
+
+        JPanel btnPanel = new JPanel();
+        btnPanel.setBackground(UITheme.palette().bgMain());
+        btnPanel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
+        btnPanel.add(btnTancar);
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle(titol);
+        dialog.setModal(true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.getContentPane().setBackground(UITheme.palette().bgMain());
+        dialog.setLayout(new BorderLayout());
+        dialog.add(lblTitol, BorderLayout.NORTH);
+        dialog.add(scroll, BorderLayout.CENTER);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+        dialog.pack();
+        dialog.setLocationRelativeTo(null);
+        dialog.setResizable(true);
+
+        btnTancar.addActionListener(ev -> dialog.dispose());
+        dialog.getRootPane().setDefaultButton(btnTancar);
+
+        dialog.setVisible(true);
+    }
+
+    private static String escHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("\n", "<br>");
+    }
+}

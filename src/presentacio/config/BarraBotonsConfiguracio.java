@@ -1,11 +1,11 @@
 package presentacio.config;
 
-import herramienta.Configuracio;
-import herramienta.ConfiguracioDb;
-import herramienta.ConfiguracioFiltre;
-import herramienta.I18n;
-import herramienta.UITheme;
-import herramienta.ConfiguracioUi;
+import herramienta.config.Configuracio;
+import herramienta.config.ConfiguracioDb;
+import herramienta.config.ConfiguracioFiltre;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
+import herramienta.config.ConfiguracioUi;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -17,7 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import static herramienta.I18n.t;
+import static herramienta.i18n.I18n.t;
 
 /**
  * Barra de botons de desar/cancel·lar. Recull els valors dels camps

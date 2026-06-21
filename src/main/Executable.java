@@ -1,11 +1,11 @@
 package main;
 
 import domini.ControladorDomini;
-import interficie.EscritorBiblioteca;
-import herramienta.Configuracio;
-import herramienta.DialegError;
-import herramienta.MidaLletra;
-import herramienta.UITheme;
+import persistencia.contract.EscritorBiblioteca;
+import herramienta.config.Configuracio;
+import herramienta.ui.DialegError;
+import herramienta.config.MidaLletra;
+import herramienta.ui.UITheme;
 import presentacio.ControladorMarcPrincipal;
 import presentacio.PanelMarcPrincipal;
 import presentacio.PantallaInici;
@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
 
+import persistencia.internal.ControladorPersistencia;
 public class Executable {
 
     private static final Logger LOG = Logger.getLogger(Executable.class.getName());
@@ -53,7 +54,7 @@ public class Executable {
             err.mostrarErrorMessage();
         });
 
-        main.ShutdownHooks.register(persistencia.ControladorPersistencia::reinicialitzarForProfileSwitch);
+        main.ShutdownHooks.register(persistencia.internal.ControladorPersistencia::reinicialitzarForProfileSwitch);
 
         iniciarSwingWithSplash();
     }

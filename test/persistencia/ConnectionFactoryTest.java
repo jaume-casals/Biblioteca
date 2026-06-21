@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.internal.ConnectionConfig;
 /**
  * Per-class unit tests for {@link ConnectionConfig}. The
  * {@code ConnectionFactory} wrapper was inlined into

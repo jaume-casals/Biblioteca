@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.internal.JarLocator;
 /**
  * Per-class unit tests for {@link JarLocator}.
  * Drives the strategy chain with synthetic system properties and a fake

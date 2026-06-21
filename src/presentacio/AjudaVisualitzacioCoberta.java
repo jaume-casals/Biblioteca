@@ -1,6 +1,6 @@
 package presentacio;
 
-import interficie.LectorBiblioteca;
+import persistencia.contract.LectorBiblioteca;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -40,7 +40,7 @@ public final class AjudaVisualitzacioCoberta {
                     }
                 } catch (Exception ignored) {}
                 target.setIcon(null);
-                target.setText(herramienta.I18n.t("lbl_no_cover"));
+                target.setText(herramienta.i18n.I18n.t("lbl_no_cover"));
             }
         }.execute();
     }

@@ -1,11 +1,11 @@
 package presentacio;
 
 import domini.Llibre;
-import herramienta.Configuracio;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.UITheme;
-import herramienta.ConfiguracioUi;
+import herramienta.config.Configuracio;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
+import herramienta.config.ConfiguracioUi;
 import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 
 import javax.swing.JFrame;

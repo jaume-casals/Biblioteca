@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 import javax.swing.*;
 
 import domini.Llibre;
-import interficie.EscritorBiblioteca;
+import persistencia.contract.EscritorBiblioteca;
 
 public class ControladorIOLlibre {
 

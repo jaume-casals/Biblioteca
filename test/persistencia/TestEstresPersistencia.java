@@ -17,6 +17,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.internal.ConnexioServidor;
+import persistencia.internal.ControladorPersistencia;
 /**
  * Tests d'estrès / càrrega contra la capa de persistència H2 en memòria.
  * Verifica que les insercions i lectures SQL massives són correctes, que
@@ -53,7 +55,7 @@ class TestEstresPersistencia {
             // Reutilitza la connexió del singleton per passar per l'esquema real
             var scField = ControladorPersistencia.class.getDeclaredField("sc");
             scField.setAccessible(true);
-            persistencia.ConnexioServidor sc = (persistencia.ConnexioServidor) scField.get(cp);
+            persistencia.internal.ConnexioServidor sc = (persistencia.internal.ConnexioServidor) scField.get(cp);
             c = sc.obtenirConnexio();
             c.setAutoCommit(false);
             try (PreparedStatement ps = c.prepareStatement(

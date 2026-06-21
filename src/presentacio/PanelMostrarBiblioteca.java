@@ -17,8 +17,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import herramienta.UITheme;
-import herramienta.ConfiguracioUi;
+import herramienta.ui.UITheme;
+import herramienta.config.ConfiguracioUi;
 
 public class PanelMostrarBiblioteca extends JPanel {
 
@@ -87,7 +87,7 @@ public class PanelMostrarBiblioteca extends JPanel {
 	 * reestablert.
 	 */
 	public void aplicarTheme() {
-		UITheme.rebuildFonts(herramienta.MidaLletra.fromKey(herramienta.Configuracio.obtenirFontSize()));
+		UITheme.rebuildFonts(herramienta.config.MidaLletra.fromKey(herramienta.config.Configuracio.obtenirFontSize()));
         ConfiguracioUi.posarTheme(UITheme.obtenirTheme());
 
 		setBackground(UITheme.palette().bgMain());

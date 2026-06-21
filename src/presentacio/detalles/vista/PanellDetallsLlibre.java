@@ -31,8 +31,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 public class PanellDetallsLlibre extends JDialog {
 
@@ -173,7 +173,7 @@ public class PanellDetallsLlibre extends JDialog {
 		afegirFieldEntry(grid, "textIdioma",          I18n.t("field_language"));
 		afegirFieldEntry(grid, "textPaisOrigen",      I18n.t("field_country"));
 		afegirComboEntry(grid, "comboFormat",         I18n.t("field_format"),
-				herramienta.FormatOptions.withBlank());
+				herramienta.text.FormatOptions.withBlank());
 		afegirComboEntry(grid, "comboEstat",          I18n.t("field_estat"),
 				new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
 		afegirCheckEntry(grid, "chckDesitjat",        I18n.t("field_wishlist"),

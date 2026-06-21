@@ -7,7 +7,7 @@ import java.util.Map;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import persistencia.ControladorPersistencia;
+import persistencia.internal.ControladorPersistencia;
 
 /**
  * Estat compartit en memòria per a la façana {@link domini.ControladorDomini}.

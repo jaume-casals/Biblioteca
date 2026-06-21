@@ -14,13 +14,13 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 import domini.Llibre;
-import interficie.EscritorBiblioteca;
-import herramienta.DialegError;
-import herramienta.FieldAutoComplete;
-import herramienta.I18n;
-import herramienta.ValidadorLlibre;
-import herramienta.ParseHelpers;
-import herramienta.UITheme;
+import persistencia.contract.EscritorBiblioteca;
+import herramienta.ui.DialegError;
+import herramienta.text.FieldAutoComplete;
+import herramienta.i18n.I18n;
+import herramienta.text.ValidadorLlibre;
+import herramienta.text.ParseHelpers;
+import herramienta.ui.UITheme;
 import presentacio.ValidadorFormulari;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.detalles.vista.DialegDesarLlibres;
@@ -60,7 +60,7 @@ public class ControladorDialegDesarLlibres {
 		if (cd == null) throw new IllegalArgumentException("ControladorDialegDesarLlibres requires non-null cd");
 		cLlibres = cd;
 
-		double defVal = herramienta.Configuracio.obtenirDefaultValoracio();
+		double defVal = herramienta.config.Configuracio.obtenirDefaultValoracio();
 		if (defVal > 0.0) this.vista.obtenirTextValoracio().setText(String.valueOf(defVal));
 
 		this.vista.obtenirTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -184,7 +184,7 @@ public class ControladorDialegDesarLlibres {
 				return;
 			}
 
-			Llibre l = herramienta.ValidadorLlibre.comprovarLlibre(
+			Llibre l = herramienta.text.ValidadorLlibre.comprovarLlibre(
 				isbn, vista.obtenirTextNom().getText().trim(),
 				vista.obtenirTextAutor().getText().trim(), any,
 				vista.obtenirTextDescripcio().getText().trim(),
@@ -218,7 +218,7 @@ public class ControladorDialegDesarLlibres {
 			l.posarNomEs(nomEs.isEmpty() ? null : nomEs);
 			l.posarNomEn(nomEn.isEmpty() ? null : nomEn);
 			l.posarImatgeBlob(selectedBlob);
-			herramienta.ValidadorLlibre.validarExtrasAll(l.obtenirEditorial(), l.obtenirSerie(), l.obtenirIdioma(), l.obtenirFormat(), l.obtenirPaisOrigen(), l.obtenirEstat());
+			herramienta.text.ValidadorLlibre.validarExtrasAll(l.obtenirEditorial(), l.obtenirSerie(), l.obtenirIdioma(), l.obtenirFormat(), l.obtenirPaisOrigen(), l.obtenirEstat());
 
 			vista.obtenirBtnGuardar().setEnabled(false);
 			final EnActualitzarBBDD cb = callback;

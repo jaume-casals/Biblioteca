@@ -7,7 +7,7 @@ import java.util.Set;
 
 import domini.BibliotecaException;
 import domini.Tag;
-import herramienta.I18n;
+import herramienta.i18n.I18n;
 
 /**
  * Gestió d'Etiquetes ({@link Tag}) i operacions de relació llibre↔etiqueta.

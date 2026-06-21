@@ -14,8 +14,8 @@ import domini.BibliotecaException;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.EspecificacioOrdenacio;
-import herramienta.FiltreUtils;
-import persistencia.ControladorPersistencia;
+import herramienta.text.FiltreUtils;
+import persistencia.internal.ControladorPersistencia;
 
 /**
  * CRUD de llibres ({@link Llibre}), accés a blobs, cerca i ordenació/filtra.

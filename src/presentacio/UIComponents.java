@@ -13,7 +13,7 @@ import javax.swing.JTextField;
 import javax.swing.border.Border;
 import javax.swing.plaf.basic.BasicButtonUI;
 
-import herramienta.UITheme;
+import herramienta.ui.UITheme;
 
 /**
  * Fàbrica de la capa de presentacio per a components Swing sensibles al tema.
@@ -23,7 +23,7 @@ import herramienta.UITheme;
  * canviar a un altre look-and-feel no obligui a tocar cada panell/control.
  *
  * <p>Els cossos d'estil (button / label / panel / field / cardBorder) es
- * van moure aquí des de {@code herramienta.UITheme} durant la
+ * van moure aquí des de {@code herramienta.ui.UITheme} durant la
  * correcció de build de la sessió 11 perquè {@code UITheme} només
  * posseeixi l'estat del tema (colors, fonts, claus UIManager) i
  * {@code UIComponents} posseeixi l'aplicació d'estils a la capa de

@@ -30,10 +30,10 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import domini.Llibre;
-import herramienta.Configuracio;
-import herramienta.UITheme;
-import herramienta.ConfiguracioUi;
-import interficie.EscritorBiblioteca;
+import herramienta.config.Configuracio;
+import herramienta.ui.UITheme;
+import herramienta.config.ConfiguracioUi;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.galeria.FabricantTargetesCoberta;
 import presentacio.galeria.ServeiImatgesCoberta;
 import presentacio.galeria.PopupZoomCoberta;

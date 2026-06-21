@@ -1,8 +1,8 @@
 package presentacio;
 
 import domini.Llibre;
-import herramienta.I18n;
-import interficie.LectorLlibre;
+import herramienta.i18n.I18n;
+import persistencia.contract.LectorLlibre;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -91,7 +91,7 @@ class ControladorPaginaTaula {
                             paginationView.apply(r.page, r.totalPages);
                         }
                     } catch (Exception ex) {
-                        new herramienta.DialegError(ex).mostrarErrorMessage();
+                        new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                     }
                 }
             }.execute();

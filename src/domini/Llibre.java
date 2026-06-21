@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import persistencia.dao.LlibreDaoCore;
 public class Llibre {
 
 	private Long isbn;
@@ -154,7 +155,7 @@ public class Llibre {
 
 	public List<String> obtenirAutors() { return Collections.unmodifiableList(autors); }
 
-	/** Usat en carregar múltiples files d'autors des de SQL (veure {@link persistencia.LlibreDaoCore#obtenirAll}). */
+	/** Usat en carregar múltiples files d'autors des de SQL (veure {@link persistencia.dao.LlibreDaoCore#obtenirAll}). */
 	public void afegirAutorNom(String nom) {
 		if (nom == null || nom.isBlank()) return;
 		autors.add(nom);
@@ -172,7 +173,7 @@ public class Llibre {
 
 	public void posarAny(Integer any) {
 		if (any != null && any < 0)
-			throw new BibliotecaException.Validacio(herramienta.I18n.t("val_any_negatiu", any));
+			throw new BibliotecaException.Validacio(herramienta.i18n.I18n.t("val_any_negatiu", any));
 		this.any = any;
 	}
 

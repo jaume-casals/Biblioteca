@@ -3,8 +3,11 @@ package herramienta;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import herramienta.csv.UtilitatsCsv;
-import interficie.EscritorBiblioteca;
+import herramienta.io.JsonImporter;
+import herramienta.io.csv.UtilitatsCsv;
+import herramienta.text.UtilitatsData;
+import herramienta.text.ValidadorLlibre;
+import persistencia.contract.EscritorBiblioteca;
 
 public class ImportadorLlibres {
 
@@ -31,13 +34,13 @@ public class ImportadorLlibres {
     public static ResultatImportacio importarCSV(java.io.File file, EscritorBiblioteca cd) {
         int ok = 0, skipped = 0, err = 0;
         java.util.List<String> errors = new java.util.ArrayList<>();
-        java.util.List<herramienta.csv.CsvImportStrategy> strategies = java.util.List.of(
-            new herramienta.csv.LibraryThingCsvStrategy(),
-            new herramienta.csv.GoodreadsCsvStrategy(),
-            new herramienta.csv.NativeCsvStrategy());
+        java.util.List<herramienta.io.csv.CsvImportStrategy> strategies = java.util.List.of(
+            new herramienta.io.csv.LibraryThingCsvStrategy(),
+            new herramienta.io.csv.GoodreadsCsvStrategy(),
+            new herramienta.io.csv.NativeCsvStrategy());
         try (java.io.Reader reader = new java.io.BufferedReader(
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
-            herramienta.csv.Rfc4180Reader br = new herramienta.csv.Rfc4180Reader(reader);
+            herramienta.io.csv.Rfc4180Reader br = new herramienta.io.csv.Rfc4180Reader(reader);
             String[] headerRow = br.next();
             if (headerRow == null) return new ResultatImportacio(0, 0, 0, java.util.Collections.emptyList());
             // Elimina un BOM UTF-8 de la PRIMERA cel·la de la capçalera
@@ -47,16 +50,16 @@ public class ImportadorLlibres {
                 headerRow[0] = headerRow[0].substring(1);
             }
             String headerLine = String.join(",", headerRow);
-            herramienta.csv.CsvImportStrategy strategy = null;
-            for (herramienta.csv.CsvImportStrategy s : strategies) {
+            herramienta.io.csv.CsvImportStrategy strategy = null;
+            for (herramienta.io.csv.CsvImportStrategy s : strategies) {
                 if (s.potHandle(headerLine)) { strategy = s; break; }
             }
-            if (strategy == null) strategy = new herramienta.csv.NativeCsvStrategy();
+            if (strategy == null) strategy = new herramienta.io.csv.NativeCsvStrategy();
             // Reutilitza el headerRow ja analitzat — no cal tornar a
             // concatenar i dividir les mateixes dades a través de
             // CsvUtils.parseLine (malbaratament d'una passada de 5-10 ms
             // per a CSV grans).
-            java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerRow);
+            java.util.Map<String, Integer> hMap = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(headerRow);
             while (br.hasNext()) {
                 String[] row = br.next();
                 if (row == null || row.length == 0 || (row.length == 1 && row[0].isBlank())) continue;

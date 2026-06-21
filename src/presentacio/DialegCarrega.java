@@ -1,6 +1,6 @@
 package presentacio;
 
-import herramienta.UITheme;
+import herramienta.ui.UITheme;
 import javax.swing.*;
 import java.awt.*;
 

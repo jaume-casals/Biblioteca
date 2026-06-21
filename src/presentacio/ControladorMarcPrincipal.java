@@ -15,13 +15,14 @@ import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import domini.LlibreFilter;
-import herramienta.Configuracio;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.ConfiguracioFinestra;
-import interficie.EscritorBiblioteca;
+import herramienta.config.Configuracio;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.config.ConfiguracioFinestra;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.listener.EnActualitzarBBDD;
 
+import persistencia.row.PrestecEndarrerit;
 /**
  * Façana sobre els 6 sub-controladors (bookActions, bookIO, contextMenu,
  * filter, shelf, tablePage) per a la pantalla principal.
@@ -129,9 +130,9 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme");
 		am.put("toggleTheme", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				herramienta.UITheme.Tema[] themes = herramienta.UITheme.Tema.values();
-				herramienta.UITheme.Tema next = themes[(herramienta.UITheme.obtenirTheme().ordinal() + 1) % themes.length];
-				herramienta.UITheme.posarTheme(next);
+				herramienta.ui.UITheme.Tema[] themes = herramienta.ui.UITheme.Tema.values();
+				herramienta.ui.UITheme.Tema next = themes[(herramienta.ui.UITheme.obtenirTheme().ordinal() + 1) % themes.length];
+				herramienta.ui.UITheme.posarTheme(next);
 				libraryPanel.aplicarTheme();
 			}
 		});
@@ -246,10 +247,10 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 			protected Void doInBackground() {
 				StringBuilder sb;
 				try {
-					List<persistencia.PrestecEndarrerit> loans = cLlibres.obtenirAllOverdueLoans(30);
+					List<persistencia.row.PrestecEndarrerit> loans = cLlibres.obtenirAllOverdueLoans(30);
 					if (!loans.isEmpty()) {
 						sb = new StringBuilder(I18n.t("alert_overdue_loans_msg") + "\n\n");
-						for (persistencia.PrestecEndarrerit row : loans) {
+						for (persistencia.row.PrestecEndarrerit row : loans) {
 							sb.append("• ").append(row.nomPersona()).append(" → ").append(row.nomLlibre()).append(" (").append(row.dataPrestecDisplay()).append(")\n");
 						}
 						overdueMsg = sb.toString();
@@ -257,7 +258,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 				} catch (Exception ignored) {}
 
 				try {
-					int goal = herramienta.Configuracio.obtenirReadingGoal();
+					int goal = herramienta.config.Configuracio.obtenirReadingGoal();
 					if (goal > 0) {
 						List<Llibre> all = cLlibres.obtenirAllLlibres();
 						java.time.LocalDate today = java.time.LocalDate.now();
@@ -267,7 +268,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 						long llegirThisYear = all.stream()
 							.filter(l -> Boolean.TRUE.equals(l.obtenirLlegit()))
 							.filter(l -> l.obtenirDataLectura() != null
-								&& herramienta.UtilitatsData.analitzarYear(l.obtenirDataLectura())
+								&& herramienta.text.UtilitatsData.analitzarYear(l.obtenirDataLectura())
 									.filter(y -> y == currentYear).isPresent())
 							.count();
 						int daysLeft = daysInYear - dayOfYear;

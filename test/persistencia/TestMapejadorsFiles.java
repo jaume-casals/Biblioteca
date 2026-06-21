@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.internal.MapejadorsFiles;
 /**
  * Per-class unit tests for {@link RowMappers}.
  * Uses a private constructor — exercises the public static helpers against

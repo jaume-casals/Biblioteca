@@ -14,7 +14,7 @@ import net.jqwik.api.constraints.StringLength;
 import net.jqwik.api.lifecycle.AfterTry;
 import net.jqwik.api.lifecycle.BeforeContainer;
 import net.jqwik.api.lifecycle.BeforeTry;
-import persistencia.ControladorPersistencia;
+import persistencia.internal.ControladorPersistencia;
 
 import java.util.List;
 import java.util.Random;

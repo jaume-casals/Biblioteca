@@ -1,7 +1,7 @@
 package presentacio.config;
 
-import herramienta.Configuracio;
-import herramienta.UITheme;
+import herramienta.config.Configuracio;
+import herramienta.ui.UITheme;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -11,7 +11,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import static herramienta.I18n.t;
+import static herramienta.i18n.I18n.t;
 
 /** Language section: UI language picker. */
 public final class SeccioIdiomaConfiguracio {

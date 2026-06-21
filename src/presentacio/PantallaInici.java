@@ -1,7 +1,7 @@
 package presentacio;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 import javax.swing.*;
 import java.awt.*;
 import java.util.concurrent.Executors;

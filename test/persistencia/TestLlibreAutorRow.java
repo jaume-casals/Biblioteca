@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.row.LlibreAutorRow;
+import persistencia.row.RelationRow;
 class TestLlibreAutorRow {
 
     @Test

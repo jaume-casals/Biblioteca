@@ -1,7 +1,7 @@
 package presentacio.galeria;
 
 import domini.Llibre;
-import interficie.LectorLlibre;
+import persistencia.contract.LectorLlibre;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;

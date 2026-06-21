@@ -4,8 +4,8 @@ package presentacio;
 
 import presentacio.UIComponents;
 import domini.Llibre;
-import herramienta.UITheme;
-import interficie.EscritorBiblioteca;
+import herramienta.ui.UITheme;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.listener.EnActualitzarBBDD;
 
 import javax.swing.JButton;
@@ -178,7 +178,7 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
                     }
                     filtrarCtrl.quitarFiltros();
                 } catch (Exception e) {
-                    new herramienta.DialegError(e).mostrarErrorMessage();
+                    new herramienta.ui.DialegError(e).mostrarErrorMessage();
                 }
             }
         }.execute();

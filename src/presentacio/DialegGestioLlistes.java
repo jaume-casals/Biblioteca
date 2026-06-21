@@ -17,11 +17,11 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
 import domini.Llista;
-import interficie.EscritorPrestatgeria;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.UITheme;
-import herramienta.UtilitatsColor;
+import persistencia.contract.EscritorPrestatgeria;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
+import herramienta.ui.UtilitatsColor;
 
 public class DialegGestioLlistes extends JDialog {
 
@@ -164,8 +164,8 @@ public class DialegGestioLlistes extends JDialog {
         // prestatgeria encara no té color (pujat a ColorSwatchPicker.DEFAULT_HEX
         // segons el finding MEDIUM de tot.txt sobre el valor per defecte compartit).
         java.awt.Color initial = sel.obtenirColor() != null
-            ? java.awt.Color.decode(sel.obtenirColor()) : java.awt.Color.decode(herramienta.SelectorMostraColor.DEFAULT_HEX);
-        String hex = herramienta.SelectorMostraColor.chooseHex(this, initial, "dlg_escull_color_title");
+            ? java.awt.Color.decode(sel.obtenirColor()) : java.awt.Color.decode(herramienta.ui.SelectorMostraColor.DEFAULT_HEX);
+        String hex = herramienta.ui.SelectorMostraColor.chooseHex(this, initial, "dlg_escull_color_title");
         if (hex == null) return;
         try {
             cd.posarLlistaColor(sel.obtenirId(), hex);

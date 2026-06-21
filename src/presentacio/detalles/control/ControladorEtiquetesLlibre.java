@@ -12,11 +12,11 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import domini.Llibre;
-import persistencia.LlibreTagRow;
+import persistencia.row.LlibreTagRow;
 import domini.Tag;
-import interficie.EscritorEtiqueta;
-import herramienta.DialegError;
-import herramienta.I18n;
+import persistencia.contract.EscritorEtiqueta;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
 import presentacio.detalles.vista.DialegEtiquetesLlibre;
 
 public class ControladorEtiquetesLlibre {

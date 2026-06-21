@@ -8,7 +8,7 @@ import domini.BibliotecaException;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import herramienta.ServeiCopiaSeguretat;
+import herramienta.io.ServeiCopiaSeguretat;
 
 /**
  * Còpia de seguretat, restauració i buidat total. Toca les tres llistes
@@ -40,7 +40,7 @@ public final class DelegatCopiaSeguretat {
      *   <li>Pren una captura atòmica de {@code bib}, {@code llistes},
      *       {@code tags} sota el lock (còpies defensives; les mutacions
      *       posteriors a la captura no afecten la còpia).</li>
-     *   <li>Lliura la captura a {@link herramienta.ServeiCopiaSeguretat#copiaSegToSQL} sense
+     *   <li>Lliura la captura a {@link herramienta.io.ServeiCopiaSeguretat#copiaSegToSQL} sense
      *       tenir el lock agafat.</li>
      * </ol>
      */
@@ -126,7 +126,7 @@ public final class DelegatCopiaSeguretat {
             } catch (Exception e) {
                 try { state.persistence().executarSQLFile(backup); }
                 catch (Exception ex) { throw new BibliotecaException(
-                    herramienta.I18n.t("dlg_restore_rollback_failed", backup.getAbsolutePath())
+                    herramienta.i18n.I18n.t("dlg_restore_rollback_failed", backup.getAbsolutePath())
                     + "\n\nError original: " + e.getMessage()
                     + "\nError de recuperació: " + ex.getMessage(), ex); }
                 throw new BibliotecaException("Ha fallat la restauració: " + e.getMessage(), e);

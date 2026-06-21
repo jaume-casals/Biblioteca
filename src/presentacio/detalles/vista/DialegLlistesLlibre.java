@@ -21,10 +21,10 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import domini.Llibre;
-import interficie.EscritorPrestatgeria;
+import persistencia.contract.EscritorPrestatgeria;
 import domini.Llista;
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 import presentacio.detalles.control.ControladorLlistesLlibre;
 
 public class DialegLlistesLlibre extends JDialog {

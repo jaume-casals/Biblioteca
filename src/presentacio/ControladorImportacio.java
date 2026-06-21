@@ -8,10 +8,10 @@ import javax.swing.*;
 
 import domini.Llibre;
 import herramienta.ImportadorLlibres;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.ClientOpenLibrary;
-import interficie.EscritorBiblioteca;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.api.ClientOpenLibrary;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.detalles.control.ControladorDialegDesarLlibres;
 import presentacio.detalles.vista.DialegDesarLlibres;
 

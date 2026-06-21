@@ -7,8 +7,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 /** Contingut de la finestra principal (taula de biblioteca + barra d'estat). La cromoteca del frame viu a {@link MainFrameControl}. */
 public class PanelMarcPrincipal extends JPanel {

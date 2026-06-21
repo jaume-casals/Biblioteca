@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.row.PrestecRow;
 class TestPrestecRow {
 
     @Test

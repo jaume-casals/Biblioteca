@@ -7,10 +7,10 @@ import javax.swing.*;
 import javax.swing.table.*;
 
 import domini.Llibre;
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.UITheme;
-import interficie.EscritorLlibre;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
+import persistencia.contract.EscritorLlibre;
 import presentacio.ControladorMarcPrincipal;
 
 /**

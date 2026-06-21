@@ -1,9 +1,9 @@
 package presentacio;
 
 import domini.Llibre;
-import herramienta.DialegError;
-import herramienta.FormatOptions;
-import herramienta.I18n;
+import herramienta.ui.DialegError;
+import herramienta.text.FormatOptions;
+import herramienta.i18n.I18n;
 import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 import presentacio.detalles.control.ControladorDialegDesarLlibres;
 import presentacio.detalles.vista.DialegDesarLlibres;

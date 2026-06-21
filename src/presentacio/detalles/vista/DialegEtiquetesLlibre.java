@@ -24,9 +24,9 @@ import javax.swing.table.DefaultTableModel;
 
 import domini.Llibre;
 import domini.Tag;
-import herramienta.I18n;
-import herramienta.UtilitatsSwing;
-import herramienta.UITheme;
+import herramienta.i18n.I18n;
+import herramienta.ui.UtilitatsSwing;
+import herramienta.ui.UITheme;
 
 /**
  * Diàleg per gestionar les etiquetes assignades a un sol llibre.
@@ -55,7 +55,7 @@ public class DialegEtiquetesLlibre extends JDialog {
         this(owner, llibre, null);
     }
 
-    public DialegEtiquetesLlibre(Window owner, Llibre llibre, interficie.EscritorEtiqueta cd) {
+    public DialegEtiquetesLlibre(Window owner, Llibre llibre, persistencia.contract.EscritorEtiqueta cd) {
         super(owner, I18n.t("dlg_tags_for_book", llibre.obtenirNom()), ModalityType.APPLICATION_MODAL);
         setSize(400, 440);
         setLocationRelativeTo(owner);

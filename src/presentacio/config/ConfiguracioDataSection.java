@@ -1,9 +1,9 @@
 package presentacio.config;
 
-import herramienta.Configuracio;
-import herramienta.ConfiguracioDb;
-import herramienta.UITheme;
-import interficie.EscritorBiblioteca;
+import herramienta.config.Configuracio;
+import herramienta.config.ConfiguracioDb;
+import herramienta.ui.UITheme;
+import persistencia.contract.EscritorBiblioteca;
 import presentacio.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -14,7 +14,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingWorker;
 
-import static herramienta.I18n.t;
+import static herramienta.i18n.I18n.t;
 
 /** Secció de dades: visualització de mida de BBDD, botó de buidar biblioteca, selector de perfil. */
 public final class ConfiguracioDataSection {
@@ -74,7 +74,7 @@ public final class ConfiguracioDataSection {
                     t("dlg_clear_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 owner.dispose();
             } catch (Exception ex) {
-                new herramienta.DialegError(ex).mostrarErrorMessage();
+                new herramienta.ui.DialegError(ex).mostrarErrorMessage();
             }
         });
 

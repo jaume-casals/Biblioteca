@@ -10,8 +10,8 @@ import domini.BibliotecaException;
 import domini.Llibre;
 import domini.LlibreLlistaContext;
 import domini.Llista;
-import herramienta.I18n;
-import persistencia.ControladorPersistencia;
+import herramienta.i18n.I18n;
+import persistencia.internal.ControladorPersistencia;
 
 /**
  * Gestió de Prestatgeries ({@link Llista}) i operacions de relació llibre↔prestatge.

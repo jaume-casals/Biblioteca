@@ -3,14 +3,19 @@ package herramienta;
 import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
-import interficie.LectorBiblioteca;
-import interficie.LectorPrestatgeria;
+import herramienta.i18n.Escapers;
+import herramienta.i18n.I18n;
+import herramienta.ui.DialegError;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import persistencia.contract.LectorBiblioteca;
+import persistencia.contract.LectorPrestatgeria;
 
+import persistencia.row.LlibreLlistaRow;
+import persistencia.row.LlibreTagRow;
 public class ExportadorLlibres {
 
     private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
@@ -18,19 +23,19 @@ public class ExportadorLlibres {
     public static void exportarCSV(File f, List<Llibre> view, LectorPrestatgeria cd) throws Exception {
         java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
         for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
-        java.util.Map<Long, java.util.List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
+        java.util.Map<Long, java.util.List<persistencia.row.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (persistencia.row.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
             llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
         domini.AnalitzadorPrestatgeria.exportarToCsv(f, view, llistaById, llistaRows);
     }
 
     public static void exportarJSON(File f, LectorBiblioteca cd) throws Exception {
         // Càrrega en lot de les dades relacionals per evitar N+1
-        java.util.Map<Long, List<persistencia.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.LlibreLlistaRow r : cd.obtenirAllLlibreLlistaRows())
+        java.util.Map<Long, List<persistencia.row.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
+        for (persistencia.row.LlibreLlistaRow r : cd.obtenirAllLlibreLlistaRows())
             llistaRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
-        java.util.Map<Long, List<persistencia.LlibreTagRow>> tagRows = new java.util.HashMap<>();
-        for (persistencia.LlibreTagRow r : cd.obtenirAllLlibreTagRows())
+        java.util.Map<Long, List<persistencia.row.LlibreTagRow>> tagRows = new java.util.HashMap<>();
+        for (persistencia.row.LlibreTagRow r : cd.obtenirAllLlibreTagRows())
             tagRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
 
         // Construeix el document com un sol LinkedHashMap perquè GSON
@@ -152,7 +157,7 @@ public class ExportadorLlibres {
             boolean tableView, java.util.Map<Long, byte[]> coverBlobs) {
         List<Llista> llistes = cd.obtenirAllLlistes();
         java.util.Map<Long, java.util.Set<Integer>> isbnToLlistes = new java.util.HashMap<>();
-        for (persistencia.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
+        for (persistencia.row.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
             isbnToLlistes.computeIfAbsent(row.isbn(), k -> new java.util.HashSet<>()).add(row.llistaId());
         java.util.Set<Long> printed = new java.util.HashSet<>();
         for (Llista llista : llistes) {
@@ -298,7 +303,7 @@ public class ExportadorLlibres {
     }
 
     private static java.util.Map<String, Object> jsonLlibreMap(Llibre l,
-            List<persistencia.LlibreLlistaRow> llistaRows, List<persistencia.LlibreTagRow> tagRows) {
+            List<persistencia.row.LlibreLlistaRow> llistaRows, List<persistencia.row.LlibreTagRow> tagRows) {
         java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("isbn", l.obtenirISBN());
         m.put("nom", l.obtenirNom());
@@ -322,7 +327,7 @@ public class ExportadorLlibres {
         m.put("format", l.obtenirFormat());
         m.put("paisOrigen", l.obtenirPaisOrigen());
         java.util.List<java.util.Map<String, Object>> llistes = new java.util.ArrayList<>();
-        for (persistencia.LlibreLlistaRow row : llistaRows) {
+        for (persistencia.row.LlibreLlistaRow row : llistaRows) {
             java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();
             entry.put("id", row.llistaId());
             entry.put("valoracio", row.valoracio());
@@ -331,7 +336,7 @@ public class ExportadorLlibres {
         }
         m.put("llistes", llistes);
         java.util.List<Integer> tagIds = new java.util.ArrayList<>();
-        for (persistencia.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
+        for (persistencia.row.LlibreTagRow row : tagRows) tagIds.add(row.tagId());
         m.put("tags", tagIds);
         return m;
     }

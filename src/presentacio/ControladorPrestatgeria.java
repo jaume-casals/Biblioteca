@@ -1,9 +1,9 @@
 package presentacio;
 
 import domini.Llista;
-import herramienta.DialegError;
-import herramienta.I18n;
-import interficie.EscritorPrestatgeria;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import persistencia.contract.EscritorPrestatgeria;
 
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
@@ -39,7 +39,7 @@ class ControladorPrestatgeria {
         try {
             state.cd.reanomenarLlista(l.obtenirId(), newNom.trim());
             refrescarComboLlistes();
-        } catch (Exception ex) { new herramienta.DialegError(ex).mostrarErrorMessage(); }
+        } catch (Exception ex) { new herramienta.ui.DialegError(ex).mostrarErrorMessage(); }
     }
 
     private void onDragToShelf(int shelfId, List<Long> isbns) {
@@ -123,7 +123,7 @@ class ControladorPrestatgeria {
                     host.pageCtrl().posarCurrentPage(0);
                     host.mostrarPage(0);
                 } catch (Exception ex) {
-                    new herramienta.DialegError(ex).mostrarErrorMessage();
+                    new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                 }
             }
         }.execute();
@@ -182,7 +182,7 @@ class ControladorPrestatgeria {
                 try {
                     for (domini.Tag t : get()) combo.addItem(t);
                 } catch (Exception ex) {
-                    new herramienta.DialegError(ex).mostrarErrorMessage();
+                    new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                 }
             }
         }.execute();

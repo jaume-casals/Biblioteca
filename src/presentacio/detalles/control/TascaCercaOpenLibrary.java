@@ -7,10 +7,10 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 
-import herramienta.DialegError;
-import herramienta.I18n;
-import herramienta.ClientOpenLibrary;
-import herramienta.UITheme;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import herramienta.api.ClientOpenLibrary;
+import herramienta.ui.UITheme;
 import presentacio.detalles.vista.DialegDesarLlibres;
 
 public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.ResultatCerca, Void> {

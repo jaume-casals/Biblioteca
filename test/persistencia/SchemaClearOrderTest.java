@@ -13,6 +13,9 @@ import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.*;
 
+import persistencia.internal.ConnexioServidor;
+import persistencia.internal.ControladorPersistencia;
+import persistencia.internal.Schema;
 /**
  * Verifica el contracte de {@link Schema#CLEAR_ORDER} — afegir o eliminar
  * una taula de l'esquema també ha d'actualitzar el vector, si no les

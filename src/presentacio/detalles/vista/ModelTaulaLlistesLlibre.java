@@ -1,7 +1,7 @@
 package presentacio.detalles.vista;
 
 import domini.Llista;
-import herramienta.I18n;
+import herramienta.i18n.I18n;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;

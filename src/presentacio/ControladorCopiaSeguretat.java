@@ -7,9 +7,9 @@ import java.util.function.Supplier;
 import javax.swing.*;
 
 import domini.Llibre;
-import herramienta.DialegError;
-import herramienta.I18n;
-import interficie.AdministradorBiblioteca;
+import herramienta.ui.DialegError;
+import herramienta.i18n.I18n;
+import persistencia.contract.AdministradorBiblioteca;
 
 public class ControladorCopiaSeguretat {
 

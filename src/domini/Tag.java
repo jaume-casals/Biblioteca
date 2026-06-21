@@ -3,6 +3,7 @@ package domini;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import persistencia.dao.TagDao;
 public class Tag {
     private int id;
     private String nom;
@@ -19,7 +20,7 @@ public class Tag {
     public String obtenirNom() { return nom; }
     public void posarNom(String nom) {
         if (nom == null || nom.isBlank())
-            throw new BibliotecaException.Validacio(herramienta.I18n.t("val_tag_blank"));
+            throw new BibliotecaException.Validacio(herramienta.i18n.I18n.t("val_tag_blank"));
         this.nom = nom;
     }
 

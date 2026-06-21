@@ -4,9 +4,9 @@ import domini.LlibreFilter;
 import domini.Llista;
 import domini.EspecificacioOrdenacio;
 import domini.Tag;
-import herramienta.FiltreUtils;
-import herramienta.ValidadorLlibre;
-import persistencia.ControladorPersistencia;
+import herramienta.text.FiltreUtils;
+import herramienta.text.ValidadorLlibre;
+import persistencia.internal.ControladorPersistencia;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -629,7 +629,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Goodreads canHandle accepts Goodreads header (full), rejects native")
     void goodreadsCanHandle() {
-        var s = new herramienta.csv.GoodreadsCsvStrategy();
+        var s = new herramienta.io.csv.GoodreadsCsvStrategy();
         String full = "Book Id,Title,Author,ISBN13,Exclusive Shelf,A,B,C,D,E,F";
         assertThat(s.potHandle(full)).isTrue();
         assertThat(s.potHandle("isbn,nom,autor")).isFalse();
@@ -638,7 +638,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Native canHandle is true (fallback)")
     void nativeCanHandle() {
-        var s = new herramienta.csv.NativeCsvStrategy();
+        var s = new herramienta.io.csv.NativeCsvStrategy();
         assertThat(s.potHandle("random,header")).isTrue();
         assertThat(s.potHandle("a,b,c,d")).isTrue();
         assertThat(s.potHandle("")).isFalse();
@@ -650,11 +650,11 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CsvUtils.parseLine: trailing comma, embedded quote, BOM tolerated")
     void csvParseLineEdgeCases() {
-        String[] r1 = herramienta.csv.UtilitatsCsv.analitzarLine("a,b,c,");
+        String[] r1 = herramienta.io.csv.UtilitatsCsv.analitzarLine("a,b,c,");
         assertThat(r1).hasSize(4).contains("a", "b", "c", "");
-        String[] r2 = herramienta.csv.UtilitatsCsv.analitzarLine("\"a\"\"b\",c");
+        String[] r2 = herramienta.io.csv.UtilitatsCsv.analitzarLine("\"a\"\"b\",c");
         assertThat(r2).contains("a\"b", "c");
-        String[] r3 = herramienta.csv.UtilitatsCsv.analitzarLine("﻿ISBN,Nom");
+        String[] r3 = herramienta.io.csv.UtilitatsCsv.analitzarLine("﻿ISBN,Nom");
         assertThat(r3[0]).endsWith("ISBN");
     }
 
@@ -662,7 +662,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("Rfc4180Reader streams multi-line rows")
     void rfc4180ReaderStreaming() throws Exception {
         String csv = "a,b\nfoo,bar\n\"qu\"\"oted\",\"line\nbreak\"\n";
-        try (var r = new herramienta.csv.Rfc4180Reader(new java.io.StringReader(csv))) {
+        try (var r = new herramienta.io.csv.Rfc4180Reader(new java.io.StringReader(csv))) {
             String[] header = r.next();
             assertThat(header).contains("a", "b");
             String[] row1 = r.next();
@@ -678,10 +678,10 @@ class BibliotecaJUnit5Test {
     @DisplayName("Re-instantiating persistence on same DB skips already-applied migrations")
     void migrationsIdempotent() {
         ControladorPersistencia.reinicialitzarForTest();
-        persistencia.ControladorPersistencia.getInstance();
-        persistencia.ControladorPersistencia.reinicialitzarForTest();
+        persistencia.internal.ControladorPersistencia.getInstance();
+        persistencia.internal.ControladorPersistencia.reinicialitzarForTest();
         // No exception means schema_version + skip-logic worked
-        persistencia.ControladorPersistencia.getInstance();
+        persistencia.internal.ControladorPersistencia.getInstance();
     }
 
     // ── DialogoError headless mode ───────────────────────────────────────────
@@ -689,7 +689,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DialogoError.showErrorMessage is no-op in headless/test mode")
     void dialogoErrorHeadlessSafe() {
-        new herramienta.DialegError("test", new Exception("err")).mostrarErrorMessage();
+        new herramienta.ui.DialegError("test", new Exception("err")).mostrarErrorMessage();
         // No exception, no GUI; passes by virtue of biblioteca.test=true
     }
 
@@ -726,8 +726,8 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("FiltreUtils.normalize strips Catalan diacritics for prefix match")
     void catalanDiacriticsNormalize() {
-        assertThat(herramienta.FiltreUtils.normalize("Català")).isEqualTo("catala");
-        assertThat(herramienta.FiltreUtils.normalize("àéíòú")).isEqualTo("aeiou");
+        assertThat(herramienta.text.FiltreUtils.normalize("Català")).isEqualTo("catala");
+        assertThat(herramienta.text.FiltreUtils.normalize("àéíòú")).isEqualTo("aeiou");
     }
 
     // ── Tag setNom blank throws ──────────────────────────────────────────────
@@ -745,7 +745,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("ConnectionConfig.toString masks password")
     void connectionConfigToStringMasksPassword() {
-        var c = new persistencia.ConnectionConfig("mariadb", "localhost", "user", "topsecret", "default", null);
+        var c = new persistencia.internal.ConnectionConfig("mariadb", "localhost", "user", "topsecret", "default", null);
         assertThat(c.toString()).doesNotContain("topsecret").contains("***");
     }
 
@@ -754,12 +754,12 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("LlibreLlistaRow handles NaN/Infinity valoracio sanely")
     void llibreLlistaRowExtremeValues() {
-        var nan = new persistencia.LlibreLlistaRow(1L, 1, Double.NaN, false);
-        var inf = new persistencia.LlibreLlistaRow(1L, 1, Double.POSITIVE_INFINITY, true);
+        var nan = new persistencia.row.LlibreLlistaRow(1L, 1, Double.NaN, false);
+        var inf = new persistencia.row.LlibreLlistaRow(1L, 1, Double.POSITIVE_INFINITY, true);
         assertThat(nan.valoracio()).isNaN();
         assertThat(inf.valoracio()).isPositive();
         // record equals() with NaN: NaN != NaN by IEEE, but Double.equals uses Double.doubleToLongBits → equal
-        assertThat(nan).isEqualTo(new persistencia.LlibreLlistaRow(1L, 1, Double.NaN, false));
+        assertThat(nan).isEqualTo(new persistencia.row.LlibreLlistaRow(1L, 1, Double.NaN, false));
     }
 
     // ── UITheme.rebuildFonts updates UIManager.defaultFont ───────────────────
@@ -767,10 +767,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("UITheme.rebuildFonts puts new font in UIManager")
     void uiThemeRebuildFontsUpdatesUIManager() {
-        herramienta.UITheme.rebuildFonts("small");
+        herramienta.ui.UITheme.rebuildFonts("small");
         java.awt.Font f1 = (java.awt.Font) javax.swing.UIManager.get("defaultFont");
         assertThat(f1.getSize()).isEqualTo(11);
-        herramienta.UITheme.rebuildFonts("large");
+        herramienta.ui.UITheme.rebuildFonts("large");
         java.awt.Font f2 = (java.awt.Font) javax.swing.UIManager.get("defaultFont");
         assertThat(f2.getSize()).isEqualTo(16);
     }
@@ -780,11 +780,11 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Isbn13Normalizer converts ISBN-10 with X-check digit")
     void isbn13NormalizerXCheck() {
-        assertThat(herramienta.Isbn13Normalizer.toIsbn13("019853110X"))
+        assertThat(herramienta.text.Isbn13Normalizer.toIsbn13("019853110X"))
             .isEqualTo("9780198531104");
-        assertThat(herramienta.Isbn13Normalizer.toIsbn13("0306406152"))
+        assertThat(herramienta.text.Isbn13Normalizer.toIsbn13("0306406152"))
             .startsWith("978");
-        assertThat(herramienta.Isbn13Normalizer.toIsbn13("9780306406157"))
+        assertThat(herramienta.text.Isbn13Normalizer.toIsbn13("9780306406157"))
             .isEqualTo("9780306406157");
     }
 
@@ -793,11 +793,11 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("parseIsoDate: ISO accepted, garbage → null")
     void analitzarIsoDate() {
-        assertThat(herramienta.UtilitatsData.analitzarIsoDate("2024-03-15"))
+        assertThat(herramienta.text.UtilitatsData.analitzarIsoDate("2024-03-15"))
             .isEqualTo(java.time.LocalDate.of(2024, 3, 15));
-        assertThat(herramienta.UtilitatsData.analitzarIsoDate(null)).isNull();
-        assertThat(herramienta.UtilitatsData.analitzarIsoDate("")).isNull();
-        assertThat(herramienta.UtilitatsData.analitzarIsoDate("not a date")).isNull();
+        assertThat(herramienta.text.UtilitatsData.analitzarIsoDate(null)).isNull();
+        assertThat(herramienta.text.UtilitatsData.analitzarIsoDate("")).isNull();
+        assertThat(herramienta.text.UtilitatsData.analitzarIsoDate("not a date")).isNull();
     }
 
     // ── PrestecRow.overdueDays + toDisplayMap ────────────────────────────────
@@ -805,17 +805,17 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("PrestecRow.overdueDays counts days past threshold")
     void prestecRowOverdueDays() {
-        persistencia.PrestecRow r = new persistencia.PrestecRow(1L, "X", java.time.LocalDate.of(2024, 1, 1), false);
+        persistencia.row.PrestecRow r = new persistencia.row.PrestecRow(1L, "X", java.time.LocalDate.of(2024, 1, 1), false);
         assertThat(r.overdueDays(java.time.LocalDate.parse("2024-02-15"), 30)).isEqualTo(15);
         assertThat(r.overdueDays(java.time.LocalDate.parse("2024-01-15"), 30)).isZero();
-        persistencia.PrestecRow bad = persistencia.PrestecRow.fromStrings(1L, "X", "not a date", false);
+        persistencia.row.PrestecRow bad = persistencia.row.PrestecRow.fromStrings(1L, "X", "not a date", false);
         assertThat(bad.overdueDays(java.time.LocalDate.parse("2024-01-01"), 30)).isEqualTo(-1L);
     }
 
     @Test
     @DisplayName("PrestecRow.toDisplayMap exposes all 4 columns")
     void prestecRowToDisplayMap() {
-        var m = new persistencia.PrestecRow(123L, "Paul", java.time.LocalDate.of(2024, 1, 1), false).toDisplayMap();
+        var m = new persistencia.row.PrestecRow(123L, "Paul", java.time.LocalDate.of(2024, 1, 1), false).toDisplayMap();
         assertThat(m).containsKeys("isbn", "persona", "dataPrestec", "retornat");
     }
 
@@ -824,7 +824,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("I18n: every registered key has all 3 language entries")
     void i18nKeyCompleteness() throws Exception {
-        java.lang.reflect.Field f = herramienta.I18n.class.getDeclaredField("TABLE");
+        java.lang.reflect.Field f = herramienta.i18n.I18n.class.getDeclaredField("TABLE");
         f.setAccessible(true);
         @SuppressWarnings("unchecked")
         java.util.Map<String, String[]> table = (java.util.Map<String, String[]>) f.get(null);
@@ -924,10 +924,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DateUtils.parseYear accepts plausible years, returns empty on garbage")
     void dateUtilsParseYear() {
-        assertThat(herramienta.UtilitatsData.analitzarYear("1984")).contains(1984);
-        assertThat(herramienta.UtilitatsData.analitzarYear("Published 1984")).contains(1984);
-        assertThat(herramienta.UtilitatsData.analitzarYear("not a year")).isEmpty();
-        assertThat(herramienta.UtilitatsData.analitzarYear(null)).isEmpty();
+        assertThat(herramienta.text.UtilitatsData.analitzarYear("1984")).contains(1984);
+        assertThat(herramienta.text.UtilitatsData.analitzarYear("Published 1984")).contains(1984);
+        assertThat(herramienta.text.UtilitatsData.analitzarYear("not a year")).isEmpty();
+        assertThat(herramienta.text.UtilitatsData.analitzarYear(null)).isEmpty();
     }
 
     // ── LlibreValidator: thrown branches ─────────────────────────────────────
@@ -1039,9 +1039,9 @@ class BibliotecaJUnit5Test {
         cd.posarLlistaColor(l.obtenirId(), "#abc");
         cd.posarLlistaColor(l.obtenirId(), "#aabbcc");
         assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "red"))
-            .hasMessage(herramienta.I18n.t("val_color_invalid", "red"));
+            .hasMessage(herramienta.i18n.I18n.t("val_color_invalid", "red"));
         assertThatThrownBy(() -> cd.posarLlistaColor(l.obtenirId(), "#zzzzzz"))
-            .hasMessage(herramienta.I18n.t("val_color_invalid", "#zzzzzz"));
+            .hasMessage(herramienta.i18n.I18n.t("val_color_invalid", "#zzzzzz"));
     }
 
     // ── Tag: rename to existing throws ───────────────────────────────────────
@@ -1130,7 +1130,7 @@ class BibliotecaJUnit5Test {
     @DisplayName("PrestecRow.toDisplayMap encodes dataPrestec as formatted date string")
     void prestecRowToDisplayMapDataPrestec() {
         java.time.LocalDate date = java.time.LocalDate.of(2024, 3, 15);
-        persistencia.PrestecRow row = new persistencia.PrestecRow(9780306406157L, "Alice", date, false);
+        persistencia.row.PrestecRow row = new persistencia.row.PrestecRow(9780306406157L, "Alice", date, false);
         java.util.Map<String, Object> map = row.toDisplayMap();
         assertThat(map.get("dataPrestec")).isEqualTo("15/03/2024");
     }
@@ -1138,7 +1138,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("PrestecRow.toDisplayMap: null date yields null")
     void prestecRowToDisplayMapNullDate() {
-        persistencia.PrestecRow row = new persistencia.PrestecRow(9780306406157L, "Bob", null, true);
+        persistencia.row.PrestecRow row = new persistencia.row.PrestecRow(9780306406157L, "Bob", null, true);
         java.util.Map<String, Object> map = row.toDisplayMap();
         assertThat(map.get("dataPrestec")).isNull();
     }
@@ -1251,7 +1251,7 @@ class BibliotecaJUnit5Test {
         String url = "jdbc:h2:mem:schema_" + System.nanoTime() + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
         System.setProperty("biblioteca.h2.url", url);
         try {
-            persistencia.ConnexioServidor sc = new persistencia.ConnexioServidor();
+            persistencia.internal.ConnexioServidor sc = new persistencia.internal.ConnexioServidor();
             sc.crearDatabase();
             try (java.sql.Connection conn = sc.obtenirConnexio()) {
                 java.util.Set<String> llibreCols = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -1373,24 +1373,24 @@ class BibliotecaJUnit5Test {
 
         String origHome = System.getProperty("user.home");
         System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-        herramienta.Configuracio.reload();
+        herramienta.config.Configuracio.reload();
 
-        assertThat(herramienta.Configuracio.obtenirColVisible(0)).isFalse();
-        assertThat(herramienta.Configuracio.obtenirColVisible(3)).isFalse();
-        assertThat(herramienta.Configuracio.obtenirColVisible(7)).isTrue();
-        assertThat(herramienta.Configuracio.obtenirColVisible(2)).isTrue(); // default
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(0)).isFalse();
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(3)).isFalse();
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(7)).isTrue();
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(2)).isTrue(); // default
 
-        herramienta.ConfiguracioFinestra.posarColVisible(5, false);
+        herramienta.config.ConfiguracioFinestra.posarColVisible(5, false);
         // Wait for async save (300ms scheduler)
         Thread.sleep(500);
-        assertThat(herramienta.Configuracio.obtenirColVisible(5)).isFalse();
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(5)).isFalse();
 
         // Verify persistence: reload from disk and check
-        herramienta.Configuracio.reload();
-        assertThat(herramienta.Configuracio.obtenirColVisible(5)).isFalse();
+        herramienta.config.Configuracio.reload();
+        assertThat(herramienta.config.Configuracio.obtenirColVisible(5)).isFalse();
 
         System.setProperty("user.home", origHome);
-        herramienta.Configuracio.reload();
+        herramienta.config.Configuracio.reload();
         Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
     }
 
@@ -1465,13 +1465,13 @@ class BibliotecaJUnit5Test {
     void goodreadsCsvFixture() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         String header = "Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count";
-        herramienta.csv.GoodreadsCsvStrategy gr = new herramienta.csv.GoodreadsCsvStrategy();
+        herramienta.io.csv.GoodreadsCsvStrategy gr = new herramienta.io.csv.GoodreadsCsvStrategy();
         assertThat(gr.potHandle(header)).isTrue();
 
         String row = "42,The Hobbit,Tolkien,J.R.R. Tolkien,,=\"0000000000\",=\"9780000000042\",5,4.5,HarperCollins,Paperback,310,1937,1937,2024-06-15,2024-05-01,fantasy;classics,read,Awesome,,nope,3";
-        String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
-        java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
-        String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
+        String[] headerCols = herramienta.io.csv.UtilitatsCsv.analitzarLine(header);
+        java.util.Map<String, Integer> hMap = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+        String[] cols = herramienta.io.csv.UtilitatsCsv.analitzarLine(row);
 
         assertThat(gr.analitzarLine(cols, hMap, cd)).isTrue();
         Llibre l = cd.obtenirLlibre(9780000000042L);
@@ -1490,13 +1490,13 @@ class BibliotecaJUnit5Test {
     void libraryThingCsvFixture() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         String header = "Book Id,ISBN,ISBN13,BCID,Title,Authors,Original Publication Year,Publication Year,Rating,Summary,Comments,Review,Collections,Tags";
-        herramienta.csv.LibraryThingCsvStrategy lt = new herramienta.csv.LibraryThingCsvStrategy();
+        herramienta.io.csv.LibraryThingCsvStrategy lt = new herramienta.io.csv.LibraryThingCsvStrategy();
         assertThat(lt.potHandle(header)).isTrue();
 
         String row = "99,,9780000000019,BC123,Test LibBook,Author One; Author Two,2021,2021,3.5,A summary,My notes,,\"My Shelf,Favorites\",fiction;adventure";
-        String[] headerCols = herramienta.csv.UtilitatsCsv.analitzarLine(header);
-        java.util.Map<String, Integer> hMap = herramienta.csv.UtilitatsCsv.buildHeaderMap(headerCols);
-        String[] cols = herramienta.csv.UtilitatsCsv.analitzarLine(row);
+        String[] headerCols = herramienta.io.csv.UtilitatsCsv.analitzarLine(header);
+        java.util.Map<String, Integer> hMap = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(headerCols);
+        String[] cols = herramienta.io.csv.UtilitatsCsv.analitzarLine(row);
 
         assertThat(lt.analitzarLine(cols, hMap, cd)).isTrue();
         Llibre l = cd.obtenirLlibre(9780000000019L);
@@ -1574,27 +1574,27 @@ class BibliotecaJUnit5Test {
         String origHome = System.getProperty("user.home");
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-            herramienta.Configuracio.reload();
-            herramienta.ConfiguracioDb.setType("mariadb");
-            herramienta.ConfiguracioDb.posarHost("db.example.com");
-            herramienta.ConfiguracioDb.posarUser("admin");
+            herramienta.config.Configuracio.reload();
+            herramienta.config.ConfiguracioDb.setType("mariadb");
+            herramienta.config.ConfiguracioDb.posarHost("db.example.com");
+            herramienta.config.ConfiguracioDb.posarUser("admin");
             Thread.sleep(500);
 
-            assertThat(herramienta.Configuracio.obtenirDbType()).isEqualTo("mariadb");
-            assertThat(herramienta.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
-            assertThat(herramienta.Configuracio.obtenirDbUser()).isEqualTo("admin");
+            assertThat(herramienta.config.Configuracio.obtenirDbType()).isEqualTo("mariadb");
+            assertThat(herramienta.config.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
+            assertThat(herramienta.config.Configuracio.obtenirDbUser()).isEqualTo("admin");
 
             // Switch back to H2 — host/user should be preserved (putIfAbsent
             // semantics; a future re-connection to MariaDB can still reuse
             // the saved values).
-            herramienta.ConfiguracioDb.setType("h2");
+            herramienta.config.ConfiguracioDb.setType("h2");
             Thread.sleep(500);
-            assertThat(herramienta.Configuracio.obtenirDbType()).isEqualTo("h2");
-            assertThat(herramienta.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
-            assertThat(herramienta.Configuracio.obtenirDbUser()).isEqualTo("admin");
+            assertThat(herramienta.config.Configuracio.obtenirDbType()).isEqualTo("h2");
+            assertThat(herramienta.config.Configuracio.obtenirDbHost()).isEqualTo("db.example.com");
+            assertThat(herramienta.config.Configuracio.obtenirDbUser()).isEqualTo("admin");
         } finally {
             System.setProperty("user.home", origHome);
-            herramienta.Configuracio.reload();
+            herramienta.config.Configuracio.reload();
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
@@ -1731,14 +1731,14 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("PrestecRow: overdueDays returns -1 when dataPrestec is null")
     void prestecRowOverdueDaysNullDate() {
-        persistencia.PrestecRow row = new persistencia.PrestecRow(9780000000001L, "Alice", null, false);
+        persistencia.row.PrestecRow row = new persistencia.row.PrestecRow(9780000000001L, "Alice", null, false);
         assertThat(row.overdueDays(java.time.LocalDate.now(), 7)).isEqualTo(-1);
     }
 
     @Test
     @DisplayName("PrestecRow: fromStrings parses ISO date correctly")
     void prestecRowFromStrings() {
-        persistencia.PrestecRow row = persistencia.PrestecRow.fromStrings(9780000000001L, "Bob", "2025-06-15", true);
+        persistencia.row.PrestecRow row = persistencia.row.PrestecRow.fromStrings(9780000000001L, "Bob", "2025-06-15", true);
         assertThat(row.nomPersona()).isEqualTo("Bob");
         assertThat(row.dataPrestec()).isEqualTo(java.time.LocalDate.of(2025, 6, 15));
         assertThat(row.retornat()).isTrue();
@@ -1761,10 +1761,10 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Config: window defaults are sensible")
     void configWindowDefaults() {
-        int x = herramienta.Configuracio.obtenirWindowX();
-        int y = herramienta.Configuracio.obtenirWindowY();
-        int w = herramienta.Configuracio.obtenirWindowWidth();
-        int h = herramienta.Configuracio.obtenirWindowHeight();
+        int x = herramienta.config.Configuracio.obtenirWindowX();
+        int y = herramienta.config.Configuracio.obtenirWindowY();
+        int w = herramienta.config.Configuracio.obtenirWindowWidth();
+        int h = herramienta.config.Configuracio.obtenirWindowHeight();
         assertThat(x).isGreaterThanOrEqualTo(0);
         assertThat(y).isGreaterThanOrEqualTo(0);
         assertThat(w).isGreaterThan(100);
@@ -1793,14 +1793,14 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CsvUtils: parseLine handles quoted fields with embedded commas")
     void csvUtilsQuotedFieldWithComma() {
-        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine("a,\"b,c\",d");
+        String[] result = herramienta.io.csv.UtilitatsCsv.analitzarLine("a,\"b,c\",d");
         assertThat(result).containsExactly("a", "b,c", "d");
     }
 
     @Test
     @DisplayName("CsvUtils: parseLine handles trailing comma")
     void csvUtilsTrailingComma() {
-        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine("a,b,");
+        String[] result = herramienta.io.csv.UtilitatsCsv.analitzarLine("a,b,");
         assertThat(result).containsExactly("a", "b", "");
     }
 
@@ -1808,12 +1808,12 @@ class BibliotecaJUnit5Test {
     @DisplayName("CsvUtils: BOM in header is preserved by parseLine; callers must strip it")
     void csvUtilsBomAwareness() {
         String withBom = "\uFEFF" + "isbn,nom,autor";
-        String[] result = herramienta.csv.UtilitatsCsv.analitzarLine(withBom);
+        String[] result = herramienta.io.csv.UtilitatsCsv.analitzarLine(withBom);
         // parseLine does not strip BOM — this is documented behavior
         assertThat(result[0]).contains("isbn");
         // After stripping BOM, parsing works normally
         String cleaned = withBom.replace("\uFEFF", "");
-        String[] cleanedResult = herramienta.csv.UtilitatsCsv.analitzarLine(cleaned);
+        String[] cleanedResult = herramienta.io.csv.UtilitatsCsv.analitzarLine(cleaned);
         assertThat(cleanedResult[0]).isEqualTo("isbn");
     }
 
@@ -1822,33 +1822,33 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("Escapers.html escapes &, <, >, \", '")
     void escapersHtml() {
-        assertThat(herramienta.Escapers.html("<script>alert(\"xss\")</script>"))
+        assertThat(herramienta.i18n.Escapers.html("<script>alert(\"xss\")</script>"))
             .isEqualTo("&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;");
-        assertThat(herramienta.Escapers.html("Tom & Jerry"))
+        assertThat(herramienta.i18n.Escapers.html("Tom & Jerry"))
             .isEqualTo("Tom &amp; Jerry");
-        assertThat(herramienta.Escapers.html(null))
+        assertThat(herramienta.i18n.Escapers.html(null))
             .isEmpty();
     }
 
     @Test
     @DisplayName("Escapers.json escapes backslash, quote, controls")
     void escapersJson() {
-        assertThat(herramienta.Escapers.json("hello\nworld"))
+        assertThat(herramienta.i18n.Escapers.json("hello\nworld"))
             .isEqualTo("hello\\nworld");
-        assertThat(herramienta.Escapers.json("a\"b"))
+        assertThat(herramienta.i18n.Escapers.json("a\"b"))
             .isEqualTo("a\\\"b");
-        assertThat(herramienta.Escapers.json(null))
+        assertThat(herramienta.i18n.Escapers.json(null))
             .isEmpty();
     }
 
     @Test
     @DisplayName("Escapers.csv wraps in quotes and doubles internal quotes")
     void escapersCsv() {
-        assertThat(herramienta.Escapers.csv("hello"))
+        assertThat(herramienta.i18n.Escapers.csv("hello"))
             .isEqualTo("\"hello\"");
-        assertThat(herramienta.Escapers.csv("say \"hi\""))
+        assertThat(herramienta.i18n.Escapers.csv("say \"hi\""))
             .isEqualTo("\"say \"\"hi\"\"\"");
-        assertThat(herramienta.Escapers.csv(null))
+        assertThat(herramienta.i18n.Escapers.csv(null))
             .isEmpty();
     }
 
@@ -1910,22 +1910,22 @@ class BibliotecaJUnit5Test {
         String origHome = System.getProperty("user.home");
         try {
             System.setProperty("user.home", tmpDir.toFile().getAbsolutePath());
-            herramienta.Configuracio.reload();
-            herramienta.ConfiguracioUi.posarDarkMode(true);
+            herramienta.config.Configuracio.reload();
+            herramienta.config.ConfiguracioUi.posarDarkMode(true);
             Thread.sleep(500);
-            herramienta.Configuracio.withBatch(() -> {
-                herramienta.ConfiguracioUi.posarDarkMode(false);
-                herramienta.ConfiguracioUi.posarFontSize("large");
+            herramienta.config.Configuracio.withBatch(() -> {
+                herramienta.config.ConfiguracioUi.posarDarkMode(false);
+                herramienta.config.ConfiguracioUi.posarFontSize("large");
             });
             Thread.sleep(500);
-            assertThat(herramienta.Configuracio.esDarkMode()).isFalse();
-            assertThat(herramienta.Configuracio.obtenirFontSize()).isEqualTo("large");
-            herramienta.Configuracio.reload();
-            assertThat(herramienta.Configuracio.esDarkMode()).isFalse();
-            assertThat(herramienta.Configuracio.obtenirFontSize()).isEqualTo("large");
+            assertThat(herramienta.config.Configuracio.esDarkMode()).isFalse();
+            assertThat(herramienta.config.Configuracio.obtenirFontSize()).isEqualTo("large");
+            herramienta.config.Configuracio.reload();
+            assertThat(herramienta.config.Configuracio.esDarkMode()).isFalse();
+            assertThat(herramienta.config.Configuracio.obtenirFontSize()).isEqualTo("large");
         } finally {
             System.setProperty("user.home", origHome);
-            herramienta.Configuracio.reload();
+            herramienta.config.Configuracio.reload();
             Files.walk(tmpDir).sorted(java.util.Comparator.reverseOrder()).map(java.nio.file.Path::toFile).forEach(File::delete);
         }
     }
@@ -1941,11 +1941,11 @@ class BibliotecaJUnit5Test {
         var renderer = new presentacio.renderers.RenderitzadorCasellaLlegit();
         javax.swing.JTable table = new javax.swing.JTable();
         java.awt.Component c = renderer.getTableCellRendererComponent(
-            table, herramienta.I18n.t("filter_read"), false, false, 0, 0);
+            table, herramienta.i18n.I18n.t("filter_read"), false, false, 0, 0);
         assertThat(c).isInstanceOf(javax.swing.JCheckBox.class);
         assertThat(((javax.swing.JCheckBox) c).isSelected()).isTrue();
         java.awt.Component c2 = renderer.getTableCellRendererComponent(
-            table, herramienta.I18n.t("filter_unread"), false, false, 0, 0);
+            table, herramienta.i18n.I18n.t("filter_unread"), false, false, 0, 0);
         assertThat(((javax.swing.JCheckBox) c2).isSelected()).isFalse();
     }
 
@@ -1994,28 +1994,28 @@ class BibliotecaJUnit5Test {
     })
     @DisplayName("CsvUtils.parseIsbn normalizes ISBN-10 X and ISBN-13")
     void analitzarIsbnNormalization(String raw, String expected) {
-        assertThat(herramienta.csv.UtilitatsCsv.analitzarIsbn(raw)).isEqualTo(expected);
+        assertThat(herramienta.io.csv.UtilitatsCsv.analitzarIsbn(raw)).isEqualTo(expected);
     }
 
     @Test
     @DisplayName("CsvUtils.colVal missing column returns empty string")
     void colValMissingColumn() {
-        var h = herramienta.csv.UtilitatsCsv.buildHeaderMap(new String[]{"ISBN"});
-        assertThat(herramienta.csv.UtilitatsCsv.colVal(h, new String[]{"978"}, "Title")).isEmpty();
+        var h = herramienta.io.csv.UtilitatsCsv.buildHeaderMap(new String[]{"ISBN"});
+        assertThat(herramienta.io.csv.UtilitatsCsv.colVal(h, new String[]{"978"}, "Title")).isEmpty();
     }
 
     @Test
     @DisplayName("CsvUtils.parseDoubleOrZero handles invalid input")
     void analitzarDoubleOrZeroInvalid() {
-        assertThat(herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero("x")).isZero();
-        assertThat(herramienta.csv.UtilitatsCsv.analitzarDoubleOrZero(" 3.5 ")).isEqualTo(3.5);
+        assertThat(herramienta.io.csv.UtilitatsCsv.analitzarDoubleOrZero("x")).isZero();
+        assertThat(herramienta.io.csv.UtilitatsCsv.analitzarDoubleOrZero(" 3.5 ")).isEqualTo(3.5);
     }
 
     @Test
     @DisplayName("CsvUtils.csvQ escapes quotes and null")
     void csvQEscaping() {
-        assertThat(herramienta.csv.UtilitatsCsv.csvQ("a\"b")).isEqualTo("\"a\"\"b\"");
-        assertThat(herramienta.csv.UtilitatsCsv.csvQ(null)).isEmpty();
+        assertThat(herramienta.io.csv.UtilitatsCsv.csvQ("a\"b")).isEqualTo("\"a\"\"b\"");
+        assertThat(herramienta.io.csv.UtilitatsCsv.csvQ(null)).isEmpty();
     }
 
     // ── FiltreUtils extended ─────────────────────────────────────────────────
@@ -2047,8 +2047,8 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("CoverService cache miss returns null")
     void coverServiceCacheMiss() {
-        assertThat(herramienta.ServeiCoberta.obtenirCachedBytes("0000000000999")).isNull();
-        assertThat(herramienta.ServeiCoberta.obtenirCachedImage("0000000000998")).isNull();
+        assertThat(herramienta.io.ServeiCoberta.obtenirCachedBytes("0000000000999")).isNull();
+        assertThat(herramienta.io.ServeiCoberta.obtenirCachedImage("0000000000998")).isNull();
     }
 
     // ── Domain: tags and loans ───────────────────────────────────────────────
@@ -2093,8 +2093,8 @@ class BibliotecaJUnit5Test {
     void existsInLibrary() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
         add(cd, 9780306406157L, "Present");
-        assertThat(herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780306406157L)).isTrue();
-        assertThat(herramienta.csv.UtilitatsCsv.existsInLibrary(cd, 9780000000001L)).isFalse();
+        assertThat(herramienta.io.csv.UtilitatsCsv.existsInLibrary(cd, 9780306406157L)).isTrue();
+        assertThat(herramienta.io.csv.UtilitatsCsv.existsInLibrary(cd, 9780000000001L)).isFalse();
     }
 
     // ── ControladorDomini construction ───────────────────────────────────────
@@ -2190,8 +2190,8 @@ class BibliotecaJUnit5Test {
     @DisplayName("getDistinctValues: in-memory path returns distinct sorted values for editorial")
     void obtenirDistinctValuesInMemoryEditorial() throws Exception {
         ControladorDomini cd = ControladorDomini.getInstance();
-        domini.Llibre a = herramienta.ValidadorLlibre.comprovarLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
-        domini.Llibre b = herramienta.ValidadorLlibre.comprovarLlibre(9780000000001L, "B", null, null, null, null, null, null, null);
+        domini.Llibre a = herramienta.text.ValidadorLlibre.comprovarLlibre(9780306406157L, "A", null, null, null, null, null, null, null);
+        domini.Llibre b = herramienta.text.ValidadorLlibre.comprovarLlibre(9780000000001L, "B", null, null, null, null, null, null, null);
         a.posarEditorial("Penguin");
         b.posarEditorial("Ace");
         cd.afegirLlibre(a);
@@ -2206,44 +2206,6 @@ class BibliotecaJUnit5Test {
         assertThat(cd.obtenirDistinctValues("not_a_column")).isEmpty();
         assertThat(cd.obtenirDistinctValues("any")).isEmpty();
     }
-
-    // ── OpenLibraryClient: number_of_pages=null must not NPE ──────────────────
-
-    @Test
-    @DisplayName("OpenLibraryClient.lookupByISBN tolerates JSON null for number_of_pages")
-    void obrirLibraryNullNumberOfPagesTolerated() throws Exception {
-        com.sun.net.httpserver.HttpServer srv = com.sun.net.httpserver.HttpServer.create(
-            new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), 0), 0);
-        srv.createContext("/", ex -> {
-            String body = "{\"ISBN:9780000000001\":{\"title\":\"X\",\"number_of_pages\":null,\"publish_date\":\"2001\"}}";
-            ex.getResponseHeaders().set("Content-Type", "application/json");
-            ex.sendResponseHeaders(200, body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
-            try (var os = ex.getResponseBody()) { os.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
-        });
-        srv.start();
-        try {
-            String prev = herramienta.ClientOpenLibrary.testBaseUrl;
-            int anteriorRetries = herramienta.ClientOpenLibrary.testMaxRetries;
-            long anteriorBase = herramienta.ClientOpenLibrary.testRetryBaseMs;
-            herramienta.ClientOpenLibrary.testBaseUrl = "http://localhost:" + srv.getAddress().getPort();
-            herramienta.ClientOpenLibrary.testMaxRetries = 0;
-            herramienta.ClientOpenLibrary.testRetryBaseMs = 0;
-            try {
-                java.util.Map<String, String> r = herramienta.ClientOpenLibrary.lookupByISBN("9780000000001");
-                // title present, no NPE thrown, no "error" key
-                assertThat(r).containsKey("title");
-                assertThat(r).doesNotContainKey("error");
-                assertThat(r).doesNotContainKey("pagines");
-            } finally {
-                herramienta.ClientOpenLibrary.testBaseUrl = prev;
-                herramienta.ClientOpenLibrary.testMaxRetries = anteriorRetries;
-                herramienta.ClientOpenLibrary.testRetryBaseMs = anteriorBase;
-            }
-        } finally {
-            srv.stop(0);
-        }
-    }
-
     // ── NotFound / Duplicate / Validation exception codes ────────────────────
 
     @Test

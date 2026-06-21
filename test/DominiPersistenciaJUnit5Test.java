@@ -12,9 +12,9 @@ import domini.Llibre;
 import domini.LlibreFilter;
 import domini.LlibreLlistaContext;
 import domini.EspecificacioOrdenacio;
-import persistencia.ConnectionConfig;
-import persistencia.ControladorPersistencia;
-import persistencia.ConnexioServidor;
+import persistencia.internal.ConnectionConfig;
+import persistencia.internal.ControladorPersistencia;
+import persistencia.internal.ConnexioServidor;
 
 /**
  * Regression tests for domini/persistencia fixes (ISBN long, migrations, tag cache, filters).

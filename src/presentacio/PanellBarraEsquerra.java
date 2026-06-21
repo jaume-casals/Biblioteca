@@ -27,9 +27,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 import domini.Llista;
-import herramienta.UtilitatsColor;
-import herramienta.I18n;
-import herramienta.UITheme;
+import herramienta.ui.UtilitatsColor;
+import herramienta.i18n.I18n;
+import herramienta.ui.UITheme;
 
 public class PanellBarraEsquerra extends JPanel {
 
@@ -169,8 +169,8 @@ public class PanellBarraEsquerra extends JPanel {
 		btnThemeToggle = makeSidebarBtn(I18n.t("btn_theme"));
 		btnThemeToggle.setToolTipText(I18n.t("tip_mode_fosc"));
 		btnThemeToggle.addActionListener(e -> {
-			herramienta.UITheme.Tema[] themes = herramienta.UITheme.Tema.values();
-			herramienta.UITheme.Tema next = themes[(UITheme.obtenirTheme().ordinal() + 1) % themes.length];
+			herramienta.ui.UITheme.Tema[] themes = herramienta.ui.UITheme.Tema.values();
+			herramienta.ui.UITheme.Tema next = themes[(UITheme.obtenirTheme().ordinal() + 1) % themes.length];
 			UITheme.posarTheme(next);
 			onThemeChange.run();
 		});
