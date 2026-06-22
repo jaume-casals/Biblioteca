@@ -603,3 +603,15 @@ theme_dark,Fosc,Oscuro,Dark
 theme_sepia,Sèpia,Sépia,Sepia
 theme_ocean,Oceà,Océano,Ocean
 filter_dash,–,–,–
+# ── Java: Scanning station ───────────────────────────────────────────────────
+estacio_title,Estació d'escaneig,Estación de escaneo,Scanning station
+estacio_hint,"Escaneja o escriu un ISBN i prem Enter.\nEl camp es netejarà sol i podràs continuar.","Escanea o escribe un ISBN y pulsa Enter.\nEl campo se limpiará solo y podrás continuar.","Scan or type an ISBN and press Enter.\nThe field clears itself and you can keep going."
+estacio_status_idle,A punt per escanejar,Listo para escanear,Ready to scan
+estacio_status_added,✓ {0},✓ {0},✓ {0}
+estacio_status_duplicate,⚠ ISBN {0} ja existeix,⚠ ISBN {0} ya existe,⚠ ISBN {0} already exists
+estacio_status_invalid,✗ ISBN no vàlid,✗ ISBN no válido,✗ Invalid ISBN
+estacio_status_network,✗ Sense connexió amb OpenLibrary,✗ Sin conexión con OpenLibrary,✗ No connection to OpenLibrary
+estacio_status_error,✗ Error: {0},✗ Error: {0},✗ Error: {0}
+estacio_counters,"Afegits: {0} · Duplicats: {1} · Errors: {2}","Añadidos: {0} · Duplicados: {1} · Errores: {2}","Added: {0} · Duplicates: {1} · Errors: {2}"
+estacio_btn_close,Tancar,Cerrar,Close
+estacio_shortcut_hint,Ctrl+Shift+S per obrir,Ctrl+Shift+S para abrir,Ctrl+Shift+S to open

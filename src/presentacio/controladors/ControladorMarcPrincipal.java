@@ -40,6 +40,7 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 	private final JFrame frame;
 	private ControladorMostrarBiblioteca mostrarControl;
 	private ControladorIOLlibre ioCtrl;
+	private presentacio.dialegs.EstacioEscaneigDialog estacioDialog;
 	/**
 	 * Singleton — un sol MainFrameControl per tota l'aplicació. A diferència
 	 * de {@link domini.ControladorDomini}, no té resetForTest() perquè la UI
@@ -85,6 +86,13 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 		am.put("nouLlibreScan", new javax.swing.AbstractAction() {
 			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
 				SwingUtilities.invokeLater(() -> ioCtrl.escanejarISBN());
+			}
+		});
+
+		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlShift), "estacioEscaneig");
+		am.put("estacioEscaneig", new javax.swing.AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				SwingUtilities.invokeLater(ControladorMarcPrincipal.this::obrirEstacioEscaneig);
 			}
 		});
 
@@ -222,6 +230,14 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 				new presentacio.detalles.vista.DialegDesarLlibres(), this, cLlibres);
 		ctrl.obtenirVista().setLocationRelativeTo(frame);
 		ctrl.obtenirVista().setVisible(true);
+	}
+
+	private void obrirEstacioEscaneig() {
+		if (estacioDialog == null || !estacioDialog.isDisplayable()) {
+			estacioDialog = new presentacio.dialegs.EstacioEscaneigDialog(frame, cLlibres, this);
+		}
+		estacioDialog.setVisible(true);
+		estacioDialog.obtenirTextFieldISBN().requestFocusInWindow();
 	}
 
 	protected List<Llibre> aplicarFiltres(LlibreFilter f) {

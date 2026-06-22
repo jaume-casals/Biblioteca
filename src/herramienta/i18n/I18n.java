@@ -611,6 +611,17 @@ public class I18n {
         T("tip_export_csv", "Exportar la llista actual a CSV", "Exportar la lista actual a CSV", "Export current list to CSV");
         T("btn_import_csv", "Importar CSV", "Importar CSV", "Import CSV");
         T("tip_import_csv", "Importar llibres des d'un fitxer CSV (Goodreads compatible)", "Importar libros desde un archivo CSV (compatible con Goodreads)", "Import books from CSV (Goodreads compatible)");
+        T("estacio_title", "Estació d'escaneig", "Estación de escaneo", "Scanning station");
+        T("estacio_hint", "Escaneja o escriu un ISBN i prem Enter.\\nEl camp es netejarà sol i podràs continuar.", "Escanea o escribe un ISBN y pulsa Enter.\\nEl campo se limpiará solo y podrás continuar.", "Scan or type an ISBN and press Enter.\\nThe field clears itself and you can keep going.");
+        T("estacio_status_idle", "A punt per escanejar", "Listo para escanear", "Ready to scan");
+        T("estacio_status_added", "✓ {0}", "✓ {0}", "✓ {0}");
+        T("estacio_status_duplicate", "⚠ ISBN {0} ja existeix", "⚠ ISBN {0} ya existe", "⚠ ISBN {0} already exists");
+        T("estacio_status_invalid", "✗ ISBN no vàlid", "✗ ISBN no válido", "✗ Invalid ISBN");
+        T("estacio_status_network", "✗ Sense connexió amb OpenLibrary", "✗ Sin conexión con OpenLibrary", "✗ No connection to OpenLibrary");
+        T("estacio_status_error", "✗ Error: {0}", "✗ Error: {0}", "✗ Error: {0}");
+        T("estacio_counters", "Afegits: {0} · Duplicats: {1} · Errors: {2}", "Añadidos: {0} · Duplicados: {1} · Errores: {2}", "Added: {0} · Duplicates: {1} · Errors: {2}");
+        T("estacio_btn_close", "Tancar", "Cerrar", "Close");
+        T("estacio_shortcut_hint", "Ctrl+Shift+S per obrir", "Ctrl+Shift+S para abrir", "Ctrl+Shift+S to open");
     }
 
     private static void T(String key, String ca, String es, String en) {
