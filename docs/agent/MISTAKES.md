@@ -97,3 +97,11 @@ class MyTest {
 The `static {}` runs on class load — BEFORE any JUnit runner — so it's the only defense when IDE / standalone `java -cp ... MyTest` runs a single method without the `-D` flags the Makefile loop sets. `make test` sets the property globally, so this leak only manifests when bypassing it.
 
 Audit command: `cd test && for f in $(grep -L "biblioteca.h2.url" $(find . -name "*.java")); do grep -l "ControladorDomini\|afegirLlibre\|afegirTag\|afegirLlista\|getInstance()\|netejarAll" "$f" 2>/dev/null; done` — every output line is a leak waiting to happen. Real bug example: `test/DominiPersistenciaJUnit5Test.java` was missing the block and was silently writing "Effective Java" / "Clean Code" / "Fluent Python" / a literal "Test"/"Author" entry + tags + shelves into the live H2 file whenever the class was run outside `make test`.
+
+## `printf` on boxed nullables swallows data silently
+
+`AnalitzadorPrestatgeria.exportarToCsv` called `pw.printf("%d", l.obtenirAny())` directly on a getter that returns boxed `Integer` / `Double` / `Boolean`. Any null field → NPE → caught by the per-row `try/catch` → row dropped, no warning. The CSV ended up with header only; user saw the "Export completed" success dialog and an empty file. **Rule**: coalesce nulls to defaults (0 / 0.0 / false) before `printf` for any nullable getter. Same audit applies to `String.valueOf(l.obtenirAny())` in `ExportadorLlibres.exportarPDF` (line 193, before the fix) — `String.valueOf(null)` returns the literal `"null"`, which gets embedded in the printed output.
+
+## `make test` discovery uses `*Test.java` — names ending `Junit5.java` / `Safe.java` get silently skipped
+
+`Makefile` line ~100: `find ./test/ -name "*Test.java"`. Files named `TestXxxJunit5.java`, `TestXxxSafe.java`, `TestXxxPertinençaPrestatgeria.java` etc. never run. The existing `TestRestaurarSqlJunit5.java` was already silently broken (not running) before this entry. **Rule when adding a JUnit 5 test class**: confirm the basename ends with `Test.java` (`XxxTest.java` or `XxxJunit5Test.java`, not `XxxJunit5.java`). Verify with `find ./test -name "*Test.java" | grep <new file>` — if it is missing from the output, the file is invisible to `make test`.

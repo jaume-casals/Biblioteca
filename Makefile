@@ -130,11 +130,12 @@ populate: compile
 
 # ---------- INSTALLERS ----- #
 #
-# make jar               → build/artifacts/biblioteca.jar (slim, needs lib/ alongside)
-# make fat-jar           → build/artifacts/biblioteca-fat.jar (all deps embedded)
-# make icon              → packaging/Biblioteca.ico (needs: ImageMagick)
-# make installer-windows → build/artifacts/install.exe   (needs: Launch4j + makensis)
-# make installer-linux   → *.rpm / *.deb (needs: jpackage from JDK 17+)
+# make jar                       → build/artifacts/biblioteca.jar (slim, needs lib/ alongside)
+# make fat-jar                   → build/artifacts/biblioteca-fat.jar (all deps embedded)
+# make icon                      → packaging/Biblioteca.ico (needs: ImageMagick)
+# make installer-windows         → build/artifacts/install.exe   (needs: Launch4j + makensis)
+# make installer-windows-bundle  → build/artifacts/install-bundle.exe (JRE + DB snapshot bundled)
+# make installer-linux           → *.rpm / *.deb (needs: jpackage from JDK 17+)
 #
 # Launch4j (cross-compile JAR → Windows EXE):
 #   Unpack to /opt/launch4j or set LAUNCH4J=/path/to/launch4j
@@ -142,6 +143,11 @@ populate: compile
 #
 # NSIS (Windows installer builder, runs on Linux):
 #   sudo dnf install mingw32-nsis   OR   sudo apt install nsis
+#
+# installer-windows-bundle also needs a Windows Temurin 21 JRE at
+# packaging/jre/ and a DB snapshot at packaging/data/biblioteca.mv.db.
+# Both are produced automatically by the target — just close the app
+# before running.
 
 LAUNCH4J ?= $(shell \
     if   command -v launch4j       >/dev/null 2>&1; then echo "launch4j"; \
@@ -226,6 +232,70 @@ installer-windows: fat-jar icon
 	@echo "═══════════════════════════════════════════════"
 	@echo "  build/artifacts/install.exe ready  ($$(du -sh build/artifacts/install.exe | cut -f1))"
 	@echo "═══════════════════════════════════════════════"
+
+# ── All-in-one Windows installer: bundles JRE + DB snapshot + app ─────────────
+# Adds a Windows Temurin 21 JRE (packaging/jre/) and a snapshot of the
+# user's current H2 database (packaging/data/biblioteca.mv.db) on top of
+# the standard installer-windows chain. The app's SeedorBaseDades copies
+# the snapshot into the user's profile on first launch.
+installer-windows-bundle: fat-jar icon packaging/jre packaging/data/biblioteca.mv.db
+	@echo ""
+	@echo "Step 1: Launch4j → packaging/Biblioteca.exe (bundled JRE)"
+	@if [ -n "$(LAUNCH4J)" ]; then \
+	    JAVA_HOME="$(LAUNCH4J_JAVA_HOME)" $(LAUNCH4J) packaging/launch4j.xml && \
+	    echo "  Biblioteca.exe ready ($$(du -sh packaging/Biblioteca.exe | cut -f1))"; \
+	else \
+	    echo "WARNING: Launch4j not found — packaging/Biblioteca.exe not built."; \
+	    echo "  Download Launch4j: https://launch4j.sourceforge.net/"; \
+	    echo "  Unpack to /opt/launch4j  OR  export LAUNCH4J=/path/to/launch4j"; \
+	    echo "  Then re-run: make installer-windows-bundle"; \
+	    exit 1; \
+	fi
+	@command -v makensis >/dev/null 2>&1 || \
+	    { echo "ERROR: makensis not found.  sudo dnf install mingw32-nsis"; exit 1; }
+	@echo "Step 2: NSIS → install-bundle.exe (with JRE + DB snapshot)"
+	@mkdir -p build/artifacts
+	@cd packaging && makensis -DOUTFILE=../build/artifacts/install-bundle.exe installer.nsi
+	@echo ""
+	@echo "═══════════════════════════════════════════════"
+	@echo "  build/artifacts/install-bundle.exe ready  ($$(du -sh build/artifacts/install-bundle.exe | cut -f1))"
+	@echo "  Double-clickable; bundles Temurin 21 JRE + your DB snapshot."
+	@echo "  No Java 21 install required on the target machine."
+	@echo "═══════════════════════════════════════════════"
+
+# ── Windows JRE for the bundled installer (~150 MB Temurin 21 x64) ────────────
+# Downloads once. If packaging/jre/ already contains bin/java.exe the
+# download is skipped.
+packaging/jre:
+	@echo "Downloading Temurin 21 JRE (Windows x64)…"
+	@mkdir -p packaging/jre
+	@cd packaging/jre && curl -fsSL -o temurin.zip \
+	    "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk" \
+	    && unzip -q temurin.zip \
+	    && (mv jdk-21*/* . 2>/dev/null || mv jre-21*/* . 2>/dev/null || true) \
+	    && rm -f temurin.zip \
+	    && rmdir jdk-21* jre-21* 2>/dev/null || true
+	@test -x packaging/jre/bin/java.exe || \
+	    { echo "ERROR: Temurin JRE download failed or did not unpack to packaging/jre/"; exit 1; }
+	@echo "  packaging/jre/ ready ($$(du -sh packaging/jre | cut -f1))"
+
+# ── DB snapshot for the bundled installer ─────────────────────────────────────
+# Refuses to run while the app holds the H2 file lock. Closes the app
+# before re-running.
+packaging/data/biblioteca.mv.db:
+	@# Fail fast si l'app té el fitxer H2 blocat (no podem copiar-ne
+	@# una versió consistent mentre s'hi escriu).
+	@if pgrep -af 'java.*main\.Executable' >/dev/null 2>&1; then \
+	    echo "ERROR: Biblioteca is running. Close it before snapshotting the DB."; \
+	    pgrep -af 'java.*main\.Executable'; \
+	    exit 1; \
+	fi
+	@test -f $(HOME)/.biblioteca/biblioteca.mv.db || \
+	    { echo "ERROR: $(HOME)/.biblioteca/biblioteca.mv.db not found."; \
+	      echo "  Run the app once to create it, then re-run this target."; exit 1; }
+	@mkdir -p packaging/data
+	@cp $(HOME)/.biblioteca/biblioteca.mv.db packaging/data/biblioteca.mv.db
+	@echo "  DB snapshot ready ($$(du -sh packaging/data/biblioteca.mv.db | cut -f1))"
 
 # ── Standalone Windows .exe with bundled JRE via jpackage ──────────────────────
 jpackage-win: fat-jar icon

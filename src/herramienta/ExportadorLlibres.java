@@ -189,8 +189,9 @@ public class ExportadorLlibres {
         for (Llibre l : view) {
             double val = l.obtenirValoracio() != null ? l.obtenirValoracio() : 0.0;
             String stars = val > 0 ? "★".repeat((int) Math.round(val)) : "-";
+            Integer any = l.obtenirAny();
             rows.add(new String[]{
-                l.obtenirNom(), l.obtenirAutor(), String.valueOf(l.obtenirAny()),
+                l.obtenirNom(), l.obtenirAutor(), any != null ? any.toString() : "",
                 stars, Boolean.TRUE.equals(l.obtenirLlegit()) ? "✓" : "○"
             });
         }

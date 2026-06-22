@@ -3,6 +3,7 @@ package main;
 import domini.ControladorDomini;
 import persistencia.contract.EscritorBiblioteca;
 import herramienta.config.Configuracio;
+import herramienta.io.SeedorBaseDades;
 import herramienta.ui.DialegError;
 import herramienta.config.MidaLletra;
 import herramienta.ui.UITheme;
@@ -82,6 +83,7 @@ public class Executable {
                 Thread loader = new Thread(() -> {
                     java.util.concurrent.atomic.AtomicReference<EscritorBiblioteca> cdRef = new java.util.concurrent.atomic.AtomicReference<>();
                     try {
+                        SeedorBaseDades.seedSiCal();
                         cdRef.set(ControladorDomini.getInstance());
                     } catch (RuntimeException e) {
                         final String msg = e.getMessage();

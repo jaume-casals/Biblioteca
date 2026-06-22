@@ -4,11 +4,18 @@
   Paths are relative to this file (packaging/).
   Run from project root: launch4j packaging/launch4j.xml
   Output: packaging/Biblioteca.exe  (with icon embedded)
+
+  bundledJrePath=jre tells Launch4j to use $EXEDIR\jre\ as the JRE.
+  The "all-in-one" installer (make installer-windows-bundle) copies
+  that path alongside the EXE. When launched from a plain
+  `java -jar biblioteca-fat.jar` run (e.g. developer smoke test),
+  Launch4j falls back to the system JRE because the bundled path
+  is missing.
 -->
 <launch4jConfig>
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
-  <jar>../biblioteca-fat.jar</jar>
+  <jar>../build/artifacts/biblioteca-fat.jar</jar>
   <outfile>Biblioteca.exe</outfile>
   <errTitle>Biblioteca</errTitle>
   <cmdLine></cmdLine>
@@ -19,13 +26,13 @@
   <restartOnCrash>false</restartOnCrash>
   <icon>Biblioteca.ico</icon>
   <jre>
-    <path></path>
-    <bundledJre64Bit>false</bundledJre64Bit>
+    <path>jre</path>
+    <bundledJre64Bit>true</bundledJre64Bit>
     <bundledJreAsFallback>false</bundledJreAsFallback>
     <minVersion>21</minVersion>
     <maxVersion></maxVersion>
     <jdkPreference>preferJre</jdkPreference>
-    <runtimeBits>64/32</runtimeBits>
+    <runtimeBits>64</runtimeBits>
   </jre>
   <versionInfo>
     <fileVersion>1.0.0.0</fileVersion>

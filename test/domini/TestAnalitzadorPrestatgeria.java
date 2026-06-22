@@ -1,11 +1,38 @@
 package domini;
 
+import herramienta.ImportadorLlibres;
+import herramienta.text.ValidadorLlibre;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import persistencia.internal.ControladorPersistencia;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import static org.assertj.core.api.Assertions.*;
 
 class TestAnalitzadorPrestatgeria {
+
+    static {
+        System.setProperty("biblioteca.test", "true");
+        System.setProperty("biblioteca.h2.url",
+            "jdbc:h2:mem:analitzador_csv_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1");
+    }
+
+    @BeforeEach
+    void reset() {
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
+    }
+
+    @AfterEach
+    void tearDown() {
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
+    }
 
     @Test
     @DisplayName("parseShelfEntries: null → empty list")
@@ -125,5 +152,85 @@ class TestAnalitzadorPrestatgeria {
         assertThat(back.get(0).llegit()).isTrue();
         assertThat(back.get(1).nom()).isEqualTo("Reference");
         assertThat(back.get(1).llegit()).isFalse();
+    }
+
+    @Test
+    @DisplayName("exportarToCsv: book with all-null numeric/bool fields still writes a row (regression for stuck-on-success bug)")
+    void exportarCsvAmbCampsNulEs() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        Llibre l = new Llibre(9780306406157L, "Test Book", "Author", null, "", null, null, null, "");
+        cd.afegirLlibre(l);
+
+        File tmp = File.createTempFile("csv_null_fields_", ".csv");
+        tmp.deleteOnExit();
+        AnalitzadorPrestatgeria.exportarToCsv(tmp,
+            java.util.List.of(l),
+            new java.util.HashMap<>(),
+            new java.util.HashMap<>());
+
+        String content = Files.readString(tmp.toPath(), StandardCharsets.UTF_8);
+        String[] rows = content.split("\n");
+        assertThat(rows).hasSize(2);
+        assertThat(rows[1]).contains("9780306406157").contains("Test Book").contains("Author");
+        assertThat(rows[1]).contains(",0,").contains(",0.0,");
+    }
+
+    @Test
+    @DisplayName("exportarToCsv + importarCSV roundtrip: book survives end-to-end")
+    void exportarCsvRoundtripImportacio() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965,
+            "descripció amb, comes", 9.0, 19.99, true, "cover.jpg");
+        cd.afegirLlibre(l);
+
+        File tmp = File.createTempFile("csv_roundtrip_", ".csv");
+        tmp.deleteOnExit();
+        AnalitzadorPrestatgeria.exportarToCsv(tmp,
+            new java.util.ArrayList<>(cd.obtenirAllLlibres()),
+            new java.util.HashMap<>(),
+            new java.util.HashMap<>());
+
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
+        ControladorDomini cd2 = ControladorDomini.getInstance();
+        ImportadorLlibres.ResultatImportacio r = ImportadorLlibres.importarCSV(tmp, cd2);
+        assertThat(r.errors()).isZero();
+        assertThat(r.imported()).isEqualTo(1);
+
+        Llibre back = cd2.obtenirLlibre(9780306406157L);
+        assertThat(back.obtenirNom()).isEqualTo("Dune");
+        assertThat(back.obtenirAutor()).isEqualTo("Herbert");
+        assertThat(back.obtenirAny()).isEqualTo(1965);
+        assertThat(back.obtenirValoracio()).isEqualTo(9.0);
+        assertThat(back.obtenirPreu()).isEqualTo(19.99);
+        assertThat(back.obtenirLlegit()).isTrue();
+    }
+
+    @Test
+    @DisplayName("exportarToCsv: shelf entries serialize as 'nom|valoracio|llegit' and roundtrip via native strategy")
+    void exportarCsvAmbPrestatgeria() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "Dune", "Herbert", 1965, "", 8.0, 0.0, false, "");
+        cd.afegirLlibre(l);
+        Llista shelf = cd.afegirLlista("Wishlist");
+        cd.afegirLlibreToLlista(9780306406157L, shelf.obtenirId(), 8.0, false);
+
+        File tmp = File.createTempFile("csv_shelf_", ".csv");
+        tmp.deleteOnExit();
+        AnalitzadorPrestatgeria.exportarToCsv(tmp,
+            new java.util.ArrayList<>(cd.obtenirAllLlibres()),
+            new java.util.HashMap<>(),
+            new java.util.HashMap<>());
+
+        String content = Files.readString(tmp.toPath(), StandardCharsets.UTF_8);
+        String dataRow = content.split("\n")[1];
+        assertThat(dataRow).contains("Wishlist|8.0|false");
+
+        ControladorDomini.reinicialitzarForTest();
+        ControladorPersistencia.reinicialitzarForTest();
+        ControladorDomini cd2 = ControladorDomini.getInstance();
+        ImportadorLlibres.ResultatImportacio r = ImportadorLlibres.importarCSV(tmp, cd2);
+        assertThat(r.imported()).isEqualTo(1);
+        assertThat(cd2.obtenirLlistesForLlibre(9780306406157L)).extracting(Llista::obtenirNom).contains("Wishlist");
     }
 }

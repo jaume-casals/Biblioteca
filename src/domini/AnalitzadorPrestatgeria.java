@@ -57,10 +57,14 @@ public final class AnalitzadorPrestatgeria {
                         llistesStr.append(esc(ll.obtenirNom())).append('|')
                             .append(row.valoracio()).append('|').append(row.llegit());
                     }
-                    pw.printf(java.util.Locale.ROOT, "\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
-                        l.obtenirISBN(), esc(l.obtenirNom()), esc(l.obtenirAutor()), l.obtenirAny(),
-                        esc(l.obtenirDescripcio()), l.obtenirValoracio(), l.obtenirPreu(), l.obtenirLlegit(),
-                        esc(l.obtenirImatge()), llistesStr);
+                Integer any = l.obtenirAny() != null ? l.obtenirAny() : 0;
+                Double valoracio = l.obtenirValoracio() != null ? l.obtenirValoracio() : 0.0;
+                Double preu = l.obtenirPreu() != null ? l.obtenirPreu() : 0.0;
+                boolean llegit = l.obtenirLlegit() != null && l.obtenirLlegit();
+                pw.printf(java.util.Locale.ROOT, "\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
+                    l.obtenirISBN(), esc(l.obtenirNom()), esc(l.obtenirAutor()), any,
+                    esc(l.obtenirDescripcio()), valoracio, preu, llegit,
+                    esc(l.obtenirImatge()), llistesStr);
                 } catch (RuntimeException e) {
                     LOG.log(Level.WARNING, "ShelfParser.exportToCsv: skipped ISBN " + l.obtenirISBN(), e);
                 }

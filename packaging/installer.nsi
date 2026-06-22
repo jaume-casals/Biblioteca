@@ -1,6 +1,12 @@
 ; ─── Biblioteca Installer ─────────────────────────────────────────────────────
 ; Build: cd packaging && makensis installer.nsi
-; Requires: Biblioteca.exe (Launch4j-wrapped) and Biblioteca.ico in this dir.
+; Requires in packaging/:
+;   Biblioteca.exe             — Launch4j-wrapped JAR
+;   Biblioteca.ico             — multi-size Windows icon
+;   jre/                       — Temurin 21 JRE for Windows x64 (bundledJrePath)
+;   data/biblioteca.mv.db      — H2 snapshot seeded on first launch
+;
+; Output: ../build/artifacts/install.exe (or ../build/artifacts/install-bundle.exe)
 ; ─────────────────────────────────────────────────────────────────────────────
 
 !define APP_NAME      "Biblioteca"
@@ -13,7 +19,11 @@
 !define UNREG_KEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\Biblioteca"
 
 Name            "${APP_NAME} ${APP_VERSION}"
-OutFile         "../build/artifacts/install.exe"
+!ifndef OUTFILE
+  OutFile       "../build/artifacts/install.exe"
+!else
+  OutFile       "${OUTFILE}"
+!endif
 InstallDir      "${INST_DIR}"
 InstallDirRegKey HKLM "${UNREG_KEY}" "InstallLocation"
 RequestExecutionLevel admin
@@ -66,9 +76,19 @@ Section "Biblioteca" SecMain
   SectionIn RO
   Call CheckJava
 
+  ; EXE + icon a l'arrel
   SetOutPath "$INSTDIR"
   File "${APP_EXE}"
   File "${APP_ICO}"
+
+  ; JRE empaquetat — Launch4j el busca a $INSTDIR\jre via bundledJrePath=jre
+  SetOutPath "$INSTDIR\jre"
+  File /r "jre\*.*"
+
+  ; Snapshot de la BD — sembrada al perfil de l'usuari al primer llançament
+  SetOutPath "$INSTDIR\data"
+  File "data\biblioteca.mv.db"
+
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; Add/Remove Programs entry
@@ -81,8 +101,8 @@ Section "Biblioteca" SecMain
   WriteRegStr   HKLM "${UNREG_KEY}" "DisplayIcon"     '"$INSTDIR\${APP_EXE}"'
   WriteRegDWORD HKLM "${UNREG_KEY}" "NoModify"        1
   WriteRegDWORD HKLM "${UNREG_KEY}" "NoRepair"        1
-  ; Estimate installed size (KB)
-  WriteRegDWORD HKLM "${UNREG_KEY}" "EstimatedSize"   25000
+  ; Mida estimada (KB): JRE ~150 MB + app ~7 MB + BD ~1 MB ≈ 180000 KB
+  WriteRegDWORD HKLM "${UNREG_KEY}" "EstimatedSize"   180000
 
   ; Start Menu
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
@@ -101,6 +121,11 @@ Section "Uninstall"
   Delete "$INSTDIR\${APP_EXE}"
   Delete "$INSTDIR\${APP_ICO}"
   Delete "$INSTDIR\Uninstall.exe"
+  ; Neteja el JRE empaquetat i el snapshot de BD.
+  ; RMDir /r falla silenciós si algun fitxer està en ús — acceptable
+  ; en un desinstal·lador; l'usuari ho tornarà a provar.
+  RMDir /r "$INSTDIR\jre"
+  RMDir /r "$INSTDIR\data"
   RMDir  "$INSTDIR"
 
   Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
