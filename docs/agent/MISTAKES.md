@@ -105,3 +105,24 @@ Audit command: `cd test && for f in $(grep -L "biblioteca.h2.url" $(find . -name
 ## `make test` discovery uses `*Test.java` — names ending `Junit5.java` / `Safe.java` get silently skipped
 
 `Makefile` line ~100: `find ./test/ -name "*Test.java"`. Files named `TestXxxJunit5.java`, `TestXxxSafe.java`, `TestXxxPertinençaPrestatgeria.java` etc. never run. The existing `TestRestaurarSqlJunit5.java` was already silently broken (not running) before this entry. **Rule when adding a JUnit 5 test class**: confirm the basename ends with `Test.java` (`XxxTest.java` or `XxxJunit5Test.java`, not `XxxJunit5.java`). Verify with `find ./test -name "*Test.java" | grep <new file>` — if it is missing from the output, the file is invisible to `make test`.
+
+## SwingWorker + modal loading dialog: `execute()` MUST run BEFORE `setVisible(true)`
+
+`JDialog.setVisible(true)` on a modal dialog called from the EDT blocks the EDT in a nested event loop until the dialog is disposed. If the call site looks like:
+
+```java
+loading.show();                          // EDT enters nested event loop, blocks here
+new SwingWorker<...>().execute();        // NEVER REACHED — no worker, no doInBackground, no done()
+```
+
+the SwingWorker is never started, the export never runs, nothing calls `loading.hide()`, and the dialog sticks forever. The user sees the loading dialog with a frozen progress bar and no file on disk. The "Exportació completada" label visible in the dialog is the loading dialog`s static label (misleading copy — it is not a success message), not the JOptionPane shown afterwards.
+
+**Rule**: always start the worker first, then show the modal loading dialog. The nested event loop will then process the worker`s `done()` event, which calls `loading.hide()` to dispose the dialog and unblock EDT. Reorder:
+
+```java
+SwingWorker<...> worker = new SwingWorker<...>() { ... };
+worker.execute();
+loading.show();
+```
+
+This bug existed in 5 places: `ControladorExportacio.exportarCSV/JSON/HTML`, `ControladorImportacio.importarCSV/Calibre/JSON`, `ControladorCopiaSeguretat.copiaSegBD/restaurarBD`. Regression test: `test/presentacio/dialegs/DialegCarregaSwingWorkerTestTest.java`.

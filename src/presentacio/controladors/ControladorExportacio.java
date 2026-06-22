@@ -53,8 +53,7 @@ public class ControladorExportacio {
         if (chosen == null) return;
         final java.io.File f = chosen;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_title"));
-        loading.show();
-        new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
                 ExportadorLlibres.exportarCSV(f, currentBooks.get(), cd);
                 return null;
@@ -65,7 +64,9 @@ public class ControladorExportacio {
                     I18n.t("dlg_export_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void exportarJSON() {
@@ -73,8 +74,7 @@ public class ControladorExportacio {
         if (chosen == null) return;
         final java.io.File f = chosen;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_json_title"));
-        loading.show();
-        new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
                 ExportadorLlibres.exportarJSON(f, cd);
                 return null;
@@ -85,7 +85,9 @@ public class ControladorExportacio {
                     I18n.t("dlg_export_json_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void exportarHTML() {
@@ -98,8 +100,7 @@ public class ControladorExportacio {
         if (chosen == null) return;
         final java.io.File f = chosen;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_html_title"));
-        loading.show();
-        new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override protected Void doInBackground() throws Exception {
                 ExportadorLlibres.exportarHTML(f, currentBooks.get(), cd, chkShelf.isSelected(), chkTable.isSelected());
                 return null;
@@ -110,7 +111,9 @@ public class ControladorExportacio {
                     I18n.t("dlg_export_html_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void exportarPDF() {

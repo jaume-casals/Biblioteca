@@ -35,8 +35,7 @@ public class ControladorImportacio {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_title"), "CSV files", "csv");
         if (f == null) return;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_title"));
-        loading.show();
-        new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
+        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() {
                 return ImportadorLlibres.importarCSV(f, cd);
             }
@@ -54,7 +53,9 @@ public class ControladorImportacio {
                     onDataChanged.run();
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     private static Frame windowFrame(Component parent) {
@@ -78,8 +79,7 @@ public class ControladorImportacio {
                 I18n.t("dlg_calibre_choose_title"), JOptionPane.ERROR_MESSAGE); return;
         }
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_calibre_choose_title"));
-        loading.show();
-        new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
+        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
                 return ImportadorLlibres.importarCalibre(dbFile, sqlite3, cd);
             }
@@ -95,15 +95,16 @@ public class ControladorImportacio {
                         r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void importarJSON() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_json_title"), "JSON files", "json");
         if (f == null) return;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_json_title"));
-        loading.show();
-        new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
+        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
             @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
                 return ImportadorLlibres.importarJSON(f, cd);
             }
@@ -119,7 +120,9 @@ public class ControladorImportacio {
                     onDataChanged.run();
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void escanejarISBN() {

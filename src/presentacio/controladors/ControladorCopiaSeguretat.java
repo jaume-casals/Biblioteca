@@ -41,8 +41,7 @@ public class ControladorCopiaSeguretat {
         if (!selectedFile.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".sql")) selectedFile = new java.io.File(selectedFile.getPath() + ".sql");
         final java.io.File f = selectedFile;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_backup_title"));
-        loading.show();
-        new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override protected Void doInBackground() throws Exception {
                 cd.copiaSegToSQL(f);
                 return null;
@@ -53,7 +52,9 @@ public class ControladorCopiaSeguretat {
                     I18n.t("dlg_backup_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 
     public void restaurarBD(Runnable onSuccess) {
@@ -65,9 +66,8 @@ public class ControladorCopiaSeguretat {
         fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQL files", "sql"));
         if (fc.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return;
         DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_restore_title"));
-        loading.show();
         final java.io.File selectedFile = fc.getSelectedFile();
-        new SwingWorker<>() {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override protected Void doInBackground() throws Exception {
                 cd.restaurarFromSQL(selectedFile);
                 return null;
@@ -82,7 +82,9 @@ public class ControladorCopiaSeguretat {
                         I18n.t("dlg_restore_done_title"), JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
             }
-        }.execute();
+        };
+        worker.execute();
+        loading.show();
     }
 }
 
