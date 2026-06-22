@@ -89,6 +89,10 @@ public class ValidadorLlibre {
 			throw new IllegalArgumentException(I18n.t("toast_isbn_required"));
 
 		int digits = comptarDig(isbn);
+		if (digits == 9) {
+			return comprovarLlibreFromString("0" + Long.toString(isbn), nom, autor, any, descripcio,
+				valoracio, preu, llegit, portada);
+		}
 		if (digits != 13 && digits != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 

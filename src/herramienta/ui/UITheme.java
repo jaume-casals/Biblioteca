@@ -85,7 +85,7 @@ public class UITheme {
         }
     }
 
-    private static Tema currentTheme = Tema.LIGHT;
+    private static volatile Tema currentTheme = Tema.LIGHT;
 
     public static Tema obtenirTheme() { return currentTheme; }
     public static boolean esDark() { return currentTheme.dark; }

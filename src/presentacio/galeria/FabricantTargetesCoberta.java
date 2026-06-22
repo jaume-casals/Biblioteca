@@ -439,8 +439,8 @@ public final class FabricantTargetesCoberta {
     private static int bookHue(String nom) {
         if (nom == null || nom.isEmpty()) return 200;
         int h = 0;
-        for (char c : nom.toCharArray()) h = (h * 31 + c) & 0xffff;
-        return (h % 300) + 20;
+        for (char c : nom.toCharArray()) h = h * 31 + c;
+        return Math.floorMod(h, 360);
     }
 
     private static Color hsvApprox(int hueDeg, float sat, float bri) {

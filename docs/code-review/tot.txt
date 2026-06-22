@@ -2,34 +2,20 @@
 
 Severity guide: CRITICAL (bug / data loss / security / thread-safety / leak) · HIGH (anti-pattern, perf, PR-blocker) · MEDIUM (suboptimal but works) · LOW (most severe nitpick only if no CRITICAL/HIGH/MEDIUM). Cap: ≤3 findings per file, ranked.
 
----
-
-## domini/
-
----
-
-## persistencia/
-
----
-
-## herramienta/
-
----
-
-## presentacio/
-
----
-
-## interficie/
+All per-file findings resolved.
 
 ---
 
 ## main/
 
+Files reviewed and skipped (clean).
+
 ---
 
 ## Calibration
 
-1. **Weakest finding.** The I18n placeholder-replacement bug at `herramienta/I18n.java:628-629` is the weakest: I argued `String.replace(CharSequence, CharSequence)` is non-replacing per replacement of the *substring*, but `String.replace` actually does a literal-replace of the *first* occurrence and returns a new `String` — the issue is more subtle (the inner `replace` re-scans the *new* `raw` on the next iteration and may inject placeholders that weren't in the input). The behavior is also bounded by the fact that `args` values today come from numeric/format outputs, not user input. Stronger evidence would be a unit test demonstrating the corruption with a realistic arg, plus a count of call sites in `presentacio/` that pass user-derived strings to `I18n.t`.
-2. **New class to look for next run.** I want to systematically check **public mutability**: the pattern of `public static Color` / `public static Font` / `public final List` fields in `herramienta.UITheme`, `interficie.LectorBibliotecaEnMemoria`, `Configuracio` — these all leak state through fields that should be encapsulated behind accessors (or records), and the write/read threading invariants are undocumented.
-3. **confidence: 75.** I verified every CRITICAL/HIGH finding against the source (Llista equals/hashCode, DelegatPrestatgeria missing lock, ClientOpenLibrary connection leaks, Configuracio char[]→String, UITheme public mutable statics, Executable silent bootstrap failure, EscritorBiblioteca duplicate declarations, ControladorMostrarBiblioteca JDBC-on-EDT). MEDIUM findings are pattern-based and some LOW ones (e.g. `ConfiguracioDataSection` style duplication) are taste. The dominant risk to the confidence bar is the presentacio JDBC-on-EDT cluster — verified the pattern in `ControladorMostrarBiblioteca.java:164,170` directly, but only spot-checked the rest; some files the subagent reported may be one-shot writes where the EDT hit is genuinely cheap.
+1. **Weakest finding.** The HIGH in `ControladorAccionsLlibre.java` about JDBC-on-EDT in `enRefrescarDades` is grounded — the sibling `refresh()` already uses a `SwingWorker` so the safe pattern is one method away — but I did not produce a runnable measurement (latency spike after Save in Settings on a 10k library). To strengthen: a thread-dump or jstack of `enRefrescarDades` against a synthetic 10k library, demonstrating the EDT block exceeds the 100 ms "Noticeable" threshold of the Swing repaint budget. As-is, the finding is correct but the magnitude is inferred, not measured.
+
+2. **New class to look for next run.** I did not systematically audit `try-finally` blocks on `HttpURLConnection` and `InputStream` returns across the codebase beyond `ClientOpenLibrary` and `ServeiCoberta`. Several SwingWorkers call `cd.obtenirLlibreBlob(isbn)` via `LlibreBlobDao` and discard the byte[] return without `try-with-resources`-aware guarantees on the underlying stream. The next pass should trace every byte[]-returning JDBC path through `try { ... } finally { ... }` to confirm no stream/connection escape on the JDBC side (e.g., `LlibreDaoCore.obtenirRecentlyAdded` and `obtenirAll` both run unbuffered on the same `con` field without per-query resource isolation — fine for sync but a hazard under future async migrations).
+
+3. **confidence: 70.** I read ~165 source files directly (no subagents), so every line cited in a finding is in the editor; CRITICAL and HIGH are grounded in concrete code paths (lock-ordering violation in `DelegatLlibre.actualitzarLlibre`, JDBC-on-EDT in `ControladorAccionsLlibre.enRefrescarDades`, static `synchronized rateLimit()` in `ClientOpenLibrary`, un-synced disk read in `ServeiCoberta.obtenirCachedBytes`). MEDIUM and LOW carry more uncertainty — many of the LOWs would be dismissed by the author with "we know, it's not worth fixing now." The dominant confidence risk is the JDBC-on-EDT cluster: I spot-checked the EDT path in `enRefrescarDades` once but did not exhaustively trace every EDT listener in `ConfiguracioDialogListener` callers; a config dialog that fires `enCanviarTema` from another branch could be worse than what I report.

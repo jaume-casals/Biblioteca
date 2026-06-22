@@ -64,18 +64,18 @@ public final class ServeiCoberta {
         synchronized (L1_LOCK) {
             byte[] mem = L1.get(isbn);
             if (mem != null) return mem;
-        }
-        try {
-            Path f = diskDir().resolve(isbn + ".jpg");
-            if (Files.isRegularFile(f)) {
-                byte[] disk = Files.readAllBytes(f);
-                synchronized (L1_LOCK) { putL1(isbn, disk); }
-                return disk;
+            try {
+                Path f = diskDir().resolve(isbn + ".jpg");
+                if (Files.isRegularFile(f)) {
+                    byte[] disk = Files.readAllBytes(f);
+                    putL1(isbn, disk);
+                    return disk;
+                }
+            } catch (Exception e) {
+                LOG.log(java.util.logging.Level.FINE, "obtenirCachedBytes: error llegint la caché al disc per a " + isbn, e);
             }
-        } catch (Exception e) {
-            LOG.log(java.util.logging.Level.FINE, "obtenirCachedBytes: error llegint la caché al disc per a " + isbn, e);
+            return null;
         }
-        return null;
     }
 
     public static BufferedImage obtenirCachedImage(String isbn) {

@@ -21,6 +21,12 @@ import persistencia.internal.ConnexioServidor;
  */
 class DominiPersistenciaJUnit5Test {
 
+    static {
+        System.setProperty("biblioteca.test", "true");
+        System.setProperty("biblioteca.h2.url",
+            "jdbc:h2:mem:domini_pers_junit5;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1");
+    }
+
     private static final long ISBN_13 = 9780262533455L;
 
     @BeforeEach

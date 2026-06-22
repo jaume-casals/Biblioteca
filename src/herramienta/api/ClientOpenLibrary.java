@@ -11,6 +11,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +23,7 @@ public class ClientOpenLibrary {
 	private ClientOpenLibrary() {}
 
 	private static final long MIN_REQUEST_INTERVAL_MS = 300;
-	private static long ultimRequestMs = 0;
+	private static final AtomicLong ultimRequestMs = new AtomicLong(0);
 
 	/** Timeout de connexió (ms) per a cada crida HTTP a OL — manté l'EDT
 	 *  responsiu quan OL penja. */
@@ -31,11 +32,11 @@ public class ClientOpenLibrary {
 	 *  d'OL = IOException, no penjat indefinit. */
 	private static final int READ_TIMEOUT_MS = 10000;
 
-	private static synchronized void rateLimit() throws InterruptedException {
+	private static void rateLimit() throws InterruptedException {
 		long now = System.currentTimeMillis();
-		long wait = MIN_REQUEST_INTERVAL_MS - (now - ultimRequestMs);
+		long next = ultimRequestMs.getAndUpdate(prev -> Math.max(prev + MIN_REQUEST_INTERVAL_MS, now));
+		long wait = next - now;
 		if (wait > 0) Thread.sleep(wait);
-		ultimRequestMs = System.currentTimeMillis();
 	}
 
 	// @VisibleForTesting — override de la URL base / política de reintents

@@ -105,7 +105,7 @@ public class Configuracio {
     private static final java.util.Set<String> WINDOW_KEYS = java.util.Set.of(
         "windowX", "windowY", "windowWidth", "windowHeight", "windowMaximized");
     private static final java.util.Set<String> FILTER_KEYS = java.util.Set.of(
-        "defaultImgDir");
+        "defaultImgDir", "lastMode");
 
     /** Vista composta que usen els camins de càrrega/desada de fitxers
      *  existents. Iterar-la recorre els 4 sub-stores; els puts s'encaminen
@@ -386,7 +386,12 @@ public class Configuracio {
     }
 
     public static String obtenirDbProfile() { return props.getOrDefault("dbProfile", "biblioteca"); }
-    public static void posarDbProfile(String name) { props.put("dbProfile", name); save(); }
+    public static void posarDbProfile(String name) {
+        if (name != null && !name.matches("[a-zA-Z0-9_-]+"))
+            throw new IllegalArgumentException("invalid dbProfile: " + name);
+        props.put("dbProfile", name);
+        save();
+    }
 
     public static java.util.List<String> listDbProfiles() {
         java.io.File dir = bibliotecaDir().toFile();

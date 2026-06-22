@@ -26,7 +26,7 @@ class SqlOpTest {
             BibliotecaException.class);
         assertThat(ex).isNotNull();
         assertThat(ex.getCause()).isSameAs(root);
-        assertThat(ex.getMessage()).isEqualTo("boom");
+        assertThat(ex.getMessage()).contains("boom").contains("SQLState=").contains("code=");
     }
 
     @Test

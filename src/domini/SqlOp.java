@@ -14,6 +14,11 @@ public interface SqlOp {
     /** Executa {@code op}; relança qualsevol SQLException com a {@link BibliotecaException} preservant la causa. */
     static void domain(SqlOp op) {
         try { op.run(); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        catch (SQLException e) {
+            String msg = e.getClass().getSimpleName() + ": "
+                + (e.getMessage() != null ? e.getMessage() : "<no message>")
+                + " [SQLState=" + e.getSQLState() + ", code=" + e.getErrorCode() + "]";
+            throw new BibliotecaException(msg, e);
+        }
     }
 }

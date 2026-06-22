@@ -11,6 +11,21 @@ public class I18n {
     // índex: 0=ca  1=es  2=en
     private static final Map<String, String[]> TABLE = new LinkedHashMap<>();
 
+    // Patterns de substitució de placeholders precompilats indexats per
+    // args.length — els casos 1-3 cobreixen el 99% de les crides. args[0]
+    // queda a null perquè args.length==0 retorna abans del Pattern.
+    private static final java.util.regex.Pattern[] PLACEHOLDER_PATTERNS = new java.util.regex.Pattern[4];
+    static {
+        for (int n = 1; n < PLACEHOLDER_PATTERNS.length; n++) {
+            StringBuilder alt = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                if (i > 0) alt.append('|');
+                alt.append("\\{").append(i).append("\\}");
+            }
+            PLACEHOLDER_PATTERNS[n] = java.util.regex.Pattern.compile(alt.toString());
+        }
+    }
+
     static {
         T("btn_settings", "Configuració", "Configuración", "Settings");
         T("btn_tags", "🏷 Etiquetes", "🏷 Etiquetas", "🏷 Tags");
@@ -575,6 +590,7 @@ public class I18n {
         T("theme_dark", "Fosc", "Oscuro", "Dark");
         T("theme_sepia", "Sèpia", "Sépia", "Sepia");
         T("theme_ocean", "Oceà", "Océano", "Ocean");
+        T("filter_dash", "–", "–", "–");
         T("val_color_invalid", "Color invàlid: {0}. Usa null per esborrar, o format #rgb / #rrggbb.", "Color inválido: {0}. Usa null para borrar, o formato #rgb / #rrggbb.", "Invalid color: {0}. Use null to clear, or #rgb / #rrggbb format.");
         T("val_llista_blank", "El nom de la llista no pot estar buit", "El nombre de la estante no puede estar vacío", "Shelf name cannot be empty");
         T("val_tag_blank", "El nom de l'etiqueta no pot estar buit", "El nombre de la etiqueta no puede estar vacío", "Tag name cannot be empty");
@@ -633,14 +649,9 @@ public class I18n {
         // mutava `raw` en cada pas i permetia que un args[k] que contingués
         // "{j}" amb j > k corrompés la sortida quan s'iterava sobre j.
         if (args.length == 0) return raw;
-        // Construeix un regex alternatiu que captura totes les posicions
-        // d'arg presents a la plantilla en una sola passada.
-        StringBuilder alt = new StringBuilder();
-        for (int i = 0; i < args.length; i++) {
-            if (i > 0) alt.append('|');
-            alt.append("\\{").append(i).append("\\}");
-        }
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile(alt.toString());
+        java.util.regex.Pattern p = args.length < PLACEHOLDER_PATTERNS.length
+            ? PLACEHOLDER_PATTERNS[args.length]
+            : buildPlaceholderPattern(args.length);
         java.util.regex.Matcher m = p.matcher(raw);
         StringBuffer sb = new StringBuffer(raw.length() + 32);
         while (m.find()) {
@@ -649,6 +660,17 @@ public class I18n {
         }
         m.appendTail(sb);
         return sb.toString();
+    }
+
+    /** Construeix un Pattern alternatiu per a més de 3 placeholders — la
+     *  via lenta, mai no toca el cas comú. */
+    private static java.util.regex.Pattern buildPlaceholderPattern(int n) {
+        StringBuilder alt = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            if (i > 0) alt.append('|');
+            alt.append("\\{").append(i).append("\\}");
+        }
+        return java.util.regex.Pattern.compile(alt.toString());
     }
 
     /** Localize JOptionPane button labels after a language change. */

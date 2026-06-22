@@ -44,6 +44,9 @@ public class ServeiCopiaSeguretat {
     /** Segons entre execucions de còpia automàtica (24 hores). */
     private static final long AUTO_BACKUP_INTERVAL_S = 86_400;
 
+    /** Segons entre reintents puntuals quan una còpia cau SQLException/RuntimeException. */
+    private static final long AUTO_BACKUP_RETRY_DELAY_S = 300;
+
     public ServeiCopiaSeguretat(ControladorPersistencia cp) {
         this.cp = cp;
     }
@@ -76,6 +79,27 @@ public class ServeiCopiaSeguretat {
     }
 
     private void autoBackup() {
+        try {
+            doAutoBackup();
+        } catch (Throwable t) {
+            // SQLException o RuntimeException escaparien del cos i les
+            // empassaria silenciosament ScheduledExecutorService
+            // (sense UncaughtExceptionHandler al fil de còpia). Log
+            // sever + reintent puntual 5 min perquè la fallada no es
+            // perdi del tot — la propera execució del cicle de 24 h
+            // continua activa.
+            LOG.log(Level.SEVERE, "Backup automàtic fallat — programant reintent en 5 min", t);
+            scheduleAutoBackupRetry();
+        }
+    }
+
+    private void scheduleAutoBackupRetry() {
+        java.util.concurrent.ScheduledExecutorService local = scheduler;
+        if (local == null || local.isShutdown()) return;
+        local.schedule(this::autoBackup, AUTO_BACKUP_RETRY_DELAY_S, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    private void doAutoBackup() throws java.io.IOException, java.sql.SQLException {
         List<Llibre> bib = cp.obtenirAllLlibres();
         if (bib.isEmpty()) return;
         File dir = Configuracio.obtenirBackupDir();
@@ -107,19 +131,12 @@ public class ServeiCopiaSeguretat {
             // Segons el finding MEDIUM de tot.txt sobre les exceptions
             // empassades: registra+continua (aquesta és la còpia
             // automàtica programada; un sol fracàs no ha d'enverinar la
-            // propera execució programada).
+            // propera execució programada). Els errors de BBDD
+            // (SQLException) i els runtime inesperats es propaguen
+            // cap amunt fins a autoBackup(), on es registren com a
+            // SEVERE i es programa un reintent.
             LOG.log(Level.WARNING, "Backup automàtic fallat (I/O)", ioe);
             return;
-        } catch (java.sql.SQLException sqle) {
-            // Propaga els errors de BBDD sorollosament — una BBDD
-            // corrupta afecta totes les operacions, no només les còpies.
-            LOG.log(Level.SEVERE, "Backup automàtic fallat (SQL)", sqle);
-            throw new RuntimeException("Ha fallat la còpia SQL automàtica", sqle);
-        } catch (RuntimeException re) {
-            // Propaga els errors de runtime inesperats (NPE, IllegalState, …).
-            // Segons el finding: no els capturis en silenci.
-            LOG.log(Level.SEVERE, "Backup automàtic fallat (runtime)", re);
-            throw re;
         }
         try {
             java.nio.file.Files.move(tmpFile.toPath(), outFile.toPath(),

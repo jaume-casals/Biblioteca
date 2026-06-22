@@ -353,11 +353,23 @@ public class ControladorAccionsLlibre {
             new ConfiguracioDialogListener() {
                 @Override public void enCanviarTema() { state.vista.aplicarTheme(); }
                 @Override public void enRefrescarDades() {
-                    state.biblio = new ArrayList<>(state.cd.obtenirAllLlibres());
-                    host.pageCtrl().posarUseDBPagination(state.cd.esLargeLibrary());
-                    state.currentLlistaId = null;
-                    filtrarCtrl.quitarFiltros();
-                    shelfCtrl.refrescarComboLlistes();
+                    new SwingWorker<List<Llibre>, Void>() {
+                        @Override protected List<Llibre> doInBackground() {
+                            return state.cd.obtenirAllLlibres();
+                        }
+                        @Override protected void done() {
+                            if (isCancelled()) return;
+                            try {
+                                state.biblio = new ArrayList<>(get());
+                                host.pageCtrl().posarUseDBPagination(state.cd.esLargeLibrary());
+                                state.currentLlistaId = null;
+                                filtrarCtrl.quitarFiltros();
+                                shelfCtrl.refrescarComboLlistes();
+                            } catch (Exception e) {
+                                new DialegError(e).mostrarErrorMessage();
+                            }
+                        }
+                    }.execute();
                 }
             },
             state.cd

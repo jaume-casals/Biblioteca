@@ -23,13 +23,11 @@ public class Llista {
         return color == null || color.matches("#[0-9a-fA-F]{3}") || color.matches("#[0-9a-fA-F]{6}");
     }
 
-    /**
-     * Setter no comprovat — crida primer {@link #esValidColor(String)} quan
-     * el valor provingui d'entrada de l'usuari. Els camins de càrrega del
-     * DAO el fan servir directament amb valors que ja s'han validat en
-     * escriure.
-     */
-    public void posarColor(String color) { this.color = color; }
+    public void posarColor(String color) {
+        if (!esValidColor(color))
+            throw new BibliotecaException.Validacio(herramienta.i18n.I18n.t("val_color_invalid", color));
+        this.color = color;
+    }
 
     public int obtenirId() { return id; }
     public String obtenirNom() { return nom; }

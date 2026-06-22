@@ -90,7 +90,7 @@ public final class DelegatLlibre {
     }
 
     public boolean esLargeLibrary() {
-        return state.withLockReturning(() -> state.bib().size() >= SQL_FILTER_THRESHOLD);
+        return comptarLlibresDB() >= SQL_FILTER_THRESHOLD;
     }
 
     public List<Llibre> obtenirRecentlyAdded() { return state.persistence().obtenirRecentlyAdded(20); }
@@ -140,13 +140,15 @@ public final class DelegatLlibre {
 
     public void actualitzarLlibre(Llibre l) {
         state.withLock(() -> {
+            int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
+            if (pos < 0)
+                throw new BibliotecaException.NoTrobat("El llibre amb ISBN: " + l.obtenirISBN() + " no existeix a la base de dades");
             try {
                 state.persistence().actualitzarLlibre(l);
             } catch (SQLException e) {
                 throw new BibliotecaException(e.getMessage(), e);
             }
-            int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
-            if (pos >= 0) state.bib().set(pos, l);
+            state.bib().set(pos, l);
         });
     }
 

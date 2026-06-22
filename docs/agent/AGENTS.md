@@ -18,6 +18,10 @@ Trivial exceptions (user explicitly asks to skip planning): one-line typo, comme
 
 The single source of truth for open work is **`tot.txt`** at the repo root. It includes current DONE / OPEN status for every phase, bug, anti-pattern, and cross-cutting item.
 
+## Mistake log
+
+Read **`docs/agent/MISTAKES.md`** at the start of any non-trivial task. It is a personal memory of past mistakes (escape conventions, generator vs hand-edited files, deletion guardrails, vague-report handling) — short, table-based, optimized to scan fast. Append new entries at the bottom.
+
 ## Loop delegation
 
 The `loop` subagent (`.opencode/agent/loop.md`) and the `loop` skill (`.opencode/skill/loop/SKILL.md`) exist for autonomous, multi-step, verify-driven work. The agent already knows the project rules (MVC layers, no-delete, schema migrations, `make test` bar). Delegate to it instead of doing the work inline.

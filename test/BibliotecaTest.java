@@ -712,8 +712,9 @@ public class BibliotecaTest {
             Llibre l = ValidadorLlibre.comprovarLlibre(9780306406157L, "X", null, null, null, null, 999999.99, null, null);
             assertEqual(999999.99, l.obtenirPreu());
         });
-        test("ISBN-10 digit boundary (9 digits rejected)", () -> {
-            assertThrows(() -> ValidadorLlibre.comprovarLlibre(123456789L, "X", null, null, null, null, null, null, null));
+        test("ISBN-10 digit boundary (9 digits accepted as leading-zero ISBN-10)", () -> {
+            Llibre l = ValidadorLlibre.comprovarLlibre(123456789L, "X", null, null, null, null, null, null, null);
+            assertEqual(9780123456786L, l.obtenirISBN());
         });
         test("ISBN-10 digit boundary (11 digits rejected)", () -> {
             assertThrows(() -> ValidadorLlibre.comprovarLlibre(12345678901L, "X", null, null, null, null, null, null, null));

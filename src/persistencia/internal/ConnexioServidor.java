@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
 
+import javax.swing.SwingUtilities;
+
 import herramienta.config.Configuracio;
 import herramienta.i18n.I18n;
 
@@ -253,6 +255,12 @@ public class ConnexioServidor {
 	 * parcialment migrat és segur.
 	 */
 	private void runMigrations() throws SQLException {
+		// Constructor-only: les migracions comparteixen `con` amb la resta
+		// de l'aplicació i el muten (setAutoCommit), per la qual cosa
+		// executar-les fora del fil del constructor de ControladorPersistencia
+		// podria interferir amb un SwingWorker que estigués fent servir la
+		// mateixa connexió.
+		assert !SwingUtilities.isEventDispatchThread() : "migrations must not run on EDT";
 		boolean esH2 = esH2Connection();
 		boolean anteriorAutoCommit = con.getAutoCommit();
 		try (Statement st = con.createStatement()) {
