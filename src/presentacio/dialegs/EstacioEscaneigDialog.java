@@ -23,7 +23,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import persistencia.contract.EscritorBiblioteca;
@@ -37,7 +36,6 @@ public class EstacioEscaneigDialog extends JDialog {
 	private final JLabel lblStatus;
 	private final JLabel lblCounters;
 	private final Timer timer;
-	private boolean ignoreTimer = false;
 
 	public EstacioEscaneigDialog(Frame parent, EscritorBiblioteca cd, EnActualitzarBBDD listener) {
 		super(parent, I18n.t("estacio_title"), false);
@@ -140,20 +138,16 @@ public class EstacioEscaneigDialog extends JDialog {
 	}
 
 	private void onControllerResult() {
-		SwingUtilities.invokeLater(() -> {
-			lblStatus.setText(controller.getStatusText());
-			lblStatus.setForeground(controller.getStatusColor());
-			updateCounters();
-			textField.setText("");
-			textField.requestFocusInWindow();
-			ignoreTimer = false;
-			if (timer.isRunning()) timer.stop();
-			timer.start();
-		});
+		lblStatus.setText(controller.getStatusText());
+		lblStatus.setForeground(controller.getStatusColor());
+		updateCounters();
+		textField.setText("");
+		textField.requestFocusInWindow();
+		if (timer.isRunning()) timer.stop();
+		timer.start();
 	}
 
 	private void resetStatus() {
-		if (ignoreTimer) return;
 		lblStatus.setText(I18n.t("estacio_status_idle"));
 		lblStatus.setForeground(Color.DARK_GRAY);
 	}
@@ -167,4 +161,11 @@ public class EstacioEscaneigDialog extends JDialog {
 
 	public JTextField obtenirTextFieldISBN() { return textField; }
 	public ControladorEstacioEscaneig obtenirControlador() { return controller; }
+	public JLabel obtenirLblStatus() { return lblStatus; }
+
+	@Override
+	public void dispose() {
+		timer.stop();
+		super.dispose();
+	}
 }

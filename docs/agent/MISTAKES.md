@@ -126,3 +126,18 @@ loading.show();
 ```
 
 This bug existed in 5 places: `ControladorExportacio.exportarCSV/JSON/HTML`, `ControladorImportacio.importarCSV/Calibre/JSON`, `ControladorCopiaSeguretat.copiaSegBD/restaurarBD`. Regression test: `test/presentacio/dialegs/DialegCarregaSwingWorkerTestTest.java`.
+
+## Path moves from the 84a0521 restructure
+
+| was | now |
+|---|---|
+| `tot.txt` (root) | `docs/code-review/tot.txt` |
+| `AGENTS.md` | `docs/agent/AGENTS.md` |
+| `CLAUDE.md` | `docs/agent/CLAUDE.md` |
+| `pom.xml` | `build/maven-legacy/pom.xml` |
+| `install.exe` | `build/artifacts/install.exe` |
+| `install.sh` | `scripts/install.sh` |
+| `audit_redo.tsv` | `build/audit/audit_redo.tsv` |
+| `.settings/` | `.config/ide/idea/` + `.config/ide/vscode/` |
+
+`AGENTS.md` still says `tot.txt at the repo root` — stale. The file IS `docs/code-review/tot.txt`. Don't re-edit `AGENTS.md` to say "docs/…" without confirming with the user (they may want a redirect note instead of a path rewrite).

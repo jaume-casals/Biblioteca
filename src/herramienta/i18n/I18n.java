@@ -621,7 +621,7 @@ public class I18n {
         T("estacio_status_error", "✗ Error: {0}", "✗ Error: {0}", "✗ Error: {0}");
         T("estacio_counters", "Afegits: {0} · Duplicats: {1} · Errors: {2}", "Añadidos: {0} · Duplicados: {1} · Errores: {2}", "Added: {0} · Duplicates: {1} · Errors: {2}");
         T("estacio_btn_close", "Tancar", "Cerrar", "Close");
-        T("estacio_shortcut_hint", "Ctrl+Shift+S per obrir", "Ctrl+Shift+S para abrir", "Ctrl+Shift+S to open");
+        T("estacio_shortcut_hint", "Ctrl+Shift+S per focus", "Ctrl+Shift+S para focus", "Ctrl+Shift+S to focus");
     }
 
     private static void T(String key, String ca, String es, String en) {

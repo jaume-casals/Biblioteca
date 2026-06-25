@@ -614,4 +614,4 @@ estacio_status_network,✗ Sense connexió amb OpenLibrary,✗ Sin conexión con
 estacio_status_error,✗ Error: {0},✗ Error: {0},✗ Error: {0}
 estacio_counters,"Afegits: {0} · Duplicats: {1} · Errors: {2}","Añadidos: {0} · Duplicados: {1} · Errores: {2}","Added: {0} · Duplicates: {1} · Errors: {2}"
 estacio_btn_close,Tancar,Cerrar,Close
-estacio_shortcut_hint,Ctrl+Shift+S per obrir,Ctrl+Shift+S para abrir,Ctrl+Shift+S to open
+estacio_shortcut_hint,Ctrl+Shift+S per focus,Ctrl+Shift+S para focus,Ctrl+Shift+S to focus

@@ -12,7 +12,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.LongAdder;
 
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 public class ControladorEstacioEscaneig {
@@ -41,9 +43,9 @@ public class ControladorEstacioEscaneig {
 	private final Deque<String> queue = new ArrayDeque<>();
 	private volatile boolean shutdown = false;
 
-	private volatile long countAdded = 0;
-	private volatile long countDuplicate = 0;
-	private volatile long countError = 0;
+	private final LongAdder countAdded = new LongAdder();
+	private final LongAdder countDuplicate = new LongAdder();
+	private final LongAdder countError = new LongAdder();
 	private volatile String statusText;
 	private volatile Color statusColor;
 
@@ -143,8 +145,10 @@ public class ControladorEstacioEscaneig {
 		}
 
 		if (listener != null) {
-			try { listener.enActualitzarLlibre(book, true); }
-			catch (Exception ignored) {}
+			SwingUtilities.invokeLater(() -> {
+				try { listener.enActualitzarLlibre(book, true); }
+				catch (Exception ignored) {}
+			});
 		}
 		return new Result(Outcome.ADDED,
 			I18n.t("estacio_status_added", title), isbn, title);
@@ -171,10 +175,10 @@ public class ControladorEstacioEscaneig {
 
 	private void finishOneResult(Result r) {
 		switch (r.outcome) {
-			case ADDED: countAdded++; break;
-			case DUPLICATE: countDuplicate++; break;
+			case ADDED: countAdded.increment(); break;
+			case DUPLICATE: countDuplicate.increment(); break;
 			case INVALID: case NETWORK_ERROR: case OTHER_ERROR:
-				countError++; break;
+				countError.increment(); break;
 		}
 		statusText = r.message;
 		statusColor = colorFor(r.outcome);
@@ -212,7 +216,7 @@ public class ControladorEstacioEscaneig {
 
 	public String getStatusText() { return statusText; }
 	public Color getStatusColor() { return statusColor; }
-	public long getCountAdded() { return countAdded; }
-	public long getCountDuplicate() { return countDuplicate; }
-	public long getCountError() { return countError; }
+	public long getCountAdded() { return countAdded.sum(); }
+	public long getCountDuplicate() { return countDuplicate.sum(); }
+	public long getCountError() { return countError.sum(); }
 }
