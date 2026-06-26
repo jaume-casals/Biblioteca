@@ -1,6 +1,5 @@
 package domini.facade;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -14,6 +13,7 @@ import domini.BibliotecaException;
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.EspecificacioOrdenacio;
+import domini.SqlOp;
 import herramienta.text.FiltreUtils;
 import persistencia.internal.ControladorPersistencia;
 
@@ -102,11 +102,7 @@ public final class DelegatLlibre {
             int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
             if (p >= 0)
                 throw new BibliotecaException.Duplicat("El llibre amb ISBN: " + l.obtenirISBN() + " ja existeix a la biblioteca");
-            try {
-                state.persistence().afegirLlibre(l);
-            } catch (SQLException e) {
-                throw new BibliotecaException(e.getMessage(), e);
-            }
+            SqlOp.domain(() -> state.persistence().afegirLlibre(l));
             state.bib().add(-(p + 1), l);
         });
     }
@@ -114,12 +110,8 @@ public final class DelegatLlibre {
     public void eliminarLlibre(Llibre l) {
         state.withLock(() -> {
             int p = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
-            if (p < 0) throw new BibliotecaException.NoTrobat("El llibre amb ISBN: " + l.obtenirISBN() + " no existeix a la base de dades");
-            try {
-                state.persistence().eliminarLlibre(l);
-            } catch (SQLException e) {
-                throw new BibliotecaException(e.getMessage(), e);
-            }
+            if (p < 0) throw notFoundEnBaseDades(l.obtenirISBN());
+            SqlOp.domain(() -> state.persistence().eliminarLlibre(l));
             state.bib().remove(p);
         });
     }
@@ -128,12 +120,8 @@ public final class DelegatLlibre {
         if (ISBN == null) throw new BibliotecaException.Validacio("ISBN no pot ser null");
         state.withLock(() -> {
             int p = binarySearchByIsbn(state.bib(), ISBN);
-            if (p < 0) throw new BibliotecaException.NoTrobat("El llibre amb ISBN: " + ISBN + " no existeix a la base de dades");
-            try {
-                state.persistence().eliminarLlibre(ISBN);
-            } catch (SQLException e) {
-                throw new BibliotecaException(e.getMessage(), e);
-            }
+            if (p < 0) throw notFoundEnBaseDades(ISBN);
+            SqlOp.domain(() -> state.persistence().eliminarLlibre(ISBN));
             state.bib().remove(p);
         });
     }
@@ -142,12 +130,8 @@ public final class DelegatLlibre {
         state.withLock(() -> {
             int pos = Collections.binarySearch(state.bib(), l, ISBN_COMPARATOR);
             if (pos < 0)
-                throw new BibliotecaException.NoTrobat("El llibre amb ISBN: " + l.obtenirISBN() + " no existeix a la base de dades");
-            try {
-                state.persistence().actualitzarLlibre(l);
-            } catch (SQLException e) {
-                throw new BibliotecaException(e.getMessage(), e);
-            }
+                throw notFoundEnBaseDades(l.obtenirISBN());
+            SqlOp.domain(() -> state.persistence().actualitzarLlibre(l));
             state.bib().set(pos, l);
         });
     }
@@ -162,13 +146,7 @@ public final class DelegatLlibre {
             if (idx < 0)
                 throw new BibliotecaException.NoTrobat("No existeix el llibre amb ISBN " + ISBN);
             Llibre l = state.bib().get(idx);
-            if (!l.teCampsPesatsCarregats()) {
-                try {
-                    state.persistence().carregarHeavyFields(l.obtenirISBN(), l);
-                } catch (RuntimeException e) {
-                    throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + l.obtenirISBN(), e);
-                }
-            }
+            if (!l.teCampsPesatsCarregats()) loadHeavyInto(l);
             return l;
         });
     }
@@ -176,11 +154,7 @@ public final class DelegatLlibre {
     public void carregarHeavyFields(Llibre book) {
         if (book == null || book.teCampsPesatsCarregats()) return;
         state.withLock(() -> {
-            try {
-                state.persistence().carregarHeavyFields(book.obtenirISBN(), book);
-            } catch (RuntimeException e) {
-                throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + book.obtenirISBN(), e);
-            }
+            loadHeavyInto(book);
             // La referència `book` pot no ser la que emmagatzema bib() a
             // la ranura de l'ISBN corresponent (una updateLlibre concurrent
             // l'ha pogut substituir), però el DAO ja ha mutat `book` in
@@ -240,6 +214,14 @@ public final class DelegatLlibre {
 
     // ── Internals ─────────────────────────────────────────────────────────────
 
+    private void loadHeavyInto(Llibre l) {
+        try {
+            state.persistence().carregarHeavyFields(l.obtenirISBN(), l);
+        } catch (RuntimeException e) {
+            throw new BibliotecaException("No s'han pogut carregar els camps pesats del llibre amb ISBN " + l.obtenirISBN(), e);
+        }
+    }
+
     private ArrayList<Llibre> filtrarInMemory(List<Llibre> font, LlibreFilter f) {
         ControladorPersistencia cp = state.persistence();
         Set<Long> tagISBNs    = f.obtenirTagId()    != null ? cp.obtenirLlibresWithTag(f.obtenirTagId())     : null;
@@ -274,5 +256,9 @@ public final class DelegatLlibre {
 
     private static int binarySearchByIsbn(ArrayList<Llibre> bib, Long isbn) {
         return binarySearchByIsbn(bib, isbn == null ? -1L : isbn);
+    }
+
+    private static BibliotecaException.NoTrobat notFoundEnBaseDades(long isbn) {
+        return new BibliotecaException.NoTrobat("El llibre amb ISBN: " + isbn + " no existeix a la base de dades");
     }
 }

@@ -20,23 +20,42 @@ public class ExportadorLlibres {
 
     private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
 
+    /** Agrupa una llista de files relacionals per ISBN preservant l'ordre d'inserció dins de cada grup. */
+    static <T> java.util.Map<Long, List<T>> groupByIsbn(List<T> rows, java.util.function.ToLongFunction<T> isbnOf) {
+        java.util.Map<Long, List<T>> map = new java.util.HashMap<>();
+        for (T row : rows) map.computeIfAbsent(isbnOf.applyAsLong(row), k -> new ArrayList<>()).add(row);
+        return map;
+    }
+
+    /** Serialitza una col·lecció d'entitats id+nom a una llista de mapes {@code {id, nom}}. */
+    private static <T> List<java.util.Map<String, Object>> idNomList(
+            java.util.Collection<T> coll,
+            java.util.function.ToIntFunction<T> idOf,
+            java.util.function.Function<T, String> nomOf) {
+        List<java.util.Map<String, Object>> out = new java.util.ArrayList<>(coll.size());
+        for (T t : coll) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", idOf.applyAsInt(t));
+            m.put("nom", nomOf.apply(t));
+            out.add(m);
+        }
+        return out;
+    }
+
     public static void exportarCSV(File f, List<Llibre> view, LectorPrestatgeria cd) throws Exception {
         java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
         for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
-        java.util.Map<Long, java.util.List<persistencia.row.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.row.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
-            llistaRows.computeIfAbsent(row.isbn(), k -> new ArrayList<>()).add(row);
+        java.util.Map<Long, List<LlibreLlistaRow>> llistaRows =
+            groupByIsbn(cd.obtenirAllLlibreLlistaRows(), LlibreLlistaRow::isbn);
         domini.AnalitzadorPrestatgeria.exportarToCsv(f, view, llistaById, llistaRows);
     }
 
     public static void exportarJSON(File f, LectorBiblioteca cd) throws Exception {
         // Càrrega en lot de les dades relacionals per evitar N+1
-        java.util.Map<Long, List<persistencia.row.LlibreLlistaRow>> llistaRows = new java.util.HashMap<>();
-        for (persistencia.row.LlibreLlistaRow r : cd.obtenirAllLlibreLlistaRows())
-            llistaRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
-        java.util.Map<Long, List<persistencia.row.LlibreTagRow>> tagRows = new java.util.HashMap<>();
-        for (persistencia.row.LlibreTagRow r : cd.obtenirAllLlibreTagRows())
-            tagRows.computeIfAbsent(r.isbn(), k -> new ArrayList<>()).add(r);
+        java.util.Map<Long, List<LlibreLlistaRow>> llistaRows =
+            groupByIsbn(cd.obtenirAllLlibreLlistaRows(), LlibreLlistaRow::isbn);
+        java.util.Map<Long, List<LlibreTagRow>> tagRows =
+            groupByIsbn(cd.obtenirAllLlibreTagRows(), LlibreTagRow::isbn);
 
         // Construeix el document com un sol LinkedHashMap perquè GSON
         // gestioni les claus, comes i escapament (la implementació
@@ -56,24 +75,8 @@ public class ExportadorLlibres {
                 tagRows.getOrDefault(l.obtenirISBN(), java.util.Collections.emptyList())));
         }
         root.put("llibres", llibresJson);
-        ArrayList<Llista> llistes = new ArrayList<>(cd.obtenirAllLlistes());
-        java.util.List<java.util.Map<String, Object>> llistesJson = new java.util.ArrayList<>(llistes.size());
-        for (Llista ll : llistes) {
-            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-            m.put("id", ll.obtenirId());
-            m.put("nom", ll.obtenirNom());
-            llistesJson.add(m);
-        }
-        root.put("llistes", llistesJson);
-        ArrayList<Tag> tags = new ArrayList<>(cd.obtenirAllTags());
-        java.util.List<java.util.Map<String, Object>> tagsJson = new java.util.ArrayList<>(tags.size());
-        for (Tag t : tags) {
-            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-            m.put("id", t.obtenirId());
-            m.put("nom", t.obtenirNom());
-            tagsJson.add(m);
-        }
-        root.put("tags", tagsJson);
+        root.put("llistes", idNomList(cd.obtenirAllLlistes(), Llista::obtenirId, Llista::obtenirNom));
+        root.put("tags", idNomList(cd.obtenirAllTags(), Tag::obtenirId, Tag::obtenirNom));
 
         try (PrintWriter pw = new PrintWriter(
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {

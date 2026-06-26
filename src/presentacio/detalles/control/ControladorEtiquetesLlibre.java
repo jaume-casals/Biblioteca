@@ -1,15 +1,15 @@
 package presentacio.detalles.control;
 
+import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import domini.Llibre;
 import persistencia.row.LlibreTagRow;
@@ -17,9 +17,10 @@ import domini.Tag;
 import persistencia.contract.EscritorEtiqueta;
 import herramienta.ui.DialegError;
 import herramienta.i18n.I18n;
+import herramienta.ui.Documents;
 import presentacio.detalles.vista.DialegEtiquetesLlibre;
 
-public class ControladorEtiquetesLlibre {
+public class ControladorEtiquetesLlibre extends ControladorEntitatLlibre<DialegEtiquetesLlibre, EscritorEtiqueta> {
 
     // NOTA DE DISSENY: TagsDelLlibreDialog aplica els canvis de pertinença
     // d'etiquetes immediatament (addLlibreToTag / removeLlibreFromTag es
@@ -31,9 +32,10 @@ public class ControladorEtiquetesLlibre {
     // valoració i estat de lectura per llibre que es beneficien de
     // l'edició per lots, i per això les prestatgeries fan servir desat diferit.
 
-    private final DialegEtiquetesLlibre vista;
-    private final Llibre llibre;
-    private final EscritorEtiqueta cd;
+    public ControladorEtiquetesLlibre(DialegEtiquetesLlibre vista, Llibre llibre, EscritorEtiqueta cd) {
+        super(vista, llibre, cd != null ? cd : domini.ControladorDomini.getInstance());
+        initEntitatLlibre();
+    }
     private ArrayList<Tag> tagsCache = new ArrayList<>();
     private ArrayList<Tag> allTagsCache = new ArrayList<>();
     private ArrayList<Tag> displayedTags = new ArrayList<>();
@@ -44,24 +46,17 @@ public class ControladorEtiquetesLlibre {
      *  recàrrega que el finding LOW de tot.txt va assenyalar. */
     private Map<Integer, Integer> tagCounts = new HashMap<>();
 
-    public ControladorEtiquetesLlibre(DialegEtiquetesLlibre vista, Llibre llibre, EscritorEtiqueta cd) {
-        this.vista = vista;
-        this.llibre = llibre;
-        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
-        wireListeners();
-        reload();
-    }
+    @Override protected Component obtenirParentDialeg() { return vista; }
+    @Override protected JComboBox<?> obtenirComboAdd() { return vista.obtenirComboAdd(); }
 
-    private void wireListeners() {
+    @Override
+    protected void wireListeners() {
         vista.obtenirBtnCrear().addActionListener(e -> onCrear());
         vista.obtenirBtnAfegir().addActionListener(e -> onAfegir());
         vista.obtenirBtnTreure().addActionListener(e -> onTreure());
         vista.obtenirTxtNovaEtiqueta().addActionListener(e -> onCrear());
-        vista.obtenirFilterField().getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { filtrarTags(); }
-            public void removeUpdate(DocumentEvent e) { filtrarTags(); }
-            public void changedUpdate(DocumentEvent e) { filtrarTags(); }
-        });
+        vista.obtenirFilterField().getDocument().addDocumentListener(
+                Documents.onChange(this::filtrarTags));
     }
 
     private void onCrear() {
@@ -90,12 +85,7 @@ public class ControladorEtiquetesLlibre {
     }
 
     private void onAfegir() {
-        if (vista.obtenirComboAdd().getItemCount() == 0) {
-            JOptionPane.showMessageDialog(vista,
-                I18n.t("dlg_no_tags_msg"),
-                I18n.t("dlg_no_tags_title"), JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+        if (comboBuit("dlg_no_tags_msg", "dlg_no_tags_title")) return;
         Tag tag = (Tag) vista.obtenirComboAdd().getSelectedItem();
         if (tag == null) return;
         if (tagsCache.stream().anyMatch(t -> t.obtenirId() == tag.obtenirId())) {
@@ -164,33 +154,25 @@ public class ControladorEtiquetesLlibre {
         vista.actualitzarTable(displayedTags, tagCounts);
     }
 
-    private void reload() {
-        new SwingWorker<ReloadData, Void>() {
-            @Override protected ReloadData doInBackground() {
-                ArrayList<Tag> forLlibre = new ArrayList<>(cd.obtenirTagsForLlibre(llibre.obtenirISBN()));
-                ArrayList<Tag> all = new ArrayList<>(cd.obtenirAllTags());
-                Map<Integer, Integer> counts = new HashMap<>();
-                for (LlibreTagRow row : cd.obtenirAllLlibreTagRows()) {
-                    counts.merge(row.tagId(), 1, Integer::sum);
-                }
-                return new ReloadData(forLlibre, all, counts);
+    @Override
+    protected void reload() {
+        executeReload(() -> {
+            ArrayList<Tag> forLlibre = new ArrayList<>(cd.obtenirTagsForLlibre(llibre.obtenirISBN()));
+            ArrayList<Tag> all = new ArrayList<>(cd.obtenirAllTags());
+            Map<Integer, Integer> counts = new HashMap<>();
+            for (LlibreTagRow row : cd.obtenirAllLlibreTagRows()) {
+                counts.merge(row.tagId(), 1, Integer::sum);
             }
-            @Override protected void done() {
-                if (isCancelled()) return;
-                try {
-                    ReloadData d = get();
-                    tagsCache = d.forLlibre();
-                    allTagsCache = d.all();
-                    tagCounts = d.counts();
-                    displayedTags = new ArrayList<>(tagsCache);
-                    reloadComboAdd();
-                    vista.actualitzarTable(displayedTags, tagCounts);
-                    vista.obtenirFilterField().setText("");
-                } catch (Exception ex) {
-                    new DialegError(ex).mostrarErrorMessage();
-                }
-            }
-        }.execute();
+            return new ReloadData(forLlibre, all, counts);
+        }, d -> {
+            tagsCache = d.forLlibre();
+            allTagsCache = d.all();
+            tagCounts = d.counts();
+            displayedTags = new ArrayList<>(tagsCache);
+            reloadComboAdd();
+            vista.actualitzarTable(displayedTags, tagCounts);
+            vista.obtenirFilterField().setText("");
+        });
     }
 
     private record ReloadData(ArrayList<Tag> forLlibre, ArrayList<Tag> all, Map<Integer, Integer> counts) {}

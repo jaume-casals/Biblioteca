@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import persistencia.internal.MapejadorsFiles;
 import persistencia.row.LlibreTagRow;
 
 public class TagDao {
@@ -60,117 +61,84 @@ public class TagDao {
 
     private volatile java.util.List<LlibreTagRow> llibreTagCache;
 
+    private static final MapejadorsFiles.MapejadorFiles<Tag> TAG_MAPPER =
+        rs -> new Tag(rs.getInt(1), rs.getString(2));
+
     public TagDao(Connection con) { this.con = con; }
 
     public void invalidateLlibreTagCache() { llibreTagCache = null; }
 
     public ArrayList<Tag> obtenirAll() {
-        ArrayList<Tag> tags = new ArrayList<>();
         try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery("SELECT id, nom FROM tag ORDER BY nom")) {
-                while (rs.next()) tags.add(new Tag(rs.getInt(1), rs.getString(2)));
-            }
+            return new ArrayList<>(MapejadorsFiles.queryAll(con,
+                "SELECT id, nom FROM tag ORDER BY nom", TAG_MAPPER));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant les etiquetes: " + e.getMessage(), e);
         }
-        return tags;
     }
 
     public int create(String nom) throws SQLException {
-        try (PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO tag (nom) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, nom);
-            ps.execute();
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (!rs.next()) throw new SQLException("createTag: no s'ha retornat cap clau generada");
-                return rs.getInt(1);
-            }
-        }
+        return MapejadorsFiles.insertReturningKey(con,
+            "INSERT INTO tag (nom) VALUES (?)", ps -> ps.setString(1, nom));
     }
 
     public void delete(int id) throws SQLException {
-        try (PreparedStatement ps = con.prepareStatement("DELETE FROM tag WHERE id = ?")) {
-            ps.setInt(1, id);
-            ps.execute();
-        }
+        MapejadorsFiles.exec(con, "DELETE FROM tag WHERE id = ?", ps -> ps.setInt(1, id));
         invalidateLlibreTagCache();
     }
 
     public void rename(int id, String newNom) throws SQLException {
-        try (PreparedStatement ps = con.prepareStatement("UPDATE tag SET nom = ? WHERE id = ?")) {
+        MapejadorsFiles.exec(con, "UPDATE tag SET nom = ? WHERE id = ?", ps -> {
             ps.setString(1, newNom);
             ps.setInt(2, id);
-            ps.execute();
-        }
+        });
     }
 
     public ArrayList<Tag> obtenirForLlibre(long isbn) {
-        ArrayList<Tag> tags = new ArrayList<>();
         try {
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT t.id, t.nom FROM tag t JOIN llibre_tag lt ON t.id = lt.tag_id WHERE lt.isbn = ? ORDER BY t.nom")) {
-                ps.setLong(1, isbn);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) tags.add(new Tag(rs.getInt(1), rs.getString(2)));
-                }
-            }
+            return new ArrayList<>(MapejadorsFiles.queryWithParams(con,
+                "SELECT t.id, t.nom FROM tag t JOIN llibre_tag lt ON t.id = lt.tag_id WHERE lt.isbn = ? ORDER BY t.nom",
+                ps -> ps.setLong(1, isbn), TAG_MAPPER));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant les etiquetes del llibre: " + e.getMessage(), e);
         }
-        return tags;
     }
 
     public void afegirToLlibre(long isbn, int tagId) throws SQLException {
-        try (PreparedStatement ps = con.prepareStatement(
-                "INSERT IGNORE INTO llibre_tag (isbn, tag_id) VALUES (?, ?)")) {
+        MapejadorsFiles.exec(con, "INSERT IGNORE INTO llibre_tag (isbn, tag_id) VALUES (?, ?)", ps -> {
             ps.setLong(1, isbn);
             ps.setInt(2, tagId);
-            ps.execute();
-        }
+        });
         invalidateLlibreTagCache();
     }
 
     public void eliminarFromLlibre(long isbn, int tagId) throws SQLException {
-        try (PreparedStatement ps = con.prepareStatement(
-                "DELETE FROM llibre_tag WHERE isbn = ? AND tag_id = ?")) {
+        MapejadorsFiles.exec(con, "DELETE FROM llibre_tag WHERE isbn = ? AND tag_id = ?", ps -> {
             ps.setLong(1, isbn);
             ps.setInt(2, tagId);
-            ps.execute();
-        }
+        });
         invalidateLlibreTagCache();
     }
 
     public Set<Long> obtenirLlibresWithTag(int tagId) {
-        Set<Long> isbns = new HashSet<>();
         try {
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT isbn FROM llibre_tag WHERE tag_id = ?")) {
-                ps.setInt(1, tagId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) isbns.add(rs.getLong(1));
-                }
-            }
+            return new HashSet<>(MapejadorsFiles.queryWithParams(con,
+                "SELECT isbn FROM llibre_tag WHERE tag_id = ?",
+                ps -> ps.setInt(1, tagId), rs -> rs.getLong(1)));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant els llibres de l'etiqueta: " + e.getMessage(), e);
         }
-        return isbns;
     }
 
     public java.util.List<LlibreTagRow> obtenirAllLlibreTag() {
         if (llibreTagCache != null) return llibreTagCache;
-        java.util.List<LlibreTagRow> rows = new java.util.ArrayList<>();
         try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery(
-                    "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn")) {
-                while (rs.next())
-                    rows.add(new LlibreTagRow(rs.getLong(1), rs.getInt(2)));
-            }
+            llibreTagCache = java.util.List.copyOf(MapejadorsFiles.queryAll(con,
+                "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn",
+                rs -> new LlibreTagRow(rs.getLong(1), rs.getInt(2))));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant les dades d'etiquetes: " + e.getMessage(), e);
         }
-        llibreTagCache = java.util.List.copyOf(rows);
         return llibreTagCache;
     }
 
@@ -183,19 +151,15 @@ public class TagDao {
      * veure'n el Javadoc per a la justificació del doble camí.
      */
     public java.util.List<String> obtenirDistinctValues(String column) {
-        java.util.List<String> vals = new java.util.ArrayList<>();
-        if (!AUTOCOMPLETE_COLUMNS.contains(column)) return vals;
+        if (!AUTOCOMPLETE_COLUMNS.contains(column)) return new java.util.ArrayList<>();
         try {
-            try (Statement s = con.createStatement();
-                 ResultSet rs = s.executeQuery(
-                    "SELECT DISTINCT `" + column + "` FROM llibre WHERE `" + column +
-                    "` IS NOT NULL AND `" + column + "` <> '' ORDER BY `" + column + "`")) {
-                while (rs.next()) vals.add(rs.getString(1));
-            }
+            return MapejadorsFiles.queryAll(con,
+                "SELECT DISTINCT `" + column + "` FROM llibre WHERE `" + column +
+                "` IS NOT NULL AND `" + column + "` <> '' ORDER BY `" + column + "`",
+                rs -> rs.getString(1));
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant valors de " + column + ": " + e.getMessage(), e);
         }
-        return vals;
     }
 
 }

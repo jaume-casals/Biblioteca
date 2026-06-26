@@ -224,30 +224,27 @@ public class ControladorPrestatgeria {
     }
 
     void afegirSeleccionatsALlista(int[] rows) {
-        Llista sel = pickLlista(I18n.t("dlg_add_to_list_msg", rows.length));
-        if (sel == null) return;
-        int ok = 0, skip = 0;
         JTable t = state.vista.obtenirTaulaLlibres();
+        List<Long> isbns = new ArrayList<>();
         for (int row : rows) {
             try {
-                long isbn = Long.parseLong((String) t.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN));
-                state.cd.afegirLlibreToLlista(isbn, sel.obtenirId(), 0.0, false);
-                ok++;
-            } catch (Exception ignored) { skip++; }
+                isbns.add(Long.parseLong((String) t.getValueAt(row, ModelTaulaBiblioteca.COL_ISBN)));
+            } catch (Exception ignored) {}
         }
-        String msg = I18n.t("dlg_books_added_to_list", ok, sel.obtenirNom());
-        if (skip > 0) msg += "\n" + I18n.t("dlg_books_existing_list", skip);
-        JOptionPane.showMessageDialog(state.vista, msg, I18n.t("dlg_added_to_list_title"), JOptionPane.INFORMATION_MESSAGE);
-        refrescarComboLlistes();
+        afegirIsbnsALlista(isbns, rows.length);
     }
 
     void afegirLlibresGaleriaALlista(List<domini.Llibre> llibres) {
-        Llista sel = pickLlista(I18n.t("dlg_add_to_list_msg", llibres.size()));
+        afegirIsbnsALlista(llibres.stream().map(domini.Llibre::obtenirISBN).toList(), llibres.size());
+    }
+
+    private void afegirIsbnsALlista(List<Long> isbns, int countForPrompt) {
+        Llista sel = pickLlista(I18n.t("dlg_add_to_list_msg", countForPrompt));
         if (sel == null) return;
         int ok = 0, skip = 0;
-        for (domini.Llibre l : llibres) {
+        for (long isbn : isbns) {
             try {
-                state.cd.afegirLlibreToLlista(l.obtenirISBN(), sel.obtenirId(), 0.0, false);
+                state.cd.afegirLlibreToLlista(isbn, sel.obtenirId(), 0.0, false);
                 ok++;
             } catch (Exception ignored) { skip++; }
         }

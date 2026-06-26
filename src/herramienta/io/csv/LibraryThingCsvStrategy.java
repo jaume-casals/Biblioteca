@@ -37,11 +37,7 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
         // claudàtors com [978...]; parseIsbn elimina tots els caràcters
         // no numèrics, de manera que els claudàtors es treuen
         // automàticament.
-        String isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN");
-        isbnRaw = UtilitatsCsv.analitzarIsbn(isbnRaw);
-        if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
-        long isbn = Long.parseLong(isbnRaw);
+        long isbn = UtilitatsCsv.resoldreIsbn(hMap, c);
         if (UtilitatsCsv.existsInLibrary(cd, isbn)) return false;
 
         String nom   = UtilitatsCsv.colVal(hMap, c, "Title");
@@ -67,13 +63,8 @@ public class LibraryThingCsvStrategy implements CsvImportStrategy {
         if (!notes.isEmpty()) l.posarNotes(notes);
         cd.afegirLlibre(l);
 
-        String collections = UtilitatsCsv.colVal(hMap, c, "Collections");
-        if (!collections.isEmpty()) {
-            for (String s : collections.split(",")) {
-                domini.Llista llista = ShelvesHelper.cercarOCrearPrestatge(cd, shelfCache, s.trim());
-                if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, false);
-            }
-        }
+        ShelvesHelper.afegirLlibreAPrestatges(cd, shelfCache, isbn,
+            UtilitatsCsv.colVal(hMap, c, "Collections"), ",", valoracio, false);
 
         String tags = UtilitatsCsv.colVal(hMap, c, "Tags");
         if (!tags.isEmpty()) {

@@ -14,6 +14,7 @@ import java.util.function.Function;
 import domini.Llibre;
 import persistencia.internal.LlibreFieldBindings;
 import persistencia.internal.LlibreMapper;
+import persistencia.internal.MapejadorsFiles;
 import persistencia.internal.Schema;
 
 import persistencia.internal.ControladorPersistencia;
@@ -134,54 +135,57 @@ public class LlibreDaoCore {
         return sb.toString();
     }
 
-    /** Construeix la part {@code (col1, col2, ...)} de la sentència INSERT
-     *  a partir de l'enum {@link Column}, excloent les entrades només de
-     *  subconsulta (autor / has_blob) que es calculen, no es lliguen. */
-    private static String inserirColumnList() {
+    private static String joinColumns(boolean onlyUpdate, String suffix) {
         StringBuilder sb = new StringBuilder(256);
         for (Columna c : Columna.values()) {
             if (c.inserirColumn == null) continue;
+            if (onlyUpdate && !c.inUpdate) continue;
             if (sb.length() > 0) sb.append(",");
-            sb.append("`").append(c.inserirColumn).append("`");
+            sb.append("`").append(c.inserirColumn).append("`").append(suffix);
         }
         return sb.toString();
     }
+
+    private static int countColumns(boolean onlyUpdate) {
+        int n = 0;
+        for (Columna c : Columna.values()) {
+            if (c.inserirColumn == null) continue;
+            if (onlyUpdate && !c.inUpdate) continue;
+            n++;
+        }
+        return n;
+    }
+
+    /** Construeix la part {@code (col1, col2, ...)} de la sentència INSERT
+     *  a partir de l'enum {@link Column}, excloent les entrades només de
+     *  subconsulta (autor / has_blob) que es calculen, no es lliguen. */
+    private static String inserirColumnList() { return joinColumns(false, ""); }
 
     /** Recompte de columnes lligables — ha de coincidir amb la longitud de
      *  la llista de valors de {@link LlibreFieldBindings#forInsert(Llibre)}
      *  (ISBN + 25 camps sense subconsulta + imatge_blob = 27). S'usa per
      *  dimensionar la llista de placeholders. */
-    private static int inserirColumnCount() {
-        int n = 0;
-        for (Columna c : Columna.values()) if (c.inserirColumn != null) n++;
-        return n;
-    }
+    private static int inserirColumnCount() { return countColumns(false); }
 
     /** Construeix la part {@code col=?, col=?, ...} de la sentència UPDATE.
      *  Exclou ISBN (la clàusula WHERE el proporciona) i imatge_blob (la
      *  coberta viu al camí dedicat setBlob, no a l'UPDATE de metadades). */
-    private static String actualitzarSetList() {
-        StringBuilder sb = new StringBuilder(256);
-        for (Columna c : Columna.values()) {
-            if (c.inserirColumn == null) continue;
-            if (!c.inUpdate) continue;
-            if (sb.length() > 0) sb.append(",");
-            sb.append("`").append(c.inserirColumn).append("`=?");
-        }
-        return sb.toString();
-    }
+    private static String actualitzarSetList() { return joinColumns(true, "=?"); }
 
     /** Nombre de placeholders {@code ?} a la llista SET de l'UPDATE. Ha
      *  de coincidir amb la longitud de la llista de valors de
      *  {@link LlibreFieldBindings#forUpdate(Llibre)} (25 = sense ISBN,
      *  sense imatge_blob). El WHERE ISBN el lliga per separat el
      *  consumidor. */
-    private static int actualitzarSetCount() {
-        int n = 0;
-        for (Columna c : Columna.values()) {
-            if (c.inserirColumn != null && c.inUpdate) n++;
-        }
-        return n;
+    private static int actualitzarSetCount() { return countColumns(true); }
+
+    private static List<String> resoldreAutorsSync(Llibre ll) {
+        return ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
+            ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
+    }
+
+    private static void bindAll(PreparedStatement ps, Object[] vals) throws SQLException {
+        for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
     }
 
     public LlibreDaoCore(Connection con) { this.con = con; }
@@ -225,13 +229,12 @@ public class LlibreDaoCore {
         if (ll == null) return;
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
-                    "INSERT INTO llibre (" + inserirColumnList() + ") VALUES (" + placeholders(inserirColumnCount()) + ")")) {
+                    "INSERT INTO llibre (" + inserirColumnList() + ") VALUES (" + MapejadorsFiles.placeholders(inserirColumnCount()) + ")")) {
                 Object[] vals = LlibreFieldBindings.forInsert(ll);
-                for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
+                bindAll(ps, vals);
                 ps.execute();
             }
-            List<String> autorsSync = ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
-                ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
+            List<String> autorsSync = resoldreAutorsSync(ll);
             if (!autorsSync.isEmpty()) sincronitzarAutors(ll.obtenirISBN(), autorsSync);
         });
     }
@@ -242,13 +245,11 @@ public class LlibreDaoCore {
             try (PreparedStatement ps = con.prepareStatement(
                     "UPDATE llibre SET " + actualitzarSetList() + " WHERE `ISBN`=?")) {
                 Object[] vals = LlibreFieldBindings.forUpdate(ll);
-                for (int i = 0; i < vals.length; i++) LlibreFieldBindings.bind(ps, i + 1, vals[i]);
+                bindAll(ps, vals);
                 ps.setLong(vals.length + 1, ll.obtenirISBN());
                 ps.execute();
             }
-            List<String> autorsSync = ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
-                ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
-            sincronitzarAutors(ll.obtenirISBN(), autorsSync);
+            sincronitzarAutors(ll.obtenirISBN(), resoldreAutorsSync(ll));
         });
     }
 
@@ -430,13 +431,6 @@ public class LlibreDaoCore {
         return false;
     }
 
-    /** {@code ?, ?, ?} × {@code n}. Helper per a la sentència INSERT. */
-    private static String placeholders(int n) {
-        StringBuilder sb = new StringBuilder(n * 2);
-        for (int i = 0; i < n; i++) sb.append(i == 0 ? "?" : ",?");
-        return sb.toString();
-    }
-
     @FunctionalInterface private interface TreballSql { void run() throws Exception; }
 
     private void withTransaction(TreballSql work) throws SQLException {
@@ -457,29 +451,36 @@ public class LlibreDaoCore {
         }
     }
 
+    @FunctionalInterface
+    private interface AutorBinder {
+        void bind(PreparedStatement ps, String nom) throws SQLException;
+    }
+
+    private static void executarBatchAutors(Connection con, String sql,
+            AutorBinder binder, List<String> autors) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            for (String nom : autors) {
+                if (nom == null || nom.isBlank()) continue;
+                binder.bind(ps, nom);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
     private void sincronitzarAutors(long isbn, List<String> autors) throws SQLException {
         try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
             del.setLong(1, isbn);
             del.execute();
         }
         if (autors == null || autors.isEmpty()) return;
-        try (PreparedStatement insAutor = con.prepareStatement("INSERT IGNORE INTO autor (nom) VALUES (?)")) {
-            for (String nom : autors) {
-                if (nom == null || nom.isBlank()) continue;
-                insAutor.setString(1, nom);
-                insAutor.addBatch();
-            }
-            insAutor.executeBatch();
-        }
-        try (PreparedStatement link = con.prepareStatement(
-                "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?")) {
-            for (String nom : autors) {
-                if (nom == null || nom.isBlank()) continue;
-                link.setLong(1, isbn);
-                link.setString(2, nom);
-                link.addBatch();
-            }
-            link.executeBatch();
-        }
+        executarBatchAutors(con, "INSERT IGNORE INTO autor (nom) VALUES (?)",
+            (ps, nom) -> ps.setString(1, nom), autors);
+        executarBatchAutors(con,
+            "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?",
+            (ps, nom) -> {
+                ps.setLong(1, isbn);
+                ps.setString(2, nom);
+            }, autors);
     }
 }

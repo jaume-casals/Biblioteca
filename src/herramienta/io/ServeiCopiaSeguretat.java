@@ -53,11 +53,7 @@ public class ServeiCopiaSeguretat {
 
     public void scheduleAutoBackup() {
         if (!schedulerStarted.compareAndSet(false, true)) return;
-        scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "auto-backup");
-            t.setDaemon(true);
-            return t;
-        });
+        scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(ServeiCoberta.daemon("auto-backup"));
         scheduler.scheduleWithFixedDelay(this::autoBackup, 30, AUTO_BACKUP_INTERVAL_S, java.util.concurrent.TimeUnit.SECONDS);
         main.ShutdownHooks.register(this::shutdownScheduler);
     }
@@ -193,30 +189,62 @@ public class ServeiCopiaSeguretat {
                 escriureLlibreINSERT(pw, l);
             }
             for (persistencia.row.AutorRow row : snap.autors) {
-                escriureAutorINSERT(pw, row.id(), row.nom());
+                escriureInsert(pw, "autor", COLS_AUTOR, row.id(), row.nom());
             }
             for (persistencia.row.LlibreAutorRow row : snap.llibreAutors) {
-                escriureLlibreAutorINSERT(pw, row.isbn(), row.autorId());
+                escriureInsert(pw, "llibre_autor", COLS_LLIBRE_AUTOR, row.isbn(), row.autorId());
             }
             for (Llista ll : snap.llistes) {
-                escriureLlistaINSERT(pw, ll);
+                escriureInsert(pw, "llista", COLS_LLISTA, ll.obtenirId(), ll.obtenirNom(), ll.obtenirOrdre(), ll.obtenirColor());
             }
             for (persistencia.row.LlibreLlistaRow row : snap.llibreLlistes) {
-                escriureLlibreLlistaINSERT(pw, row);
+                escriureInsert(pw, "llibre_llista", COLS_LLIBRE_LLISTA, row.isbn(), row.llistaId(), row.valoracio(), row.llegit());
             }
             for (Tag t : snap.tags) {
-                escriureTagINSERT(pw, t);
+                escriureInsert(pw, "tag", COLS_TAG, t.obtenirId(), t.obtenirNom());
             }
             for (persistencia.row.LlibreTagRow row : snap.llibreTags) {
-                escriureLlibreTagINSERT(pw, row);
+                escriureInsert(pw, "llibre_tag", COLS_LLIBRE_TAG, row.isbn(), row.tagId());
             }
             for (persistencia.row.PrestecRow row : snap.prestecs) {
-                escriurePrestecINSERT(pw, row);
+                escriureInsert(pw, "prestec", COLS_PRESTEC, row.isbn(), row.nomPersona(),
+                    row.dataPrestec() != null ? row.dataPrestec().toString() : null, row.retornat());
             }
             for (persistencia.row.LecturaRow row : snap.lectures) {
-                escriureLecturaINSERT(pw, row);
+                escriureInsert(pw, "lectura", COLS_LECTURA, row.isbn(),
+                    row.dataInici() == null ? null : row.dataInici().toString(),
+                    row.dataFi() == null ? null : row.dataFi().toString(),
+                    row.paginesLlegides());
             }
         }
+    }
+
+    private static final String[] COLS_AUTOR = {"id", "nom"};
+    private static final String[] COLS_LLIBRE_AUTOR = {"isbn", "autor_id"};
+    private static final String[] COLS_LLISTA = {"id", "nom", "ordre", "color"};
+    private static final String[] COLS_LLIBRE_LLISTA = {"isbn", "llista_id", "valoracio", "llegit"};
+    private static final String[] COLS_TAG = {"id", "nom"};
+    private static final String[] COLS_LLIBRE_TAG = {"isbn", "tag_id"};
+    private static final String[] COLS_PRESTEC = {"isbn", "nom_persona", "data_prestec", "retornat"};
+    private static final String[] COLS_LECTURA = {"isbn", "data_inici", "data_fi", "pagines_llegides"};
+
+    /** Escriu una sentència INSERT generant els noms de columna i formatant cada
+     *  valor via {@link #formatejarValue}. Comú a totes les taules excepte {@code llibre}
+     *  (que exclou {@code imatge_blob}). */
+    private void escriureInsert(java.io.PrintWriter pw, String table, String[] cols, Object... vals) {
+        StringBuilder sb = new StringBuilder(96);
+        sb.append("INSERT INTO ").append(table).append(" (");
+        for (int i = 0; i < cols.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append('`').append(cols[i]).append('`');
+        }
+        sb.append(") VALUES (");
+        for (int i = 0; i < vals.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(formatejarValue(vals[i]));
+        }
+        sb.append(");");
+        pw.println(sb);
     }
 
     private void escriureLlibreINSERT(java.io.PrintWriter pw, Llibre l) {
@@ -238,22 +266,19 @@ public class ServeiCopiaSeguretat {
         // perquè el volcats deixa el blob intencionadament.
         StringBuilder sb = new StringBuilder(640);
         sb.append("INSERT INTO llibre (");
+        StringBuilder valsSb = new StringBuilder();
         boolean first = true;
         for (int i = 0; i < cols.length; i++) {
             if ("imatge_blob".equals(cols[i])) continue;
-            if (!first) sb.append(',');
+            if (!first) {
+                sb.append(',');
+                valsSb.append(',');
+            }
             sb.append('`').append(cols[i]).append('`');
+            valsSb.append(formatejarValue(vals[i]));
             first = false;
         }
-        sb.append(") VALUES (");
-        first = true;
-        for (int i = 0; i < cols.length; i++) {
-            if ("imatge_blob".equals(cols[i])) continue;
-            if (!first) sb.append(',');
-            sb.append(formatejarValue(vals[i]));
-            first = false;
-        }
-        sb.append(");\n");
+        sb.append(") VALUES (").append(valsSb).append(");\n");
         pw.print(sb);
     }
 
@@ -274,86 +299,6 @@ public class ServeiCopiaSeguretat {
         if (v instanceof byte[] bytes) return "NULL /* " + bytes.length + " bytes descartats */";
         // String
         return sqlNullable(v.toString());
-    }
-
-    private void escriureAutorINSERT(java.io.PrintWriter pw, int id, String nom) {
-        pw.print("INSERT INTO autor (`id`,`nom`) VALUES (");
-        pw.print(id);
-        pw.print(',');
-        pw.print(sqlNullable(nom));
-        pw.println(");");
-    }
-
-    private void escriureLlibreAutorINSERT(java.io.PrintWriter pw, long isbn, int autorId) {
-        pw.print("INSERT INTO llibre_autor (`isbn`,`autor_id`) VALUES (");
-        pw.print(isbn);
-        pw.print(',');
-        pw.print(autorId);
-        pw.println(");");
-    }
-
-    private void escriureLlistaINSERT(java.io.PrintWriter pw, Llista ll) {
-        pw.print("INSERT INTO llista (`id`,`nom`,`ordre`,`color`) VALUES (");
-        pw.print(ll.obtenirId());
-        pw.print(',');
-        pw.print(sqlNullable(ll.obtenirNom()));
-        pw.print(',');
-        pw.print(ll.obtenirOrdre());
-        pw.print(',');
-        pw.print(sqlNullable(ll.obtenirColor()));
-        pw.println(");");
-    }
-
-    private void escriureLlibreLlistaINSERT(java.io.PrintWriter pw, persistencia.row.LlibreLlistaRow row) {
-        pw.print("INSERT INTO llibre_llista (`isbn`,`llista_id`,`valoracio`,`llegit`) VALUES (");
-        pw.print(row.isbn());
-        pw.print(',');
-        pw.print(row.llistaId());
-        pw.print(',');
-        pw.print(String.format(java.util.Locale.ROOT, "%.4f", row.valoracio()));
-        pw.print(',');
-        pw.print(row.llegit());
-        pw.println(");");
-    }
-
-    private void escriureTagINSERT(java.io.PrintWriter pw, Tag t) {
-        pw.print("INSERT INTO tag (`id`,`nom`) VALUES (");
-        pw.print(t.obtenirId());
-        pw.print(',');
-        pw.print(sqlNullable(t.obtenirNom()));
-        pw.println(");");
-    }
-
-    private void escriureLlibreTagINSERT(java.io.PrintWriter pw, persistencia.row.LlibreTagRow row) {
-        pw.print("INSERT INTO llibre_tag (`isbn`,`tag_id`) VALUES (");
-        pw.print(row.isbn());
-        pw.print(',');
-        pw.print(row.tagId());
-        pw.println(");");
-    }
-
-    private void escriurePrestecINSERT(java.io.PrintWriter pw, persistencia.row.PrestecRow row) {
-        pw.print("INSERT INTO prestec (`isbn`,`nom_persona`,`data_prestec`,`retornat`) VALUES (");
-        pw.print(row.isbn());
-        pw.print(',');
-        pw.print(sqlNullable(row.nomPersona()));
-        pw.print(',');
-        pw.print(sqlNullable(row.dataPrestec() != null ? row.dataPrestec().toString() : null));
-        pw.print(',');
-        pw.print(row.retornat());
-        pw.println(");");
-    }
-
-    private void escriureLecturaINSERT(java.io.PrintWriter pw, persistencia.row.LecturaRow row) {
-        pw.print("INSERT INTO lectura (`isbn`,`data_inici`,`data_fi`,`pagines_llegides`) VALUES (");
-        pw.print(row.isbn());
-        pw.print(',');
-        pw.print(sqlNullable(row.dataInici() == null ? null : row.dataInici().toString()));
-        pw.print(',');
-        pw.print(sqlNullable(row.dataFi() == null ? null : row.dataFi().toString()));
-        pw.print(',');
-        pw.print(row.paginesLlegides());
-        pw.println(");");
     }
 
     private static String sqlNullable(String s) {

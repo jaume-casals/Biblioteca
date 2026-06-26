@@ -27,19 +27,21 @@ public final class ServeiCoberta {
      *  limitador. El multithreading de les escriptures JDBC és el guany;
      *  les cerques OL eren el coll d'ampolla només perquè compartien pool
      *  amb les escriptures. */
-    public static final ExecutorService FETCHER = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "cover-fetch");
-        t.setDaemon(true);
-        return t;
-    });
+    public static final ExecutorService FETCHER = Executors.newSingleThreadExecutor(daemon("cover-fetch"));
     /** Pool per a escriptures de blob de coberta JDBC — dimensionat pel
      *  nombre de cobertes, independent del límit de taxa d'OL, de manera
      *  que les escriptures no fan cua darrere les cerques. */
-    public static final ExecutorService WRITE_POOL = Executors.newFixedThreadPool(MAX_PARALLEL, r -> {
-        Thread t = new Thread(r, "cover-write");
-        t.setDaemon(true);
-        return t;
-    });
+    public static final ExecutorService WRITE_POOL = Executors.newFixedThreadPool(MAX_PARALLEL, daemon("cover-write"));
+
+    /** Crea una {@link ThreadFactory} de fils dimoni amb el nom donat. Compartit
+     *  per tots els pools d'aquest paquet. */
+    static java.util.concurrent.ThreadFactory daemon(String name) {
+        return r -> {
+            Thread t = new Thread(r, name);
+            t.setDaemon(true);
+            return t;
+        };
+    }
 
     private static final java.util.logging.Logger LOG =
         java.util.logging.Logger.getLogger(ServeiCoberta.class.getName());

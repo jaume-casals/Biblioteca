@@ -40,6 +40,10 @@ public final class AnalitzadorPrestatgeria {
         return "true".equalsIgnoreCase(s) || "1".equals(s);
     }
 
+    private static <T> T orElse(T v, T def) {
+        return v != null ? v : def;
+    }
+
     public static void exportarToCsv(File f, List<Llibre> view,
                                      Map<Integer, Llista> llistaById,
                                      Map<Long, List<LlibreLlistaRow>> llistaRows) throws IOException {
@@ -53,13 +57,11 @@ public final class AnalitzadorPrestatgeria {
                     for (LlibreLlistaRow row : rows) {
                         Llista ll = llistaById.get(row.llistaId());
                         if (ll == null) continue;
-                        if (llistesStr.length() > 0) llistesStr.append(';');
-                        llistesStr.append(esc(ll.obtenirNom())).append('|')
-                            .append(row.valoracio()).append('|').append(row.llegit());
+                        appendEntry(llistesStr, ll.obtenirNom(), row.valoracio(), row.llegit());
                     }
-                Integer any = l.obtenirAny() != null ? l.obtenirAny() : 0;
-                Double valoracio = l.obtenirValoracio() != null ? l.obtenirValoracio() : 0.0;
-                Double preu = l.obtenirPreu() != null ? l.obtenirPreu() : 0.0;
+                Integer any = orElse(l.obtenirAny(), 0);
+                Double valoracio = orElse(l.obtenirValoracio(), 0.0);
+                Double preu = orElse(l.obtenirPreu(), 0.0);
                 boolean llegit = l.obtenirLlegit() != null && l.obtenirLlegit();
                 pw.printf(java.util.Locale.ROOT, "%s,%s,%s,%d,%s,%.1f,%.2f,%b,%s,%s%n",
                     UtilitatsCsv.csvQ(l.obtenirISBN() == null ? "" : String.valueOf(l.obtenirISBN())),
@@ -80,10 +82,14 @@ public final class AnalitzadorPrestatgeria {
     public static String joinShelfEntries(List<ShelfEntry> entries) {
         StringBuilder sb = new StringBuilder();
         for (ShelfEntry e : entries) {
-            if (sb.length() > 0) sb.append(';');
-            sb.append(esc(e.nom())).append('|').append(e.valoracio()).append('|').append(e.llegit());
+            appendEntry(sb, e.nom(), e.valoracio(), e.llegit());
         }
         return sb.toString();
+    }
+
+    private static void appendEntry(StringBuilder sb, String nom, double valoracio, boolean llegit) {
+        if (sb.length() > 0) sb.append(';');
+        sb.append(esc(nom)).append('|').append(valoracio).append('|').append(llegit);
     }
 
     private static String esc(String s) {

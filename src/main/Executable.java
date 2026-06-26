@@ -33,6 +33,19 @@ public class Executable {
         else EventQueue.invokeLater(() -> { if (splashRef != null) splashRef.forceHide(); });
     }
 
+    /** Registra l'error, amaga la pantalla d'inici, mostra el diàleg d'error
+     *  passant per l'EDT i surt amb codi 1. Usat pels camins fatals del
+     *  loader (fil de fons) i de la continuació EDT quan fallen les fases
+     *  d'inicialització. */
+    private static void fatalExit(String logMsg, Throwable e, Runnable dialog) {
+        LOG.log(Level.SEVERE, logMsg, e);
+        hideSplashSafely();
+        EventQueue.invokeLater(() -> {
+            dialog.run();
+            System.exit(1);
+        });
+    }
+
     public static void main(String[] args) throws Exception {
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             // Primer el missatge, després el throwable — el logger
@@ -86,13 +99,8 @@ public class Executable {
                         SeedorBaseDades.seedSiCal();
                         cdRef.set(ControladorDomini.getInstance());
                     } catch (RuntimeException e) {
-                        final String msg = e.getMessage();
-                        LOG.log(Level.SEVERE, "No s'ha pogut inicialitzar ControladorDomini", e);
-                        hideSplashSafely();
-                        EventQueue.invokeLater(() -> {
-                            javax.swing.JOptionPane.showMessageDialog(null, msg);
-                            System.exit(1);
-                        });
+                        fatalExit("No s'ha pogut inicialitzar ControladorDomini", e,
+                            () -> javax.swing.JOptionPane.showMessageDialog(null, e.getMessage()));
                         return;
                     }
                     EventQueue.invokeLater(() -> {
@@ -101,13 +109,11 @@ public class Executable {
                             PanelMarcPrincipal vista = new PanelMarcPrincipal();
                             ControladorMarcPrincipal.getInstance(vista, cdRef.get()).setVisible(true);
                         } catch (Exception e) {
-                            LOG.log(Level.SEVERE, "No s'ha pogut iniciar el marc principal", e);
                             // Superfície l'error via DialegError perquè
                             // l'usuari vegi què ha fallat en lloc d'una
                             // pantalla en blanc amb el procés penjat.
-                            hideSplashSafely();
-                            new DialegError(e).mostrarErrorMessage();
-                            System.exit(1);
+                            fatalExit("No s'ha pogut iniciar el marc principal", e,
+                                () -> new DialegError(e).mostrarErrorMessage());
                         }
                     });
                 });

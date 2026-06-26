@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JRootPane;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -22,6 +23,7 @@ import persistencia.row.PrestecEndarrerit;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.panells.PanelMarcPrincipal;
 import presentacio.panells.PanelMostrarBiblioteca;
+import presentacio.util.DreceresTeclat;
 
 
 
@@ -69,106 +71,53 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 
 		final int ctrl = java.awt.event.InputEvent.CTRL_DOWN_MASK;
 		final int ctrlShift = ctrl | java.awt.event.InputEvent.SHIFT_DOWN_MASK;
-		JComponent root = frame.getRootPane();
-		javax.swing.InputMap im = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-		javax.swing.ActionMap am = root.getActionMap();
+		JRootPane root = frame.getRootPane();
 
 		libraryPanel.obtenirBtnNouLlibre()
 				.addActionListener(e -> SwingUtilities.invokeLater(this::obrirNouLlibreDialeg));
 
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrl), "nouLlibre");
-		am.put("nouLlibre", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				SwingUtilities.invokeLater(ControladorMarcPrincipal.this::obrirNouLlibreDialeg);
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrl), "nouLlibre",
+			() -> SwingUtilities.invokeLater(this::obrirNouLlibreDialeg));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlShift), "nouLlibreScan",
+			() -> SwingUtilities.invokeLater(() -> ioCtrl.escanejarISBN()));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlShift), "estacioEscaneig",
+			() -> SwingUtilities.invokeLater(this::obrirEstacioEscaneig));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrl), "focusFiltres",
+			() -> libraryPanel.obtenirSearchBar().requestFocusInWindow());
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, ctrl), "galeriaZoomIn",
+			() -> libraryPanel.obtenirGaleria().adjustZoom(1));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_ADD, ctrl), "galeriaZoomIn",
+			() -> libraryPanel.obtenirGaleria().adjustZoom(1));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, ctrl), "galeriaZoomOut",
+			() -> libraryPanel.obtenirGaleria().adjustZoom(-1));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_SUBTRACT, ctrl), "galeriaZoomOut",
+			() -> libraryPanel.obtenirGaleria().adjustZoom(-1));
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_A, ctrl), "seleccionarTot", () -> {
+			if (libraryPanel.esGaleriaMode()) {
+				libraryPanel.obtenirGaleria().selectAll();
+			} else {
+				JTable t = libraryPanel.obtenirTaulaLlibres();
+				if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
 			}
 		});
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlShift), "nouLlibreScan");
-		am.put("nouLlibreScan", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				SwingUtilities.invokeLater(() -> ioCtrl.escanejarISBN());
-			}
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_E, ctrl), "editarLlibre",
+			() -> mostrarControl.abrirDetallesEnEdicio());
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme", () -> {
+			herramienta.ui.UITheme.Tema[] themes = herramienta.ui.UITheme.Tema.values();
+			herramienta.ui.UITheme.Tema next = themes[(herramienta.ui.UITheme.obtenirTheme().ordinal() + 1) % themes.length];
+			herramienta.ui.UITheme.posarTheme(next);
+			libraryPanel.aplicarTheme();
 		});
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrl), "undoDelete",
+			() -> mostrarControl.undoDelete());
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "ajudaDreceres",
+			this::mostrarAjudaDreceres);
+		DreceresTeclat.bind(root, KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, ctrl), "ajudaDreceres",
+			this::mostrarAjudaDreceres);
 
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlShift), "estacioEscaneig");
-		am.put("estacioEscaneig", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				SwingUtilities.invokeLater(ControladorMarcPrincipal.this::obrirEstacioEscaneig);
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrl), "focusFiltres");
-		am.put("focusFiltres", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				libraryPanel.obtenirSearchBar().requestFocusInWindow();
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, ctrl), "galeriaZoomIn");
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ADD, ctrl), "galeriaZoomIn");
-		am.put("galeriaZoomIn", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				libraryPanel.obtenirGaleria().adjustZoom(1);
-			}
-		});
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, ctrl), "galeriaZoomOut");
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SUBTRACT, ctrl), "galeriaZoomOut");
-		am.put("galeriaZoomOut", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				libraryPanel.obtenirGaleria().adjustZoom(-1);
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, ctrl), "seleccionarTot");
-		am.put("seleccionarTot", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				if (libraryPanel.esGaleriaMode()) {
-					libraryPanel.obtenirGaleria().selectAll();
-				} else {
-					JTable t = libraryPanel.obtenirTaulaLlibres();
-					if (t.getRowCount() > 0) t.setRowSelectionInterval(0, t.getRowCount() - 1);
-				}
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_E, ctrl), "editarLlibre");
-		am.put("editarLlibre", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				mostrarControl.abrirDetallesEnEdicio();
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, ctrlShift), "toggleTheme");
-		am.put("toggleTheme", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				herramienta.ui.UITheme.Tema[] themes = herramienta.ui.UITheme.Tema.values();
-				herramienta.ui.UITheme.Tema next = themes[(herramienta.ui.UITheme.obtenirTheme().ordinal() + 1) % themes.length];
-				herramienta.ui.UITheme.posarTheme(next);
-				libraryPanel.aplicarTheme();
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrl), "undoDelete");
-		am.put("undoDelete", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				mostrarControl.undoDelete();
-			}
-		});
-
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "ajudaDreceres");
-		im.put(KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, ctrl), "ajudaDreceres");
-		am.put("ajudaDreceres", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				mostrarAjudaDreceres();
-			}
-		});
-
-		libraryPanel.obtenirTaulaLlibres().getInputMap(JComponent.WHEN_FOCUSED)
-				.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "eliminarFila");
-		libraryPanel.obtenirTaulaLlibres().getActionMap().put("eliminarFila", new javax.swing.AbstractAction() {
-			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
-				mostrarControl.eliminarFilaSeleccionada();
-			}
-		});
+		DreceresTeclat.bind(libraryPanel.obtenirTaulaLlibres(), JComponent.WHEN_FOCUSED,
+			KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "eliminarFila",
+			() -> mostrarControl.eliminarFilaSeleccionada());
 
 		mostrarControl = new ControladorMostrarBiblioteca(
 				libraryPanel, new ArrayList<>(), this, cLlibres);

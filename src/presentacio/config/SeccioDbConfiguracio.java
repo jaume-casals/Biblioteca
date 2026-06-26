@@ -11,7 +11,6 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
@@ -21,43 +20,26 @@ public final class SeccioDbConfiguracio {
     private SeccioDbConfiguracio() {}
 
     public static JPanel build(JDialog owner) {
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
-        JLabel lblSeccio = new JLabel(t("lbl_database"));
-        lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.palette().accent());
+        JLabel lblSeccio = UIComponents.sectionHeader("lbl_database");
 
-        JLabel lblTipus = new JLabel(t("lbl_type"));
-        UIComponents.styleLabel(lblTipus);
-        JComboBox<String> cmbType = new JComboBox<>(new String[]{
-            t("opt_h2_full"), t("opt_mariadb_full")
-        });
-        cmbType.setSelectedIndex("h2".equals(Configuracio.obtenirDbType()) ? 0 : 1);
-        cmbType.setFont(UITheme.fontBase());
-        cmbType.putClientProperty("id", "cmbType");
+        JLabel lblTipus = UIComponents.label("lbl_type");
+        JComboBox<String> cmbType = UIComponents.combo("cmbType",
+            new String[]{t("opt_h2_full"), t("opt_mariadb_full")},
+            new String[]{"h2", "mariadb"},
+            Configuracio.obtenirDbType());
 
-        JLabel lblHost = new JLabel(t("lbl_server"));
-        UIComponents.styleLabel(lblHost);
-        JTextField txtHost = new JTextField(Configuracio.obtenirDbHost());
-        UIComponents.styleField(txtHost);
-        txtHost.putClientProperty("id", "txtHost");
+        JLabel lblHost = UIComponents.label("lbl_server");
+        JTextField txtHost = UIComponents.field("txtHost", Configuracio.obtenirDbHost());
 
-        JLabel lblUser = new JLabel(t("lbl_user"));
-        UIComponents.styleLabel(lblUser);
-        JTextField txtUser = new JTextField(Configuracio.obtenirDbUser());
-        UIComponents.styleField(txtUser);
-        txtUser.putClientProperty("id", "txtUser");
+        JLabel lblUser = UIComponents.label("lbl_user");
+        JTextField txtUser = UIComponents.field("txtUser", Configuracio.obtenirDbUser());
 
-        JLabel lblPass = new JLabel(t("lbl_password"));
-        UIComponents.styleLabel(lblPass);
-        JPasswordField txtPass = new JPasswordField(Configuracio.obtenirDbPassword());
-        UIComponents.styleField(txtPass);
-        txtPass.putClientProperty("id", "txtPass");
+        JLabel lblPass = UIComponents.label("lbl_password");
+        javax.swing.JPasswordField txtPass = UIComponents.passwordField("txtPass", Configuracio.obtenirDbPassword());
 
         JLabel lblDbNote = new JLabel(t("lbl_db_restart"));
         lblDbNote.setFont(UITheme.fontSmall());
@@ -158,6 +140,6 @@ public final class SeccioDbConfiguracio {
         jc = SeccionsConfiguracio.cercarById(root, "txtUser");
         if (jc instanceof JTextField tf) tf.setText(Configuracio.obtenirDbUser());
         jc = SeccionsConfiguracio.cercarById(root, "txtPass");
-        if (jc instanceof JPasswordField pf) pf.setText(Configuracio.obtenirDbPassword());
+        if (jc instanceof javax.swing.JPasswordField pf) pf.setText(Configuracio.obtenirDbPassword());
     }
 }

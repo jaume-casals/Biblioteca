@@ -27,21 +27,15 @@ public final class ConstructorGraellaFormulari {
     public static ConstructorGraellaFormulari columnsOf(JPanel host) { return new ConstructorGraellaFormulari(host); }
 
     public ConstructorGraellaFormulari afegirField(String label, JTextField field) {
-        host.add(new JLabel(label));
-        host.add(field);
-        return this;
+        return afegirRaw(label, field);
     }
 
     public ConstructorGraellaFormulari afegirCombo(String label, JComboBox<?> combo) {
-        host.add(new JLabel(label));
-        host.add(combo);
-        return this;
+        return afegirRaw(label, combo);
     }
 
     public ConstructorGraellaFormulari afegirCheck(String label, JCheckBox check) {
-        host.add(new JLabel(label));
-        host.add(check);
-        return this;
+        return afegirRaw(label, check);
     }
 
     public ConstructorGraellaFormulari afegirRaw(String label, JComponent comp) {

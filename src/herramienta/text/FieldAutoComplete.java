@@ -8,9 +8,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+
+import persistencia.contract.EscritorBiblioteca;
 
 public class FieldAutoComplete {
 
@@ -30,6 +33,31 @@ public class FieldAutoComplete {
 
     public static void attach(JTextField field, List<String> suggestions) {
         attach(field, suggestions, MAX_SUGGESTIONS);
+    }
+
+    /** Carrega valors diferenciats de la BBDD en segon pla i adjunta autocompletat als camps. */
+    public static void attachDistinct(EscritorBiblioteca cd,
+                                      JTextField autor, JTextField editorial,
+                                      JTextField serie, JTextField idioma) {
+        new SwingWorker<List<List<String>>, Void>() {
+            @Override protected List<List<String>> doInBackground() {
+                List<List<String>> lists = new ArrayList<>();
+                lists.add(cd.obtenirDistinctAutorNames());
+                lists.add(cd.obtenirDistinctValues("editorial"));
+                lists.add(cd.obtenirDistinctValues("serie"));
+                lists.add(cd.obtenirDistinctValues("idioma"));
+                return lists;
+            }
+            @Override protected void done() {
+                try {
+                    List<List<String>> lists = get();
+                    attach(autor, lists.get(0));
+                    attach(editorial, lists.get(1));
+                    attach(serie, lists.get(2));
+                    attach(idioma, lists.get(3));
+                } catch (Exception ignored) {}
+            }
+        }.execute();
     }
 
     public static void attach(JTextField field, List<String> suggestions, int maxSuggestions) {

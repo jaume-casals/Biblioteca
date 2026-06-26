@@ -33,7 +33,18 @@ public class ControladorTaula {
         {true, false, false, true, true, true, true, true, true, false};
 
     private static final int ROW_HEIGHT = 50;
-    private static final int[] DEFAULT_COL_WIDTHS = {48, 130, 220, 180, 55, 75, 60, 80, 90, 85};
+    private static final int[][] COL_WIDTHS = {
+        {48, 48, 56},
+        {130, 80, Integer.MAX_VALUE},
+        {220, 80, Integer.MAX_VALUE},
+        {180, 80, Integer.MAX_VALUE},
+        {55, 40, Integer.MAX_VALUE},
+        {75, 50, Integer.MAX_VALUE},
+        {60, 40, Integer.MAX_VALUE},
+        {80, 55, Integer.MAX_VALUE},
+        {90, 50, Integer.MAX_VALUE},
+        {85, 85, Integer.MAX_VALUE},
+    };
 
     private static String[] colNames() {
         return new String[]{
@@ -201,34 +212,29 @@ public class ControladorTaula {
                                 Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
                                 Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         t.setRowHeight(ROW_HEIGHT);
-        setWidth(t, ModelTaulaBiblioteca.COL_COVER, 48, 48, 56);
-        setWidth(t, ModelTaulaBiblioteca.COL_ISBN, 130, 80, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_NOM, 220, 80, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_AUTOR, 180, 80, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_ANY, 55, 40, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_VALORACIO, 75, 50, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_PREU, 60, 40, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_LLEGIT, 80, 55, Integer.MAX_VALUE);
-        setWidth(t, ModelTaulaBiblioteca.COL_PROGRES, 90, 50, Integer.MAX_VALUE);
-        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_COVER).setCellRenderer(
+        for (int i = 0; i < 9; i++) {
+            int[] w = COL_WIDTHS[i];
+            setWidth(t, i, w[0], w[1], w[2]);
+        }
+        column(t, ModelTaulaBiblioteca.COL_COVER).setCellRenderer(
             new RenderitzadorCellaCoberta(t, coverCache, coverLoading, cd, isbnToRow::get));
         // Columna de detalls oculta — doble clic a la fila o Enter obre
         // els detalls (veure installInteractionListeners)
-        TableColumn detallsCol = t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_DETALLS);
+        TableColumn detallsCol = column(t, ModelTaulaBiblioteca.COL_DETALLS);
         hiddenCols.put(ModelTaulaBiblioteca.COL_DETALLS, detallsCol);
         t.removeColumn(detallsCol);
         ConfiguracioFinestra.posarColVisible(ModelTaulaBiblioteca.COL_DETALLS, false);
-        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_LLEGIT).setCellRenderer(new RenderitzadorCasellaLlegit());
-        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_LLEGIT).setCellEditor(
+        column(t, ModelTaulaBiblioteca.COL_LLEGIT).setCellRenderer(new RenderitzadorCasellaLlegit());
+        column(t, ModelTaulaBiblioteca.COL_LLEGIT).setCellEditor(
             new EditorCasellaLlegit((EscritorLlibre) cd, onRowUpdated));
-        t.getColumnModel().getColumn(ModelTaulaBiblioteca.COL_PROGRES).setCellRenderer(new RenderitzadorBarraProgres());
+        column(t, ModelTaulaBiblioteca.COL_PROGRES).setCellRenderer(new RenderitzadorBarraProgres());
         highlightRenderer = new RenderitzadorDestacatCerca(loanedIsbns);
         for (int v = 0; v < t.getColumnCount(); v++) {
             int modelIndex = t.getColumnModel().getColumn(v).getModelIndex();
             if (modelIndex != ModelTaulaBiblioteca.COL_COVER && modelIndex != ModelTaulaBiblioteca.COL_LLEGIT && modelIndex != ModelTaulaBiblioteca.COL_PROGRES)
                 t.getColumnModel().getColumn(v).setCellRenderer(highlightRenderer);
         }
-        for (int i = 0; i < DEFAULT_COL_WIDTHS.length; i++) {
+        for (int i = 0; i < COL_WIDTHS.length; i++) {
             int saved = ConfiguracioFinestra.colWidth(i, -1);
             if (saved > 0) {
                 TableColumn tc = columnByModelIndex(t, i);
@@ -261,8 +267,12 @@ public class ControladorTaula {
         return null;
     }
 
+    private static TableColumn column(JTable t, int idx) {
+        return t.getColumnModel().getColumn(idx);
+    }
+
     private static void setWidth(JTable t, int col, int pref, int min, int max) {
-        TableColumn c = t.getColumnModel().getColumn(col);
+        TableColumn c = column(t, col);
         c.setPreferredWidth(pref);
         c.setMinWidth(min);
         if (max < Integer.MAX_VALUE) c.setMaxWidth(max);

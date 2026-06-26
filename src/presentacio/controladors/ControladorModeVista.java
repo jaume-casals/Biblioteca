@@ -14,6 +14,7 @@ import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 import presentacio.panells.PanelMarcPrincipal;
 import presentacio.util.AmfitrioPantallaBiblioteca;
 import presentacio.util.EstatVistaBiblioteca;
+import presentacio.util.UtilitatsLlibre;
 
 
 /** Vista galeria vs taula, agrupació per sèrie i barra de títol. */
@@ -51,12 +52,13 @@ public class ControladorModeVista {
     }
 
     void restaurarViewMode() {
-        if ("galeria".equals(Configuracio.obtenirViewMode())) {
-            state.vista.obtenirGaleria().actualitzarLlibres(
-                state.biblio instanceof java.util.ArrayList<Llibre> a ? a : new java.util.ArrayList<>(state.biblio));
-            state.vista.mostrarGaleria();
-            state.vista.obtenirBtnToggleVista().setText(I18n.t("btn_table_view"));
-        }
+        if ("galeria".equals(Configuracio.obtenirViewMode())) activarGaleria();
+    }
+
+    private void activarGaleria() {
+        state.vista.obtenirGaleria().actualitzarLlibres(UtilitatsLlibre.asArrayList(state.biblio));
+        state.vista.mostrarGaleria();
+        state.vista.obtenirBtnToggleVista().setText(I18n.t("btn_table_view"));
     }
 
     void restaurarSort() {
@@ -74,10 +76,7 @@ public class ControladorModeVista {
 
     void toggleVista() {
         if (!state.vista.esGaleriaMode()) {
-            state.vista.obtenirGaleria().actualitzarLlibres(
-                state.biblio instanceof java.util.ArrayList<Llibre> a ? a : new java.util.ArrayList<>(state.biblio));
-            state.vista.mostrarGaleria();
-            state.vista.obtenirBtnToggleVista().setText(I18n.t("btn_table_view"));
+            activarGaleria();
             ConfiguracioUi.posarViewMode("galeria");
         } else {
             state.vista.mostrarTaula();

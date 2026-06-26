@@ -34,11 +34,7 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
 
     @Override
     public boolean analitzarLine(String[] c, Map<String, Integer> hMap, EscritorBiblioteca cd) throws domini.BibliotecaException {
-        String isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN13");
-        if (isbnRaw.isEmpty()) isbnRaw = UtilitatsCsv.colVal(hMap, c, "ISBN");
-        isbnRaw = UtilitatsCsv.analitzarIsbn(isbnRaw);
-        if (isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
-        long isbn = Long.parseLong(isbnRaw);
+        long isbn = UtilitatsCsv.resoldreIsbn(hMap, c);
         if (UtilitatsCsv.existsInLibrary(cd, isbn)) return false;
 
         String nom       = UtilitatsCsv.colVal(hMap, c, "Title");
@@ -68,13 +64,8 @@ public class GoodreadsCsvStrategy implements CsvImportStrategy {
             l.posarDataLectura(herramienta.text.UtilitatsData.normalizeDate(dataLect));
         cd.afegirLlibre(l);
 
-        String bookshelves = UtilitatsCsv.colVal(hMap, c, "Bookshelves");
-        if (!bookshelves.isEmpty()) {
-            for (String s : bookshelves.split(",")) {
-                domini.Llista llista = ShelvesHelper.cercarOCrearPrestatge(cd, shelfCache, s.trim());
-                if (llista != null) cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);
-            }
-        }
+        ShelvesHelper.afegirLlibreAPrestatges(cd, shelfCache, isbn,
+            UtilitatsCsv.colVal(hMap, c, "Bookshelves"), ",", valoracio, llegit);
         return true;
     }
 }

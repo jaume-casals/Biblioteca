@@ -16,9 +16,4 @@ public record LlibreLlistaContext(
     String color,
     Double valoracio,
     Boolean llegit
-) {
-    public static LlibreLlistaContext of(long isbn, int llistaId, String nom, int ordre, String color,
-                                         Double valoracio, Boolean llegit) {
-        return new LlibreLlistaContext(isbn, llistaId, nom, ordre, color, valoracio, llegit);
-    }
-}
+) {}

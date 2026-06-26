@@ -96,33 +96,15 @@ public class PanellBarraEsquerra extends JPanel {
 
 		top.add(makeSectionLabel(I18n.t("lbl_sidebar_nav")));
 
-		btnTotsElsLlibres = makeSidebarBtn(I18n.t("btn_tots_els_llibres"));
-		btnTotsElsLlibres.setToolTipText(I18n.t("tip_tots_els_llibres"));
+		btnTotsElsLlibres = addNavBtn(top, "btn_tots_els_llibres", "tip_tots_els_llibres");
 		btnTotsElsLlibres.addActionListener(e -> {
 			if (comboLlistes.getItemCount() > 0) comboLlistes.setSelectedIndex(0);
 		});
-		sidebarBtns.add(btnTotsElsLlibres);
-		top.add(btnTotsElsLlibres);
 
-		btnAfegitsRecentment = makeSidebarBtn(I18n.t("btn_afegits_recentment"));
-		btnAfegitsRecentment.setToolTipText(I18n.t("tip_afegits_recentment"));
-		sidebarBtns.add(btnAfegitsRecentment);
-		top.add(btnAfegitsRecentment);
-
-		btnLlegitsRecentment = makeSidebarBtn(I18n.t("btn_llegits_sidebar"));
-		btnLlegitsRecentment.setToolTipText(I18n.t("tip_llegits_sidebar"));
-		sidebarBtns.add(btnLlegitsRecentment);
-		top.add(btnLlegitsRecentment);
-
-		btnDesitjats = makeSidebarBtn(I18n.t("btn_desitjats_sidebar"));
-		btnDesitjats.setToolTipText(I18n.t("tip_desitjats_sidebar"));
-		sidebarBtns.add(btnDesitjats);
-		top.add(btnDesitjats);
-
-		btnEnCurs = makeSidebarBtn(I18n.t("btn_en_curs_sidebar"));
-		btnEnCurs.setToolTipText(I18n.t("tip_en_curs_sidebar"));
-		sidebarBtns.add(btnEnCurs);
-		top.add(btnEnCurs);
+		btnAfegitsRecentment = addNavBtn(top, "btn_afegits_recentment", "tip_afegits_recentment");
+		btnLlegitsRecentment = addNavBtn(top, "btn_llegits_sidebar", "tip_llegits_sidebar");
+		btnDesitjats = addNavBtn(top, "btn_desitjats_sidebar", "tip_desitjats_sidebar");
+		btnEnCurs = addNavBtn(top, "btn_en_curs_sidebar", "tip_en_curs_sidebar");
 
 		top.add(makeSidebarSep());
 
@@ -148,59 +130,36 @@ public class PanellBarraEsquerra extends JPanel {
 
 		bottom.add(makeSidebarSep());
 
-		btnEstadistiques = makeSidebarBtn(I18n.t("btn_estadistiques_sidebar"));
-		btnEstadistiques.setToolTipText(I18n.t("tip_estadistiques_sidebar"));
-		sidebarBtns.add(btnEstadistiques);
-		bottom.add(btnEstadistiques);
-
-		btnLlibreAleatori = makeSidebarBtn(I18n.t("btn_aleatori_sidebar"));
-		btnLlibreAleatori.setToolTipText(I18n.t("tip_aleatori_sidebar"));
-		sidebarBtns.add(btnLlibreAleatori);
-		bottom.add(btnLlibreAleatori);
+		btnEstadistiques = addNavBtn(bottom, "btn_estadistiques_sidebar", "tip_estadistiques_sidebar");
+		btnLlibreAleatori = addNavBtn(bottom, "btn_aleatori_sidebar", "tip_aleatori_sidebar");
 
 		bottom.add(makeSidebarSep());
 
-		btnGestioLlistes = makeSidebarBtn(I18n.t("btn_gestio_llistes_sidebar"));
-		btnGestioLlistes.setToolTipText(I18n.t("tip_gestio_llistes_sidebar"));
-		sidebarBtns.add(btnGestioLlistes);
-		bottom.add(btnGestioLlistes);
+		btnGestioLlistes = addNavBtn(bottom, "btn_gestio_llistes_sidebar", "tip_gestio_llistes_sidebar");
 
 		bottom.add(makeSidebarSep());
 
-		btnThemeToggle = makeSidebarBtn(I18n.t("btn_theme"));
-		btnThemeToggle.setToolTipText(I18n.t("tip_mode_fosc"));
+		btnThemeToggle = addNavBtn(bottom, "btn_theme", "tip_mode_fosc");
 		btnThemeToggle.addActionListener(e -> {
 			herramienta.ui.UITheme.Tema[] themes = herramienta.ui.UITheme.Tema.values();
 			herramienta.ui.UITheme.Tema next = themes[(UITheme.obtenirTheme().ordinal() + 1) % themes.length];
 			UITheme.posarTheme(next);
 			onThemeChange.run();
 		});
-		sidebarBtns.add(btnThemeToggle);
-		bottom.add(btnThemeToggle);
 
-		btnConfiguracio = makeSidebarBtn(I18n.t("btn_configuracio_sidebar"));
-		btnConfiguracio.setToolTipText(I18n.t("tip_configuracio_sidebar"));
-		sidebarBtns.add(btnConfiguracio);
-		bottom.add(btnConfiguracio);
-
-		btnSobre = makeSidebarBtn(I18n.t("btn_sobre_sidebar"));
-		btnSobre.setToolTipText(I18n.t("tip_sobre_sidebar"));
-		sidebarBtns.add(btnSobre);
-		bottom.add(btnSobre);
+		btnConfiguracio = addNavBtn(bottom, "btn_configuracio_sidebar", "tip_configuracio_sidebar");
+		btnSobre = addNavBtn(bottom, "btn_sobre_sidebar", "tip_sobre_sidebar");
 
 		bottom.add(makeSidebarSep());
 
-		btnSortir = makeSidebarBtn(I18n.t("btn_sortir_sidebar"));
+		btnSortir = addNavBtn(bottom, "btn_sortir_sidebar", "tip_sortir_sidebar");
 		btnSortir.setForeground(UITheme.palette().danger());
-		btnSortir.setToolTipText(I18n.t("tip_sortir_sidebar"));
 		btnSortir.addActionListener(e -> {
 			if (javax.swing.JOptionPane.showConfirmDialog(this,
 					I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 					javax.swing.JOptionPane.YES_NO_OPTION) == javax.swing.JOptionPane.YES_OPTION)
 				System.exit(0);
 		});
-		sidebarBtns.add(btnSortir);
-		bottom.add(btnSortir);
 
 		bottom.add(Box.createVerticalStrut(10));
 
@@ -227,25 +186,11 @@ public class PanellBarraEsquerra extends JPanel {
 			if (btn != null) {
 				btn.setText("  " + label);
 				btn.getAccessibleContext().setAccessibleName(label);
-				if (l.obtenirColor() != null) {
-					try {
-						Color c = Color.decode(l.obtenirColor());
-						btn.setIcon(UtilitatsColor.colorSwatch(c));
-						btn.setHorizontalTextPosition(JButton.RIGHT);
-					} catch (Exception ignored) { btn.setIcon(null); }
-				} else {
-					btn.setIcon(null);
-				}
+				applyShelfColor(btn, l.obtenirColor(), true);
 			} else {
 				btn = makeSidebarBtn("  " + label);
 				btn.getAccessibleContext().setAccessibleName(label);
-				if (l.obtenirColor() != null) {
-					try {
-						Color c = Color.decode(l.obtenirColor());
-						btn.setIcon(UtilitatsColor.colorSwatch(c));
-						btn.setHorizontalTextPosition(JButton.RIGHT);
-					} catch (Exception ignored) {}
-				}
+				applyShelfColor(btn, l.obtenirColor(), false);
 				final int id = l.obtenirId();
 				btn.addActionListener(e -> {
 					for (int i = 0; i < comboLlistes.getItemCount(); i++) {
@@ -280,28 +225,46 @@ public class PanellBarraEsquerra extends JPanel {
 
 	public void aplicarTheme() {
 		aplicarBgToNonButtons(this, UITheme.palette().sidebarBg());
-		for (JButton btn : sidebarBtns) {
-			UIComponents.styleSidebarButton(btn);
-			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
-		}
+		for (JButton btn : sidebarBtns) styleSidebarBtn(btn);
 		btnSortir.setForeground(UITheme.palette().danger());
-		for (JButton btn : sidebarShelfBtnMap.values()) {
-			UIComponents.styleSidebarButton(btn);
-			btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
-		}
+		for (JButton btn : sidebarShelfBtnMap.values()) styleSidebarBtn(btn);
 	}
 
 	public void nameScrollBarButtons() {
-		if (shelvesScroll != null) nameScrollBar(shelvesScroll.getVerticalScrollBar());
+		if (shelvesScroll != null) UIComponents.nameScrollBar(shelvesScroll.getVerticalScrollBar());
+	}
+
+	private JButton addNavBtn(JPanel container, String lbl, String tip) {
+		JButton btn = makeSidebarBtn(I18n.t(lbl));
+		btn.setToolTipText(I18n.t(tip));
+		sidebarBtns.add(btn);
+		container.add(btn);
+		return btn;
+	}
+
+	private void applyShelfColor(JButton btn, String color, boolean clearOnError) {
+		if (color != null) {
+			try {
+				Color c = Color.decode(color);
+				btn.setIcon(UtilitatsColor.colorSwatch(c));
+				btn.setHorizontalTextPosition(JButton.RIGHT);
+			} catch (Exception ignored) {
+				if (clearOnError) btn.setIcon(null);
+			}
+		} else if (clearOnError) {
+			btn.setIcon(null);
+		}
+	}
+
+	private void styleSidebarBtn(JButton btn) {
+		UIComponents.styleSidebarButton(btn);
+		btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+		btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
 	}
 
 	private JButton makeSidebarBtn(String text) {
 		JButton btn = new JButton(text);
-		UIComponents.styleSidebarButton(btn);
-		btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-		btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
+		styleSidebarBtn(btn);
 		btn.setAlignmentX(Component.LEFT_ALIGNMENT);
 		btn.addMouseListener(new java.awt.event.MouseAdapter() {
 			@Override public void mouseEntered(java.awt.event.MouseEvent e) {
@@ -350,14 +313,6 @@ public class PanellBarraEsquerra extends JPanel {
 			for (Component child : ((java.awt.Container) comp).getComponents()) {
 				if (!(child instanceof javax.swing.JTable)) aplicarBgToNonButtons(child, bg);
 			}
-		}
-	}
-
-	private void nameScrollBar(javax.swing.JScrollBar sb) {
-		Component[] comps = sb.getComponents();
-		for (int i = 0; i < comps.length; i++) {
-			comps[i].getAccessibleContext().setAccessibleName(
-				i == 0 ? I18n.t("acc_scroll_up") : I18n.t("acc_scroll_down"));
 		}
 	}
 

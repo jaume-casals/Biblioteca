@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -139,12 +140,7 @@ public class ControladorAccionsLlibre {
             @Override protected void done() {
                 if (isCancelled()) return;
                 try {
-                    List<Llibre> toPush = get();
-                    for (Llibre l : toPush) {
-                        state.undoBuffer.push(l);
-                        if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
-                    }
-                    for (long isbn : toDelete) eliminarFilaPerIsbn(isbn);
+                    finalizeDeleteWithUndo(get(), toDelete);
                 } catch (Exception e) {
                     new DialegError(e).mostrarErrorMessage();
                 }
@@ -250,27 +246,43 @@ public class ControladorAccionsLlibre {
         detalles.obtenirDetallesLlibrePanel().setVisible(true);
     }
 
+    private void applyAsCurrentView(List<Llibre> result) {
+        state.biblio = result;
+        host.pageCtrl().posarUseDBPagination(false);
+        state.currentLlistaId = null;
+        host.pageCtrl().posarCurrentPage(0);
+        host.mostrarPage(0);
+    }
+
+    void finalizeDeleteWithUndo(List<Llibre> toPush, List<Long> isbns) {
+        for (Llibre l : toPush) {
+            state.undoBuffer.push(l);
+            if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+        }
+        for (long isbn : isbns) eliminarFilaPerIsbn(isbn);
+    }
+
     private void mostrarVistaFiltrada(Predicate<Llibre> filter, String emptyMsg, String title) {
+        mostrarVistaLlistat(() -> state.cd.obtenirAllLlibres().stream()
+            .filter(filter)
+            .collect(Collectors.toList()), emptyMsg, title);
+    }
+
+    private void mostrarVistaLlistat(Supplier<List<Llibre>> loader, String emptyMsg, String title) {
         new SwingWorker<List<Llibre>, Void>() {
             @Override protected List<Llibre> doInBackground() {
-                return state.cd.obtenirAllLlibres().stream()
-                    .filter(filter)
-                    .collect(Collectors.toList());
+                return loader.get();
             }
             @Override protected void done() {
                 if (isCancelled()) return;
                 try {
                     List<Llibre> result = get();
-                    if (result.isEmpty()) {
+                    if (result.isEmpty() && emptyMsg != null) {
                         JOptionPane.showMessageDialog(state.vista, emptyMsg, title,
                             JOptionPane.INFORMATION_MESSAGE);
                         return;
                     }
-                    state.biblio = result;
-                    host.pageCtrl().posarUseDBPagination(false);
-                    state.currentLlistaId = null;
-                    host.pageCtrl().posarCurrentPage(0);
-                    host.mostrarPage(0);
+                    applyAsCurrentView(result);
                 } catch (Exception e) {
                     new DialegError(e).mostrarErrorMessage();
                 }
@@ -279,29 +291,8 @@ public class ControladorAccionsLlibre {
     }
 
     private void mostrarAfegitsRecentment() {
-        new SwingWorker<ArrayList<Llibre>, Void>() {
-            @Override protected ArrayList<Llibre> doInBackground() {
-                return new ArrayList<>(state.cd.obtenirRecentlyAdded());
-            }
-            @Override protected void done() {
-                if (isCancelled()) return;
-                try {
-                    ArrayList<Llibre> recents = get();
-                    if (recents.isEmpty()) {
-                        JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_no_books_recent"),
-                            I18n.t("dlg_recently_added_title"), JOptionPane.INFORMATION_MESSAGE);
-                        return;
-                    }
-                    state.biblio = recents;
-                    host.pageCtrl().posarUseDBPagination(false);
-                    state.currentLlistaId = null;
-                    host.pageCtrl().posarCurrentPage(0);
-                    host.mostrarPage(0);
-                } catch (Exception e) {
-                    new DialegError(e).mostrarErrorMessage();
-                }
-            }
-        }.execute();
+        mostrarVistaLlistat(() -> new ArrayList<>(state.cd.obtenirRecentlyAdded()),
+            I18n.t("dlg_no_books_recent"), I18n.t("dlg_recently_added_title"));
     }
 
     private void mostrarLlegitsRecentment() {
@@ -310,47 +301,12 @@ public class ControladorAccionsLlibre {
     }
 
     private void mostrarDesitjats() {
-        new SwingWorker<List<Llibre>, Void>() {
-            @Override protected List<Llibre> doInBackground() {
-                return state.cd.obtenirAllLlibres().stream()
-                    .filter(l -> Boolean.TRUE.equals(l.esDesitjat()))
-                    .collect(Collectors.toList());
-            }
-            @Override protected void done() {
-                if (isCancelled()) return;
-                try {
-                    state.biblio = get();
-                    host.pageCtrl().posarUseDBPagination(false);
-                    state.currentLlistaId = null;
-                    host.pageCtrl().posarCurrentPage(0);
-                    host.mostrarPage(0);
-                } catch (Exception e) {
-                    new DialegError(e).mostrarErrorMessage();
-                }
-            }
-        }.execute();
+        mostrarVistaFiltrada(l -> Boolean.TRUE.equals(l.esDesitjat()), null, null);
     }
 
     private void mostrarEnCurs() {
-        new SwingWorker<List<Llibre>, Void>() {
-            @Override protected List<Llibre> doInBackground() {
-                return state.cd.obtenirAllLlibres().stream()
-                    .filter(l -> l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit()))
-                    .collect(Collectors.toList());
-            }
-            @Override protected void done() {
-                if (isCancelled()) return;
-                try {
-                    state.biblio = get();
-                    host.pageCtrl().posarUseDBPagination(false);
-                    state.currentLlistaId = null;
-                    host.pageCtrl().posarCurrentPage(0);
-                    host.mostrarPage(0);
-                } catch (Exception e) {
-                    new DialegError(e).mostrarErrorMessage();
-                }
-            }
-        }.execute();
+        mostrarVistaFiltrada(l -> l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit()),
+            null, null);
     }
 
     void obrirConfiguracio() {

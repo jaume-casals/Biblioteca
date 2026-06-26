@@ -33,8 +33,6 @@ public final class Isbn13Normalizer {
     }
 
     private static String convertToIsbn13(String base12) {
-        int sum = 0;
-        for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-        return base12 + ((10 - sum % 10) % 10);
+        return base12 + ValidadorLlibre.checkDigit13(base12);
     }
 }

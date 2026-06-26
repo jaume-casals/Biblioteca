@@ -6,7 +6,6 @@ import herramienta.api.ClientOpenLibrary;
 import herramienta.i18n.I18n;
 import herramienta.ui.DialegError;
 import java.awt.Component;
-import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -35,9 +34,9 @@ public class ControladorExportacio {
     private final Supplier<List<Llibre>> currentBooks;
     private final Runnable onDataChanged;
 
-    private static Frame windowFrame(Component parent) {
-        java.awt.Window w = SwingUtilities.getWindowAncestor(parent);
-        return w instanceof Frame f ? f : null;
+    @FunctionalInterface
+    private interface ExportTask {
+        void run(java.io.File f) throws Exception;
     }
 
     public ControladorExportacio(Component parent, EscritorBiblioteca cd,
@@ -51,43 +50,13 @@ public class ControladorExportacio {
     public void exportarCSV() {
         java.io.File chosen = chooseExportFile("biblioteca.csv", "csv", "CSV files");
         if (chosen == null) return;
-        final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_title"));
-        SwingWorker<Void, Void> worker = new SwingWorker<>() {
-            @Override protected Void doInBackground() throws Exception {
-                ExportadorLlibres.exportarCSV(f, currentBooks.get(), cd);
-                return null;
-            }
-            @Override protected void done() {
-                loading.hide();
-                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                    I18n.t("dlg_export_title"), JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
+        exportWith(chosen, "dlg_export_title", f -> ExportadorLlibres.exportarCSV(f, currentBooks.get(), cd));
     }
 
     public void exportarJSON() {
         java.io.File chosen = chooseExportFile("biblioteca.json", "json", "JSON files");
         if (chosen == null) return;
-        final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_json_title"));
-        SwingWorker<Void, Void> worker = new SwingWorker<>() {
-            @Override protected Void doInBackground() throws Exception {
-                ExportadorLlibres.exportarJSON(f, cd);
-                return null;
-            }
-            @Override protected void done() {
-                loading.hide();
-                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                    I18n.t("dlg_export_json_title"), JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
+        exportWith(chosen, "dlg_export_json_title", f -> ExportadorLlibres.exportarJSON(f, cd));
     }
 
     public void exportarHTML() {
@@ -98,22 +67,15 @@ public class ControladorExportacio {
         if (r != JOptionPane.OK_OPTION) return;
         java.io.File chosen = chooseExportFile("biblioteca.html", "html", "HTML files", "htm");
         if (chosen == null) return;
-        final java.io.File f = chosen;
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_export_html_title"));
-        SwingWorker<Void, Void> worker = new SwingWorker<>() {
-            @Override protected Void doInBackground() throws Exception {
-                ExportadorLlibres.exportarHTML(f, currentBooks.get(), cd, chkShelf.isSelected(), chkTable.isSelected());
-                return null;
-            }
-            @Override protected void done() {
-                loading.hide();
-                try { get(); JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
-                    I18n.t("dlg_export_html_title"), JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
+        exportWith(chosen, "dlg_export_html_title",
+            f -> ExportadorLlibres.exportarHTML(f, currentBooks.get(), cd, chkShelf.isSelected(), chkTable.isSelected()));
+    }
+
+    private void exportWith(java.io.File f, String titleKey, ExportTask task) {
+        DialegCarrega.runAsync(parent, I18n.t(titleKey),
+            () -> { task.run(f); return null; },
+            v -> JOptionPane.showMessageDialog(parent, I18n.t("dlg_export_done", f.getAbsolutePath()),
+                I18n.t(titleKey), JOptionPane.INFORMATION_MESSAGE));
     }
 
     public void exportarPDF() {

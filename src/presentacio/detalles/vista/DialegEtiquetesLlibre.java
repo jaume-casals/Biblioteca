@@ -1,11 +1,7 @@
 package presentacio.detalles.vista;
 
-
-
 import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.util.ArrayList;
@@ -13,12 +9,9 @@ import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
@@ -40,31 +33,23 @@ import herramienta.ui.UITheme;
  * la pertinença a prestatgeria també porta valoració per llibre i estat de
  * lectura que es beneficien de l'edició per lots.
  */
-public class DialegEtiquetesLlibre extends JDialog {
+public class DialegEtiquetesLlibre extends DialegEntitatLlibre<Tag> {
 
     private final DefaultTableModel tableModel;
-    private final JTable table;
-    private final JComboBox<Tag> comboAdd;
     private final JTextField filtrarField;
     private final JTextField txtNovaEtiqueta;
-    private final JButton btnAfegir;
     private final JButton btnCrear;
-    private final JButton btnTreure;
 
     public DialegEtiquetesLlibre(Window owner, Llibre llibre) {
         this(owner, llibre, null);
     }
 
     public DialegEtiquetesLlibre(Window owner, Llibre llibre, persistencia.contract.EscritorEtiqueta cd) {
-        super(owner, I18n.t("dlg_tags_for_book", llibre.obtenirNom()), ModalityType.APPLICATION_MODAL);
-        setSize(400, 440);
-        setLocationRelativeTo(owner);
-        setResizable(false);
-
-        JPanel panel = new JPanel(new BorderLayout(8, 8));
-        panel.setBackground(UITheme.palette().bgPanel());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(panel);
+        super(owner, I18n.t("dlg_tags_for_book", llibre.obtenirNom()), 400, 440,
+                new DefaultTableModel(new String[]{I18n.t("col_tag_name")}, 0) {
+                    @Override public boolean isCellEditable(int r, int c) { return false; }
+                }, 28);
+        tableModel = (DefaultTableModel) table.getModel();
 
         filtrarField = new JTextField();
         UIComponents.styleField(filtrarField);
@@ -75,28 +60,14 @@ public class DialegEtiquetesLlibre extends JDialog {
         UIComponents.styleLabel(lblFilter);
         filtrarPanel.add(lblFilter, BorderLayout.WEST);
         filtrarPanel.add(filtrarField, BorderLayout.CENTER);
-        panel.add(filtrarPanel, BorderLayout.NORTH);
+        rootPanel.add(filtrarPanel, BorderLayout.NORTH);
 
-        tableModel = new DefaultTableModel(new String[]{I18n.t("col_tag_name")}, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        table = new JTable(tableModel);
-        table.setBackground(UITheme.palette().bgPanel());
-        table.setForeground(UITheme.palette().textDark());
-        table.setRowHeight(28);
-        table.setFont(UITheme.fontBase());
-        table.setSelectionBackground(UITheme.palette().accent());
-        table.setSelectionForeground(Color.WHITE);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        rootPanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
         JPanel south = new JPanel(new BorderLayout(4, 8));
         south.setBackground(UITheme.palette().bgPanel());
 
-        comboAdd = new JComboBox<>();
-        comboAdd.setPreferredSize(new Dimension(180, 30));
-
-        btnAfegir = new JButton(I18n.t("btn_afegir_etiqueta"));
-        UIComponents.styleAccentButton(btnAfegir);
+        btnAfegir.setText(I18n.t("btn_afegir_etiqueta"));
 
         txtNovaEtiqueta = new JTextField(12);
         UIComponents.styleField(txtNovaEtiqueta);
@@ -121,10 +92,6 @@ public class DialegEtiquetesLlibre extends JDialog {
         crearRow.add(txtNovaEtiqueta);
         crearRow.add(btnCrear);
 
-        btnTreure = new JButton(I18n.t("btn_treure_seleccionada"));
-        UIComponents.styleSecondaryButton(btnTreure);
-        btnTreure.setBackground(UITheme.palette().danger());
-
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
         btnRow.setBackground(UITheme.palette().bgPanel());
         btnRow.add(btnTreure);
@@ -136,19 +103,15 @@ public class DialegEtiquetesLlibre extends JDialog {
         afegirArea.add(btnRow, BorderLayout.SOUTH);
 
         south.add(afegirArea, BorderLayout.CENTER);
-        panel.add(south, BorderLayout.SOUTH);
+        rootPanel.add(south, BorderLayout.SOUTH);
 
         new presentacio.detalles.control.ControladorEtiquetesLlibre(this, llibre, cd);
     }
 
-    public JTable obtenirTable() { return table; }
     public DefaultTableModel obtenirTableModel() { return tableModel; }
-    public JComboBox<Tag> obtenirComboAdd() { return comboAdd; }
     public JTextField obtenirFilterField() { return filtrarField; }
     public JTextField obtenirTxtNovaEtiqueta() { return txtNovaEtiqueta; }
-    public JButton obtenirBtnAfegir() { return btnAfegir; }
     public JButton obtenirBtnCrear() { return btnCrear; }
-    public JButton obtenirBtnTreure() { return btnTreure; }
 
     public void actualitzarTable(ArrayList<Tag> tags, Map<Integer, Integer> counts) {
         tableModel.setRowCount(0);

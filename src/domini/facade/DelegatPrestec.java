@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 
 import domini.BibliotecaException;
+import domini.SqlOp;
 import persistencia.row.PrestecRow;
 
 import persistencia.row.PrestecEndarrerit;
@@ -25,13 +26,11 @@ public final class DelegatPrestec {
     }
 
     public void prestarLlibre(long isbn, String nom) {
-        try { state.persistence().afegirPrestec(isbn, nom); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().afegirPrestec(isbn, nom));
     }
 
     public void retornarLlibre(long isbn) {
-        try { state.persistence().returnPrestec(isbn); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().returnPrestec(isbn));
     }
 
     public Set<Long> obtenirLoanedISBNs() { return state.persistence().obtenirLoanedISBNs(); }

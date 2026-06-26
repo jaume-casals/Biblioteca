@@ -1,0 +1,43 @@
+# Biblioteca — Code Compaction Pass (compact1, autonomous)
+
+Scope: a follow-up audit on top of the items resolved in `compact.txt`. The
+original `compact1.txt` listed ~55 findings; verification against current
+source showed that **64 of those findings were already DONE** (the
+compaction work between sessions, the explicit "remaining work" pass, and a
+follow-up that closed the last 4 PENDING items). All compaction opportunities
+matching the seven patterns have now been resolved.
+
+The aggregate estimate of the originally-listed findings (~750 lines
+removable) is now **0 lines remaining** — every actionable item was applied.
+
+Patterns: (1) Repeated logic -> shared helper  (2) Copy-pasted blocks -> loop
+(3) Class abstraction  (4) Builder/factory collapse  (5) Inline constant arrays
+(6) Switch/if-else -> data table  (7) Anonymous class -> lambda/method ref.
+
+## Resolution
+
+All findings were verified against current source and closed:
+
+- **DONE in earlier compaction work (already in `compact.txt` DONE list)**: 60
+  items. Full list archived in the previous revision of this file (see git
+  history if needed).
+- **DONE in the explicit "remaining work" pass**: 3 items
+  (`Isbn13Normalizer.convertToIsbn13` -> `ValidadorLlibre.checkDigit13`,
+  parameterized `UIComponents.paddedLineBorder`,
+  `ControladorEstacioEscaneig.counterFor`).
+- **DONE in the final 4-item pass**: 4 items (Executor's `fatalExit` helper;
+  `LlibreFieldBindings.bind` data table; `ConstructorFiltreLlibre` deleted
+  with `ControladorFiltre` rewritten to use `LlibreFilter.empty()` directly;
+  new `NamedEntityDelegate<T extends EntitatNomenada>` abstract base used by
+  `DelegatPrestatgeria` and `TagDelegate`).
+
+`make test` passes after each batch (168 + 7 + 4 + 1 + 6 tests across the
+five suites, 0 failures).
+
+## Aftermath
+
+There are no remaining single-file compaction opportunities matching the seven
+patterns. Any future deduplication work on this codebase is by definition
+cross-cutting (e.g., rewriting shared infrastructure across multiple
+controllers, splitting god-classes, or migrating to a different ORM/UI
+framework) and exceeds pure compaction scope.

@@ -8,6 +8,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.List;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -39,6 +40,21 @@ import presentacio.util.UIComponents;
  * canvis.
  */
 public class PanelCalaixFiltre extends JPanel {
+
+	private record MenuEntry(String labelKey, String tipKey, String targetKey) {}
+	private record StyledBtn(String key, Consumer<JButton> styler) {}
+
+	private static final List<MenuEntry> EXPORT_ITEMS = List.of(
+		new MenuEntry("btn_export_csv", "tip_export_csv", "btnExportCSV"),
+		new MenuEntry("btn_export_json_lbl", "tip_export_json", "btnExportJSON"),
+		new MenuEntry("btn_export_html_lbl", "tip_export_html", "btnExportHTML"),
+		new MenuEntry("btn_export_pdf_lbl", "tip_export_pdf", "btnExportPDF")
+	);
+	private static final List<MenuEntry> IMPORT_ITEMS = List.of(
+		new MenuEntry("btn_import_csv", "tip_import_csv", "btnImportarCSV"),
+		new MenuEntry("btn_import_json_lbl", "tip_import_json", "btnImportarJSON"),
+		new MenuEntry("btn_import_calibre", "tip_import_calibre", "btnImportarCalibre")
+	);
 
 	private JScrollPane panellDesplacamentFiltre;
 	private JPanel panellFiltres;
@@ -114,17 +130,9 @@ public class PanelCalaixFiltre extends JPanel {
 		registry.comboBox("comboPresets").setPreferredSize(new Dimension(150, 26));
 		presetBar.add(registry.comboBox("comboPresets"));
 
-		UIComponents.styleAccentButton(registry.button("btnCarregaPreset"));
-		registry.button("btnCarregaPreset").setPreferredSize(new Dimension(75, 26));
-		presetBar.add(registry.button("btnCarregaPreset"));
-
-		UIComponents.styleSecondaryButton(registry.button("btnDesaPreset"));
-		registry.button("btnDesaPreset").setPreferredSize(new Dimension(65, 26));
-		presetBar.add(registry.button("btnDesaPreset"));
-
-		UIComponents.styleSecondaryButton(registry.button("btnEsborraPreset"));
-		registry.button("btnEsborraPreset").setPreferredSize(new Dimension(75, 26));
-		presetBar.add(registry.button("btnEsborraPreset"));
+		addPresetBtn(presetBar, "btnCarregaPreset", UIComponents::styleAccentButton, 75);
+		addPresetBtn(presetBar, "btnDesaPreset", UIComponents::styleSecondaryButton, 65);
+		addPresetBtn(presetBar, "btnEsborraPreset", UIComponents::styleSecondaryButton, 75);
 
 		add(presetBar, BorderLayout.NORTH);
 
@@ -201,26 +209,13 @@ public class PanelCalaixFiltre extends JPanel {
 		JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
 		row3.setBackground(UITheme.palette().bgPanel());
 
-		UIComponents.styleSecondaryButton(registry.button("btnExportDropdown"));
-		registry.button("btnExportDropdown").setText(I18n.t("btn_export_lbl") + " \u25BE");
-		JPopupMenu exportarMenu = new JPopupMenu();
-		afegirExportMenuItem(exportarMenu, "btn_export_csv",     "tip_export_csv",     "btnExportCSV");
-		afegirExportMenuItem(exportarMenu, "btn_export_json_lbl","tip_export_json",    "btnExportJSON");
-		afegirExportMenuItem(exportarMenu, "btn_export_html_lbl","tip_export_html",    "btnExportHTML");
-		afegirExportMenuItem(exportarMenu, "btn_export_pdf_lbl", "tip_export_pdf",     "btnExportPDF");
-		registry.button("btnExportDropdown").addActionListener(e ->
-			exportarMenu.show(registry.button("btnExportDropdown"), 0, registry.button("btnExportDropdown").getHeight()));
-		row3.add(registry.button("btnExportDropdown"));
+		makeDropdown(row3, "btnExportDropdown", "btn_export_lbl", menu -> {
+			for (MenuEntry e : EXPORT_ITEMS) afegirExportMenuItem(menu, e);
+		});
 
-		UIComponents.styleSecondaryButton(registry.button("btnImportDropdown"));
-		registry.button("btnImportDropdown").setText(I18n.t("btn_import_lbl") + " \u25BE");
-		JPopupMenu importarMenu = new JPopupMenu();
-		afegirExportMenuItem(importarMenu, "btn_import_csv",     "tip_import_csv",     "btnImportarCSV");
-		afegirExportMenuItem(importarMenu, "btn_import_json_lbl","tip_import_json",    "btnImportarJSON");
-		afegirExportMenuItem(importarMenu, "btn_import_calibre", "tip_import_calibre", "btnImportarCalibre");
-		registry.button("btnImportDropdown").addActionListener(e ->
-			importarMenu.show(registry.button("btnImportDropdown"), 0, registry.button("btnImportDropdown").getHeight()));
-		row3.add(registry.button("btnImportDropdown"));
+		makeDropdown(row3, "btnImportDropdown", "btn_import_lbl", menu -> {
+			for (MenuEntry e : IMPORT_ITEMS) afegirExportMenuItem(menu, e);
+		});
 
 		UIComponents.styleSecondaryButton(registry.button("btnFetchCovers"));
 		row3.add(registry.button("btnFetchCovers"));
@@ -247,10 +242,27 @@ public class PanelCalaixFiltre extends JPanel {
 		add(panellDesplacamentFiltre, BorderLayout.CENTER);
 	}
 
-	private void afegirExportMenuItem(JPopupMenu menu, String labelKey, String tipKey, String targetKey) {
-		JMenuItem mi = new JMenuItem(I18n.t(labelKey));
-		mi.setToolTipText(I18n.t(tipKey));
-		JButton target = registry.button(targetKey);
+	private void addPresetBtn(JPanel presetBar, String key, Consumer<JButton> styler, int w) {
+		JButton btn = registry.button(key);
+		styler.accept(btn);
+		btn.setPreferredSize(new Dimension(w, 26));
+		presetBar.add(btn);
+	}
+
+	private void makeDropdown(JPanel row, String btnKey, String labelKey, Consumer<JPopupMenu> populate) {
+		JButton b = registry.button(btnKey);
+		UIComponents.styleSecondaryButton(b);
+		b.setText(I18n.t(labelKey) + " \u25BE");
+		JPopupMenu menu = new JPopupMenu();
+		populate.accept(menu);
+		b.addActionListener(e -> menu.show(b, 0, b.getHeight()));
+		row.add(b);
+	}
+
+	private void afegirExportMenuItem(JPopupMenu menu, MenuEntry entry) {
+		JMenuItem mi = new JMenuItem(I18n.t(entry.labelKey()));
+		mi.setToolTipText(I18n.t(entry.tipKey()));
+		JButton target = registry.button(entry.targetKey());
 		mi.addActionListener(e -> target.doClick());
 		menu.add(mi);
 	}
@@ -280,17 +292,23 @@ public class PanelCalaixFiltre extends JPanel {
 	 */
 	private void styleAllButtons() {
 		styleFilterComponents();
-		UIComponents.styleAccentButton(registry.button("bttnFiltrar"));
-		UIComponents.styleSecondaryButton(registry.button("bttnQuitarFiltros"));
-		UIComponents.styleSecondaryButton(registry.button("btnExportDropdown"));
-		UIComponents.styleSecondaryButton(registry.button("btnImportDropdown"));
-		UIComponents.styleSecondaryButton(registry.button("btnFetchCovers"));
-		UIComponents.styleSecondaryButton(registry.button("btnEscanejarISBN"));
-		UIComponents.styleSecondaryButton(registry.button("btnBackupBD"));
-		UIComponents.styleSecondaryButton(registry.button("btnRestaurarBD"));
-		UIComponents.styleAccentButton(registry.button("btnCarregaPreset"));
-		UIComponents.styleSecondaryButton(registry.button("btnDesaPreset"));
-		UIComponents.styleSecondaryButton(registry.button("btnEsborraPreset"));
+		for (StyledBtn b : styledFilterButtons()) b.styler().accept(registry.button(b.key()));
+	}
+
+	private static List<StyledBtn> styledFilterButtons() {
+		return List.of(
+			new StyledBtn("bttnFiltrar", UIComponents::styleAccentButton),
+			new StyledBtn("bttnQuitarFiltros", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnExportDropdown", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnImportDropdown", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnFetchCovers", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnEscanejarISBN", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnBackupBD", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnRestaurarBD", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnCarregaPreset", UIComponents::styleAccentButton),
+			new StyledBtn("btnDesaPreset", UIComponents::styleSecondaryButton),
+			new StyledBtn("btnEsborraPreset", UIComponents::styleSecondaryButton)
+		);
 	}
 
 	private JPanel makeFieldWrap(String label, JTextField field) {

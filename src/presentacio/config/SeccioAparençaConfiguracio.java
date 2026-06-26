@@ -19,55 +19,36 @@ public final class SeccioAparençaConfiguracio {
     private SeccioAparençaConfiguracio() {}
 
     public static JPanel build(JDialog owner) {
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
-        JLabel lblSeccio = new JLabel(t("lbl_appearance"));
-        lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.palette().accent());
+        JLabel lblSeccio = UIComponents.sectionHeader("lbl_appearance");
 
-        JLabel lblTheme = new JLabel(t("lbl_theme"));
-        UIComponents.styleLabel(lblTheme);
+        JLabel lblTheme = UIComponents.label("lbl_theme");
         UITheme.Tema[] themeValues = UITheme.Tema.values();
         String[] themeLabels = new String[themeValues.length];
-        for (int i = 0; i < themeValues.length; i++) themeLabels[i] = themeValues[i].displayName();
-        JComboBox<String> cmbTheme = new JComboBox<>(themeLabels);
-        UITheme.Tema curTheme = Configuracio.obtenirTheme();
-        for (int i = 0; i < themeValues.length; i++)
-            if (themeValues[i] == curTheme) { cmbTheme.setSelectedIndex(i); break; }
-        cmbTheme.setFont(UITheme.fontBase());
-        cmbTheme.putClientProperty("id", "cmbTheme");
+        String[] themeKeys = new String[themeValues.length];
+        for (int i = 0; i < themeValues.length; i++) {
+            themeLabels[i] = themeValues[i].displayName();
+            themeKeys[i] = themeValues[i].name();
+        }
+        JComboBox<String> cmbTheme = UIComponents.combo("cmbTheme", themeLabels, themeKeys,
+            Configuracio.obtenirTheme().name());
 
-        JLabel lblFont = new JLabel(t("lbl_font_size"));
-        UIComponents.styleLabel(lblFont);
+        JLabel lblFont = UIComponents.label("lbl_font_size");
         String[] fontSizeLabels = {t("opt_small"), t("opt_medium"), t("opt_large")};
-        String[] fontSizeKeys = {"small", "medium", "large"};
-        JComboBox<String> cmbFont = new JComboBox<>(fontSizeLabels);
-        String curSize = Configuracio.obtenirFontSize();
-        for (int i = 0; i < fontSizeKeys.length; i++)
-            if (fontSizeKeys[i].equals(curSize)) { cmbFont.setSelectedIndex(i); break; }
-        cmbFont.setFont(UITheme.fontBase());
-        cmbFont.putClientProperty("id", "cmbFont");
+        JComboBox<String> cmbFont = UIComponents.combo("cmbFont", fontSizeLabels,
+            ConfiguracioConstants.FONT_SIZE_KEYS, Configuracio.obtenirFontSize());
 
-        JLabel lblCurrency = new JLabel(t("lbl_currency_symbol"));
-        UIComponents.styleLabel(lblCurrency);
+        JLabel lblCurrency = UIComponents.label("lbl_currency_symbol");
         String[] currencySymbols = {"€", "$", "£", "¥", "CHF"};
-        JComboBox<String> cmbCurrency = new JComboBox<>(currencySymbols);
-        cmbCurrency.setFont(UITheme.fontBase());
-        String curCurrency = Configuracio.getCurrencySymbol();
-        for (int i = 0; i < currencySymbols.length; i++)
-            if (currencySymbols[i].equals(curCurrency)) { cmbCurrency.setSelectedIndex(i); break; }
-        cmbCurrency.putClientProperty("id", "cmbCurrency");
+        JComboBox<String> cmbCurrency = UIComponents.combo("cmbCurrency", currencySymbols,
+            currencySymbols, Configuracio.getCurrencySymbol());
 
-        JLabel lblDefVal = new JLabel(t("lbl_default_rating"));
-        UIComponents.styleLabel(lblDefVal);
-        JTextField txtDefVal = new JTextField(String.valueOf(Configuracio.obtenirDefaultValoracio()));
-        UIComponents.styleField(txtDefVal);
-        txtDefVal.putClientProperty("id", "txtDefVal");
+        JLabel lblDefVal = UIComponents.label("lbl_default_rating");
+        JTextField txtDefVal = UIComponents.field("txtDefVal",
+            String.valueOf(Configuracio.obtenirDefaultValoracio()));
 
         JLabel lblDefValHint = new JLabel("(0.0 – 10.0)");
         UIComponents.styleLabel(lblDefValHint);

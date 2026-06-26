@@ -1,7 +1,9 @@
 package presentacio.detalles.control;
 
+import java.awt.Component;
 import java.util.ArrayList;
 
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 
@@ -14,11 +16,8 @@ import persistencia.contract.EscritorPrestatgeria;
 import presentacio.detalles.vista.DialegLlistesLlibre;
 import presentacio.detalles.vista.ModelTaulaLlistesLlibre;
 
-public class ControladorLlistesLlibre {
+public class ControladorLlistesLlibre extends ControladorEntitatLlibre<DialegLlistesLlibre, EscritorPrestatgeria> {
 
-    private final DialegLlistesLlibre vista;
-    private final Llibre llibre;
-    private final EscritorPrestatgeria cd;
     private ArrayList<Llista> llistesCache = new ArrayList<>();
     private ArrayList<Llista> allLlistesCache = new ArrayList<>();
     private java.util.Set<Integer> memberIds = new java.util.HashSet<>();
@@ -48,14 +47,15 @@ public class ControladorLlistesLlibre {
         };
 
     public ControladorLlistesLlibre(DialegLlistesLlibre vista, Llibre llibre, EscritorPrestatgeria cd) {
-        this.vista = vista;
-        this.llibre = llibre;
-        this.cd = cd != null ? cd : domini.ControladorDomini.getInstance();
-        wireListeners();
-        reload();
+        super(vista, llibre, cd != null ? cd : domini.ControladorDomini.getInstance());
+        initEntitatLlibre();
     }
 
-    private void wireListeners() {
+    @Override protected Component obtenirParentDialeg() { return vista; }
+    @Override protected JComboBox<?> obtenirComboAdd() { return vista.obtenirComboAdd(); }
+
+    @Override
+    protected void wireListeners() {
         vista.obtenirBtnAfegir().addActionListener(e -> onAfegir());
         vista.obtenirBtnTreure().addActionListener(e -> onTreure());
         vista.obtenirBtnGuardar().addActionListener(e -> onGuardar());
@@ -69,15 +69,20 @@ public class ControladorLlistesLlibre {
         });
     }
 
+    private double valoracioField() {
+        try {
+            return Double.parseDouble(vista.obtenirTxtVal().getText().trim());
+        } catch (NumberFormatException ignored) {
+            return 0.0;
+        }
+    }
+
     private void toggleShelfMembership(Llista llista) {
         boolean member = llistesCache.stream().anyMatch(l -> l.obtenirId() == llista.obtenirId());
         try {
             if (member) cd.eliminarLlibreFromLlista(llibre.obtenirISBN(), llista.obtenirId());
-            else {
-                double val = 0.0;
-                try { val = Double.parseDouble(vista.obtenirTxtVal().getText().trim()); } catch (NumberFormatException ignored) {}
-                cd.afegirLlibreToLlista(llibre.obtenirISBN(), llista.obtenirId(), val, vista.obtenirChkLlegit().isSelected());
-            }
+            else cd.afegirLlibreToLlista(llibre.obtenirISBN(), llista.obtenirId(),
+                    valoracioField(), vista.obtenirChkLlegit().isSelected());
             reload();
         } catch (Exception ex) {
             new DialegError(ex).mostrarErrorMessage();
@@ -85,18 +90,11 @@ public class ControladorLlistesLlibre {
     }
 
     private void onAfegir() {
-        if (vista.obtenirComboAdd().getItemCount() == 0) {
-            JOptionPane.showMessageDialog(vista,
-                I18n.t("dlg_no_llistes_msg"),
-                I18n.t("dlg_no_llistes_title"), JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+        if (comboBuit("dlg_no_llistes_msg", "dlg_no_llistes_title")) return;
         Llista llista = (Llista) vista.obtenirComboAdd().getSelectedItem();
-        double val = 0.0;
-        try { val = Double.parseDouble(vista.obtenirTxtVal().getText().trim()); } catch (NumberFormatException ignored) {}
-        boolean llegit = vista.obtenirChkLlegit().isSelected();
         try {
-            cd.afegirLlibreToLlista(llibre.obtenirISBN(), llista.obtenirId(), val, llegit);
+            cd.afegirLlibreToLlista(llibre.obtenirISBN(), llista.obtenirId(),
+                    valoracioField(), vista.obtenirChkLlegit().isSelected());
             reload();
         } catch (Exception ex) {
             new DialegError(ex).mostrarErrorMessage();
@@ -135,44 +133,36 @@ public class ControladorLlistesLlibre {
             I18n.t("dlg_config_saved_title"), JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void reload() {
-        new SwingWorker<ReloadData, Void>() {
-            @Override protected ReloadData doInBackground() {
-                ArrayList<Llista> perLlibre = new ArrayList<>(cd.obtenirLlistesForLlibre(llibre.obtenirISBN()));
-                ArrayList<Llista> all = new ArrayList<>(cd.obtenirAllLlistes());
-                return new ReloadData(perLlibre, all);
+    @Override
+    protected void reload() {
+        executeReload(() -> {
+            ArrayList<Llista> perLlibre = new ArrayList<>(cd.obtenirLlistesForLlibre(llibre.obtenirISBN()));
+            ArrayList<Llista> all = new ArrayList<>(cd.obtenirAllLlistes());
+            return new ReloadData(perLlibre, all);
+        }, d -> {
+            llistesCache = d.perLlibre();
+            allLlistesCache = d.all();
+            UtilitatsSwing.reloadComboPreserveSelection(vista.obtenirComboAdd(), allLlistesCache, Llista::obtenirId);
+            vista.obtenirTableModel().setRows(llistesCache);
+            if (vista.obtenirTableModel().getRowCount() > 0) {
+                vista.obtenirTable().setRowSelectionInterval(0, vista.obtenirTableModel().getRowCount() - 1);
             }
-            @Override protected void done() {
-                if (isCancelled()) return;
-                try {
-                    ReloadData d = get();
-                    llistesCache = d.perLlibre();
-                    allLlistesCache = d.all();
-                    UtilitatsSwing.reloadComboPreserveSelection(vista.obtenirComboAdd(), allLlistesCache, Llista::obtenirId);
-                    vista.obtenirTableModel().setRows(llistesCache);
-                    if (vista.obtenirTableModel().getRowCount() > 0) {
-                        vista.obtenirTable().setRowSelectionInterval(0, vista.obtenirTableModel().getRowCount() - 1);
-                    }
-                    // Reutilitza el mateix HashSet entre recàrregues (clear+addAll)
-                    // perquè el SHELF_RENDERER capturat continuï apuntant a un set vàlid.
-                    memberIds.clear();
-                    for (Llista l : llistesCache) memberIds.add(l.obtenirId());
-                    javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
-                    for (Llista l : allLlistesCache) model.addElement(l);
-                    vista.obtenirShelfCheckList().setModel(model);
-                    java.util.List<Integer> memberIdx = new java.util.ArrayList<>();
-                    for (int i = 0; i < allLlistesCache.size(); i++) {
-                        if (memberIds.contains(allLlistesCache.get(i).obtenirId())) memberIdx.add(i);
-                    }
-                    int[] memberIdxArr = new int[memberIdx.size()];
-                    for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
-                    vista.obtenirShelfCheckList().setSelectedIndices(memberIdxArr);
-                    vista.obtenirShelfCheckList().setCellRenderer(SHELF_RENDERER);
-                } catch (Exception ex) {
-                    new DialegError(ex).mostrarErrorMessage();
-                }
+            // Reutilitza el mateix HashSet entre recàrregues (clear+addAll)
+            // perquè el SHELF_RENDERER capturat continuï apuntant a un set vàlid.
+            memberIds.clear();
+            for (Llista l : llistesCache) memberIds.add(l.obtenirId());
+            javax.swing.DefaultListModel<Llista> model = new javax.swing.DefaultListModel<>();
+            for (Llista l : allLlistesCache) model.addElement(l);
+            vista.obtenirShelfCheckList().setModel(model);
+            java.util.List<Integer> memberIdx = new java.util.ArrayList<>();
+            for (int i = 0; i < allLlistesCache.size(); i++) {
+                if (memberIds.contains(allLlistesCache.get(i).obtenirId())) memberIdx.add(i);
             }
-        }.execute();
+            int[] memberIdxArr = new int[memberIdx.size()];
+            for (int i = 0; i < memberIdx.size(); i++) memberIdxArr[i] = memberIdx.get(i);
+            vista.obtenirShelfCheckList().setSelectedIndices(memberIdxArr);
+            vista.obtenirShelfCheckList().setCellRenderer(SHELF_RENDERER);
+        });
     }
 
     private record ReloadData(ArrayList<Llista> perLlibre, ArrayList<Llista> all) {}

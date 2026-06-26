@@ -52,7 +52,6 @@ public final class SelectorMostraColor {
         int result = JOptionPane.showConfirmDialog(parent, wrap,
             I18n.t(titleKey), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return null;
-        Color c = chosen[0];
-        return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
+        return UtilitatsColor.toHex(chosen[0]);
     }
 }

@@ -42,6 +42,22 @@ public class ControladorMenuContextual {
         this.bookActionsCtrl = bookActionsCtrl;
     }
 
+    private void addMenuItem(JPopupMenu menu, String labelKey, boolean enabled, Runnable action) {
+        addItem(menu, I18n.t(labelKey), enabled, action);
+    }
+
+    private void addItem(JPopupMenu menu, String label, boolean enabled, Runnable action) {
+        JMenuItem item = new JMenuItem(label);
+        item.setEnabled(enabled);
+        item.addActionListener(ev -> action.run());
+        menu.add(item);
+    }
+
+    private void copyIsbnToClipboard(String isbn) {
+        Toolkit.getDefaultToolkit().getSystemClipboard()
+            .setContents(new StringSelection(isbn), null);
+    }
+
     MouseAdapter contextMenu() {
         return new MouseAdapter() {
             private void maybeShow(MouseEvent e) {
@@ -57,25 +73,16 @@ public class ControladorMenuContextual {
                 JPopupMenu menu = new JPopupMenu();
                 int[] selectedRows = table.getSelectedRows();
 
-                JMenuItem itemObrir = new JMenuItem(I18n.t("menu_open_details"));
-                itemObrir.setEnabled(selectedRows.length == 1);
-                itemObrir.addActionListener(ev -> bookActionsCtrl.abrirDetallesLlibres());
-                menu.add(itemObrir);
-
-                JMenuItem itemEliminar = new JMenuItem(
-                    selectedRows.length > 1 ? I18n.t("menu_delete_n", selectedRows.length) : I18n.t("menu_delete_one"));
-                itemEliminar.addActionListener(ev -> bookActionsCtrl.eliminarFilaSeleccionada());
-                menu.add(itemEliminar);
-
-                JMenuItem itemAfegirLlista = new JMenuItem(
-                    selectedRows.length > 1 ? I18n.t("menu_add_to_list_n", selectedRows.length) : I18n.t("menu_add_to_list"));
-                itemAfegirLlista.addActionListener(ev -> shelfCtrl.afegirSeleccionatsALlista(selectedRows));
-                menu.add(itemAfegirLlista);
-
-                JMenuItem itemDuplicar = new JMenuItem(I18n.t("menu_duplicate"));
-                itemDuplicar.setEnabled(selectedRows.length == 1);
-                itemDuplicar.addActionListener(ev -> duplicarLlibre(isbnStr));
-                menu.add(itemDuplicar);
+                addMenuItem(menu, "menu_open_details", selectedRows.length == 1,
+                    () -> bookActionsCtrl.abrirDetallesLlibres());
+                addItem(menu,
+                    selectedRows.length > 1 ? I18n.t("menu_delete_n", selectedRows.length) : I18n.t("menu_delete_one"),
+                    true, () -> bookActionsCtrl.eliminarFilaSeleccionada());
+                addItem(menu,
+                    selectedRows.length > 1 ? I18n.t("menu_add_to_list_n", selectedRows.length) : I18n.t("menu_add_to_list"),
+                    true, () -> shelfCtrl.afegirSeleccionatsALlista(selectedRows));
+                addMenuItem(menu, "menu_duplicate", selectedRows.length == 1,
+                    () -> duplicarLlibre(isbnStr));
 
                 if (selectedRows.length > 1) {
                     JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selectedRows.length));
@@ -115,12 +122,8 @@ public class ControladorMenuContextual {
 
                 menu.addSeparator();
 
-                JMenuItem itemCopiarISBN = new JMenuItem(I18n.t("menu_copy_isbn"));
-                itemCopiarISBN.setEnabled(selectedRows.length == 1);
-                itemCopiarISBN.addActionListener(ev ->
-                    Toolkit.getDefaultToolkit().getSystemClipboard()
-                        .setContents(new StringSelection(isbnStr), null));
-                menu.add(itemCopiarISBN);
+                addItem(menu, I18n.t("menu_copy_isbn"), selectedRows.length == 1,
+                    () -> copyIsbnToClipboard(isbnStr));
 
                 menu.show(e.getComponent(), e.getX(), e.getY());
             }
@@ -134,9 +137,7 @@ public class ControladorMenuContextual {
         if (selected.isEmpty()) return;
         JPopupMenu menu = new JPopupMenu();
 
-        JMenuItem itemObrir = new JMenuItem(I18n.t("ctx_open_details"));
-        itemObrir.setEnabled(selected.size() == 1);
-        itemObrir.addActionListener(ev -> {
+        addItem(menu, I18n.t("ctx_open_details"), selected.size() == 1, () -> {
             try {
                 ControladorPanellDetallsLlibre d = new ControladorPanellDetallsLlibre(
                     selected.get(0), state.enActualizarBBDD, state.cd);
@@ -144,17 +145,12 @@ public class ControladorMenuContextual {
                 d.obtenirDetallesLlibrePanel().setVisible(true);
             } catch (Exception ex) { new DialegError(ex).mostrarErrorMessage(); }
         });
-        menu.add(itemObrir);
-
-        JMenuItem itemEliminar = new JMenuItem(
-            selected.size() > 1 ? I18n.t("ctx_delete_n", selected.size()) : I18n.t("ctx_delete_one"));
-        itemEliminar.addActionListener(ev -> eliminarLlibresGaleria(selected));
-        menu.add(itemEliminar);
-
-        JMenuItem itemAfegirLlista = new JMenuItem(
-            selected.size() > 1 ? I18n.t("menu_add_to_list_n", selected.size()) : I18n.t("menu_add_to_list"));
-        itemAfegirLlista.addActionListener(ev -> shelfCtrl.afegirLlibresGaleriaALlista(selected));
-        menu.add(itemAfegirLlista);
+        addItem(menu,
+            selected.size() > 1 ? I18n.t("ctx_delete_n", selected.size()) : I18n.t("ctx_delete_one"),
+            true, () -> eliminarLlibresGaleria(selected));
+        addItem(menu,
+            selected.size() > 1 ? I18n.t("menu_add_to_list_n", selected.size()) : I18n.t("menu_add_to_list"),
+            true, () -> shelfCtrl.afegirLlibresGaleriaALlista(selected));
 
         if (selected.size() > 1) {
             JMenuItem itemBatchEdit = new JMenuItem(I18n.t("menu_batch_edit_n", selected.size()));
@@ -165,12 +161,8 @@ public class ControladorMenuContextual {
 
         menu.addSeparator();
 
-        JMenuItem itemCopiarISBN = new JMenuItem(I18n.t("ctx_copy_isbn"));
-        itemCopiarISBN.setEnabled(selected.size() == 1);
-        itemCopiarISBN.addActionListener(ev ->
-            Toolkit.getDefaultToolkit().getSystemClipboard()
-                .setContents(new StringSelection(String.valueOf(selected.get(0).obtenirISBN())), null));
-        menu.add(itemCopiarISBN);
+        addItem(menu, I18n.t("ctx_copy_isbn"), selected.size() == 1,
+            () -> copyIsbnToClipboard(String.valueOf(selected.get(0).obtenirISBN())));
 
         menu.show(e.getComponent(), e.getX(), e.getY());
     }
@@ -205,19 +197,7 @@ public class ControladorMenuContextual {
                 List<Llibre> toPush;
                 try { toPush = get(); }
                 catch (Exception e) { new DialegError(e).mostrarErrorMessage(); return; }
-                for (Llibre l : toPush) {
-                    state.undoBuffer.push(l);
-                    if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
-                }
-                for (long isbn : isbns) {
-                    Llibre found = null;
-                    if (state.biblio != null) {
-                        for (Llibre l : state.biblio) {
-                            if (l.obtenirISBN() == isbn) { found = l; break; }
-                        }
-                    }
-                    if (found != null) bookActionsCtrl.eliminarFila(found);
-                }
+                bookActionsCtrl.finalizeDeleteWithUndo(toPush, isbns);
                 ArrayList<Llibre> toShow = host.pageCtrl().esPaginatedMode()
                     ? new ArrayList<>(state.biblio.subList(
                         host.pageCtrl().obtenirCurrentPage() * ControladorPaginaTaula.PAGE_SIZE,

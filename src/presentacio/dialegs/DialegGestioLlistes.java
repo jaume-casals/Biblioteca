@@ -9,6 +9,7 @@ import herramienta.ui.UITheme;
 import herramienta.ui.UtilitatsColor;
 import java.awt.BorderLayout;
 import java.awt.Window;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -70,25 +71,15 @@ public class DialegGestioLlistes extends JDialog {
         btnEliminar.setBackground(UITheme.palette().danger());
         btnEliminar.addActionListener(e -> onDeleteLlista());
 
-        JButton btnRename = new JButton(I18n.t("btn_rename_llista"));
-        UIComponents.styleSecondaryButton(btnRename);
-        btnRename.setToolTipText(I18n.t("tip_rename_llista"));
-        btnRename.addActionListener(e -> onRenameLlista());
+        JButton btnRename = UIComponents.secondaryBtn(I18n.t("btn_rename_llista"),
+            I18n.t("tip_rename_llista"), e -> onRenameLlista());
 
-        JButton btnColor = new JButton(I18n.t("btn_color_llista"));
-        UIComponents.styleSecondaryButton(btnColor);
-        btnColor.setToolTipText(I18n.t("tip_color_llista"));
-        btnColor.addActionListener(e -> onColorLlista());
+        JButton btnColor = UIComponents.secondaryBtn(I18n.t("btn_color_llista"),
+            I18n.t("tip_color_llista"), e -> onColorLlista());
 
-        JButton btnUp = new JButton("▲");
-        UIComponents.styleSecondaryButton(btnUp);
-        btnUp.setToolTipText(I18n.t("tip_pujar_llista"));
-        btnUp.addActionListener(e -> onMoveLlista(true));
+        JButton btnUp = UIComponents.secondaryBtn("▲", I18n.t("tip_pujar_llista"), e -> onMoveLlista(true));
 
-        JButton btnDown = new JButton("▼");
-        UIComponents.styleSecondaryButton(btnDown);
-        btnDown.setToolTipText(I18n.t("tip_baixar_llista"));
-        btnDown.addActionListener(e -> onMoveLlista(false));
+        JButton btnDown = UIComponents.secondaryBtn("▼", I18n.t("tip_baixar_llista"), e -> onMoveLlista(false));
 
         JPanel reorderRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
         reorderRow.setBackground(UITheme.palette().bgPanel());
@@ -128,6 +119,18 @@ public class DialegGestioLlistes extends JDialog {
         }
     }
 
+    private void runOnSelected(Consumer<Llista> body) {
+        Llista sel = jList.getSelectedValue();
+        if (sel == null) return;
+        try {
+            body.accept(sel);
+            reload();
+            mainControl.refrescarComboLlistes();
+        } catch (Exception ex) {
+            new DialegError(ex).mostrarErrorMessage();
+        }
+    }
+
     private void onDeleteLlista() {
         Llista sel = jList.getSelectedValue();
         if (sel == null) return;
@@ -135,13 +138,7 @@ public class DialegGestioLlistes extends JDialog {
             I18n.t("dlg_confirm_delete_llista", sel.obtenirNom()),
             I18n.t("dlg_confirm_delete_title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
-        try {
-            cd.eliminarLlista(sel);
-            reload();
-            mainControl.refrescarComboLlistes();
-        } catch (Exception ex) {
-            new DialegError(ex).mostrarErrorMessage();
-        }
+        runOnSelected(cd::eliminarLlista);
     }
 
     private void onRenameLlista() {
@@ -151,11 +148,7 @@ public class DialegGestioLlistes extends JDialog {
             I18n.t("dlg_rename_llista_prompt", sel.obtenirNom()),
             I18n.t("dlg_rename_llista_title"), JOptionPane.PLAIN_MESSAGE, null, null, sel.obtenirNom());
         if (newNom == null || newNom.isBlank()) return;
-        try {
-            cd.reanomenarLlista(sel.obtenirId(), newNom.trim());
-            reload();
-            mainControl.refrescarComboLlistes();
-        } catch (Exception ex) { new DialegError(ex).mostrarErrorMessage(); }
+        runOnSelected(l -> cd.reanomenarLlista(l.obtenirId(), newNom.trim()));
     }
 
     private void onColorLlista() {
@@ -168,11 +161,7 @@ public class DialegGestioLlistes extends JDialog {
             ? java.awt.Color.decode(sel.obtenirColor()) : java.awt.Color.decode(herramienta.ui.SelectorMostraColor.DEFAULT_HEX);
         String hex = herramienta.ui.SelectorMostraColor.chooseHex(this, initial, "dlg_escull_color_title");
         if (hex == null) return;
-        try {
-            cd.posarLlistaColor(sel.obtenirId(), hex);
-            reload();
-            mainControl.refrescarComboLlistes();
-        } catch (Exception ex) { new DialegError(ex).mostrarErrorMessage(); }
+        runOnSelected(l -> cd.posarLlistaColor(l.obtenirId(), hex));
     }
 
     private void onMoveLlista(boolean up) {

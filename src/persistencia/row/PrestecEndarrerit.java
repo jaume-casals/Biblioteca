@@ -15,19 +15,11 @@ import persistencia.dao.PrestecDao;
  */
 public record PrestecEndarrerit(String nomPersona, String nomLlibre, LocalDate dataPrestec) {
 
-    private static final java.time.format.DateTimeFormatter DISPLAY =
-        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
     public static PrestecEndarrerit fromStrings(String nomPersona, String nomLlibre, String dataPrestecStr) {
-        LocalDate d = null;
-        if (dataPrestecStr != null && !dataPrestecStr.isBlank()) {
-            try { d = LocalDate.parse(dataPrestecStr.trim()); }
-            catch (java.time.format.DateTimeParseException ignored) { d = null; }
-        }
-        return new PrestecEndarrerit(nomPersona, nomLlibre, d);
+        return new PrestecEndarrerit(nomPersona, nomLlibre, RowDates.parseOrNull(dataPrestecStr));
     }
 
     public String dataPrestecDisplay() {
-        return dataPrestec != null ? dataPrestec.format(DISPLAY) : "";
+        return dataPrestec != null ? dataPrestec.format(RowDates.DISPLAY) : "";
     }
 }

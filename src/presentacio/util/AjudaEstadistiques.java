@@ -38,10 +38,45 @@ public class AjudaEstadistiques {
         return yr.filter(y -> y > 0).orElse(l.obtenirAny() != null && l.obtenirAny() > 1900 ? l.obtenirAny() : 0);
     }
 
+    private static boolean isLlegit(Llibre l) {
+        return Boolean.TRUE.equals(l.obtenirLlegit());
+    }
+
+    private static long countLlegits(List<Llibre> books) {
+        return books.stream().filter(AjudaEstadistiques::isLlegit).count();
+    }
+
+    private static double avgValoracio(List<Llibre> books) {
+        return books.stream().mapToDouble(l -> l.obtenirValoracio() != null ? l.obtenirValoracio() : 0).average().orElse(0);
+    }
+
+    private abstract static class ChartPanel extends javax.swing.JPanel {
+        ChartPanel(int w, int h, String titleKey) {
+            setPreferredSize(new java.awt.Dimension(w, h));
+            setBackground(herramienta.ui.UITheme.palette().bgPanel());
+            setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t(titleKey)));
+        }
+
+        abstract boolean isEmpty();
+
+        abstract void drawChart(java.awt.Graphics2D g2);
+
+        @Override protected void paintComponent(java.awt.Graphics g) {
+            super.paintComponent(g);
+            if (isEmpty()) {
+                g.drawString(I18n.t("stats_no_data"), 20, 60);
+                return;
+            }
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            drawChart(g2);
+        }
+    }
+
     public static java.util.Map<Integer, Long> booksByReadYear(List<Llibre> books) {
         java.util.Map<Integer, Long> byYear = new java.util.HashMap<>();
         for (Llibre l : books) {
-            if (!Boolean.TRUE.equals(l.obtenirLlegit())) continue;
+            if (!isLlegit(l)) continue;
             if ((l.obtenirDataLectura() == null || l.obtenirDataLectura().isEmpty()) && (l.obtenirAny() == null || l.obtenirAny() <= 1900)) continue;
             int yr = llegirYearFor(l);
             if (yr > 0) byYear.merge(yr, 1L, Long::sum);
@@ -51,21 +86,18 @@ public class AjudaEstadistiques {
 
     public static EstadistiquesLlibre computeStats(List<Llibre> books) {
         int total = books.size();
-        long llegits = books.stream().filter(l -> Boolean.TRUE.equals(l.obtenirLlegit())).count();
-        double avgVal = books.stream().mapToDouble(l -> l.obtenirValoracio() != null ? l.obtenirValoracio() : 0).average().orElse(0);
+        long llegits = countLlegits(books);
+        double avgVal = avgValoracio(books);
         double avgPreu = books.stream().mapToDouble(l -> l.obtenirPreu() != null ? l.obtenirPreu() : 0).average().orElse(0);
         return new EstadistiquesLlibre(total, llegits, avgVal, avgPreu, booksByReadYear(books));
     }
 
     public static javax.swing.JPanel buildReadingChart(java.util.Map<Integer, Long> perYear) {
         java.awt.Font chartFont9 = herramienta.ui.UITheme.fontBase().deriveFont(9f);
-        return new javax.swing.JPanel() {
-            { setPreferredSize(new java.awt.Dimension(560, 180)); setBackground(herramienta.ui.UITheme.palette().bgPanel()); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_books_year"))); }
-            @Override protected void paintComponent(java.awt.Graphics g) {
-                super.paintComponent(g);
-                if (perYear.isEmpty()) { g.drawString(I18n.t("stats_no_data"), 20, 60); return; }
-                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
-                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        return new ChartPanel(560, 180, "stats_chart_books_year") {
+            @Override boolean isEmpty() { return perYear.isEmpty(); }
+
+            @Override void drawChart(java.awt.Graphics2D g2) {
                 java.util.List<Integer> years = perYear.keySet().stream().filter(y -> y > 1900).sorted().collect(Collectors.toList());
                 if (years.isEmpty()) { g2.drawString(I18n.t("stats_no_data"), 20, 60); return; }
                 long maxVal = perYear.values().stream().mapToLong(v -> v).max().orElse(1);
@@ -97,13 +129,10 @@ public class AjudaEstadistiques {
             .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
             .limit(10).collect(Collectors.toList());
         java.awt.Font chartFont10 = herramienta.ui.UITheme.fontBase().deriveFont(10f);
-        return new javax.swing.JPanel() {
-            { setPreferredSize(new java.awt.Dimension(560, 200)); setBackground(herramienta.ui.UITheme.palette().bgPanel()); setBorder(javax.swing.BorderFactory.createTitledBorder(I18n.t("stats_chart_publishers"))); }
-            @Override protected void paintComponent(java.awt.Graphics g) {
-                super.paintComponent(g);
-                if (top.isEmpty()) { g.drawString(I18n.t("stats_no_data"), 20, 60); return; }
-                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
-                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        return new ChartPanel(560, 200, "stats_chart_publishers") {
+            @Override boolean isEmpty() { return top.isEmpty(); }
+
+            @Override void drawChart(java.awt.Graphics2D g2) {
                 long maxVal = top.get(0).getValue();
                 int pad = 8, lblW = 130, chartH = 22, gap = 4;
                 g2.setFont(chartFont10);
@@ -267,8 +296,8 @@ public class AjudaEstadistiques {
         for (domini.Llista ll : cd.obtenirAllLlistes()) {
             java.util.List<Llibre> shelf = shelfBooks.getOrDefault(ll.obtenirId(), java.util.List.of());
             if (shelf.isEmpty()) { shelfModel.addRow(new Object[]{ll.obtenirNom(), 0, 0, "0.0%", "—"}); continue; }
-            long llegits = shelf.stream().filter(l -> Boolean.TRUE.equals(l.obtenirLlegit())).count();
-            double avgVal = shelf.stream().mapToDouble(l -> l.obtenirValoracio() != null ? l.obtenirValoracio() : 0).average().orElse(0);
+            long llegits = countLlegits(shelf);
+            double avgVal = avgValoracio(shelf);
             shelfModel.addRow(new Object[]{
                 ll.obtenirNom(), shelf.size(), llegits,
                 String.format("%.1f%%", 100.0 * llegits / shelf.size()),
@@ -290,7 +319,7 @@ public class AjudaEstadistiques {
     }
 
     private static javax.swing.JPanel buildReadingGoalPanel(List<Llibre> global, EstadistiquesLlibre globalStats) {
-        int totalLlegits = (int) global.stream().filter(l -> Boolean.TRUE.equals(l.obtenirLlegit())).count();
+        int totalLlegits = (int) countLlegits(global);
         int savedGoal = herramienta.config.Configuracio.obtenirReadingGoal();
         javax.swing.JPanel goalPanel = new javax.swing.JPanel(new java.awt.BorderLayout(6, 4));
         goalPanel.setBackground(herramienta.ui.UITheme.palette().bgPanel());

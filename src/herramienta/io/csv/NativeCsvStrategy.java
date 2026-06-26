@@ -59,7 +59,7 @@ public class NativeCsvStrategy implements CsvImportStrategy {
             c.length > COL_DESCR ? c[COL_DESCR] : "",
             c.length > COL_VAL ? UtilitatsCsv.analitzarDoubleOrZero(c[COL_VAL]) : 0.0,
             c.length > COL_PREU ? UtilitatsCsv.analitzarDoubleOrZero(c[COL_PREU]) : 0.0,
-            c.length > COL_LLEGIT ? analitzarBool(c[COL_LLEGIT].trim()) : false,
+            c.length > COL_LLEGIT ? UtilitatsCsv.analitzarBool(c[COL_LLEGIT].trim()) : false,
             c.length > COL_PORTADA ? c[COL_PORTADA] : "");
         cd.afegirLlibre(l);
         if (c.length > COL_LLISTES && !c[COL_LLISTES].isBlank()) {
@@ -67,25 +67,12 @@ public class NativeCsvStrategy implements CsvImportStrategy {
                 llistaCache = new java.util.HashMap<>();
                 for (domini.Llista ll : cd.obtenirAllLlistes()) llistaCache.put(ll.obtenirNom(), ll);
             }
-            for (String entry : c[COL_LLISTES].split(";")) {
-                String[] parts = entry.split("\\|", 3);
-                if (parts.length < 1 || parts[0].isBlank()) continue;
-                String nomLlista = parts[0].trim();
-                double val = parts.length > 1 ? UtilitatsCsv.analitzarDoubleOrZero(parts[1]) : 0.0;
-                boolean llegitLl = parts.length > 2 && analitzarBool(parts[2].trim());
-                domini.Llista llista = llistaCache.get(nomLlista);
-                if (llista == null) {
-                    llista = cd.afegirLlista(nomLlista);
-                    llistaCache.put(nomLlista, llista);
-                }
-                cd.afegirLlibreToLlista(isbn, llista.obtenirId(), val, llegitLl);
+            for (AnalitzadorPertinençaPrestatgeria.Entrada entry
+                    : AnalitzadorPertinençaPrestatgeria.parse(c[COL_LLISTES])) {
+                ShelvesHelper.afegirLlibreAPrestatge(cd, llistaCache, isbn,
+                    entry.name(), entry.valoracio(), entry.llegit());
             }
         }
         return true;
-    }
-
-    private static boolean analitzarBool(String s) {
-        if (s == null || s.isBlank()) return false;
-        return "true".equalsIgnoreCase(s) || "1".equals(s) || "yes".equalsIgnoreCase(s) || "y".equalsIgnoreCase(s);
     }
 }

@@ -10,6 +10,7 @@ import domini.BibliotecaException;
 import domini.Llibre;
 import domini.LlibreLlistaContext;
 import domini.Llista;
+import domini.SqlOp;
 import herramienta.i18n.I18n;
 import persistencia.internal.ControladorPersistencia;
 
@@ -32,13 +33,18 @@ import persistencia.internal.ControladorPersistencia;
  * d'alliberar i tornar a agafar afegiria complexitat per un guany de
  * rendiment negligible.
  */
-public final class DelegatPrestatgeria {
-
-    private final StateContext state;
+public final class DelegatPrestatgeria extends NamedEntityDelegate<Llista> {
 
     public DelegatPrestatgeria(StateContext state) {
-        this.state = state;
+        super(state);
     }
+
+    @Override protected List<Llista> list() { return state.llistes(); }
+    @Override protected Map<Integer, Llista> mapById() { return state.llistesById(); }
+    @Override protected int createInDb(String nom) throws java.sql.SQLException { return state.persistence().crearLlista(nom); }
+    @Override protected void renameInDb(int id, String newNom) throws java.sql.SQLException { state.persistence().reanomenarLlista(id, newNom); }
+    @Override protected void deleteFromDb(int id) throws java.sql.SQLException { state.persistence().eliminarLlista(id); }
+    @Override protected Llista newEntity(int id, String nom) { return new Llista(id, nom); }
 
     public List<Llista> obtenirAllLlistes() {
         return state.withLockReturning(() -> new ArrayList<>(state.llistes()));
@@ -52,36 +58,16 @@ public final class DelegatPrestatgeria {
 
     public Llista afegirLlista(String nom) {
         if (nom == null || nom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-        return state.withLockReturning(() -> {
-            try {
-                int id = state.persistence().crearLlista(nom);
-                Llista l = new Llista(id, nom);
-                state.llistes().add(l);
-                state.llistesById().put(id, l);
-                return l;
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-        });
+        return addInternal(nom);
     }
 
     public void eliminarLlista(Llista llista) {
-        state.withLock(() -> {
-            try {
-                state.persistence().eliminarLlista(llista.obtenirId());
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            state.llistes().remove(llista);
-            state.llistesById().remove(llista.obtenirId());
-        });
+        deleteInternal(llista.obtenirId());
     }
 
     public void reanomenarLlista(int id, String newNom) {
         if (newNom == null || newNom.isBlank()) throw new BibliotecaException("El nom del prestatge no pot estar buit");
-        state.withLock(() -> {
-            try {
-                state.persistence().reanomenarLlista(id, newNom);
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            Llista l = state.llistesById().get(id);
-            if (l != null) l.posarNom(newNom);
-        });
+        renameInternal(id, newNom);
     }
 
     public int obtenirCountInLlista(int llistaId) { return state.persistence().obtenirCountInLlista(llistaId); }
@@ -94,41 +80,37 @@ public final class DelegatPrestatgeria {
     }
 
     public void afegirLlibreToLlista(long isbn, int llistaId, double valoracio, boolean llegit) {
-        try { state.persistence().afegirLlibreToLlista(isbn, llistaId, valoracio, llegit); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().afegirLlibreToLlista(isbn, llistaId, valoracio, llegit));
     }
 
     public void eliminarLlibreFromLlista(long isbn, int llistaId) {
-        try { state.persistence().eliminarLlibreFromLlista(isbn, llistaId); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().eliminarLlibreFromLlista(isbn, llistaId));
     }
 
     public void actualitzarLlibreInLlista(long isbn, int llistaId, double valoracio, boolean llegit) {
-        try { state.persistence().actualitzarLlibreInLlista(isbn, llistaId, valoracio, llegit); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().actualitzarLlibreInLlista(isbn, llistaId, valoracio, llegit));
     }
 
     public void moureLlistaUp(int id) {
-        state.withLock(() -> {
-            int idx = indexOfLlistaLocked(id);
-            if (idx > 0) swapLlistesOrdreLocked(idx, idx - 1, id);
-        });
+        state.withLock(() -> moureLlista(id, -1));
     }
 
     public void moureLlistaDown(int id) {
-        state.withLock(() -> {
-            int idx = indexOfLlistaLocked(id);
-            if (idx >= 0 && idx < state.llistes().size() - 1) swapLlistesOrdreLocked(idx, idx + 1, id);
-        });
+        state.withLock(() -> moureLlista(id, 1));
+    }
+
+    private void moureLlista(int id, int delta) {
+        int idx = indexOfLlistaLocked(id);
+        int target = idx + delta;
+        if (idx < 0 || target < 0 || target >= state.llistes().size()) return;
+        swapLlistesOrdreLocked(idx, target, id);
     }
 
     public void posarLlistaColor(int id, String color) {
         if (!Llista.esValidColor(color))
             throw new BibliotecaException.Validacio(I18n.t("val_color_invalid", color));
         state.withLock(() -> {
-            try {
-                state.persistence().actualitzarLlistaColor(id, color);
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+            SqlOp.domain(() -> state.persistence().actualitzarLlistaColor(id, color));
             Llista l = state.llistesById().get(id);
             if (l != null) l.posarColor(color);
         });

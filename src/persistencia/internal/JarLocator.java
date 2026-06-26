@@ -34,7 +34,7 @@ public final class JarLocator {
         STRATEGIES.add(JarLocator::fromBibliotecaRoot);
         STRATEGIES.add(JarLocator::fromUserDir);
         STRATEGIES.add(JarLocator::fromUserDirSiblings);
-        STRATEGIES.add((d, h) -> walkUp(d, h, 6, "user.dir"));
+        STRATEGIES.add((d, h) -> walkUpFrom(new File(System.getProperty("user.dir")), 6, d, h));
         STRATEGIES.add((d, h) -> walkUpFromClassSource(d, h, 10));
     }
 
@@ -80,9 +80,8 @@ public final class JarLocator {
         return null;
     }
 
-    private static File walkUp(StringBuilder diag, Predicate<File> teJars,
-                               int maxLevels, String originLabel) {
-        File dir = new File(System.getProperty("user.dir"));
+    private static File walkUpFrom(File start, int maxLevels, StringBuilder diag, Predicate<File> teJars) {
+        File dir = start;
         for (int i = 0; i < maxLevels; i++) {
             if (dir == null) return null;
             File lib = new File(dir, "lib");
@@ -119,13 +118,7 @@ public final class JarLocator {
             diag.append("  classSource=IllegalArgument:").append(iae.getMessage()).append("\n");
             return null;
         }
-        for (int i = 0; i < maxLevels; i++) {
-            if (dir == null) return null;
-            File lib = new File(dir, "lib");
-            if (recordAndReturn(lib, diag, teJars) != null) return lib;
-            dir = dir.getParentFile();
-        }
-        return null;
+        return walkUpFrom(dir, maxLevels, diag, teJars);
     }
 
     private static File recordAndReturn(File lib, StringBuilder diag, Predicate<File> teJars) {

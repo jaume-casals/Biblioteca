@@ -2,6 +2,7 @@ package domini;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Especificació d'ordenació conscient de la paginació, extreta de LlibreFilter perquè
@@ -59,10 +60,14 @@ public final class EspecificacioOrdenacio {
     public String column() { return column; }
     public boolean ascending() { return ascending; }
 
+    private static <T> T pickColumn(String key, Function<Columna, T> getter, T isbnDefault) {
+        Columna c = COLUMNS.get(key);
+        return c != null ? getter.apply(c) : isbnDefault;
+    }
+
     /** Fragment d'expressió SQL ORDER BY, p.ex. "l.`ISBN` ASC" */
     public String toSql() {
-        Columna c = COLUMNS.get(column);
-        return (c != null ? c.sqlFragment() : "l.`ISBN`") + (ascending ? " ASC" : " DESC");
+        return pickColumn(column, Columna::sqlFragment, "l.`ISBN`") + (ascending ? " ASC" : " DESC");
     }
 
 /**
@@ -73,8 +78,7 @@ public final class EspecificacioOrdenacio {
  */
     public static Comparator<Llibre> comparator(String column) {
         if (column == null) return ISBN_COMPARATOR;
-        Columna c = COLUMNS.get(column);
-        return c != null ? c.cmp() : ISBN_COMPARATOR;
+        return pickColumn(column, Columna::cmp, ISBN_COMPARATOR);
     }
 
     /** Mapa de comparadors en memòria calculat un sol cop; es consumeix a {@link DelegatLlibre#SORT_BY} */

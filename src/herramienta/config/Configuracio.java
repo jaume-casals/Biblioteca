@@ -48,10 +48,15 @@ public class Configuracio {
         return java.nio.file.Path.of(System.getProperty("user.home"), ".biblioteca");
     }
 
-    private static final ConcurrentHashMap<String, String> UI_STORE     = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> DB_STORE     = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> WINDOW_STORE = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> FILTER_STORE = new ConcurrentHashMap<>();
+    /** Un sub-store per domini. Substitueix els quatre camps {@code *_STORE}
+     *  i els switch que els seleccionaven. */
+    private static final java.util.EnumMap<Domini, ConcurrentHashMap<String, String>> STORES = buildStores();
+
+    private static java.util.EnumMap<Domini, ConcurrentHashMap<String, String>> buildStores() {
+        java.util.EnumMap<Domini, ConcurrentHashMap<String, String>> m = new java.util.EnumMap<>(Domini.class);
+        for (Domini d : Domini.values()) m.put(d, new ConcurrentHashMap<>());
+        return m;
+    }
 
     /** Emmagatzematge transitori de la contrasenya com a {@code char[]} (no a
      *  {@code props}) perquè la representació al heap no sigui mai una còpia
@@ -63,23 +68,12 @@ public class Configuracio {
 
     /** Intern: escriu una clau en un store de domini concret. */
     static void putIn(Domini d, String key, String val) {
-        switch (d) {
-            case UI:     UI_STORE.put(key, val); break;
-            case DB:     DB_STORE.put(key, val); break;
-            case WINDOW: WINDOW_STORE.put(key, val); break;
-            case FILTER: FILTER_STORE.put(key, val); break;
-        }
+        STORES.get(d).put(key, val);
     }
 
     /** Intern: llegeix una clau d'un store de domini concret. */
     static String obtenirFrom(Domini d, String key) {
-        switch (d) {
-            case UI:     return UI_STORE.get(key);
-            case DB:     return DB_STORE.get(key);
-            case WINDOW: return WINDOW_STORE.get(key);
-            case FILTER: return FILTER_STORE.get(key);
-        }
-        return null;
+        return STORES.get(d).get(key);
     }
 
     /** Domini d'una clau. Les claus desconegudes van al store FILTER i es
@@ -123,14 +117,11 @@ public class Configuracio {
         }
         @Override public java.util.Set<java.util.Map.Entry<String, String>> entrySet() {
             java.util.Set<java.util.Map.Entry<String, String>> all = new java.util.LinkedHashSet<>();
-            all.addAll(UI_STORE.entrySet());
-            all.addAll(DB_STORE.entrySet());
-            all.addAll(WINDOW_STORE.entrySet());
-            all.addAll(FILTER_STORE.entrySet());
+            for (var s : STORES.values()) all.addAll(s.entrySet());
             return all;
         }
         @Override public int size() {
-            return UI_STORE.size() + DB_STORE.size() + WINDOW_STORE.size() + FILTER_STORE.size();
+            return STORES.values().stream().mapToInt(Map::size).sum();
         }
     };
 
@@ -193,8 +184,7 @@ public class Configuracio {
     }
 
     public static void posarDarkMode(boolean dark) {
-        props.put("darkMode", String.valueOf(dark));
-        save();
+        putAndSave("darkMode", String.valueOf(dark));
     }
 
     public static UITheme.Tema obtenirTheme() {
@@ -211,10 +201,10 @@ public class Configuracio {
 
     // ── DB ────────────────────────────────────────────────────────────────────
     public static String obtenirDbHost() { return props.getOrDefault("dbHost", "localhost"); }
-    public static void posarDbHost(String host) { props.put("dbHost", host); save(); }
+    public static void posarDbHost(String host) { putAndSave("dbHost", host); }
 
     public static String obtenirDbUser() { return props.getOrDefault("dbUser", "user"); }
-    public static void posarDbUser(String user) { props.put("dbUser", user); save(); }
+    public static void posarDbUser(String user) { putAndSave("dbUser", user); }
 
     /**
      * Retorna la contrasenya de la BBDD. <b>Nota:</b> la contrasenya
@@ -296,19 +286,18 @@ public class Configuracio {
     public static String obtenirFontSize() { return props.getOrDefault("fontSize", "medium"); }
     public static void posarFontSize(String size) {
         if (!VALID_FONT_SIZES.contains(size)) throw new IllegalArgumentException("Mida de lletra no vàlida: " + size + ". Ha de ser petita, mitjana o gran.");
-        props.put("fontSize", size); save();
+        putAndSave("fontSize", size);
     }
 
     public static String getCurrencySymbol() { return props.getOrDefault("currencySymbol", "€"); }
-    public static void setCurrencySymbol(String s) { props.put("currencySymbol", s != null ? s : "€"); save(); }
+    public static void setCurrencySymbol(String s) { putAndSave("currencySymbol", s != null ? s : "€"); }
 
     public static double obtenirDefaultValoracio() {
         try { return Double.parseDouble(props.getOrDefault("defaultValoracio", "0.0")); }
         catch (NumberFormatException e) { return 0.0; }
     }
     public static void posarDefaultValoracio(double v) {
-        props.put("defaultValoracio", String.valueOf(Math.max(0.0, Math.min(10.0, v))));
-        save();
+        putAndSave("defaultValoracio", String.valueOf(Math.max(0.0, Math.min(10.0, v))));
     }
 
     private static final String[] PRESET_KEYS =
@@ -361,10 +350,10 @@ public class Configuracio {
     public static String obtenirDefaultImgDir() {
         return props.getOrDefault("defaultImgDir", System.getProperty("user.home"));
     }
-    public static void posarDefaultImgDir(String dir) { props.put("defaultImgDir", dir); save(); }
+    public static void posarDefaultImgDir(String dir) { putAndSave("defaultImgDir", dir); }
 
     public static String obtenirLang() { return props.getOrDefault("lang", "ca"); }
-    public static void posarLang(String lang) { props.put("lang", lang); save(); }
+    public static void posarLang(String lang) { putAndSave("lang", lang); }
 
     public static String obtenirDbType() { return props.getOrDefault("dbType", "h2"); }
     public static void posarDbType(String type) {
@@ -389,8 +378,7 @@ public class Configuracio {
     public static void posarDbProfile(String name) {
         if (name != null && !name.matches("[a-zA-Z0-9_-]+"))
             throw new IllegalArgumentException("invalid dbProfile: " + name);
-        props.put("dbProfile", name);
-        save();
+        putAndSave("dbProfile", name);
     }
 
     public static java.util.List<String> listDbProfiles() {
@@ -431,8 +419,7 @@ public class Configuracio {
     }
 
     public static void posarWindowMaximized(boolean m) {
-        props.put("windowMaximized", String.valueOf(m));
-        save();
+        putAndSave("windowMaximized", String.valueOf(m));
     }
 
     public static int obtenirColWidth(int col, int defaultWidth) {
@@ -450,26 +437,30 @@ public class Configuracio {
     }
 
     public static void posarColVisible(int col, boolean visible) {
-        props.put("colVisible_" + col, String.valueOf(visible));
-        save();
+        putAndSave("colVisible_" + col, String.valueOf(visible));
     }
 
     public static int obtenirReadingGoal() { return parseInt(props.get("readingGoal"), 0); }
-    public static void posarReadingGoal(int goal) { props.put("readingGoal", String.valueOf(goal)); save(); }
+    public static void posarReadingGoal(int goal) { putAndSave("readingGoal", String.valueOf(goal)); }
 
     public static String obtenirViewMode() {
         return props.getOrDefault("viewMode", "taula");
     }
-    public static void posarViewMode(String mode) { props.put("viewMode", mode); save(); }
+    public static void posarViewMode(String mode) { putAndSave("viewMode", mode); }
 
     public static int obtenirGalleryZoom() { return parseInt(props.get("galleryZoom"), 2); }
-    public static void posarGalleryZoom(int zoom) { props.put("galleryZoom", String.valueOf(zoom)); save(); }
+    public static void posarGalleryZoom(int zoom) { putAndSave("galleryZoom", String.valueOf(zoom)); }
 
     public static int obtenirSortColumn() { return parseInt(props.get("sortColumn"), -1); }
-    public static void posarSortColumn(int col) { props.put("sortColumn", String.valueOf(col)); save(); }
+    public static void posarSortColumn(int col) { putAndSave("sortColumn", String.valueOf(col)); }
 
     public static String getSortOrder() { return props.getOrDefault("sortOrder", "ASCENDING"); }
-    public static void posarSortOrder(String order) { props.put("sortOrder", order); save(); }
+    public static void posarSortOrder(String order) { putAndSave("sortOrder", order); }
+
+    private static void putAndSave(String key, String val) {
+        props.put(key, val);
+        save();
+    }
 
     private static int parseInt(String s) {
         return parseInt(s, 0);

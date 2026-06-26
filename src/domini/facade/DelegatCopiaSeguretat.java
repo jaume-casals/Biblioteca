@@ -53,20 +53,13 @@ public final class DelegatCopiaSeguretat {
      */
     public void copiaSegToSQL(File file) {
         preLoadHeavyFieldsBatched();
-        ArrayList<Llibre> bibSnapshot;
-        ArrayList<Llista> llistesSnapshot;
-        ArrayList<Tag> tagsSnapshot;
-        synchronized (state.lock()) {
-            bibSnapshot = new ArrayList<>(state.bib());
-            llistesSnapshot = new ArrayList<>(state.llistes());
-            tagsSnapshot = new ArrayList<>(state.tags());
-        }
+        StateContext.Snapshot snapshot = state.snapshotAll();
         try {
             persistencia.internal.ControladorPersistencia.BackupSnapshot snap =
                 state.persistence().snapshotForBackup();
-            snap.bib = bibSnapshot;
-            snap.llistes = llistesSnapshot;
-            snap.tags = tagsSnapshot;
+            snap.bib = snapshot.bib();
+            snap.llistes = snapshot.llistes();
+            snap.tags = snapshot.tags();
             copiaSegService.copiaSegToSQL(file, snap);
         }
         catch (java.io.IOException e) { throw new BibliotecaException(e.getMessage(), e); }
@@ -116,18 +109,11 @@ public final class DelegatCopiaSeguretat {
             File tmpDir = new File(System.getProperty("java.io.tmpdir"));
             File backup = new File(tmpDir, "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
             backup.deleteOnExit();
-            ArrayList<Llibre> preBib;
-            ArrayList<Llista> preLlistes;
-            ArrayList<Tag> preTags;
             // Captura l'estat previ a la restauració sota el lock; el
             // lock es manté només per a les còpies defensives barates,
             // no per a l'escriptura de la còpia de seguretat.
-            synchronized (state.lock()) {
-                preBib = new ArrayList<>(state.bib());
-                preLlistes = new ArrayList<>(state.llistes());
-                preTags = new ArrayList<>(state.tags());
-            }
-            copiaSegService.copiaSegToSQL(backup, preBib, preLlistes, preTags);
+            StateContext.Snapshot pre = state.snapshotAll();
+            copiaSegService.copiaSegToSQL(backup, pre.bib(), pre.llistes(), pre.tags());
             try {
                 // Una sola transacció JDBC envolta clearAllData i
                 // executeSQLFile. Si falla l'execució del fitxer, també

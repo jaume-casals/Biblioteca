@@ -53,9 +53,7 @@ public final class UtilitatsCsv {
      *  donen "". Per a comprovacions de presència de columna, usa primer
      *  hMap.containsKey(col). */
     public static String colVal(Map<String, Integer> hMap, String[] c, String col) {
-        Integer idx = hMap.get(col);
-        if (idx == null || idx >= c.length) return "";
-        return c[idx].trim();
+        return colValOpt(hMap, c, col).orElse("");
     }
 
     /** Com {@link #colVal} però distingeix "columna absent" de "valor buit".
@@ -73,6 +71,25 @@ public final class UtilitatsCsv {
     public static double analitzarDoubleOrZero(String s) {
         if (s == null || s.isBlank()) return 0.0;
         try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
+    }
+
+    /** Interpreta una cadena com a booleà tolerant: true/1/yes/y (sense distingir
+     *  majúscules); null o buit → false. Compartit per les estratègies CSV. */
+    public static boolean analitzarBool(String s) {
+        if (s == null || s.isBlank()) return false;
+        String t = s.trim().toLowerCase(java.util.Locale.ROOT);
+        return t.equals("true") || t.equals("1") || t.equals("yes") || t.equals("y");
+    }
+
+    /** Resol l'ISBN d'una fila: prova {@code ISBN13}, cau a {@code ISBN}, normalitza a
+     *  ISBN-13 i el converteix a {@code long}. Llança {@link domini.BibliotecaException}
+     *  si no es pot resoldre cap ISBN. */
+    public static long resoldreIsbn(Map<String, Integer> hMap, String[] c) {
+        String isbnRaw = colVal(hMap, c, "ISBN13");
+        if (isbnRaw.isEmpty()) isbnRaw = colVal(hMap, c, "ISBN");
+        isbnRaw = analitzarIsbn(isbnRaw);
+        if (isbnRaw == null || isbnRaw.isEmpty()) throw new domini.BibliotecaException("ISBN buit");
+        return Long.parseLong(isbnRaw);
     }
 
     public static Map<String, Integer> buildHeaderMap(String[] headers) {

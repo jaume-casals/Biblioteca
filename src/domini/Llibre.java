@@ -3,8 +3,15 @@ package domini;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 public class Llibre {
+
+	private static final Map<String, Function<Llibre, String>> NOM_BY_LANG = Map.of(
+		"ca", Llibre::obtenirNomCa,
+		"es", Llibre::obtenirNomEs,
+		"en", Llibre::obtenirNomEn);
 
 	private Long isbn;
 	private String nom;
@@ -141,12 +148,13 @@ public class Llibre {
 		return (s != null && !s.isBlank()) ? s.trim() : null;
 	}
 
+	private static String nullToEmpty(String s) {
+		return s != null ? s : "";
+	}
+
 	/** Retorna el títol per al codi d'idioma donat ("ca","es","en"), caient al nom si no hi és. */
 	public String obtenirDisplayNom(String lang) {
-		String alt = null;
-		if ("ca".equals(lang)) alt = nomCa;
-		else if ("es".equals(lang)) alt = nomEs;
-		else if ("en".equals(lang)) alt = nomEn;
+		String alt = NOM_BY_LANG.containsKey(lang) ? NOM_BY_LANG.get(lang).apply(this) : null;
 		return (alt != null && !alt.isBlank()) ? alt : nom;
 	}
 
@@ -181,7 +189,7 @@ public class Llibre {
 	}
 
 	public void posarDescripcio(String descripcio) {
-		this.descripcio = descripcio != null ? descripcio : "";
+		this.descripcio = nullToEmpty(descripcio);
 	}
 
 	public Double obtenirValoracio() {
@@ -222,15 +230,15 @@ public class Llibre {
 	public void posarHasBlob(boolean teBlob) { this.teBlob = teBlob; }
 
 	public String obtenirNotes() { return notes; }
-	public void posarNotes(String notes) { this.notes = notes != null ? notes : ""; }
+	public void posarNotes(String notes) { this.notes = nullToEmpty(notes); }
 	public int obtenirPagines() { return pagines; }
 	public void posarPagines(int pagines) { this.pagines = Math.max(0, pagines); }
 	public int obtenirPaginesLlegides() { return paginesLlegides; }
 	public void posarPaginesLlegides(int paginesLlegides) { this.paginesLlegides = Math.max(0, paginesLlegides); }
 	public String obtenirEditorial() { return editorial; }
-	public void posarEditorial(String editorial) { this.editorial = editorial != null ? editorial : ""; }
+	public void posarEditorial(String editorial) { this.editorial = nullToEmpty(editorial); }
 	public String obtenirSerie() { return serie; }
-	public void posarSerie(String serie) { this.serie = serie != null ? serie : ""; }
+	public void posarSerie(String serie) { this.serie = nullToEmpty(serie); }
 	public int obtenirVolum() { return volum; }
 	public void posarVolum(int volum) { this.volum = Math.max(0, volum); }
 	public String obtenirDataCompra() { return dataCompra; }

@@ -25,17 +25,21 @@ public class ValidadorLlibre {
 		String normalized = normalizeIsbn13(trimmed);
 		String digits = normalized.replaceAll("[^0-9]", "");
 		// Validació del dígit de control ISBN-13 (camí d'entrada de l'usuari)
-		if (digits.length() == 13) {
-			int sum = 0;
-			for (int i = 0; i < 12; i++) sum += (digits.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-			if ((digits.charAt(12) - '0') != (10 - sum % 10) % 10)
-				throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
-		}
+		if (digits.length() == 13 && (digits.charAt(12) - '0') != checkDigit13(digits))
+			throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
 		try {
 			return comprovarLlibre(Long.parseLong(digits), nom, autor, any, descripcio, valoracio, preu, llegit, portada);
 		} catch (NumberFormatException e) {
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 		}
+	}
+
+	/** Calcula el dígit de control EAN-13 a partir dels 12 primers caràcters de {@code base12}.
+	 *  Package-private per compartir amb {@link Isbn13Normalizer#convertToIsbn13(String)}. */
+	static int checkDigit13(String base12) {
+		int sum = 0;
+		for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
+		return (10 - sum % 10) % 10;
 	}
 
 	/** Comprova el dígit de control ISBN-10 (suma ponderada × (10 - posició),
@@ -62,16 +66,11 @@ public class ValidadorLlibre {
 		String raw = isbn.replaceAll("[^0-9Xx]", "").toUpperCase(java.util.Locale.ROOT);
 		if (raw.length() == 10) return isValidIsbn10(raw);
 		if (raw.length() == 13) {
-			String digits = raw;
-			int sum = 0;
-			for (int i = 0; i < 12; i++) {
-				char c = digits.charAt(i);
+			for (int i = 0; i < 13; i++) {
+				char c = raw.charAt(i);
 				if (c < '0' || c > '9') return false;
-				sum += (c - '0') * (i % 2 == 0 ? 1 : 3);
 			}
-			char last = digits.charAt(12);
-			if (last < '0' || last > '9') return false;
-			return (last - '0') == (10 - sum % 10) % 10;
+			return (raw.charAt(12) - '0') == checkDigit13(raw);
 		}
 		return false;
 	}
@@ -83,18 +82,14 @@ public class ValidadorLlibre {
 			String core = isbn.substring(0, isbn.length() - 1).replaceAll("[^0-9]", "");
 			if (core.length() == 9) {
 				String base12 = "978" + core;
-				int sum = 0;
-				for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-				isbn = base12 + (10 - sum % 10) % 10;
+				isbn = base12 + checkDigit13(base12);
 			}
 		}
 		String digits = isbn.replaceAll("[^0-9]", "");
 		// ISBN-10 que comença amb 0 → ISBN-13: evita la pèrdua del zero inicial quan s'emmagatzema com a Long
 		if (digits.length() == 10 && digits.charAt(0) == '0') {
 			String base12 = "978" + digits.substring(0, 9);
-			int sum = 0;
-			for (int i = 0; i < 12; i++) sum += (base12.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
-			digits = base12 + (10 - sum % 10) % 10;
+			digits = base12 + checkDigit13(base12);
 		}
 		return digits.length() == 13 ? digits : isbn;
 	}
@@ -123,14 +118,8 @@ public class ValidadorLlibre {
 		// aquest mètode rep un {@code Long} que ja ha perdut el 'X',
 		// per la qual cosa la validació X es fa exclusivament al camí
 		// d'entrada de cadena.
-		if (digits == 10) {
-			String s = Long.toString(isbn);
-			int sum = 0;
-			for (int i = 0; i < 9; i++) sum += (s.charAt(i) - '0') * (10 - i);
-			int check = (11 - sum % 11) % 11;
-			if (check != (s.charAt(9) - '0'))
-				throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
-		}
+		if (digits == 10 && !isValidIsbn10(Long.toString(isbn)))
+			throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
 
 		if (nom == null || nom.isBlank())
 			throw new IllegalArgumentException(I18n.t("val_nom_buit"));

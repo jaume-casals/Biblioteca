@@ -69,6 +69,16 @@ public final class StateContext {
     public Map<Integer, Llista> llistesById() { return llistesById; }
     public Map<Integer, Tag> tagsById() { return tagsById; }
 
+    /** Captura defensiva atòmica de les tres llistes de suport sota el lock. */
+    public record Snapshot(ArrayList<Llibre> bib, ArrayList<Llista> llistes, ArrayList<Tag> tags) {}
+
+    /** Pren una còpia defensiva de {@code bib}, {@code llistes} i {@code tags} sota el lock. */
+    public Snapshot snapshotAll() {
+        synchronized (lock) {
+            return new Snapshot(new ArrayList<>(bib), new ArrayList<>(llistes), new ArrayList<>(tags));
+        }
+    }
+
     /** Substitueix les tres llistes de suport atòmicament (usat per restaurarFromSQL). */
     public void replaceAll(ArrayList<Llibre> newBib,
                            ArrayList<Llista> newLlistes,
@@ -86,12 +96,7 @@ public final class StateContext {
      *  buides perquè ambdós camins comparteixin un sol cos — futures addicions
      *  (p.ex. un nou mapa d'índex per id) són un canvi d'una sola línia. */
     public void netejarAll() {
-        synchronized (lock) {
-            this.bib = new ArrayList<>();
-            this.llistes = new ArrayList<>();
-            this.tags = new ArrayList<>();
-            rebuildIdIndexesLocked();
-        }
+        replaceAll(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
     /** Reconstrueix els mapes d'índex per id a partir de les llistes de suport actuals. S'ha de cridar amb el lock agafat. */

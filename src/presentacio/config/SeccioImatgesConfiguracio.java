@@ -1,7 +1,6 @@
 package presentacio.config;
 
 import herramienta.config.Configuracio;
-import herramienta.ui.UITheme;
 import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -12,29 +11,19 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import static herramienta.i18n.I18n.t;
-
 /** Images section: default cover-folder picker. */
 public final class SeccioImatgesConfiguracio {
     private SeccioImatgesConfiguracio() {}
 
     public static JPanel build(JDialog owner) {
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
-        JLabel lblSeccio = new JLabel(t("lbl_images"));
-        lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.palette().accent());
+        JLabel lblSeccio = UIComponents.sectionHeader("lbl_images");
 
-        JLabel lblImgDir = new JLabel(t("lbl_default_folder"));
-        UIComponents.styleLabel(lblImgDir);
-        JTextField txtImgDir = new JTextField(Configuracio.obtenirDefaultImgDir());
-        UIComponents.styleField(txtImgDir);
-        txtImgDir.putClientProperty("id", "txtImgDir");
+        JLabel lblImgDir = UIComponents.label("lbl_default_folder");
+        JTextField txtImgDir = UIComponents.field("txtImgDir", Configuracio.obtenirDefaultImgDir());
 
         JButton btnExplorar = new JButton("...");
         UIComponents.styleSecondaryButton(btnExplorar);

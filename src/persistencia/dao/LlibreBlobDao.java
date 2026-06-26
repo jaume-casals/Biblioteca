@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import domini.Llibre;
+import persistencia.internal.MapejadorsFiles;
 
 /** Lectura/escriptura del {@code imatge_blob} i càrrega mandrosa de {@code descripcio}/{@code notes}. */
 public class LlibreBlobDao {
@@ -36,16 +37,18 @@ public class LlibreBlobDao {
         }
     }
 
+    private static void applyHeavyFields(Llibre target, ResultSet rs) throws SQLException {
+        target.posarDescripcio(rs.getString("descripcio"));
+        target.posarNotes(rs.getString("notes"));
+        target.posarCampsPesatsCarregats(true);
+    }
+
     public void carregarHeavyFields(long isbn, Llibre target) {
         try (PreparedStatement ps = con.prepareStatement(
                 "SELECT descripcio, notes FROM llibre WHERE ISBN = ?")) {
             ps.setLong(1, isbn);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    target.posarDescripcio(rs.getString("descripcio"));
-                    target.posarNotes(rs.getString("notes"));
-                    target.posarCampsPesatsCarregats(true);
-                }
+                if (rs.next()) applyHeavyFields(target, rs);
             }
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant camps pesats: " + e.getMessage(), e);
@@ -76,19 +79,16 @@ public class LlibreBlobDao {
         for (int from = 0; from < isbns.size(); from += CHUNK) {
             int to = Math.min(from + CHUNK, isbns.size());
             java.util.List<Long> chunk = isbns.subList(from, to);
-            StringBuilder sql = new StringBuilder("SELECT ISBN, descripcio, notes FROM llibre WHERE ISBN IN (");
-            for (int i = 0; i < chunk.size(); i++) sql.append(i == 0 ? "?" : ",?");
-            sql.append(")");
-            try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            String sql = "SELECT ISBN, descripcio, notes FROM llibre WHERE ISBN IN (" +
+                MapejadorsFiles.placeholders(chunk.size()) + ")";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
                 for (int i = 0; i < chunk.size(); i++) ps.setLong(i + 1, chunk.get(i));
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         long isbn = rs.getLong(1);
                         Llibre target = targets.get(isbn);
                         if (target == null) continue;
-                        target.posarDescripcio(rs.getString("descripcio"));
-                        target.posarNotes(rs.getString("notes"));
-                        target.posarCampsPesatsCarregats(true);
+                        applyHeavyFields(target, rs);
                     }
                 }
             } catch (SQLException e) {

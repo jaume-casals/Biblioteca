@@ -214,16 +214,19 @@ public class ConnexioServidor {
 		}
 	}
 
+	private static final java.util.Map<String, java.util.function.Supplier<String>> ERR_INIT_KEY = java.util.Map.of(
+		"h2", () -> I18n.t("err_db_init_h2"),
+		"mariadb", () -> I18n.t("err_db_init_mariadb")
+	);
+
 	/** Mapeja un dbType conegut a la clau i18n {@code err_db_init_*} corresponent.
 	 *  Llança per a tipus desconeguts perquè el consumidor no acabi fent
 	 *  {@code I18n.t("err_db_init_" + dbType)} (que retornaria la clau mateixa
 	 *  per a tipus desconeguts, emmascarant l'error real). */
 	private static String inicialitzarErrorKey(String dbType) {
-		switch (dbType) {
-			case "h2":     return I18n.t("err_db_init_h2");
-			case "mariadb": return I18n.t("err_db_init_mariadb");
-			default: throw new IllegalArgumentException("Tipus de BBDD desconegut: " + dbType);
-		}
+		java.util.function.Supplier<String> supplier = ERR_INIT_KEY.get(dbType);
+		if (supplier == null) throw new IllegalArgumentException("Tipus de BBDD desconegut: " + dbType);
+		return supplier.get();
 	}
 
 	/** Rebutja separadors de ruta en noms de perfil de fitxer H2 (jdbc:h2:dir/perfil). */
@@ -298,13 +301,9 @@ public class ConnexioServidor {
 	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migracio m) throws SQLException {
 		con.setAutoCommit(false);
 		try {
-			if (m.version() == 34) {
-				if (!aplicarMigration34DropAutor(st)) {
-					con.rollback();
-					return false;
-				}
-			} else {
-				st.executeUpdate(m.sql());
+			if (!aplicarDDL(st, m)) {
+				con.rollback();
+				return false;
 			}
 			ins.setInt(1, m.version());
 			ins.execute();
@@ -337,11 +336,7 @@ public class ConnexioServidor {
 	}
 
 	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migracio m) throws SQLException {
-		if (m.version() == 34) {
-			aplicarMigration34DropAutor(st);
-		} else {
-			st.executeUpdate(m.sql());
-		}
+		aplicarDDL(st, m);
 		try {
 			ins.setInt(1, m.version());
 			ins.execute();
@@ -350,6 +345,16 @@ public class ConnexioServidor {
 			LOG.log(java.util.logging.Level.WARNING, "Ha fallat la inserció de schema_version a la migració " + m.version(), e);
 			return false;
 		}
+	}
+
+	/**
+	 * Aplica el DDL d'una migració. Retorna {@code false} quan la migració 34
+	 * s'omet per files sense enllaç a {@code llibre_autor}.
+	 */
+	private boolean aplicarDDL(Statement st, Migracio m) throws SQLException {
+		if (m.version() == 34) return aplicarMigration34DropAutor(st);
+		st.executeUpdate(m.sql());
+		return true;
 	}
 
 	/**

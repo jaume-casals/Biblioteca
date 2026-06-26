@@ -17,36 +17,36 @@ import java.util.Map;
  */
 public final class RelationRemapper {
 
-    public static final class RemapejadorIdPrestatgeria {
-        private final EscritorPrestatgeria cd;
+    /** Base de resolució nom→id amb cache i creació diferida. */
+    public abstract static class RemapejadorId {
         private final Map<String, Integer> byNom = new HashMap<>();
-        public RemapejadorIdPrestatgeria(EscritorPrestatgeria cd) {
-            this.cd = cd;
-            for (Llista l : cd.obtenirAllLlistes()) byNom.put(l.obtenirNom(), l.obtenirId());
-        }
+        protected void seed(String nom, int id) { byNom.put(nom, id); }
+        protected abstract int crear(String name);
         public int resolve(String name) {
             Integer cached = byNom.get(name);
             if (cached != null) return cached;
-            Llista created = cd.afegirLlista(name);
-            byNom.put(name, created.obtenirId());
-            return created.obtenirId();
+            int id = crear(name);
+            byNom.put(name, id);
+            return id;
         }
     }
 
-    public static final class RemapejadorIdEtiqueta {
+    public static final class RemapejadorIdPrestatgeria extends RemapejadorId {
+        private final EscritorPrestatgeria cd;
+        public RemapejadorIdPrestatgeria(EscritorPrestatgeria cd) {
+            this.cd = cd;
+            for (Llista l : cd.obtenirAllLlistes()) seed(l.obtenirNom(), l.obtenirId());
+        }
+        @Override protected int crear(String name) { return cd.afegirLlista(name).obtenirId(); }
+    }
+
+    public static final class RemapejadorIdEtiqueta extends RemapejadorId {
         private final EscritorEtiqueta cd;
-        private final Map<String, Integer> byNom = new HashMap<>();
         public RemapejadorIdEtiqueta(EscritorEtiqueta cd) {
             this.cd = cd;
-            for (Tag t : cd.obtenirAllTags()) byNom.put(t.obtenirNom(), t.obtenirId());
+            for (Tag t : cd.obtenirAllTags()) seed(t.obtenirNom(), t.obtenirId());
         }
-        public int resolve(String name) {
-            Integer cached = byNom.get(name);
-            if (cached != null) return cached;
-            Tag created = cd.afegirTag(name);
-            byNom.put(name, created.obtenirId());
-            return created.obtenirId();
-        }
+        @Override protected int crear(String name) { return cd.afegirTag(name).obtenirId(); }
     }
 
     private RelationRemapper() {}

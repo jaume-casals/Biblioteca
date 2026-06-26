@@ -1,15 +1,17 @@
 package presentacio.dialegs;
 
-import presentacio.config.SeccioAparençaConfiguracio;
 import presentacio.config.BarraBotonsConfiguracio;
 import presentacio.config.ConfiguracioDataSection;
-import presentacio.config.SeccioDbConfiguracio;
 import presentacio.config.ConfiguracioDialogListener;
-import presentacio.config.SeccioImatgesConfiguracio;
+import presentacio.config.ConfiguracioSeccio;
+import presentacio.config.SeccioAparençaConfiguracio;
+import presentacio.config.SeccioDbConfiguracio;
 import presentacio.config.SeccioIdiomaConfiguracio;
+import presentacio.config.SeccioImatgesConfiguracio;
 import presentacio.config.SeccionsConfiguracio;
 
 import java.awt.Frame;
+import java.util.List;
 import javax.swing.GroupLayout;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -30,18 +32,27 @@ public class ConfiguracioDialog extends JDialog {
 
     private final EscritorBiblioteca cd;
     private final ConfiguracioDialogListener listener;
+    private final List<ConfiguracioSeccio> seccions;
 
     public ConfiguracioDialog(Frame parent, ConfiguracioDialogListener listener, EscritorBiblioteca cd) {
         super(parent, herramienta.i18n.I18n.t("modal_settings"), true);
         if (cd == null) throw new IllegalArgumentException("ConfiguracioDialog requires non-null cd");
         this.cd = cd;
         this.listener = listener;
+        this.seccions = List.of(
+            ConfiguracioSeccio.of(SeccioDbConfiguracio::build, SeccioDbConfiguracio::reloadFromConfig),
+            ConfiguracioSeccio.of(SeccioImatgesConfiguracio::build, SeccioImatgesConfiguracio::reloadFromConfig),
+            ConfiguracioSeccio.of(SeccioAparençaConfiguracio::build, SeccioAparençaConfiguracio::reloadFromConfig),
+            ConfiguracioSeccio.of(SeccioIdiomaConfiguracio::build, SeccioIdiomaConfiguracio::reloadFromConfig),
+            ConfiguracioSeccio.of(d -> ConfiguracioDataSection.build(d, this.cd, this.listener),
+                ConfiguracioDataSection::reloadFromConfig)
+        );
 
-        JPanel dbSection        = SeccioDbConfiguracio.build(this);
-        JPanel imgSection       = SeccioImatgesConfiguracio.build(this);
-        JPanel appearanceSection = SeccioAparençaConfiguracio.build(this);
-        JPanel languageSection  = SeccioIdiomaConfiguracio.build(this);
-        JPanel dataSection      = ConfiguracioDataSection.build(this, this.cd, this.listener);
+        JPanel dbSection = seccions.get(0).build(this);
+        JPanel imgSection = seccions.get(1).build(this);
+        JPanel appearanceSection = seccions.get(2).build(this);
+        JPanel languageSection = seccions.get(3).build(this);
+        JPanel dataSection = seccions.get(4).build(this);
         JPanel buttonBar = BarraBotonsConfiguracio.build(this,
             (JComboBox<String>) SeccionsConfiguracio.cercarById(dbSection, "cmbType"),
             (JTextField) SeccionsConfiguracio.cercarById(dbSection, "txtHost"),
@@ -62,23 +73,16 @@ public class ConfiguracioDialog extends JDialog {
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
-        layout.setHorizontalGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-            .addComponent(dbSection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(imgSection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(appearanceSection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(languageSection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(dataSection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(buttonBar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-
-        layout.setVerticalGroup(layout.createSequentialGroup()
-            .addComponent(dbSection)
-            .addComponent(imgSection)
-            .addComponent(appearanceSection)
-            .addComponent(languageSection)
-            .addComponent(dataSection)
-            .addComponent(buttonBar)
-        );
+        GroupLayout.SequentialGroup vGroup = layout.createSequentialGroup();
+        GroupLayout.ParallelGroup hGroup = layout.createParallelGroup(GroupLayout.Alignment.LEADING);
+        for (JPanel section : List.of(dbSection, imgSection, appearanceSection, languageSection, dataSection)) {
+            hGroup.addComponent(section, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE);
+            vGroup.addComponent(section);
+        }
+        hGroup.addComponent(buttonBar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE);
+        vGroup.addComponent(buttonBar);
+        layout.setHorizontalGroup(hGroup);
+        layout.setVerticalGroup(vGroup);
 
         setContentPane(content);
         setResizable(true);
@@ -96,10 +100,8 @@ public class ConfiguracioDialog extends JDialog {
     public void reloadFromConfig() {
         Configuracio.reload();
         JPanel root = (JPanel) getContentPane();
-        SeccioDbConfiguracio.reloadFromConfig(root);
-        SeccioImatgesConfiguracio.reloadFromConfig(root);
-        SeccioAparençaConfiguracio.reloadFromConfig(root);
-        SeccioIdiomaConfiguracio.reloadFromConfig(root);
-        ConfiguracioDataSection.reloadFromConfig(root);
+        for (ConfiguracioSeccio seccio : seccions) {
+            seccio.reloadFromConfig(root);
+        }
     }
 }

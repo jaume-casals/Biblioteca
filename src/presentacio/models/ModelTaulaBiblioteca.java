@@ -5,6 +5,7 @@ import herramienta.config.Configuracio;
 import herramienta.i18n.I18n;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import javax.swing.table.AbstractTableModel;
 import presentacio.controladors.ControladorTaula;
 
@@ -30,25 +31,31 @@ public class ModelTaulaBiblioteca extends AbstractTableModel {
         String.class, String.class, Object.class
     };
 
+    private static final String[] COL_KEYS = {
+        "col_cover", "col_isbn", "col_title", "col_author", "col_year",
+        "col_rating", "col_price", "col_read", "col_progress", "col_details"
+    };
+
+    private static final List<Function<Llibre, Object>> COL_EXTRACTORS = List.of(
+        l -> "",
+        l -> l.obtenirISBN() != null ? String.valueOf(l.obtenirISBN()) : "",
+        l -> l.obtenirDisplayNom(Configuracio.obtenirLang()),
+        Llibre::obtenirAutor,
+        Llibre::obtenirAny,
+        Llibre::obtenirValoracio,
+        Llibre::obtenirPreu,
+        l -> Boolean.TRUE.equals(l.obtenirLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread"),
+        l -> l.obtenirPaginesLlegides() + "/" + l.obtenirPagines(),
+        l -> ""
+    );
+
     private final List<Llibre> books = new ArrayList<>();
 
     @Override public int getRowCount() { return books.size(); }
     @Override public int getColumnCount() { return COL_TYPES.length; }
 
     @Override public String getColumnName(int column) {
-        return switch (column) {
-            case COL_COVER -> I18n.t("col_cover");
-            case COL_ISBN -> I18n.t("col_isbn");
-            case COL_NOM -> I18n.t("col_title");
-            case COL_AUTOR -> I18n.t("col_author");
-            case COL_ANY -> I18n.t("col_year");
-            case COL_VALORACIO -> I18n.t("col_rating");
-            case COL_PREU -> I18n.t("col_price");
-            case COL_LLEGIT -> I18n.t("col_read");
-            case COL_PROGRES -> I18n.t("col_progress");
-            case COL_DETALLS -> I18n.t("col_details");
-            default -> "";
-        };
+        return column >= 0 && column < COL_KEYS.length ? I18n.t(COL_KEYS[column]) : "";
     }
 
     @Override public Class<?> getColumnClass(int column) {
@@ -58,21 +65,8 @@ public class ModelTaulaBiblioteca extends AbstractTableModel {
     @Override public boolean isCellEditable(int row, int column) { return column == COL_LLEGIT; }
 
     @Override public Object getValueAt(int row, int column) {
-        if (row < 0 || row >= books.size()) return null;
-        Llibre l = books.get(row);
-        return switch (column) {
-            case COL_COVER -> "";
-            case COL_ISBN -> l.obtenirISBN() != null ? String.valueOf(l.obtenirISBN()) : "";
-            case COL_NOM -> l.obtenirDisplayNom(Configuracio.obtenirLang());
-            case COL_AUTOR -> l.obtenirAutor();
-            case COL_ANY -> l.obtenirAny();
-            case COL_VALORACIO -> l.obtenirValoracio();
-            case COL_PREU -> l.obtenirPreu();
-            case COL_LLEGIT -> Boolean.TRUE.equals(l.obtenirLlegit()) ? I18n.t("filter_read") : I18n.t("filter_unread");
-            case COL_PROGRES -> l.obtenirPaginesLlegides() + "/" + l.obtenirPagines();
-            case COL_DETALLS -> "";
-            default -> null;
-        };
+        if (row < 0 || row >= books.size() || column < 0 || column >= COL_EXTRACTORS.size()) return null;
+        return COL_EXTRACTORS.get(column).apply(books.get(row));
     }
 
     public void posarBooks(List<Llibre> llibres) {

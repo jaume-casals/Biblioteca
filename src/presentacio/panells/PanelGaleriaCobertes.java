@@ -5,6 +5,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
@@ -135,30 +137,18 @@ public class PanelGaleriaCobertes extends JPanel {
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN,  0),  "galDown");
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP,    0),  "galUp");
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),  "galEnter");
-        getActionMap().put("galDelete", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
-                List<Llibre> sel = obtenirSelectedLlibres();
-                if (!sel.isEmpty() && onDeleteSelected != null) onDeleteSelected.accept(sel);
-            }
+        bindAction("galDelete", e -> {
+            List<Llibre> sel = obtenirSelectedLlibres();
+            if (!sel.isEmpty() && onDeleteSelected != null) onDeleteSelected.accept(sel);
         });
-        getActionMap().put("galRight", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moureKeyboard(1); }
-        });
-        getActionMap().put("galLeft", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moureKeyboard(-1); }
-        });
-        getActionMap().put("galDown", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moureKeyboard(computeCols()); }
-        });
-        getActionMap().put("galUp", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { moureKeyboard(-computeCols()); }
-        });
-        getActionMap().put("galEnter", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (focusedRef[0] >= 0 && currentLlibres != null
-                        && focusedRef[0] < currentLlibres.size() && onCardClick != null)
-                    onCardClick.accept(currentLlibres.get(focusedRef[0]));
-            }
+        bindAction("galRight", e -> moureKeyboard(1));
+        bindAction("galLeft", e -> moureKeyboard(-1));
+        bindAction("galDown", e -> moureKeyboard(computeCols()));
+        bindAction("galUp", e -> moureKeyboard(-computeCols()));
+        bindAction("galEnter", e -> {
+            if (focusedRef[0] >= 0 && currentLlibres != null
+                    && focusedRef[0] < currentLlibres.size() && onCardClick != null)
+                onCardClick.accept(currentLlibres.get(focusedRef[0]));
         });
 
         cardHost = new FabricantTargetesCoberta.AmfitrioTargeta(
@@ -168,6 +158,15 @@ public class PanelGaleriaCobertes extends JPanel {
             l -> { if (onCardClick != null) onCardClick.accept(l); },
             (e, sel) -> { if (onRightClick != null) onRightClick.accept(e, sel); },
             changedIsbns -> repaintCards(changedIsbns));
+    }
+
+    private void bindAction(String key, java.util.function.Consumer<ActionEvent> body) {
+        getActionMap().put(key, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                body.accept(e);
+            }
+        });
     }
 
     public void posarCd(EscritorBiblioteca cd) {

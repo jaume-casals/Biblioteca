@@ -9,8 +9,8 @@ import javax.swing.*;
 import javax.swing.table.*;
 
 import domini.Llibre;
-import herramienta.ui.UITheme;
 import persistencia.contract.LectorLlibre;
+import presentacio.util.UIComponents;
 import presentacio.models.ModelTaulaBiblioteca;
 import presentacio.util.MemoriaImatgesCoberta;
 
@@ -64,7 +64,7 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
     @Override
     public Component getTableCellRendererComponent(JTable t, Object value,
             boolean selected, boolean focus, int row, int col) {
-        setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
+        UIComponents.applySelectedColors(this, selected);
         setIcon(null);
         try {
             if (!(t.getModel() instanceof ModelTaulaBiblioteca model)) return this;

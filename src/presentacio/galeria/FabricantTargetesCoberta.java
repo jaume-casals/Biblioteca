@@ -46,6 +46,10 @@ import javax.swing.SwingUtilities;
  */
 public final class FabricantTargetesCoberta {
 
+    private static Color withAlpha(Color c, int alpha) {
+        return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
+    }
+
     // Constants Color en caché — mai no assignar dins del paint path.
     // A = ombra externa, B = ombra interna; prefix H = hover (alfa més fort).
     private static final Color SHADOW_A   = new Color(0, 0, 0, 14);  // externa, normal
@@ -225,8 +229,8 @@ public final class FabricantTargetesCoberta {
         g2.setStroke(new BasicStroke(sel || h ? 2f : 1f));
         Color bdr;
         if (sel) bdr = UITheme.palette().accent();
-        else if (h) bdr = new Color(UITheme.palette().accent().getRed(), UITheme.palette().accent().getGreen(), UITheme.palette().accent().getBlue(), 140);
-        else bdr = new Color(UITheme.palette().borderClr().getRed(), UITheme.palette().borderClr().getGreen(), UITheme.palette().borderClr().getBlue(), 180);
+        else if (h) bdr = withAlpha(UITheme.palette().accent(), 140);
+        else bdr = withAlpha(UITheme.palette().borderClr(), 180);
         g2.setColor(bdr);
         g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
 

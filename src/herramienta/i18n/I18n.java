@@ -16,14 +16,8 @@ public class I18n {
     // queda a null perquè args.length==0 retorna abans del Pattern.
     private static final java.util.regex.Pattern[] PLACEHOLDER_PATTERNS = new java.util.regex.Pattern[4];
     static {
-        for (int n = 1; n < PLACEHOLDER_PATTERNS.length; n++) {
-            StringBuilder alt = new StringBuilder();
-            for (int i = 0; i < n; i++) {
-                if (i > 0) alt.append('|');
-                alt.append("\\{").append(i).append("\\}");
-            }
-            PLACEHOLDER_PATTERNS[n] = java.util.regex.Pattern.compile(alt.toString());
-        }
+        for (int n = 1; n < PLACEHOLDER_PATTERNS.length; n++)
+            PLACEHOLDER_PATTERNS[n] = buildPlaceholderPattern(n);
     }
 
     static {

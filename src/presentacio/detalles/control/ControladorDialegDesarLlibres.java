@@ -20,6 +20,7 @@ import herramienta.text.FieldAutoComplete;
 import herramienta.i18n.I18n;
 import herramienta.text.ValidadorLlibre;
 import herramienta.text.ParseHelpers;
+import herramienta.ui.Documents;
 import herramienta.ui.UITheme;
 import presentacio.formularis.ValidadorFormulari;
 import presentacio.listener.EnActualitzarBBDD;
@@ -55,39 +56,14 @@ public class ControladorDialegDesarLlibres {
 		double defVal = herramienta.config.Configuracio.obtenirDefaultValoracio();
 		if (defVal > 0.0) this.vista.obtenirTextValoracio().setText(String.valueOf(defVal));
 
-		this.vista.obtenirTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { carregarImatge(vista.obtenirTextPortada().getText().trim()); }
-		});
+		this.vista.obtenirTextPortada().getDocument().addDocumentListener(
+			Documents.onChange(() -> carregarImatge(vista.obtenirTextPortada().getText().trim())));
 
-		// Carrega les llistes d'autocompletat diferenciades fora de l'EDT —
-		// són consultes a la BBDD que poden bloquejar la UI en biblioteques grans.
-		new SwingWorker<java.util.List<java.util.List<String>>, Void>() {
-			@Override protected java.util.List<java.util.List<String>> doInBackground() {
-				java.util.List<java.util.List<String>> lists = new java.util.ArrayList<>();
-				lists.add(cLlibres.obtenirDistinctAutorNames());
-				lists.add(cLlibres.obtenirDistinctValues("editorial"));
-				lists.add(cLlibres.obtenirDistinctValues("serie"));
-				lists.add(cLlibres.obtenirDistinctValues("idioma"));
-				return lists;
-			}
-			@Override protected void done() {
-				try {
-					java.util.List<java.util.List<String>> lists = get();
-					FieldAutoComplete.attach(vista.obtenirTextAutor(),     lists.get(0));
-					FieldAutoComplete.attach(vista.obtenirTextEditorial(), lists.get(1));
-					FieldAutoComplete.attach(vista.obtenirTextSerie(),     lists.get(2));
-					FieldAutoComplete.attach(vista.obtenirTextIdioma(),    lists.get(3));
-				} catch (Exception ignored) {}
-			}
-		}.execute();
+		FieldAutoComplete.attachDistinct(cLlibres,
+			vista.obtenirTextAutor(), vista.obtenirTextEditorial(),
+			vista.obtenirTextSerie(), vista.obtenirTextIdioma());
 
-		javax.swing.event.DocumentListener live = new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { refrescarLiveValidation(); }
-		};
+		javax.swing.event.DocumentListener live = Documents.onChange(this::refrescarLiveValidation);
 		vista.obtenirTextISBN().getDocument().addDocumentListener(live);
 		vista.obtenirTextNom().getDocument().addDocumentListener(live);
 	}
@@ -182,8 +158,7 @@ public class ControladorDialegDesarLlibres {
 				vista.obtenirTextDescripcio().getText().trim(),
 				valoracio, preu, vista.obtenirChckLlegit().isSelected(),
 				vista.obtenirTextPortada().getText().trim());
-			java.util.List<String> autors = java.util.Arrays.stream(vista.obtenirTextAutor().getText().split(","))
-				.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
+			java.util.List<String> autors = ParseHelpers.splitAutors(vista.obtenirTextAutor().getText());
 			l.posarAutors(autors);
 			l.posarEditorial(vista.obtenirTextEditorial().getText().trim());
 			l.posarSerie(vista.obtenirTextSerie().getText().trim());
@@ -191,13 +166,11 @@ public class ControladorDialegDesarLlibres {
 			l.posarDataCompra(vista.obtenirTextDataCompra().getText().trim());
 			l.posarDataLectura(vista.obtenirTextDataLectura().getText().trim());
 			l.posarIdioma(vista.obtenirTextIdioma().getText().trim());
-			String fmt = (String) vista.obtenirComboFormat().getSelectedItem();
-			l.posarFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
+			l.posarFormat(ParseHelpers.blankToNull((String) vista.obtenirComboFormat().getSelectedItem()));
 			l.posarDesitjat(vista.obtenirChckDesitjat().isSelected());
 			l.posarNotes(vista.obtenirTextNotes().getText().trim());
 			l.posarPaisOrigen(vista.obtenirTextPaisOrigen().getText().trim());
-			String estat = (String) vista.obtenirComboEstat().getSelectedItem();
-			l.posarEstat(estat != null && !estat.isEmpty() ? estat : null);
+			l.posarEstat(ParseHelpers.blankToNull((String) vista.obtenirComboEstat().getSelectedItem()));
 			String exemplarsTxt = vista.obtenirTextExemplars().getText().trim();
 			if (!exemplarsTxt.isEmpty()) {
 				try { l.posarExemplars(Integer.parseInt(exemplarsTxt)); }
@@ -206,9 +179,9 @@ public class ControladorDialegDesarLlibres {
 			String nomCa = vista.obtenirTextNomCa().getText().trim();
 			String nomEs = vista.obtenirTextNomEs().getText().trim();
 			String nomEn = vista.obtenirTextNomEn().getText().trim();
-			l.posarNomCa(nomCa.isEmpty() ? null : nomCa);
-			l.posarNomEs(nomEs.isEmpty() ? null : nomEs);
-			l.posarNomEn(nomEn.isEmpty() ? null : nomEn);
+			l.posarNomCa(ParseHelpers.blankToNull(nomCa));
+			l.posarNomEs(ParseHelpers.blankToNull(nomEs));
+			l.posarNomEn(ParseHelpers.blankToNull(nomEn));
 			l.posarImatgeBlob(selectedBlob);
 			herramienta.text.ValidadorLlibre.validarExtrasAll(l.obtenirEditorial(), l.obtenirSerie(), l.obtenirIdioma(), l.obtenirFormat(), l.obtenirPaisOrigen(), l.obtenirEstat());
 

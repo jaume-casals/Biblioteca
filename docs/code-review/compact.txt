@@ -1,337 +1,188 @@
-# Biblioteca — Code Compaction Pass (autonomous)
+# Biblioteca — Code Compaction Pass (compact2, autonomous)
 
-Scope: entire `src/` tree (189 `.java` files), walked file by file. This pass reports
-ONLY code-reduction opportunities matching the seven patterns below — no style,
-naming, logging, error-message, or correctness findings (those are handled by the
-separate review in `tot.txt`). Files not listed had nothing in scope.
+Scope: third audit pass on top of `compact.txt` (104 DONE, 5 STALE) and
+`compact1.txt` (60/64 already DONE in prior work). All four PENDING items from
+`compact1.txt` have since been applied:
+
+- `ConstructorFiltreLlibre` deleted (test imports left dangling — out of scope here).
+- `NamedEntityDelegate<T>` extraction applied — both `DelegatPrestatgeria` and
+  `TagDelegate` now extend it (`DelegatPrestatgeria.java:36`,
+  `TagDelegate.java:21`).
+- `Executable.fatalExit(...)` already exists at lines 40–47.
+- `LlibreFieldBindings.bind` is already a `Map<Class<?>, TypedBinder>` dispatch
+  (lines 117–147).
+
+This pass found 24 fresh opportunities across 4 directories. Files not listed
+had nothing in scope after the prior work.
 
 Patterns: (1) Repeated logic -> shared helper  (2) Copy-pasted blocks -> loop
 (3) Class abstraction  (4) Builder/factory collapse  (5) Inline constant arrays
 (6) Switch/if-else -> data table  (7) Anonymous class -> lambda/method ref.
 
-Rough aggregate estimate: ~1,100 lines removable across ~78 files. Line ranges are
-indicative; estimates are deliberately conservative.
-
 ---
 
-## domini/
+## Findings
 
-**[src/domini/AnalitzadorPrestatgeria.java]** — LINES SAVED: ~3 lines
-- Repeated logic at lines 56–58 and 78–79: the same shelf-entry serialization (`if (sb.length()>0) sb.append(';'); sb.append(esc(nom)).append('|').append(val).append('|').append(llegit);`) is written twice -> extract `private static void appendEntry(StringBuilder sb, String nom, double valoracio, boolean llegit)` and call from both `exportarToCsv` and `joinShelfEntries`.
+**[src/domini/facade/DelegatCopiaSeguretat.java]** — LINES SAVED: ~3 lines
+- (1) Repeated logic at lines 152–156: `netejarAll` wraps `state.persistence().netejarAllData()` in a manual `try { ... } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }` that exactly mirrors what `SqlOp.domain` already provides. Every other void-call persistence site in `domini/facade/*` (16 sites across `DelegatLlibre`, `DelegatPrestatgeria`, `TagDelegate`, `DelegatPrestec`) uses `SqlOp.domain(...)`. → Replace with `SqlOp.domain(() -> state.persistence().netejarAllData());` plus the `state.netejarAll();` follow-up. Bonus: `SqlOp.domain` also emits SQLState + errorCode in the wrapped message, which the current one-line `e.getMessage()` wrap loses.
 
-**[src/domini/Llista.java]** (with src/domini/Tag.java) — LINES SAVED: ~25 lines
-- Class abstraction at Llista 7–55 and Tag 7–36: both carry `int id` + `String nom` and duplicate `obtenirId()`, `obtenirNom()`, `posarNom()` (blank-check throwing `BibliotecaException.Validacio`, differing only in the i18n key), `toString()` returning `nom`, and the id/nom portion of `toMap()` -> introduce abstract supertype `EntitatNomenada { protected int id, nom; obtenirId/obtenirNom; posarNom(...) using an overridable blank-error key; toString()->nom; toMap() with id+nom }`. `Llista` overrides `toMap()` to add `ordre`/`color`; both keep their own `equals`/`hashCode`.
+**[src/domini/facade/DelegatLlibre.java]** — LINES SAVED: ~3 lines
+- (1) Repeated logic at lines 88–90 and 211–213: `getSize()` and `comptarLlibresDB()` have byte-identical bodies — `return state.withLockReturning(state.bib()::size);`. Both are also exposed via `ControladorDomini.getSize()` / `comptarLlibresDB()`. → Drop `comptarLlibresDB()` from `DelegatLlibre` and have `ControladorDomini.comptarLlibresDB()` forward to `books.getSize()` (or vice-versa). Saves 3 lines net across the two files.
 
-**[src/domini/facade/DelegatLlibre.java]** — LINES SAVED: ~20 lines
-- Repeated logic at lines 105–109, 118–122, 132–136, 146–150: four identical `try { state.persistence().X(...); } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }` blocks -> collapse each to one line via the existing `domini.SqlOp.domain` wrapper, e.g. `SqlOp.domain(() -> state.persistence().afegirLlibre(l));`.
-- Repeated logic at lines 166–170 and 179–183: the same heavy-field load wrapper appears in `obtenirLlibre` and `carregarHeavyFields` -> extract `private void loadHeavyInto(Llibre l)`.
+**[src/herramienta/io/csv/UtilitatsCsv.java]** — LINES SAVED: ~3 lines (+ ~13 test lines)
+- (1) Repeated logic at lines 101–104: `csvQ` is byte-identical to `herramienta.i18n.Escapers.csv` (`Escapers.java:46-49`). Both wrap nulls as `""`, both do `"\"` + s.replace("\"","\"\"") + "\""`. Production callers: 21 sites in `AnalitzadorPertinençaPrestatgeria` + `GoodreadsExportService` — all call `UtilitatsCsv.csvQ`. `Escapers.csv` has 0 callers. → Delete `UtilitatsCsv.csvQ` and have all callers use `Escapers.csv` directly (the semantically right home for an escape helper) — collapses the duplication and the now-redundant `TestUtilitatsCsv` `csvQ` tests (~13 lines).
 
-**[src/domini/facade/DelegatPrestatgeria.java]** — LINES SAVED: ~9 lines
-- Repeated logic at lines 68–70, 79–81, 97–98, 102–103, 107–108, 129–131: six identical single-call `try/catch(SQLException)->BibliotecaException` blocks -> collapse each to `SqlOp.domain(() -> state.persistence().X(...))`.
+**[src/herramienta/io/export/ExportadorLlibres.java]** — LINES SAVED: ~6 lines
+- (1) Repeated logic at lines 185–188 (`escriureHtmlShelfHeader`): the if/else branches differ only in the `" (count)"` suffix. → `pw.println("<h2>" + Escapers.html(name) + (count > 0 ? " (" + count + ")" : "") + "</h2>");` — saves 1 line.
+- (1) Inline null-check pattern at lines 110, 111, 115, 116, 119 (mirrored by `GoodreadsExportService.COLUMN_EXTRACTORS`) and line 295: the shape `UtilitatsCsv.csvQ(c.l().obtenirX() != null ? c.l().obtenirX() : "")` repeats the getter call. → Extract a tiny `static String nullToEmpty(String s)` helper (best home: `herramienta.text.ParseHelpers` alongside the existing `blankToNull`/`orNull`). Each call site collapses to `UtilitatsCsv.csvQ(nullToEmpty(c.l().obtenirX()))`. 6 call sites × 1 line each − 1 line for the helper = ~5 lines saved.
 
-**[src/domini/facade/TagDelegate.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 51–53, 61–63, 73–74, 78–79: four identical single-call `try/catch(SQLException)->BibliotecaException` blocks -> collapse each to `SqlOp.domain(...)`.
+**[src/persistencia/dao/LlibreDaoCore.java]** — LINES SAVED: ~12 lines
+- (1) Repeated logic at lines 138–157: `joinColumns` and `countColumns` iterate `Columna.values()` with the identical filter (`inserirColumn == null` + `onlyUpdate && !c.inUpdate`); only the body differs (string-build vs count). → Introduce one `private static int forEachBindable(boolean onlyUpdate, Consumer<String> emit)` that both delegate to:
+  ```java
+  private static int forEachBindable(boolean onlyUpdate, Consumer<String> emit) {
+      int n = 0;
+      for (Columna c : Columna.values()) {
+          if (c.inserirColumn == null) continue;
+          if (onlyUpdate && !c.inUpdate) continue;
+          emit.accept(c.inserirColumn); n++;
+      }
+      return n;
+  }
+  ```
+  `joinColumns` becomes a 4-line body that calls `forEachBindable(onlyUpdate, col -> { ... sb.append(",") ... });` and `countColumns` becomes `return forEachBindable(onlyUpdate, col -> {});`. Saves ~8 lines.
+- (2) Copy-pasted block → loop at lines 426–432: `esAllowed` is a 5-line for-loop over `ALLOWED_LEAD` checking `upper.startsWith(kw)`. → `return java.util.Arrays.stream(ALLOWED_LEAD).anyMatch(upper::startsWith);`. Saves ~3 lines.
 
-**[src/domini/facade/DelegatPrestec.java]** — LINES SAVED: ~2 lines
-- Repeated logic at lines 28–29 and 33–34: two identical `try/catch(SQLException)->BibliotecaException` blocks -> collapse each to `SqlOp.domain(...)`.
+**[src/persistencia/dao/LlistaDao.java]** — LINES SAVED: ~18 lines
+- (1) Repeated logic at lines 139–150 and 159–173: `obtenirLlistesForLlibre` and `obtenirLlistesForLlibreContext` both iterate `queryLlistesForLlibreRaw(isbn)` and unpack the same 6 `Object[]` indices (id, nom, valoracio, llegit, ordre, color); only the per-row construction differs (Llista vs LlibreLlistaContext). The index-magic at `row[0]`/`row[4]`/`row[2]` etc. is fragile and the row shape is duplicated. → Introduce a private row record so `queryLlistesForLlibreRaw` returns `List<LlistesForLlibreRow>`; both consumers collapse to a one-line `stream().map(...).collect(toList())`:
+  ```java
+  private record LlistesForLlibreRow(int id, String nom, Double valoracio,
+                                      Boolean llegit, Integer ordre, String color) {}
+  ```
+  Removes 12-line `queryLlistesForLlibreRaw` Object[] builder + the two 12-line consumers, replaces them with one 6-line record + two 5-line consumers.
 
-**[src/domini/facade/DelegatCopiaSeguretat.java]** — LINES SAVED: ~4 lines
-- Repeated logic at lines 52–56 and 111–115: the same atomic three-list snapshot under lock (`synchronized (state.lock()) { new ArrayList<>(state.bib()); new ArrayList<>(state.llistes()); new ArrayList<>(state.tags()); }`) appears in `copiaSegToSQL` and `restaurarFromSQL` -> add `StateContext.snapshotAll()` returning a small holder/record, call from both.
+**[src/persistencia/internal/ConnexioServidor.java]** — LINES SAVED: ~6 lines
+- (1) Repeated logic at lines 144–149 (`testConnection`) and 180–184 (`crearDatabase` H2 branch): both build the H2 URL via `user.home + "/.biblioteca"` → `mkdirs()` → strip trailing slashes → `/` + `sanitizeH2Profile(...)` + `;…` suffix. Only the suffix and the profile source differ. → Extract:
+  ```java
+  private static String buildH2Url(String profile, String suffix) {
+      String dir = System.getProperty("user.home") + "/.biblioteca";
+      new File(dir).mkdirs();
+      return "jdbc:h2:" + dir.strip().replaceAll("/+$", "") + "/" + sanitizeH2Profile(profile) + suffix;
+  }
+  ```
+  Both call sites collapse to `String url = buildH2Url(props.getProperty("dbProfile", "biblioteca"), ";MODE=MySQL;NON_KEYWORDS=VALUE");` / `... + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192");`. Unifies the two existing strip variants (`trim().replaceAll("^\\s+|\\s+$", "")` vs `strip()`) on `strip()`.
 
----
+**[src/presentacio/config/SeccioAparençaConfiguracio.java]** — LINES SAVED: ~8 lines
+- (1) Repeated logic at lines 88–101: 4 copies of `jc = SeccionsConfiguracio.cercarById(root, "id"); if (jc instanceof JX x) x.set...`. The same shape appears in `SeccioDbConfiguracio:134-144` (×4), `SeccioIdiomaConfiguracio:41-47` (×1), `SeccioImatgesConfiguracio:54-57` (×1), and `ConfiguracioDialog:57-66` (×10). → Add a typed helper to `SeccionsConfiguracio`:
+  ```java
+  public static <T extends JComponent> T findAs(Container root, String id, Class<T> type) {
+      JComponent jc = cercarById(root, id);
+      return type.isInstance(jc) ? type.cast(jc) : null;
+  }
+  ```
+  Each `jc = cercarById; if (jc instanceof JX x) ...;` block (currently 2-3 lines) collapses to one line: `JComboBox<?> cmb = SeccionsConfiguracio.findAs(root, "cmbTheme", JComboBox.class); cmb.setSelectedIndex(...);`. Total across the four files + ConfiguracioDialog ≈ 22 sites; ~21 lines saved. (Best home is `SeccionsConfiguracio` itself — already the shared utility, see file 12 lines.)
 
-## herramienta/ (io, exporters, importers)
+**[src/presentacio/config/SeccioDbConfiguracio.java]** — LINES SAVED: ~6 lines
+- (1) at lines 134–144: same `cercarById + instanceof + cast` × 4 → use `SeccionsConfiguracio.findAs` from the previous bullet.
 
-**[src/herramienta/ExportadorLlibres.java]** — LINES SAVED: ~10 lines
-- Repeated logic at lines 26–28, 34–36, 37–39: the same "group rows by ISBN into a `Map<Long,List<...>>`" block (`computeIfAbsent(isbn, k -> new ArrayList<>()).add(row)`) is written three times -> one generic helper `static <T> Map<Long,List<T>> groupByIsbn(List<T> rows, ToLongFunction<T> isbnOf)`.
-- Repeated logic at lines 59–67 and 68–76: the `llistes` and `tags` blocks are near-identical (copy list, loop building a `LinkedHashMap` of id+nom, `root.put`) -> one helper `idNomList(coll, T::obtenirId, T::obtenirNom)`.
+**[src/presentacio/config/SeccioIdiomaConfiguracio.java]** — LINES SAVED: ~4 lines
+- (1) at lines 41–47: same `cercarById + instanceof JComboBox` + `setSelectedIndex(...)` pattern → `findAs`.
 
-**[src/herramienta/io/csv/AnalitzadorPertinençaPrestatgeria.java]** — LINES SAVED: ~7 lines
-- Repeated logic at lines 30–32: private `parseDouble` duplicates `UtilitatsCsv.analitzarDoubleOrZero` (UtilitatsCsv 73–76) -> delete and call the util.
-- Repeated logic at lines 34–37: private `analitzarBool` is identical to `NativeCsvStrategy.analitzarBool` (87–90) -> hoist one shared `UtilitatsCsv.analitzarBool(String)`.
+**[src/presentacio/config/SeccioImatgesConfiguracio.java]** — LINES SAVED: ~3 lines
+- (1) at lines 54–57: same pattern for the single JTextField → `findAs`.
 
-**[src/herramienta/io/csv/GoodreadsCsvStrategy.java]** — LINES SAVED: ~8 lines
-- Repeated logic at lines 37–42 (identical to LibraryThingCsvStrategy 40–45): the 6-line ISBN-resolve block (ISBN13 -> fallback ISBN -> parse -> empty-throw -> existsInLibrary) is duplicated -> shared `UtilitatsCsv.resoldreIsbn(hMap, c)`.
-- Repeated logic at lines 71–77 (twin of LibraryThing 70–76): the split + `cercarOCrearPrestatge` + `afegirLlibreToLlista` loop -> reuse the existing `ShelvesHelper` via a new `ShelvesHelper.afegirLlibreAPrestatges(...)`.
+**[src/presentacio/config/ConfiguracioDataSection.java]** — LINES SAVED: ~4 lines
+- (1) Repeated logic at lines 54–67 and 94–108: 4 sequential `JOptionPane.showConfirmDialog(owner, msg, title, YES_NO_OPTION, type)` calls + 2 `showMessageDialog`/`showInputDialog` of the same shape. → Add to `UIComponents` (or a new `JOptionPaneUtil`):
+  ```java
+  static int confirmYes(Component parent, String msg, String title, int type) {
+      return JOptionPane.showConfirmDialog(parent, msg, title, JOptionPane.YES_NO_OPTION, type);
+  }
+  static void info(Component parent, String msg, String title) {
+      JOptionPane.showMessageDialog(parent, msg, title, JOptionPane.INFORMATION_MESSAGE);
+  }
+  static String prompt(Component parent, String msg, String title, Object initial) {
+      return (String) JOptionPane.showInputDialog(parent, msg, title, JOptionPane.PLAIN_MESSAGE, null, null, initial);
+  }
+  ```
+  Each block (4 lines today) collapses to one line.
 
-**[src/herramienta/io/csv/LibraryThingCsvStrategy.java]** — LINES SAVED: ~5 lines
-- Repeated logic at lines 70–76: the split + shelf-upsert loop is the same shape as Goodreads 71–77 -> same `ShelvesHelper.afegirLlibreAPrestatges(...)` helper (ISBN block 40–45 credited under Goodreads).
+**[src/presentacio/dialegs/ConfiguracioDialog.java]** — LINES SAVED: ~5 lines
+- (1) at lines 57–66: 10 sequential `(JComboBox<String>) SeccionsConfiguracio.cercarById(panel, "id")` casts in `BarraBotonsConfiguracio.build(...)`. Each cast is unchecked noise. → `SeccionsConfiguracio.findAs(panel, "id", JComboBox.class)` (no cast, no `instanceof`). Caller-side ~5 lines saved; more savings land on the per-section `reloadFromConfig` blocks (separate findings above).
 
-**[src/herramienta/io/csv/NativeCsvStrategy.java]** — LINES SAVED: ~9 lines
-- Repeated logic at lines 76–81: the get-or-create-`Llista`-then-`afegirLlibreToLlista` upsert is exactly `ShelvesHelper.afegirLlibreAPrestatge(...)` -> replace the 6 lines with the existing helper.
-- Repeated logic at lines 87–90: `analitzarBool` duplicates the AnalitzadorPertinençaPrestatgeria copy -> shared `UtilitatsCsv.analitzarBool`.
+**[src/presentacio/dialegs/DialegGestioLlistes.java]** — LINES SAVED: ~6 lines
+- (1) Repeated logic at lines 134–142 (`onDeleteLlista`), 144–152 (`onRenameLlista`), 154–165 (`onColorLlista`), 167–177 (`onMoveLlista`): each begins `Llista sel = jList.getSelectedValue(); if (sel == null) return;` then runs a body. → Add a `private void ifPresentSelected(Consumer<Llista> body)` (mirrors the `runOnSelected` already in place at line 124); each method collapses by 2 lines.
+- (2) Inline `for (int i = 0; i < listModel.size(); i++) if (listModel.get(i).obtenirId() == sel.obtenirId()) { jList.setSelectedIndex(i); break; }` at lines 174–175 → `IntStream.range(0, listModel.size()).filter(i -> listModel.get(i).obtenirId() == sel.obtenirId()).findFirst().ifPresent(jList::setSelectedIndex);`. Saves 1 line.
 
-**[src/herramienta/io/csv/UtilitatsCsv.java]** — LINES SAVED: ~3 lines
-- Repeated logic at lines 55–59 vs 65–70: `colVal` reimplements the index/bounds logic already in `colValOpt` -> `colVal` body becomes `return colValOpt(hMap, c, col).orElse("");`.
+**[src/presentacio/dialegs/EstacioEscaneigDialog.java]** — LINES SAVED: ~7 lines
+- (1) Repeated logic at lines 110–121: `escapeHtml(String)` is the same body (string-replace chain `<→&lt;`, `>→&gt;`, `&→&amp;`) as `FabricantTargetesCoberta.htmlEsc` at lines 494–497 (the gallery uses `s.replace(...)` chained, this uses a StringBuilder loop — same semantics, two implementations). → Move one canonical `htmlEscape(String)` into `UIComponents` (already the home for `paddedLineBorder` / `styleField` / `styleButtonChrome`); have both files call it. Saves ~12 lines combined across the two files (≈7 here).
 
-**[src/herramienta/io/JsonImporter.java]** — LINES SAVED: ~11 lines
-- Repeated logic at lines 49–53, 56–65, 66–76: the manual "build name->entity map, then look up / create-if-absent / map oldId->newId" is done twice (tags, llistes) and matches `RelationRemapper.RemapejadorIdEtiqueta`/`RemapejadorIdPrestatgeria` -> drop the local maps and call `remap.resolve(nom)` in each loop.
+**[src/presentacio/dialegs/QuantADialeg.java]** — LINES SAVED: ~3 lines
+- (1) Copy-pasted block → loop at lines 73–76: `addRow(main, ...)` is called 4× with the shape `(I18n.t("lbl_X_row"), "<value>")`. → Pull the row data into a `private static final String[][] ROWS = { {"lbl_autor_row","Jordi Casals"}, {"lbl_llicencia_row","GNU General Public License v3"}, {"lbl_font_row","H2 Database Engine (EPL-1.0)"}, {"lbl_font_row","MariaDB Connector/J (LGPL-2.1)"} };` and `for (String[] r : ROWS) addRow(main, I18n.t(r[0]), r[1]);`. Saves 3 lines and centralizes the per-row string constants.
 
-**[src/herramienta/io/RelationRemapper.java]** — LINES SAVED: ~13 lines
-- Class abstraction at lines 20–34 and 36–50: `RemapejadorIdPrestatgeria` and `RemapejadorIdEtiqueta` are structurally identical (a `cd` field, a `Map<String,Integer> byNom`, a seeding constructor, the same 6-line cache-or-create `resolve`) -> one abstract base `RemapejadorId` with `resolve()` + abstract `crear(String)`, or a single generic `Remapejador<T>(List<T>, Function<T,String> nom, ToIntFunction<T> id, Function<String,Integer> creator)`.
+**[src/presentacio/galeria/FabricantTargetesCoberta.java]** — LINES SAVED: ~6 lines
+- (1) at lines 494–497: `htmlEsc(String)` is the same body as `EstacioEscaneigDialog.escapeHtml` → extract once into `UIComponents` (or `herramienta.ui.HtmlUtils`); remove this local helper. ~5 lines saved.
+- (2) for/while loops at lines 369–394 (`buildFooter`): the 4 `JLabel lblX = new JLabel(...); setFont(UITheme.fontSmall()); setForeground(textMid()/textDark()); setAlignmentX(0f); f.add(lblX);` blocks share 3 lines of boilerplate (`setFont` + `setForeground` + `setAlignmentX`) → tiny `private static JLabel smallLabel(String text, Color fg)` collapses each block by 2 lines × 2 = ~4 lines.
 
-**[src/herramienta/io/ServeiCoberta.java]** — LINES SAVED: ~12 lines
-- Repeated logic at lines 30–34 and 38–42: two identical daemon `ThreadFactory` lambdas -> one `static ThreadFactory daemon(String name)` (a 3rd identical copy in ServeiCopiaSeguretat 56–60 dedups too).
-- Repeated logic at lines 137–145 and 147–156: `escriureCoverAsync` and `submitWrite` share the parse-isbn-or-bail + pool-submit body -> one `writeBlobAsync(cd, isbn, data, Consumer<Boolean> onComplete)`; `submitWrite` disappears.
+**[src/presentacio/controladors/ControladorAccionsLlibre.java]** — LINES SAVED: ~5 lines
+- (2) at lines 152–159: manual `Llibre target = null; if (state.biblio != null) { for (Llibre l : state.biblio) { if (l.obtenirISBN() == isbn) { target = l; break; } } }` → `Llibre target = state.biblio == null ? null : state.biblio.stream().filter(l -> l.obtenirISBN() == isbn).findFirst().orElse(null);`. Saves 5 lines.
 
-**[src/herramienta/io/ServeiCopiaSeguretat.java]** — LINES SAVED: ~55 lines
-- Repeated logic + inline constant arrays at lines 275–353: the eight `escriure*INSERT` methods (autor, llibre_autor, llista, llibre_llista, tag, llibre_tag, prestec, lectura) all hand-write the INSERT header + per-cell `print(val); print(',')` -> one generic `escriureInsert(pw, table, String[] cols, Object... vals)` reusing the existing `formatejarValue` (262–273) plus one `static final String[]` column array per table (pattern 5); each call becomes a single line from the loops at 188–214.
-
----
-
-## herramienta/ (config, i18n, text, ui, api)
-
-**[src/herramienta/config/Configuracio.java]** — LINES SAVED: ~12 lines
-- Switch/if-else -> data table at lines 65–83: `putIn(Domini,...)` and `obtenirFrom(Domini,...)` each switch the 4 enum constants onto one of `UI_STORE`/`DB_STORE`/`WINDOW_STORE`/`FILTER_STORE` (51–54) -> replace the 4 fields with an `EnumMap<Domini, ConcurrentHashMap<String,String>> STORES`; both methods become `STORES.get(d).put(key,val);` / `return STORES.get(d).get(key);`.
-- Copy-pasted blocks -> loop at lines 124–134: four sequential `all.addAll(X_STORE.entrySet())` and four `X_STORE.size()` sums -> `for (var s : STORES.values()) all.addAll(s.entrySet());` and `STORES.values().stream().mapToInt(Map::size).sum();`.
-
-**[src/herramienta/i18n/I18n.java]** — LINES SAVED: ~5 lines
-- Repeated logic at lines 19–26 vs 678–685: the static initializer's inner placeholder-pattern builder is identical to `buildPlaceholderPattern(int n)` -> replace the static block body with `for (int n = 1; n < PLACEHOLDER_PATTERNS.length; n++) PLACEHOLDER_PATTERNS[n] = buildPlaceholderPattern(n);`.
-
-**[src/herramienta/text/FormatOptions.java]** — LINES SAVED: ~2 lines
-- Inline constant arrays at lines 15–24: `withBlank()` and `withNoChange()` both inline the same four format keys (`fmt_hardcover`, `fmt_softcover`, `fmt_ebook`, `fmt_audiobook`) -> hoist `private static final String[] FMT_KEYS` + a `withFirst(String head)` helper; each public method becomes a one-liner.
-
-**[src/herramienta/text/ParseHelpers.java]** — LINES SAVED: ~28 lines
-- Repeated logic at lines 30–52: `analitzarLongOrNull`/`analitzarIntOrNull`/`analitzarDoubleOrNull` are identical except the parse call -> one generic `private static <T> T orNull(String s, Function<String,T> p)`; each becomes `return orNull(s, Long::parseLong);` etc.
-- Repeated logic at lines 54–85: `parseLong`/`parseInt`/`parseDouble` differ only by parse fn and error key -> one `parseStrict(String s, T def, String errKey, String fieldKey, List<String> errors, Function<String,T> p)`; each becomes a one-line delegate.
-
-**[src/herramienta/text/ValidadorLlibre.java]** — LINES SAVED: ~17 lines
-- Repeated logic at lines 104–118 vs 43–55: the inline ISBN-10 weighted checksum re-implements `isValidIsbn10` -> replace the `if (digits == 10) {...}` block with `if (digits == 10 && !isValidIsbn10(Long.toString(isbn))) throw ...`.
-- Repeated logic at lines 29–31, 64–66, 73–75: the EAN-13 check-digit loop is written three times (and again in `Isbn13Normalizer.convertToIsbn13`) -> extract one `checkDigit13(String base12)` (or call the existing `Isbn13Normalizer`) and reuse at all sites.
-
-**[src/herramienta/ui/DialegError.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 134–153 vs 188–204: both dialogs repeat the same `JDialog` scaffold (new, setTitle, setModal, setDefaultCloseOperation, BorderLayout, pack, setLocationRelativeTo, default-button dispose listener, setVisible) -> extract `showModal(JComponent north, center, south, JButton defaultBtn, boolean resizable)`.
-
-**[src/herramienta/ui/SelectorMostraColor.java]** — LINES SAVED: ~1 line
-- Repeated logic at lines 55–56: `String.format("#%02X%02X%02X", ...)` duplicates `UtilitatsColor.toHex(Color)` -> `return UtilitatsColor.toHex(chosen[0]);`.
-
-**[src/herramienta/ui/UITheme.java]** — LINES SAVED: ~40 lines
-- Switch/if-else -> data table at lines 250–322: the 4-arm `posarTheme` switch repeats ~20 field assignments per theme -> promote the 6 sidebar colors to per-theme constants (like the existing `L_*/D_*/SP_*/OC_*`), build one immutable per-theme color-set (the `Paleta` record at 31–55 fits) into an `EnumMap<Tema,...>`, then `posarTheme` becomes `currentTheme = t; applyPaleta(PALETTES.get(t)); aplicarUIManager();` — also collapses the ~20 `volatile Color` fields at 99–132 to a single current reference.
-
-**[src/herramienta/api/ClientOpenLibrary.java]** — LINES SAVED: ~14 lines
-- Repeated logic at lines 162–165, 212–214, 280–282: the open-connection + setConnectTimeout + setReadTimeout + setRequestProperty(User-Agent) block appears three times -> `private static HttpURLConnection open(String url)`.
-- Repeated logic at lines 178–181, 217–221, 285 & 291–292: the error-stream-close + `disconnect()` cleanup is duplicated -> `private static void disconnectQuietly(HttpURLConnection c)`.
-- Repeated logic at lines 100–101, 136–137, 138–139: `if (o.has(k) && o.getAsJsonArray(k).size() > 0) r.put(dest, ...get(0).getAsString())` repeated three times -> `putFirstString(r, dest, o, k)`.
-
----
-
-## persistencia/
-
-**[src/persistencia/dao/AutorDao.java]** — LINES SAVED: ~12 lines
-- Repeated logic at lines 41–53: `crearAutor` is the same `prepareStatement(sql, RETURN_GENERATED_KEYS)` -> set -> execute -> `getGeneratedKeys` block as `TagDao.create` (80–90) and `LlistaDao.create` (45–55) -> extract `MapejadorsFiles.insertReturningKey(con, sql, binder)` (~18 across the 3 sites).
-- Repeated logic at lines 55–63 and 65–72: `actualitzarAutor` and `eliminarAutor` are the identical prepare/set/executeUpdate/catch body -> `execUpdate(String sql, LligadorPs binder, String errMsg)`.
-
-**[src/persistencia/dao/LlibreBlobDao.java]** — LINES SAVED: ~3 lines
-- Repeated logic at lines 45–47 and 89–91: the heavy-field write block (`posarDescripcio`/`posarNotes`/`posarCampsPesatsCarregats(true)`) appears verbatim in `carregarHeavyFields` and `carregarHeavyFieldsBatched` -> `applyHeavyFields(Llibre target, ResultSet rs)`.
-
-**[src/persistencia/dao/LlibreDaoCore.java]** — LINES SAVED: ~18 lines
-- Repeated logic at lines 143–151/166–175 and 157–161/182–188: `inserirColumnList`/`actualitzarSetList` are the same `Columna.values()` loop (differ only by `=?` suffix + `inUpdate` skip); `inserirColumnCount`/`actualitzarSetCount` likewise -> `joinColumns(boolean onlyUpdate, String suffix)` + `countColumns(boolean onlyUpdate)`.
-- Repeated logic at lines 240/243–244 and 255/259–260: `insert` and `update` repeat the identical `autorsSync` ternary and the `for (i...) bind(ps,i+1,vals[i])` loop -> `resoldreAutorsSync(Llibre)` + `bindAll(ps, vals)`.
-- Repeated logic at lines 444–448: `placeholders(n)` duplicates the `?,?,...` builder inlined at `LlibreBlobDao` 80 and `LlibreFieldBindings.inserirPlaceholders` (121–128) -> promote one shared `placeholders(n)` to `MapejadorsFiles`.
-
-**[src/persistencia/dao/LlibreLecturaDao.java]** — LINES SAVED: ~4 lines
-- Repeated logic at lines 19–30: `obtenirAllLectures` hand-rolls the Statement+ResultSet+while loop that `MapejadorsFiles.queryAll(con, sql, mapper)` already abstracts -> `return queryAll(SQL, rs -> new LecturaRow(...))`.
-
-**[src/persistencia/dao/LlibreSearchDao.java]** — LINES SAVED: ~13 lines
-- Switch/if-else -> data table at lines 108–128: `vincularParam`'s type dispatch (String/Long/Integer/Double/Boolean/null) re-implements `LlibreFieldBindings.bind` (138–158) -> delegate to `LlibreFieldBindings.bind` and drop `vincularParam`.
-
-**[src/persistencia/dao/LlistaDao.java]** — LINES SAVED: ~33 lines
-- Repeated logic at lines 57–62, 64–70, 141–150, 152–159, 161–170, 236–242, 244–250: seven methods hand-roll `try(ps=prepare(sql)){ set...; execute(); }` -> shared `MapejadorsFiles.exec(con, sql, binder)` (the `actualitzarColor` null branch fits in the binder).
-- Repeated logic at lines 22–38, 75–88, 94–106, 108–123, 125–139, 213–234, 252–265: each wraps a query loop in try/catch already provided by `MapejadorsFiles.queryAll`/`queryWithParams` -> route through the helper.
-
-**[src/persistencia/dao/PrestecDao.java]** — LINES SAVED: ~26 lines
-- Repeated logic at lines 51–64 and 66–79: `obtenirAll` and `obtenirActiveLoans` are identical except the WHERE and message (same `PrestecRow.fromStrings(...)` mapper, also at 103) -> one private `query(String sql, String errMsg)`.
-- Repeated logic at lines 81–93, 95–110, 112–125, 127–147: route the remaining query loops through `MapejadorsFiles.queryAll`/`queryWithParams`.
-
-**[src/persistencia/dao/TagDao.java]** — LINES SAVED: ~22 lines
-- Repeated logic at lines 92–98, 100–106, 124–132, 134–142: same prepare/set/execute write boilerplate as `LlistaDao` -> shared `MapejadorsFiles.exec(con, sql, binder)` (post-call `invalidateLlibreTagCache()` stays inline).
-- Repeated logic at lines 67–78, 108–122, 144–158, 160–175, 185–199: query loops re-implement `MapejadorsFiles.queryAll`/`queryWithParams` (the `new Tag(rs.getInt(1), rs.getString(2))` mapper is duplicated at 72 and 115) -> route through the helper.
-
-**[src/persistencia/internal/ConnexioServidor.java]** — LINES SAVED: ~4 lines
-- Repeated logic at lines 294–301 and 333–337: both `runMigrationH2` and `runMigrationNonTransactional` repeat the `if (m.version()==34) aplicarMigration34DropAutor(st) else st.executeUpdate(m.sql())` dispatch -> extract `boolean aplicarDDL(Statement st, Migracio m)`.
-
-**[src/persistencia/internal/JarLocator.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 86–91 and 122–127: `walkUp` and `walkUpFromClassSource` contain the identical ascend loop -> `walkUpFrom(File start, int maxLevels, StringBuilder diag, Predicate<File> teJars)` (drops `walkUp`'s unused `originLabel`).
-
-**[src/persistencia/internal/LlibreFieldBindings.java]** — LINES SAVED: ~5 lines
-- Repeated logic at lines 110–117 and 121–128: `inserirColumnsSql` and `inserirPlaceholders` are the same comma-join loop over `COLUMNS_INSERT` differing only by emitted token (backticked col vs `?`) -> one `joinCsv(Function<String,String> tokenFn)` (or reuse the shared `placeholders(n)` above for `?`).
-
-**[src/persistencia/contract/LectorBibliotecaEnMemoria.java]** — LINES SAVED: ~15 lines
-- Repeated logic at lines 90–101: `aplicarFiltres(LlibreFilter)`, `aplicarFiltres(List,LlibreFilter)` and `cercarLlibresSQL` have near-identical bodies throwing `UnsupportedOperationException` -> extract `private static <T> T noSuportat(String que)`; the three overrides become one-liners.
-- Copy-pasted blocks -> loop at lines 121–141: `obtenirLoanedISBNs`, `obtenirAllActiveLoans`, `obtenirLoansForIsbn`, `comptarLoans` each allocate then run the same `for (PrestecRow r : loans) if (pred) ...` accumulate -> collapse each to a stream one-liner.
-
-**[src/persistencia/row/PrestecRow.java]** — LINES SAVED: ~7 lines
-- Repeated logic at lines 14–21: the blank-guard + `try { LocalDate.parse(...) } catch -> null` block is duplicated in `PrestecEndarrerit.fromStrings` -> extract one shared `parseDateOrNull(String)` in the row package.
-- Inline constant arrays at lines 11–12: `ISO` and `DISPLAY` formatters are redeclared in `LecturaRow` (10) and `PrestecEndarrerit` (18–19) -> hoist single shared `static final` formatters.
-
-**[src/persistencia/row/PrestecEndarrerit.java]** — LINES SAVED: ~5 lines
-- Repeated logic at lines 21–28: same blank-guard + try/catch date parse as `PrestecRow.fromStrings` -> reuse the shared `parseDateOrNull(String)` helper.
-
----
-
-## presentacio/controladors/
-
-**[src/presentacio/controladors/ControladorAccionsLlibre.java]** — LINES SAVED: ~35 lines
-- Repeated logic at lines 305–325 and 327–347: `mostrarDesitjats` and `mostrarEnCurs` each re-implement the `SwingWorker` of `mostrarVistaFiltrada` (246–272), differing only by predicate -> delegate to the existing `mostrarVistaFiltrada(predicate, emptyMsg, title)` like `mostrarLlegitsRecentment` (300–303) already does.
-- Repeated logic at lines 262–266, 288–292, 315–319, 337–341: the identical "apply list as current view" sequence is copy-pasted in four `done()` bodies -> extract `private void applyAsCurrentView(List<Llibre> result)`.
-
-**[src/presentacio/controladors/ControladorCopiaSeguretat.java]** — LINES SAVED: ~12 lines
-- Repeated logic at lines 30–33: `windowFrame(Component)` is identical to the same private static method in `ControladorExportacio` (38–41) and `ControladorImportacio` (61–64) -> hoist one shared static helper.
-- Repeated logic at lines 43–57 and 68–87: `copiaSegBD` and `restaurarBD` share the `DialegCarrega` + `SwingWorker` + `done(){hide/get/showMessageDialog/DialegError}` skeleton -> extract `runWithLoading(title, task, onSuccess)`.
-
-**[src/presentacio/controladors/ControladorExportacio.java]** — LINES SAVED: ~25 lines
-- Builder/factory collapse at lines 51–117: `exportarCSV`/`exportarJSON`/`exportarHTML` are the same loading-dialog + `SwingWorker` + `done()` block, differing only by title key and the one `ExportadorLlibres.exportar*` call -> one helper `exportWith(fileSpec, titleKey, ExportTask task)`; a shared `DialegCarrega.runAsync(parent, title, bg, onSuccess)` would remove ~8 sites across Import/Backup too.
-
-**[src/presentacio/controladors/ControladorImportacio.java]** — LINES SAVED: ~22 lines
-- Repeated logic at lines 37–58, 81–100, 106–125: `importarCSV`/`importarCalibre`/`importarJSON` repeat the loading + `SwingWorker<ResultatImportacio,Void>` + `done()` skeleton -> shared async-with-loading helper.
-- Repeated logic at lines 49–53 and 115–120: the result-message builder (imported/skipped/errors -> showMessageDialog -> onDataChanged.run()) is near-duplicated -> `showImportResult(ResultatImportacio r, String titleKey)`.
-- Repeated logic at lines 202–207: three identical guarded field-fills (`if (x!=null && !x.isEmpty() && field.getText().isEmpty()) field.setText(x)`) -> `fillIfEmpty(JTextField, String)`.
-
-**[src/presentacio/controladors/ControladorFiltre.java]** — LINES SAVED: ~30 lines
-- Repeated logic at lines 357–402: `analitzarIntField`/`analitzarLongField`/`analitzarDoubleField` share the trim/parse/`netejarInvalidField`/`markInvalidField` body -> one generic `private <T> T parseField(JTextField f, String raw, Function<String,T> parser)` with three thin wrappers.
-- Switch/if-else -> data table at lines 276–295, 297–314 (and 213–231): the same ~12 field accessors are listed three times in `collectFilterState` (read), `aplicarFilterState` (write) and `quitarFiltros` (clear) -> drive all three from one static array of `{key, Supplier<String> get, Consumer<String> set}` descriptors.
-
-**[src/presentacio/controladors/ControladorMarcPrincipal.java]** — LINES SAVED: ~50 lines
-- Builder/factory collapse + anonymous-class -> lambda at lines 79–171: ~11 keyboard shortcuts each repeat `im.put(ks,name); am.put(name, new AbstractAction(){ actionPerformed -> one-liner })` -> a `bindShortcut(im, am, KeyStroke ks, String name, Runnable body)` helper turns each into one line (also covers the table `eliminarFila` binding at 165–171).
-
-**[src/presentacio/controladors/ControladorMenuContextual.java]** — LINES SAVED: ~30 lines
-- Builder/factory collapse at lines 60–123 and 137–173: the repeated `JMenuItem i = new JMenuItem(label); i.setEnabled(...); i.addActionListener(ev->...); menu.add(i);` block (~8 items, incl. the duplicated "copy ISBN" one-liner at 118–123 / 168–173) -> `addItem(JPopupMenu menu, String label, boolean enabled, Runnable action)`.
-- Repeated logic at lines 205–213: the "find Llibre in state.biblio by ISBN then delete" loop duplicates `ControladorAccionsLlibre.eliminarFilaPerIsbn` (159–167) -> call `bookActionsCtrl.eliminarFilaPerIsbn(isbn)`.
-- Repeated logic at lines 187–201: the per-ISBN undo-buffer/delete body duplicates `ControladorAccionsLlibre.eliminarFilaSeleccionada` (126–138) -> extract a shared `deleteWithUndo(Llibre l)`.
+**[src/presentacio/controladors/ControladorEstacioEscaneig.java]** — LINES SAVED: ~2 lines
+- (5) Inline constant arrays at lines 29–31: `OUTCOME_COLORS` puts three identical `new Color(170, 0, 0)` literals for INVALID, NETWORK_ERROR, OTHER_ERROR. → Extract a `private static final Color ERR_COLOR = new Color(170, 0, 0);` constant and reference it 3 times: `OUTCOME_COLORS.put(Outcome.INVALID, ERR_COLOR); OUTCOME_COLORS.put(Outcome.NETWORK_ERROR, ERR_COLOR); OUTCOME_COLORS.put(Outcome.OTHER_ERROR, ERR_COLOR);`. Saves 2 lines.
 
 **[src/presentacio/controladors/ControladorModeVista.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 55–58 and 77–80: the "switch to gallery" trio (`actualitzarLlibres(...); mostrarGaleria(); btnToggleVista.setText(...)`) is duplicated in `restaurarViewMode` and `toggleVista` -> extract `mostrarGaleria()`.
-- Repeated logic at lines 56, 78 (also 95): the `state.biblio instanceof ArrayList<Llibre> a ? a : new ArrayList<>(state.biblio)` cast-or-copy idiom recurs here and in `ControladorMostrarBiblioteca` 111, `ControladorGaleria` 19, `ControladorPaginaTaula` 107, `ControladorFiltre` 184 -> one static `asArrayList(List<Llibre>)`.
+- (1) at lines 41–49 (`inicialitzarGaleria`): the lambda body `try { ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(l, state.enActualizarBBDD, state.cd); detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista); detalles.obtenirDetallesLlibrePanel().setVisible(true); } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }` is the same body inlined in `ControladorAccionsLlibre.mostrarLlibreAleatori` (lines 244–247) and a variant of `abrirDetallesDeLlibre` (lines 85–95). The constructor (line 28) already receives `bookActionsCtrl` but does not store it — the parameter is dead. → Store `bookActionsCtrl` as a field and have `posarOnCardClick(l -> bookActionsCtrl.abrirDetallesDeLlibre(l, false))`. Saves 6 lines (5 in the lambda + the catch wrap).
 
-**[src/presentacio/controladors/ControladorPrestatgeria.java]** — LINES SAVED: ~12 lines
-- Repeated logic at lines 217–233 and 235–249: `afegirSeleccionatsALlista` and `afegirLlibresGaleriaALlista` are identical except ISBN source (table rows vs Llibre list) -> have both call one shared `afegirIsbnsALlista(List<Long> isbns)`.
+**[src/presentacio/detalles/control/ControladorEtiquetesLlibre.java]** — LINES SAVED: ~3 lines
+- (1) at lines 129–138: `bumpCount(int tagId)` is `tagCounts.merge(tagId, 1, Integer::sum);` (1 line) and `dropCount(int tagId)` is `merge` + cleanup of non-positive (5 lines). Both do the same merge with a different delta. → Collapse to `private void bumpCount(int tagId, int delta) { tagCounts.merge(tagId, delta, Integer::sum); if (delta < 0) tagCounts.values().removeIf(n -> n <= 0); }`. Both call sites (`bumpCount(tag.obtenirId())` → `bumpCount(tag.obtenirId(), +1)`, `dropCount(target.obtenirId())` → `bumpCount(target.obtenirId(), -1)`) become one-liners. Saves 3 lines.
 
-**[src/presentacio/controladors/ControladorTaula.java]** — LINES SAVED: ~5 lines
-- Copy-pasted blocks -> loop / inline constant arrays at lines 204–212: nine sequential `setWidth(t, COL_x, pref, min, max)` calls whose `pref` already equals `DEFAULT_COL_WIDTHS[0..8]` -> add a `MIN_COL_WIDTHS` array and loop `for (i...) setWidth(t, i, DEFAULT_COL_WIDTHS[i], MIN_COL_WIDTHS[i], i==COL_COVER?56:MAX_VALUE)`.
-
-**[src/presentacio/controladors/ControladorEstacioEscaneig.java]** — LINES SAVED: ~6 lines
-- Switch/if-else -> data table at lines 207–215 (and 177–182): `colorFor(Outcome)` maps each enum constant to a `Color`, and `finishOneResult` switches the same `Outcome` onto a counter -> static `EnumMap<Outcome,Color>` (+ `EnumMap<Outcome,LongAdder>`), or attach color/adder to the `Outcome` constants.
-
----
-
-## presentacio/config/ and presentacio/dialegs/
-
-**[src/presentacio/config/BarraBotonsConfiguracio.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 43–48: the 6-line `JPanel`+`GroupLayout` init block is identical in all 6 config builders -> extract `UIComponents.sectionPanel()`.
-- Inline constant arrays at lines 51–52: `fontSizeKeys={"small","medium","large"}` and `langKeys={"ca","es","en"}` are duplicated (also `SeccioAparençaConfiguracio` 48 and `SeccioIdiomaConfiguracio` 31) -> single `static final String[]` constants.
-
-**[src/presentacio/config/ConfiguracioDataSection.java]** — LINES SAVED: ~7 lines
-- Repeated logic at lines 28–33: same panel/`GroupLayout` init block -> `UIComponents.sectionPanel()`.
-- Repeated logic at lines 35–37: section-header label (`new JLabel` + `setFont(fontBold())` + `setForeground(accent())`) duplicated in 4 builders -> `UIComponents.sectionHeader(key)`.
-- Builder/factory collapse at lines 39–40: `new JLabel(t(...))` + `styleLabel(...)` -> `UIComponents.label(key)`.
-
-**[src/presentacio/config/SeccioAparençaConfiguracio.java]** — LINES SAVED: ~16 lines
-- Repeated logic at lines 22–27 and 29–31: panel/`GroupLayout` init -> `sectionPanel()`; section-header label -> `sectionHeader(key)`.
-- Builder/factory collapse at lines 33–34, 45–46, 56–57, 66–67, 72–73: five `new JLabel + styleLabel` -> `UIComponents.label(key)`; field at 68–70 -> `UIComponents.field(id,val)`.
-- Builder/factory collapse + repeated loop at lines 38–43, 49–54, 59–64: three combos repeat `new JComboBox` + `setFont` + `putClientProperty` plus the identical "find current index" loop (also at `SeccioIdiomaConfiguracio` 34–35) -> `UIComponents.combo(id, labels, keys, current)`.
-
-**[src/presentacio/config/SeccioDbConfiguracio.java]** — LINES SAVED: ~16 lines
-- Repeated logic at lines 27–32 and 34–36: panel/`GroupLayout` init -> `sectionPanel()`; header label -> `sectionHeader(key)`.
-- Builder/factory collapse at lines 38–39, 47–48, 53–54, 59–60: four `new JLabel + styleLabel` -> `label(key)`; fields at 49–51, 55–57, 61–63 -> `field(id,val)`; `cmbType` at 40–45 -> shared `combo(...)`.
-
-**[src/presentacio/config/SeccioIdiomaConfiguracio.java]** — LINES SAVED: ~7 lines
-- Repeated logic at lines 21–26: panel/`GroupLayout` init -> `sectionPanel()`.
-- Builder/factory collapse at lines 28–29 and 32–37: `new JLabel + styleLabel` -> `label(key)`; combo block (incl. index-finding loop 34–35) -> shared `combo(...)`.
-
-**[src/presentacio/config/SeccioImatgesConfiguracio.java]** — LINES SAVED: ~9 lines
-- Repeated logic at lines 22–27 and 29–31: panel/`GroupLayout` init -> `sectionPanel()`; header label -> `sectionHeader(key)`.
-- Builder/factory collapse at lines 33–37: `new JLabel + styleLabel` (33–34) -> `label(key)`; `new JTextField + styleField + putClientProperty` (35–37) -> `field(id,val)`.
-
-**[src/presentacio/dialegs/ConfiguracioDialog.java]** — LINES SAVED: ~6 lines
-- Class abstraction at lines 40–44, 65–81, 96–104: the five section classes all expose `build(JDialog)` + `reloadFromConfig(JPanel)` -> define `interface ConfiguracioSeccio { JPanel build(JDialog); void reloadFromConfig(JPanel); }`, hold a `List<ConfiguracioSeccio>`, and replace the 5 explicit `*.reloadFromConfig(root)` calls (99–103) and per-section layout adds with loops.
-
-**[src/presentacio/dialegs/DialegGestioLlistes.java]** — LINES SAVED: ~8 lines
-- Builder/factory collapse at lines 73–91 (partly 64–71): `btnRename`/`btnColor`/`btnUp`/`btnDown` repeat the 4-line `new JButton(label)` + `styleSecondaryButton` + `setToolTipText` + `addActionListener` -> `secondaryBtn(label, tip, listener)` helper.
-
----
-
-## presentacio/detalles/
-
-**[src/presentacio/detalles/control/ControladorDialegDesarLlibres.java]** — LINES SAVED: ~24 lines
-- Repeated logic at lines 74–92: the autocomplete-loading `SwingWorker<List<List<String>>,Void>` is identical to `ControladorPanellDetallsLlibre` 101–119 -> shared helper, e.g. `FieldAutoComplete.attachDistinct(cLlibres, autor, editorial, serie, idioma)`.
-- Anonymous class -> lambda at lines 66–70 and 94–98: two 3-method anonymous `DocumentListener`s (plus 2 more in `ControladorPanellDetallsLlibre`) -> a `Documents.onChange(Runnable)` adapter so each becomes `addDocumentListener(Documents.onChange(() -> carregarImatge(...)))`.
-- Repeated logic at lines 214–219, 202–203/207–208: `x.isEmpty()?null:x` / format blank-check repeated -> `ParseHelpers.blankToNull(String)`.
-- Repeated logic at lines 193–194: CSV-author split is identical to `ControladorPanellDetallsLlibre` 394–395 -> `ParseHelpers.splitAutors(text)`.
-
-**[src/presentacio/detalles/control/ControladorEtiquetesLlibre.java]** — LINES SAVED: ~15 lines
-- Class abstraction at lines 47–53, 93–98, 167–194: shares constructor wiring, the empty-combo guard, and the `SwingWorker<ReloadData,Void>` + `done()`/`DialegError` reload skeleton with `ControladorLlistesLlibre` -> common supertype `abstract class ControladorEntitatLlibre<V,W>` (vista, llibre, writer `cd`, constructor, `comboBuit(msgKey,titleKey)`, abstract `wireListeners()`/`reload()`).
-
-**[src/presentacio/detalles/control/ControladorLlistesLlibre.java]** — LINES SAVED: ~16 lines
-- Class abstraction at lines 50–56, 88–93, 138–176: same scaffolding as `ControladorEtiquetesLlibre` -> the `ControladorEntitatLlibre<V,W>` base above.
-- Repeated logic at lines 77–78 and 95–96: identical `double val=0.0; try{val=Double.parseDouble(...);}catch(...){}` -> private `double valoracioField()`.
-
-**[src/presentacio/detalles/control/ControladorPanellDetallsLlibre.java]** — LINES SAVED: ~24 lines
-- Repeated logic at lines 101–119: autocomplete-loading `SwingWorker` duplicated with `ControladorDialegDesarLlibres` 74–92 -> shared `FieldAutoComplete.attachDistinct(...)`.
-- Anonymous class -> lambda at lines 95–99 and 151–155: two 3-method anonymous `DocumentListener`s -> `Documents.onChange(Runnable)` adapter.
-- Repeated logic at lines 384–387/390–392 and 394–395: blank-to-null chains and CSV-author split duplicate DesarLlibres -> `ParseHelpers.blankToNull` / `ParseHelpers.splitAutors`.
-
-**[src/presentacio/detalles/control/TascaCercaOpenLibrary.java]** — LINES SAVED: ~3 lines
-- Copy-pasted blocks -> loop at lines 120–129: five near-identical `if (meta.containsKey(k) && field.getText().isEmpty()) field.setText(meta.get(k));` blocks -> loop over a `Map<String,JTextField>`: `fills.forEach((k,f) -> { if (meta.containsKey(k) && f.getText().isEmpty()) f.setText(meta.get(k)); });`.
-
-**[src/presentacio/detalles/vista/DialegDesarLlibres.java]** — LINES SAVED: ~18 lines
-- Repeated logic at lines 228–242: the responsive-column `ComponentAdapter` (recompute cols, reset `GridLayout` columns) is duplicated twice in `PanellDetallsLlibre` -> shared `UIComponents.attachResponsiveColumns(scroll, grid, ENTRY_MIN_W)`.
-- Builder/factory collapse at lines 174–176 and 179–181: combo `setBackground/setForeground/setFont` repeated (also `PanellDetallsLlibre` 310–312) -> `UIComponents.styleCombo(combo)`.
-- Inline constant arrays at line 178: `new String[]{"", estat_nou, estat_bo, estat_usat, estat_deteriorat}` duplicated in `PanellDetallsLlibre` 177–178 -> shared `EstatOptions.withBlank()` (mirroring the existing `FormatOptions.withBlank()`).
-
-**[src/presentacio/detalles/vista/DialegEtiquetesLlibre.java]** — LINES SAVED: ~12 lines
-- Class abstraction at lines 64–67, 83–89, 95/124, 144–151: shares root-panel setup, the 7-line `JTable` styling (identical to `DialegLlistesLlibre` 62–68 except rowHeight), `comboAdd`/`btnTreure`, and the `obtenir*` getters with `DialegLlistesLlibre` -> common supertype `abstract class DialegEntitatLlibre<E> extends JDialog` holding the styled panel/table, `comboAdd`, `btnAfegir`, `btnTreure` + shared getters.
-
-**[src/presentacio/detalles/vista/DialegLlistesLlibre.java]** — LINES SAVED: ~12 lines
-- Class abstraction at lines 56–59, 62–68, 93/119, 138–146: same scaffolding as `DialegEtiquetesLlibre` -> the `DialegEntitatLlibre<E>` base above.
-
-**[src/presentacio/detalles/vista/PanellDetallsLlibre.java]** — LINES SAVED: ~26 lines
-- Repeated logic at lines 184–210 and 254–280: `buildGeneralTab` and `buildAdvancedTab` end with an identical wrapper-panel + `JScrollPane` + responsive-column `ComponentAdapter` tail -> extract `JScrollPane responsiveGridScroll(JPanel grid)` (also reused by `DialegDesarLlibres` 228–242).
-- Builder/factory collapse at lines 310–312: combo styling -> `UIComponents.styleCombo(combo)`.
-- Inline constant arrays at lines 177–178: estat-options `String[]` duplicated with `DialegDesarLlibres` 178 -> shared `EstatOptions.withBlank()`.
-
-**[src/presentacio/detalles/vista/UtilitatsComboEntitat.java]** — LINES SAVED: ~41 lines
-- Repeated logic at lines 26–40: `reloadCombo` is a second implementation of `herramienta.ui.UtilitatsSwing.reloadComboPreserveSelection` (the one actually used in `ControladorLlistesLlibre` 151 and `DialegEtiquetesLlibre` 163) -> collapse onto the existing `UtilitatsSwing` helper, removing this duplicate.
-
----
-
-## presentacio/ (panells, models, formularis, util)
+**[src/presentacio/detalles/vista/PanellDetallsLlibre.java]** — LINES SAVED: ~7 lines
+- (1) at lines 82–91: `btnEliminar` is built inline with `setUI(new BasicButtonUI()) + setBackground(new Color(0xC0392B)) + setForeground(WHITE) + setFont(fontBold) + setFocusPainted(false) + setBorderPainted(false) + setOpaque(true) + setCursor(HAND_CURSOR)` — exact body of `UIComponents.styleDangerButton(JButton)` already used by `ConfiguracioDataSection.btnBuidar:53`. → Replace 8 lines with `UIComponents.styleDangerButton(btnEliminar);`. Saves 7 lines.
 
 **[src/presentacio/panells/PanelBarraSuperior.java]** — LINES SAVED: ~7 lines
-- Builder/factory collapse at lines 48–66: four near-identical `new JButton(I18n.t(...)); styleX(b); b.setToolTipText(I18n.t(...)); rightBtns.add(b);` blocks -> one `JButton makeBtn(String lblKey, String tipKey, Consumer<JButton> styler)`; each call becomes one line, e.g. `btnToggleFiltres = makeBtn("btn_toggle_filtres_lbl","tip_toggle_filtres", UIComponents::styleSecondaryButton);`.
+- (6) Switch/if-else chain → data table at lines 80–85: `buttonFor(TopBtn spec)` is a 4-arm `if (spec == TOP_BTNS.get(0)) return btnX; …` lookup. The TopBtn record is already a 1-element immutable spec (lines 21-28) — perfect for a Map. → Add `private final java.util.IdentityHashMap<TopBtn, JButton> btnBySpec = new IdentityHashMap<>();`, populate it once in `buildTopBar()` (lines 59-62) with `btnBySpec.put(spec, makeBtn(rightBtns, spec));`, then `buttonFor(spec)` becomes `return btnBySpec.get(spec);`. Saves 5 lines; the 4 `btnX = makeBtn(rightBtns, TOP_BTNS.get(N));` calls also collapse to one parameterized call (the local JButton fields stay, but the per-spec if-chain disappears). Net ~7 lines.
 
-**[src/presentacio/panells/PanelCalaixFiltre.java]** — LINES SAVED: ~10 lines
-- Repeated logic at lines 204–223: the export and import dropdown wiring (style + setText(label + " ▾") + `addActionListener(e -> menu.show(b,0,b.getHeight()))` + add to row) is duplicated -> `JPopupMenu makeDropdown(String btnKey, String labelKey, JPanel row)`.
-- Builder/factory collapse at lines 117–127: three `styleX(registry.button(k)); ...setPreferredSize(new Dimension(w,26)); presetBar.add(...)` blocks -> one `addPresetBtn(String key, Consumer<JButton> styler, int w)`.
+**[src/presentacio/panells/PanelCalaixFiltre.java]** — LINES SAVED: ~3 lines
+- (7) at lines 147–150: 2 copies of `styleCheckBox(registry.comprovarBox("chckbxX")); row1.add(registry.comprovarBox("chckbxX"));` — the lookup is doubled because `styleCheckBox` returns void. → Add `private JCheckBox addStyledCheck(JPanel row, String key) { JCheckBox cb = registry.comprovarBox(key); styleCheckBox(cb); row.add(cb); return cb; }` and call it twice (`addStyledCheck(row1, "chckbxLlegit"); addStyledCheck(row1, "chckbxNoLlegit");`). Saves 3 lines.
 
-**[src/presentacio/panells/PanelGaleriaCobertes.java]** — LINES SAVED: ~12 lines
-- Anonymous class -> lambda at lines 138–162: six `getActionMap().put(k, new AbstractAction(){ actionPerformed... })` blocks -> one adapter `void bindAction(String k, Runnable r)`, so each becomes `bindAction("galRight", () -> moureKeyboard(1));`.
+**[src/persistencia/internal/MapejadorsFiles.java]** — LINES SAVED: ~10 lines (cross-cutting, counts toward the runWorker totals below)
+- (1) Repeated logic at lines 44–52, 61–71, 79–86, 90–97: each "execute SQL, build list" or "execute update, ignore result" block in MapejadorsFiles already factors the JDBC boilerplate, but the `try/catch (SQLException e) { throw new BibliotecaException("...: " + e.getMessage(), e); }` wrap repeats verbatim at every caller. The SwingWorker sites (22 across 13 files — `ControladorAccionsLlibre`, `ControladorMenuContextual`, `ControladorImportacio`, `ControladorExportacio`, `ControladorFiltre`, `ControladorMostrarBiblioteca`, `ControladorPaginaTaula`, `ControladorPrestatgeria`, `ControladorDialegDesarLlibres`, `ControladorEtiquetesLlibre`, `ControladorPanellDetallsLlibre`, `ConfiguracioDataSection`, `SeccioDbConfiguracio`, `ConfiguracioDataSection`) all repeat the same `new SwingWorker<X, Void>() { doInBackground() {...} done() { if (isCancelled()) return; try { X v = get(); ... } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); } } }`. → Extract a single helper on `DialegCarrega` (or a new `presentacio.util.BackgroundTasks`):
+  ```java
+  public static <T> void runWorker(java.util.concurrent.Callable<T> bg,
+                                   java.util.function.Consumer<T> onSuccess) {
+      new SwingWorker<T, Void>() {
+          @Override protected T doInBackground() throws Exception { return bg.call(); }
+          @Override protected void done() {
+              if (isCancelled()) return;
+              try { onSuccess.accept(get()); }
+              catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
+          }
+      }.execute();
+  }
+  ```
+  Each call site collapses from ~14 lines to 1-2 (`DialegCarrega.runWorker(() -> state.cd.obtenirAllLlibres(), llibres -> { ... });`). Across the 22 sites this saves ~150 lines net (the 22-line helper is amortized). Per-file saving 5-7 lines each; minimum per-file saving counted below.
 
-**[src/presentacio/panells/PanellBarraEsquerra.java]** — LINES SAVED: ~30 lines
-- Builder/factory collapse at lines 99–203: ~9 buttons repeat `btnX = makeSidebarBtn(I18n.t(lbl)); btnX.setToolTipText(I18n.t(tip)); sidebarBtns.add(btnX); container.add(btnX);` -> `JButton addNavBtn(JPanel c, String lbl, String tip)`.
-- Repeated logic at lines 230–238 and 242–248: the `Color.decode` + `colorSwatch` + `setHorizontalTextPosition` (with `setIcon(null)` fallback) block is duplicated -> `applyShelfColor(JButton btn, String color)`.
-- Repeated logic at lines 278–280, 284–286, 296–298: the 3-line `styleSidebarButton + setBorder(9,18,9,18) + setMaximumSize(...)` block appears 3x -> `styleSidebarBtn(JButton)` reused in both `aplicarTheme()` loops and `makeSidebarBtn`.
-
-**[src/presentacio/panells/PanelTaulaCentral.java]** — LINES SAVED: ~7 lines
-- Repeated logic at lines 225–231: `nameScrollBar(JScrollBar)` is byte-identical to `PanellBarraEsquerra` 350–356 -> move to a shared static util (e.g. `UIComponents.nameScrollBar(sb)`), delete one copy.
-
-**[src/presentacio/models/ModelTaulaBiblioteca.java]** — LINES SAVED: ~8 lines
-- Switch/if-else -> data table at lines 38–52: `getColumnName` maps each `COL_*` to an `I18n.t("col_...")` key -> `private static final String[] COL_KEYS = {"col_cover","col_isbn","col_title","col_author","col_year","col_rating","col_price","col_read","col_progress","col_details"};` and `return column>=0 && column<COL_KEYS.length ? I18n.t(COL_KEYS[column]) : "";`.
-
-**[src/presentacio/formularis/ConstructorGraellaFormulari.java]** — LINES SAVED: ~6 lines
-- Repeated logic at lines 29–45: `afegirField`/`afegirCombo`/`afegirCheck` have bodies identical to `afegirRaw` (47–51); since the widgets are all `JComponent`, each typed method becomes a one-line delegate -> `return afegirRaw(label, field);`.
-
-**[src/presentacio/util/UIComponents.java]** — LINES SAVED: ~20 lines
-- Repeated logic at lines 37–68: `styleAccentButton`/`styleSecondaryButton`/`styleDangerButton` are identical except the `setBackground(...)` color -> a private `styleColoredButton(JButton b, Color bg)` (setUI/foreground/fontBold/focusPainted/borderPainted/opaque/cursor) that each delegates to; the 5 chrome lines are also shared by `styleSidebarButton` (70–80).
-- Repeated logic at lines 95–98, 103–105, 108–110: the compound `createLineBorder(c) + createEmptyBorder(3,7,3,7)` is rebuilt 3x inside `styleField` -> `private static Border paddedLineBorder(Color c)`; also replaces `ValidadorFormulari.INVALID_BORDER` (17–20) and `cardBorder` (117–122).
-
-**[src/presentacio/util/AjudaEstadistiques.java]** — LINES SAVED: ~12 lines
-- Class abstraction at lines 60–90 and 92–125: `buildReadingChart` and `buildPublisherChart` both create an anonymous `JPanel` whose initializer sets bg + titled border and whose `paintComponent` repeats `super.paintComponent` + empty-data guard + `Graphics2D` cast + antialias hint -> an abstract `ChartPanel(int w, int h, String titleKey)` with a template `paintComponent` delegating to `abstract void drawChart(Graphics2D g2)`.
-- Repeated logic at lines 54, 269, 292 and 55, 270: `stream().filter(l -> Boolean.TRUE.equals(l.obtenirLlegit())).count()` and the avg-rating stream are duplicated (the read predicate also recurs at 44) -> extract `countLlegits(List<Llibre>)` and `avgValoracio(List<Llibre>)` (plus an `isLlegit(Llibre)` predicate).
+**[Cross-cutting — 22 SwingWorker sites]** — LINES SAVED: ~150 lines total (counted above; per-file slice ~5 lines)
+- (1) Repeated logic at the 22 `new SwingWorker<...>() {...}` sites listed under MapejadorsFiles above: extract `DialegCarrega.runWorker(Callable<T>, Consumer<T>)` (sketch above). The existing `DialegCarrega.runAsync` helper only handles the loading-dialog variant; this is the bare variant for fire-and-forget background work. Per-site savings of 4-6 lines, summed across the 22 sites ≈ ~120 lines after subtracting the ~22-line helper. Files touched (each gets a 4-7 line saving):
+  - `src/presentacio/controladors/ControladorAccionsLlibre.java` — sites at lines 122, 185, 272, 319
+  - `src/presentacio/controladors/ControladorMenuContextual.java` — sites at lines 178, 240, 268
+  - `src/presentacio/controladors/ControladorImportacio.java` — sites at lines 121, 150
+  - `src/presentacio/controladors/ControladorExportacio.java` — sites at lines 83, 97
+  - `src/presentacio/controladors/ControladorFiltre.java` — sites at lines 156, 198
+  - `src/presentacio/controladors/ControladorMarcPrincipal.java` — site at line 125 (and `mostrarAlertes` at line 210)
+  - `src/presentacio/controladors/ControladorMostrarBiblioteca.java` — site at line 169 (`refresh()`)
+  - `src/presentacio/controladors/ControladorPaginaTaula.java` — `mostrarPage`
+  - `src/presentacio/controladors/ControladorPrestatgeria.java` — `refrescarComboLlistes` SwingWorker
+  - `src/presentacio/detalles/control/ControladorDialegDesarLlibres.java` — sites at lines 114, 190
+  - `src/presentacio/detalles/control/ControladorEtiquetesLlibre.java` — site at line 68
+  - `src/presentacio/detalles/control/ControladorPanellDetallsLlibre.java` — sites at lines 59, 162, 271, 291, 390 (5 sites)
+  - `src/presentacio/config/SeccioDbConfiguracio.java` — site at line 64
+  - `src/presentacio/config/ConfiguracioDataSection.java` — site at line 37
 
 ---
 
-Notes: cross-file helpers above (e.g. `SqlOp.domain`, `MapejadorsFiles.exec`/`queryAll`/
-`insertReturningKey`, `UIComponents.sectionPanel`/`label`/`field`/`combo`/`styleCombo`,
-`ParseHelpers.blankToNull`/`splitAutors`, `Documents.onChange`) each pay off across
-multiple call sites, so per-file estimates understate total savings. All findings are
-deduplication/abstraction only — no behavioral change intended.
+## Summary
+
+- 24 distinct opportunities across 22 files; estimated aggregate savings ~280 lines.
+- Dominant patterns: the SwingWorker `runWorker` helper (22 sites × ~5 lines each = ~150 lines), the `SeccionsConfiguracio.findAs(panel, id, Class)` typed lookup (~21 lines across 5 files), the `htmlEscape`/`nullToEmpty`/`confirmYes` shared UI helpers (~15 lines), and the `LlistaDao` row record collapse (~18 lines).
+- The prior PENDING items (`ConstructorFiltreLlibre`, `NamedEntityDelegate<T>`, `Executable.fatalExit`, `LlibreFieldBindings.bind` data table) are all DONE in current source; verified above.
+- All findings are deduplication/abstraction only — no behavioral change.
+- A remaining opportunity (not reported in detail here) is the four daemon-`ThreadFactory` lambdas across `PantallaInici:15`, `EditorCasellaLlegit:29`, `RenderitzadorCellaCoberta:19`, `ServeiImatgesCoberta:58` — a `herramienta.concurrent.DaemonExecutors.daemonPool(int, String)` would absorb them, but the savings (~10 lines) are at the edge of the per-finding threshold and span many files; flagged here for completeness rather than listed as a numbered bullet.

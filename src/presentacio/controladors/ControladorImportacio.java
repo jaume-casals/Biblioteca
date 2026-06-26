@@ -6,7 +6,6 @@ import herramienta.api.ClientOpenLibrary;
 import herramienta.i18n.I18n;
 import herramienta.ui.DialegError;
 import java.awt.Component;
-import java.awt.Frame;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.*;
@@ -34,33 +33,9 @@ public class ControladorImportacio {
     public void importarCSV() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_title"), "CSV files", "csv");
         if (f == null) return;
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_title"));
-        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
-            @Override protected ImportadorLlibres.ResultatImportacio doInBackground() {
-                return ImportadorLlibres.importarCSV(f, cd);
-            }
-            @Override protected void done() {
-                loading.hide();
-                try {
-                    ImportadorLlibres.ResultatImportacio r = get();
-                    if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
-                        new DialegError(new Exception(String.join("\n", r.errorDetails()))).mostrarErrorMessage(); return;
-                    }
-                    String msg = I18n.t("dlg_import_json_msg", r.imported());
-                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors()) + String.join("\n", r.errorDetails());
-                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_title"),
-                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-                    onDataChanged.run();
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
-    }
-
-    private static Frame windowFrame(Component parent) {
-        java.awt.Window w = SwingUtilities.getWindowAncestor(parent);
-        return w instanceof Frame f ? f : null;
+        DialegCarrega.runAsync(parent, I18n.t("dlg_import_title"),
+            () -> ImportadorLlibres.importarCSV(f, cd),
+            r -> showImportResult(r, I18n.t("dlg_import_title"), false, true));
     }
 
     public void importarCalibre() {
@@ -78,51 +53,45 @@ public class ControladorImportacio {
             JOptionPane.showMessageDialog(parent, I18n.t("dlg_calibre_no_sqlite3"),
                 I18n.t("dlg_calibre_choose_title"), JOptionPane.ERROR_MESSAGE); return;
         }
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_calibre_choose_title"));
-        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
-            @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
-                return ImportadorLlibres.importarCalibre(dbFile, sqlite3, cd);
-            }
-            @Override protected void done() {
-                loading.hide();
-                try {
-                    ImportadorLlibres.ResultatImportacio r = get();
-                    onDataChanged.run();
-                    String msg = r.imported() + " " + I18n.t("lbl_imported_ok");
-                    if (r.skipped() > 0) msg += "\n" + r.skipped() + " " + I18n.t("lbl_skipped");
-                    if (r.errors() > 0) msg += "\n" + r.errors() + " " + I18n.t("lbl_errors");
-                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_calibre_choose_title"),
-                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
+        DialegCarrega.runAsync(parent, I18n.t("dlg_calibre_choose_title"),
+            () -> ImportadorLlibres.importarCalibre(dbFile, sqlite3, cd),
+            r -> {
+                onDataChanged.run();
+                String msg = r.imported() + " " + I18n.t("lbl_imported_ok");
+                if (r.skipped() > 0) msg += "\n" + r.skipped() + " " + I18n.t("lbl_skipped");
+                if (r.errors() > 0) msg += "\n" + r.errors() + " " + I18n.t("lbl_errors");
+                JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_calibre_choose_title"),
+                    r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+            });
     }
 
     public void importarJSON() {
         java.io.File f = ControladorIOLlibre.pickFile(parent, I18n.t("dlg_import_json_title"), "JSON files", "json");
         if (f == null) return;
-        DialegCarrega loading = new DialegCarrega(windowFrame(parent), I18n.t("dlg_import_json_title"));
-        SwingWorker<ImportadorLlibres.ResultatImportacio, Void> worker = new SwingWorker<ImportadorLlibres.ResultatImportacio, Void>() {
-            @Override protected ImportadorLlibres.ResultatImportacio doInBackground() throws Exception {
-                return ImportadorLlibres.importarJSON(f, cd);
-            }
-            @Override protected void done() {
-                loading.hide();
-                try {
-                    ImportadorLlibres.ResultatImportacio r = get();
-                    String msg = I18n.t("dlg_import_json_msg", r.imported());
-                    if (r.skipped() > 0) msg += "\n" + I18n.t("dlg_import_json_skipped", r.skipped());
-                    if (r.errors() > 0) msg += "\n" + I18n.t("dlg_import_json_errors", r.errors());
-                    JOptionPane.showMessageDialog(parent, msg, I18n.t("dlg_import_json_title"),
-                        r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
-                    onDataChanged.run();
-                } catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
-            }
-        };
-        worker.execute();
-        loading.show();
+        DialegCarrega.runAsync(parent, I18n.t("dlg_import_json_title"),
+            () -> ImportadorLlibres.importarJSON(f, cd),
+            r -> showImportResult(r, I18n.t("dlg_import_json_title"), true, false));
+    }
+
+    private void showImportResult(ImportadorLlibres.ResultatImportacio r, String title,
+            boolean showSkipped, boolean appendErrorDetails) {
+        if (r.errors() > 0 && r.imported() == 0 && !r.errorDetails().isEmpty()) {
+            new DialegError(new Exception(String.join("\n", r.errorDetails()))).mostrarErrorMessage();
+            return;
+        }
+        String msg = I18n.t("dlg_import_json_msg", r.imported());
+        if (showSkipped && r.skipped() > 0) msg += "\n" + I18n.t("dlg_import_json_skipped", r.skipped());
+        if (r.errors() > 0) {
+            msg += "\n" + I18n.t("dlg_import_json_errors", r.errors());
+            if (appendErrorDetails) msg += String.join("\n", r.errorDetails());
+        }
+        JOptionPane.showMessageDialog(parent, msg, title,
+            r.errors() > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+        onDataChanged.run();
+    }
+
+    private static void fillIfEmpty(JTextField field, String value) {
+        if (value != null && !value.isEmpty() && field.getText().isEmpty()) field.setText(value);
     }
 
     public void escanejarISBN() {
@@ -199,12 +168,9 @@ public class ControladorImportacio {
                 String title = meta.get("title");
                 String autor = meta.get("autor");
                 String any = meta.get("any");
-                if (title != null && !title.isEmpty() && dialeg.obtenirTextNom().getText().isEmpty())
-                    dialeg.obtenirTextNom().setText(title);
-                if (autor != null && !autor.isEmpty() && dialeg.obtenirTextAutor().getText().isEmpty())
-                    dialeg.obtenirTextAutor().setText(autor);
-                if (any != null && !any.isEmpty() && dialeg.obtenirTextAny().getText().isEmpty())
-                    dialeg.obtenirTextAny().setText(any);
+                fillIfEmpty(dialeg.obtenirTextNom(), title);
+                fillIfEmpty(dialeg.obtenirTextAutor(), autor);
+                fillIfEmpty(dialeg.obtenirTextAny(), any);
             }
         }.execute();
 

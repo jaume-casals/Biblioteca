@@ -1,12 +1,6 @@
 package domini;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import persistencia.dao.TagDao;
-public class Tag {
-    private int id;
-    private String nom;
+public class Tag extends EntitatNomenada {
 
     // Actualment les etiquetes no tenen camp de color. Si en el futur
     // s'afegeix suport de color a les etiquetes, cal afegir un camp
@@ -14,26 +8,10 @@ public class Tag {
     // Llista, i actualitzar TagDao, TagRouter i l'esquema de la BBDD
     // (migració).
 
-    public Tag(int id, String nom) { this.id = id; this.nom = nom; }
+    public Tag(int id, String nom) { super(id, nom); }
 
-    public int obtenirId() { return id; }
-    public String obtenirNom() { return nom; }
-    public void posarNom(String nom) {
-        if (nom == null || nom.isBlank())
-            throw new BibliotecaException.Validacio(herramienta.i18n.I18n.t("val_tag_blank"));
-        this.nom = nom;
-    }
-
-    public Map<String, Object> toMap() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", id);
-        m.put("nom", nom);
-        return m;
-    }
-
-    /** Retorna nom — s'usa per a visualitzar a JComboBox i a toString(). No és una representació de depuració. */
     @Override
-    public String toString() { return nom; }
+    protected String claveNomBlank() { return "val_tag_blank"; }
 
     // Identitat entre bases de dades: equals compara només per l'id
     // generat a la BBDD, de manera que dues etiquetes amb el mateix

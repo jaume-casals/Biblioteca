@@ -8,10 +8,15 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.Timer;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Frame;
+
+import herramienta.ui.DialegError;
 
 public class DialegCarrega {
 
@@ -85,5 +90,30 @@ public class DialegCarrega {
         } else {
             dialog.dispose();
         }
+    }
+
+    public static Frame windowFrame(Component parent) {
+        java.awt.Window w = SwingUtilities.getWindowAncestor(parent);
+        return w instanceof Frame f ? f : null;
+    }
+
+    @FunctionalInterface
+    public interface BackgroundTask<T> {
+        T run() throws Exception;
+    }
+
+    public static <T> void runAsync(Component parent, String title, BackgroundTask<T> bg,
+            java.util.function.Consumer<T> onSuccess) {
+        DialegCarrega loading = new DialegCarrega(windowFrame(parent), title);
+        SwingWorker<T, Void> worker = new SwingWorker<>() {
+            @Override protected T doInBackground() throws Exception { return bg.run(); }
+            @Override protected void done() {
+                loading.hide();
+                try { onSuccess.accept(get()); }
+                catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
+            }
+        };
+        worker.execute();
+        loading.show();
     }
 }

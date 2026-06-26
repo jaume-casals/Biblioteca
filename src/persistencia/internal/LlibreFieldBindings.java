@@ -5,6 +5,7 @@ import domini.Llibre;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Map;
 
 import persistencia.dao.LlibreDaoCore;
 /**
@@ -116,22 +117,32 @@ public final class LlibreFieldBindings {
     public static void bind(PreparedStatement ps, int idx, Object value) throws SQLException {
         if (value == null) {
             ps.setNull(idx, Types.VARCHAR);
-        } else if (value instanceof Nul n) {
-            ps.setNull(idx, n.sqlType);
-        } else if (value instanceof Integer i) {
-            ps.setInt(idx, i);
-        } else if (value instanceof Long l) {
-            ps.setLong(idx, l);
-        } else if (value instanceof Double d) {
-            ps.setDouble(idx, d);
-        } else if (value instanceof Boolean b) {
-            ps.setBoolean(idx, b);
-        } else if (value instanceof java.sql.Date d) {
-            ps.setDate(idx, d);
-        } else if (value instanceof byte[] b) {
-            ps.setBytes(idx, b);
-        } else {
-            ps.setString(idx, String.valueOf(value));
+            return;
         }
+        if (value instanceof Nul n) {
+            ps.setNull(idx, n.sqlType);
+            return;
+        }
+        TypedBinder binder = BINDERS.get(value.getClass());
+        if (binder != null) {
+            binder.bind(ps, idx, value);
+            return;
+        }
+        ps.setString(idx, String.valueOf(value));
     }
+
+    @FunctionalInterface
+    private interface TypedBinder {
+        void bind(PreparedStatement ps, int idx, Object value) throws SQLException;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static final Map<Class<?>, TypedBinder> BINDERS = Map.ofEntries(
+        Map.entry(Integer.class,       (ps, idx, v) -> ps.setInt(idx, (Integer) v)),
+        Map.entry(Long.class,          (ps, idx, v) -> ps.setLong(idx, (Long) v)),
+        Map.entry(Double.class,        (ps, idx, v) -> ps.setDouble(idx, (Double) v)),
+        Map.entry(Boolean.class,       (ps, idx, v) -> ps.setBoolean(idx, (Boolean) v)),
+        Map.entry(java.sql.Date.class, (ps, idx, v) -> ps.setDate(idx, (java.sql.Date) v)),
+        Map.entry(byte[].class,        (ps, idx, v) -> ps.setBytes(idx, (byte[]) v))
+    );
 }

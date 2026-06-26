@@ -2,7 +2,6 @@ package presentacio.config;
 
 import herramienta.config.Configuracio;
 import herramienta.config.ConfiguracioDb;
-import herramienta.ui.UITheme;
 import persistencia.contract.EscritorBiblioteca;
 import presentacio.util.UIComponents;
 
@@ -25,22 +24,16 @@ public final class ConfiguracioDataSection {
     }
 
     public static JPanel build(JDialog owner, EscritorBiblioteca cd, ConfiguracioDialogListener listener) {
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
-        JLabel lblSeccio = new JLabel(t("lbl_data"));
-        lblSeccio.setFont(UITheme.fontBold());
-        lblSeccio.setForeground(UITheme.palette().accent());
+        JLabel lblSeccio = UIComponents.sectionHeader("lbl_data");
 
-        JLabel lblDbSize = new JLabel(t("lbl_db_size"));
-        UIComponents.styleLabel(lblDbSize);
+        JLabel lblDbSize = UIComponents.label("lbl_db_size");
         JLabel lblDbSizeVal = new JLabel("...");
-        lblDbSizeVal.setFont(UITheme.fontBase());
-        lblDbSizeVal.setForeground(UITheme.palette().textDark());
+        lblDbSizeVal.setFont(herramienta.ui.UITheme.fontBase());
+        lblDbSizeVal.setForeground(herramienta.ui.UITheme.palette().textDark());
         new SwingWorker<Long, Void>() {
             @Override protected Long doInBackground() { return cd.obtenirDbSizeBytes(); }
             @Override protected void done() {

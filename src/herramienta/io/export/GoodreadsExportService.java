@@ -10,7 +10,9 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.joining;
 
@@ -73,29 +75,13 @@ public final class GoodreadsExportService {
             Double val = l.obtenirValoracio();
             if (val != null && val > 0) myRating = (int) Math.floor(val / 2.0 + 0.5);
             Integer any = l.obtenirAny();
-            // Nombre de columnes amb valor explícit que escrivim abans
-            // dels camps de cua buits. Si el header canvia, la secció
-            // d'emplenament s'adapta sense tocar aquest recompte.
+            FilaCtx ctx = new FilaCtx(l, rowId++, myRating, any, bookshelves, shelf);
             int writtenValues = 0;
-            pw.print(rowId++); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirNom())); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirAutor())); writtenValues++;
-            pw.print(','); pw.print(""); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ("=\"" + String.valueOf(l.obtenirISBN()) + "\"")); writtenValues++;
-            pw.print(','); pw.print(myRating); writtenValues++;
-            pw.print(','); pw.print(""); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirEditorial() != null ? l.obtenirEditorial() : "")); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirFormat() != null ? l.obtenirFormat() : "")); writtenValues++;
-            pw.print(','); pw.print(l.obtenirPagines() > 0 ? l.obtenirPagines() : ""); writtenValues++;
-            pw.print(','); pw.print(any != null && any > 0 ? any : ""); writtenValues++;
-            pw.print(','); pw.print(any != null && any > 0 ? any : ""); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirDataLectura() != null ? l.obtenirDataLectura() : "")); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "")); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(bookshelves)); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(shelf)); writtenValues++;
-            pw.print(','); pw.print(UtilitatsCsv.csvQ(l.obtenirNotes() != null ? l.obtenirNotes() : "")); writtenValues++;
+            for (int i = 0; i < COLUMN_EXTRACTORS.size(); i++) {
+                if (i > 0) pw.print(',');
+                pw.print(COLUMN_EXTRACTORS.get(i).apply(ctx));
+                writtenValues++;
+            }
             // Emplena les columnes restants amb valors buits. Un
             // separador per cada columna restant; el PrintWriter escriu
             // una fila acabada en coma seguida de salt de línia, que
@@ -108,4 +94,28 @@ public final class GoodreadsExportService {
             pw.println();
         }
     }
+
+    private record FilaCtx(Llibre l, int rowId, int myRating, Integer any, String bookshelves, String shelf) {}
+
+    private static final List<Function<FilaCtx, Object>> COLUMN_EXTRACTORS = List.of(
+        c -> c.rowId(),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirNom()),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirAutor()),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirAutor()),
+        c -> "",
+        c -> UtilitatsCsv.csvQ("=\"" + String.valueOf(c.l().obtenirISBN()) + "\""),
+        c -> UtilitatsCsv.csvQ("=\"" + String.valueOf(c.l().obtenirISBN()) + "\""),
+        c -> c.myRating(),
+        c -> "",
+        c -> UtilitatsCsv.csvQ(c.l().obtenirEditorial() != null ? c.l().obtenirEditorial() : ""),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirFormat() != null ? c.l().obtenirFormat() : ""),
+        c -> c.l().obtenirPagines() > 0 ? c.l().obtenirPagines() : "",
+        c -> c.any() != null && c.any() > 0 ? c.any() : "",
+        c -> c.any() != null && c.any() > 0 ? c.any() : "",
+        c -> UtilitatsCsv.csvQ(c.l().obtenirDataLectura() != null ? c.l().obtenirDataLectura() : ""),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirDataCompra() != null ? c.l().obtenirDataCompra() : ""),
+        c -> UtilitatsCsv.csvQ(c.bookshelves()),
+        c -> UtilitatsCsv.csvQ(c.shelf()),
+        c -> UtilitatsCsv.csvQ(c.l().obtenirNotes() != null ? c.l().obtenirNotes() : "")
+    );
 }

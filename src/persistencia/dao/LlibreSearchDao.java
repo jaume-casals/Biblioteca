@@ -4,13 +4,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
 import domini.Llibre;
 import domini.LlibreFilter;
 import domini.EspecificacioOrdenacio;
+import persistencia.internal.LlibreFieldBindings;
 import persistencia.internal.LlibreMapper;
 
 /** Cerca amb filtre unificat per a la taula principal de la biblioteca. */
@@ -80,7 +80,7 @@ public class LlibreSearchDao {
         }
         try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
-                vincularParam(ps, i + 1, params.get(i));
+                LlibreFieldBindings.bind(ps, i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) result.add(LlibreMapper.buildLlibre(rs));
@@ -103,27 +103,5 @@ public class LlibreSearchDao {
         if (value == null) return;
         sql.append(clause);
         params.add(value);
-    }
-
-    private static void vincularParam(PreparedStatement ps, int index, Object p) throws SQLException {
-        switch (p) {
-            case String  s -> ps.setString(index, s);
-            case Long    l -> ps.setLong(index, l);
-            case Integer i -> ps.setInt(index, i);
-            case Double  d -> ps.setDouble(index, d);
-            case Boolean b -> ps.setBoolean(index, b);
-            case null      -> {
-                // Avui el constructor SQL no insereix mai un null literal
-                // (tota condició està protegida amb != null o amb una
-                // comprovació de blanc), de manera que aquesta branca és
-                // morta. Registra a FINE perquè un futur lloc de crida
-                // que afegeixi un null literal es faci visible als logs
-                // sense llançar excepció.
-                java.util.logging.Logger.getLogger(LlibreSearchDao.class.getName())
-                    .fine("bindParam: null literal a l'índex " + index + " — hauria d'estar protegit aigües amunt");
-                ps.setObject(index, null, Types.NULL);
-            }
-            default        -> throw new IllegalArgumentException("Unsupported filter parameter type: " + p.getClass().getName());
-        }
     }
 }

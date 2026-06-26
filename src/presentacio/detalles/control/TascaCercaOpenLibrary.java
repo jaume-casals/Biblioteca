@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
 import herramienta.ui.DialegError;
@@ -117,16 +118,15 @@ public class TascaCercaOpenLibrary extends SwingWorker<TascaCercaOpenLibrary.Res
                 return;
             }
 
-            if (meta.containsKey("title") && vista.obtenirTextNom().getText().isEmpty())
-                vista.obtenirTextNom().setText(meta.get("title"));
-            if (meta.containsKey("autor") && vista.obtenirTextAutor().getText().isEmpty())
-                vista.obtenirTextAutor().setText(meta.get("autor"));
-            if (meta.containsKey("any") && vista.obtenirTextAny().getText().isEmpty())
-                vista.obtenirTextAny().setText(meta.get("any"));
-            if (meta.containsKey("isbn") && vista.obtenirTextISBN().getText().isEmpty())
-                vista.obtenirTextISBN().setText(meta.get("isbn"));
-            if (meta.containsKey("descripcio") && vista.obtenirTextDescripcio().getText().isEmpty())
-                vista.obtenirTextDescripcio().setText(meta.get("descripcio"));
+            Map<String, JTextField> fills = Map.of(
+                    "title", vista.obtenirTextNom(),
+                    "autor", vista.obtenirTextAutor(),
+                    "any", vista.obtenirTextAny(),
+                    "isbn", vista.obtenirTextISBN(),
+                    "descripcio", vista.obtenirTextDescripcio());
+            fills.forEach((k, f) -> {
+                if (meta.containsKey(k) && f.getText().isEmpty()) f.setText(meta.get(k));
+            });
 
             if (result.coverBlob != null && existingBlob == null) {
                 onCoverFound.accept(result.coverBlob);

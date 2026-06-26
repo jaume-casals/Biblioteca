@@ -1,18 +1,18 @@
 package domini;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class Llista {
-    private int id;
-    private String nom;
+public class Llista extends EntitatNomenada {
     private int ordre;
     private String color;
     // S'estableix només quan es recupera en el context d'un llibre concret
     private Double valoracioLlibre;
     private Boolean llegitLlibre;
 
-    public Llista(int id, String nom) { this.id = id; this.nom = nom; }
+    public Llista(int id, String nom) { super(id, nom); }
+
+    @Override
+    protected String claveNomBlank() { return "val_llista_blank"; }
 
     public int obtenirOrdre() { return ordre; }
     public void posarOrdre(int ordre) { this.ordre = ordre; }
@@ -29,30 +29,18 @@ public class Llista {
         this.color = color;
     }
 
-    public int obtenirId() { return id; }
-    public String obtenirNom() { return nom; }
-    public void posarNom(String nom) {
-        if (nom == null || nom.isBlank())
-            throw new BibliotecaException.Validacio(herramienta.i18n.I18n.t("val_llista_blank"));
-        this.nom = nom;
-    }
     public Double obtenirValoracioLlibre() { return valoracioLlibre; }
     public void posarValoracioLlibre(Double v) { valoracioLlibre = v; }
     public Boolean obtenirLlegitLlibre() { return llegitLlibre; }
     public void posarLlegitLlibre(Boolean l) { llegitLlibre = l; }
 
+    @Override
     public Map<String, Object> toMap() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", id);
-        m.put("nom", nom);
+        Map<String, Object> m = super.toMap();
         m.put("ordre", ordre);
         m.put("color", color);
         return m;
     }
-
-    /** Retorna nom — l'usa JComboBox per visualitzar. No és una representació de depuració. */
-    @Override
-    public String toString() { return nom; }
 
     @Override
     public boolean equals(Object o) {

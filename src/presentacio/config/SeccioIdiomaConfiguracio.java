@@ -1,7 +1,6 @@
 package presentacio.config;
 
 import herramienta.config.Configuracio;
-import herramienta.ui.UITheme;
 import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
@@ -18,23 +17,14 @@ public final class SeccioIdiomaConfiguracio {
     private SeccioIdiomaConfiguracio() {}
 
     public static JPanel build(JDialog owner) {
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
-        JLabel lblLang = new JLabel(t("lbl_language_setting"));
-        UIComponents.styleLabel(lblLang);
+        JLabel lblLang = UIComponents.label("lbl_language_setting");
         String[] langLabels = {t("opt_lang_ca"), t("opt_lang_es"), t("opt_lang_en")};
-        String[] langKeys = {"ca", "es", "en"};
-        JComboBox<String> cmbLang = new JComboBox<>(langLabels);
-        String curLang = Configuracio.obtenirLang();
-        for (int i = 0; i < langKeys.length; i++)
-            if (langKeys[i].equals(curLang)) { cmbLang.setSelectedIndex(i); break; }
-        cmbLang.setFont(UITheme.fontBase());
-        cmbLang.putClientProperty("id", "cmbLang");
+        JComboBox<String> cmbLang = UIComponents.combo("cmbLang", langLabels,
+            ConfiguracioConstants.LANG_KEYS, Configuracio.obtenirLang());
 
         gl.setHorizontalGroup(gl.createSequentialGroup()
             .addComponent(lblLang)

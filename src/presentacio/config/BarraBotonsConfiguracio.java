@@ -40,16 +40,11 @@ public final class BarraBotonsConfiguracio {
                                JTextField txtDefVal,
                                ConfiguracioDialogListener listener) {
 
-        JPanel panel = new JPanel();
-        panel.setBackground(UITheme.palette().bgPanel());
-        GroupLayout gl = new GroupLayout(panel);
-        panel.setLayout(gl);
-        gl.setAutoCreateGaps(true);
-        gl.setAutoCreateContainerGaps(true);
+        UIComponents.SectionPanel section = UIComponents.sectionPanel();
+        JPanel panel = section.panel();
+        GroupLayout gl = section.layout();
 
         UITheme.Tema[] themeValues = UITheme.Tema.values();
-        String[] fontSizeKeys = {"small", "medium", "large"};
-        String[] langKeys = {"ca", "es", "en"};
 
         JButton btnGuardar = new JButton(t("btn_save"));
         UIComponents.styleAccentButton(btnGuardar);
@@ -80,9 +75,9 @@ public final class BarraBotonsConfiguracio {
                 UITheme.Tema selTheme = themeValues[Math.max(0, cmbTheme.getSelectedIndex())];
                 UITheme.posarTheme(selTheme);
                 ConfiguracioUi.posarTheme(selTheme);
-                ConfiguracioUi.posarFontSize(fontSizeKeys[Math.max(0, cmbFont.getSelectedIndex())]);
+                ConfiguracioUi.posarFontSize(ConfiguracioConstants.FONT_SIZE_KEYS[Math.max(0, cmbFont.getSelectedIndex())]);
                 ConfiguracioUi.setCurrency((String) cmbCurrency.getSelectedItem());
-                ConfiguracioUi.posarLang(langKeys[Math.max(0, cmbLang.getSelectedIndex())]);
+                ConfiguracioUi.posarLang(ConfiguracioConstants.LANG_KEYS[Math.max(0, cmbLang.getSelectedIndex())]);
                 I18n.aplicarSwingOptionPane();
                 try { ConfiguracioUi.posarDefaultValoracio(Double.parseDouble(txtDefVal.getText().trim())); }
                 catch (NumberFormatException ignored) {}

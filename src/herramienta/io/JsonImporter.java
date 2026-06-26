@@ -4,12 +4,11 @@ import herramienta.text.ValidadorLlibre;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import domini.Llista;
 import domini.Llibre;
-import domini.Tag;
 import persistencia.contract.EscritorBiblioteca;
 import herramienta.ImportadorLlibres.ResultatImportacio;
 
@@ -45,34 +44,16 @@ public final class JsonImporter {
     public static ResultatImportacio run(JsonObject root, EscritorBiblioteca cd) throws Exception {
         int ok = 0, skipped = 0, err = 0;
         List<String> errDetails = new ArrayList<>();
-        List<Tag> existingTags = cd.obtenirAllTags();
-        Map<String, Tag> tagByNom = new HashMap<>();
-        for (Tag t : existingTags) tagByNom.put(t.obtenirNom(), t);
-        List<Llista> existingLlistes = cd.obtenirAllLlistes();
-        Map<String, Llista> llistaByNom = new HashMap<>();
-        for (Llista l : existingLlistes) llistaByNom.put(l.obtenirNom(), l);
+        RelationRemapper.RemapejadorIdEtiqueta tagRemap = new RelationRemapper.RemapejadorIdEtiqueta(cd);
+        RelationRemapper.RemapejadorIdPrestatgeria llistaRemap = new RelationRemapper.RemapejadorIdPrestatgeria(cd);
         Set<Long> existingIsbns = null;
         Map<Integer, Integer> tagIdMap = new HashMap<>();
         if (root.has("tags")) {
-            for (JsonElement te : root.getAsJsonArray("tags")) {
-                JsonObject to = te.getAsJsonObject();
-                int oldId = to.get("id").getAsInt();
-                String nom = to.get("nom").getAsString();
-                Tag existing = tagByNom.get(nom);
-                if (existing != null) { tagIdMap.put(oldId, existing.obtenirId()); }
-                else { Tag nt = cd.afegirTag(nom); tagIdMap.put(oldId, nt.obtenirId()); tagByNom.put(nom, nt); }
-            }
+            mapOldToNewIds(root.getAsJsonArray("tags"), tagIdMap, tagRemap::resolve);
         }
         Map<Integer, Integer> llistaIdMap = new HashMap<>();
         if (root.has("llistes")) {
-            for (JsonElement le : root.getAsJsonArray("llistes")) {
-                JsonObject lo = le.getAsJsonObject();
-                int oldId = lo.get("id").getAsInt();
-                String nom = lo.get("nom").getAsString();
-                Llista existing = llistaByNom.get(nom);
-                if (existing != null) { llistaIdMap.put(oldId, existing.obtenirId()); }
-                else { Llista nl = cd.afegirLlista(nom); llistaIdMap.put(oldId, nl.obtenirId()); llistaByNom.put(nom, nl); }
-            }
+            mapOldToNewIds(root.getAsJsonArray("llistes"), llistaIdMap, llistaRemap::resolve);
         }
         if (root.has("llibres")) {
             existingIsbns = new HashSet<>();
@@ -91,24 +72,7 @@ public final class JsonImporter {
                     boolean llegit = bo.has("llegit") && bo.get("llegit").getAsBoolean();
                     String imatge = bo.has("imatge") && !bo.get("imatge").isJsonNull() ? bo.get("imatge").getAsString() : "";
                     Llibre l = ValidadorLlibre.comprovarLlibre(isbn, nom, autor, any, desc, val, preu, llegit, imatge);
-                    if (bo.has("notes") && !bo.get("notes").isJsonNull()) l.posarNotes(bo.get("notes").getAsString());
-                    if (bo.has("pagines")) l.posarPagines(bo.get("pagines").getAsInt());
-                    if (bo.has("paginesLlegides")) l.posarPaginesLlegides(bo.get("paginesLlegides").getAsInt());
-                    if (bo.has("editorial") && !bo.get("editorial").isJsonNull()) l.posarEditorial(bo.get("editorial").getAsString());
-                    if (bo.has("serie") && !bo.get("serie").isJsonNull()) l.posarSerie(bo.get("serie").getAsString());
-                    if (bo.has("volum")) l.posarVolum(bo.get("volum").getAsInt());
-                    if (bo.has("dataCompra") && !bo.get("dataCompra").isJsonNull()) l.posarDataCompra(bo.get("dataCompra").getAsString());
-                    if (bo.has("dataLectura") && !bo.get("dataLectura").isJsonNull()) l.posarDataLectura(bo.get("dataLectura").getAsString());
-                    if (bo.has("idioma") && !bo.get("idioma").isJsonNull()) l.posarIdioma(bo.get("idioma").getAsString());
-                    if (bo.has("format") && !bo.get("format").isJsonNull()) l.posarFormat(bo.get("format").getAsString());
-                    if (bo.has("desitjat")) l.posarDesitjat(bo.get("desitjat").getAsBoolean());
-                    if (bo.has("paisOrigen") && !bo.get("paisOrigen").isJsonNull()) l.posarPaisOrigen(bo.get("paisOrigen").getAsString());
-                    if (bo.has("estat") && !bo.get("estat").isJsonNull()) l.posarEstat(bo.get("estat").getAsString());
-                    if (bo.has("exemplars")) l.posarExemplars(bo.get("exemplars").getAsInt());
-                    if (bo.has("llenguaOriginal") && !bo.get("llenguaOriginal").isJsonNull()) l.posarLlenguaOriginal(bo.get("llenguaOriginal").getAsString());
-                    if (bo.has("nomCa") && !bo.get("nomCa").isJsonNull()) l.posarNomCa(bo.get("nomCa").getAsString());
-                    if (bo.has("nomEs") && !bo.get("nomEs").isJsonNull()) l.posarNomEs(bo.get("nomEs").getAsString());
-                    if (bo.has("nomEn") && !bo.get("nomEn").isJsonNull()) l.posarNomEn(bo.get("nomEn").getAsString());
+                    aplicarCampsOpcionals(bo, l);
                     cd.afegirLlibre(l);
                     if (bo.has("tags") && bo.get("tags").isJsonArray()) {
                         for (JsonElement te : bo.getAsJsonArray("tags")) {
@@ -138,5 +102,46 @@ public final class JsonImporter {
             }
         }
         return new ResultatImportacio(ok, skipped, err, errDetails);
+    }
+
+    private static void mapOldToNewIds(JsonArray arr, Map<Integer, Integer> idMap,
+            java.util.function.Function<String, Integer> resolve) {
+        for (JsonElement e : arr) {
+            JsonObject o = e.getAsJsonObject();
+            idMap.put(o.get("id").getAsInt(), resolve.apply(o.get("nom").getAsString()));
+        }
+    }
+
+    private record CampOpcional(String key, java.util.function.BiConsumer<Llibre, JsonElement> apply,
+            boolean nullableString) {}
+
+    private static final CampOpcional[] CAMPS_OPCIONALS = {
+        new CampOpcional("notes", (l, el) -> l.posarNotes(el.getAsString()), true),
+        new CampOpcional("pagines", (l, el) -> l.posarPagines(el.getAsInt()), false),
+        new CampOpcional("paginesLlegides", (l, el) -> l.posarPaginesLlegides(el.getAsInt()), false),
+        new CampOpcional("editorial", (l, el) -> l.posarEditorial(el.getAsString()), true),
+        new CampOpcional("serie", (l, el) -> l.posarSerie(el.getAsString()), true),
+        new CampOpcional("volum", (l, el) -> l.posarVolum(el.getAsInt()), false),
+        new CampOpcional("dataCompra", (l, el) -> l.posarDataCompra(el.getAsString()), true),
+        new CampOpcional("dataLectura", (l, el) -> l.posarDataLectura(el.getAsString()), true),
+        new CampOpcional("idioma", (l, el) -> l.posarIdioma(el.getAsString()), true),
+        new CampOpcional("format", (l, el) -> l.posarFormat(el.getAsString()), true),
+        new CampOpcional("desitjat", (l, el) -> l.posarDesitjat(el.getAsBoolean()), false),
+        new CampOpcional("paisOrigen", (l, el) -> l.posarPaisOrigen(el.getAsString()), true),
+        new CampOpcional("estat", (l, el) -> l.posarEstat(el.getAsString()), true),
+        new CampOpcional("exemplars", (l, el) -> l.posarExemplars(el.getAsInt()), false),
+        new CampOpcional("llenguaOriginal", (l, el) -> l.posarLlenguaOriginal(el.getAsString()), true),
+        new CampOpcional("nomCa", (l, el) -> l.posarNomCa(el.getAsString()), true),
+        new CampOpcional("nomEs", (l, el) -> l.posarNomEs(el.getAsString()), true),
+        new CampOpcional("nomEn", (l, el) -> l.posarNomEn(el.getAsString()), true),
+    };
+
+    private static void aplicarCampsOpcionals(JsonObject bo, Llibre l) {
+        for (CampOpcional camp : CAMPS_OPCIONALS) {
+            if (!bo.has(camp.key())) continue;
+            JsonElement el = bo.get(camp.key());
+            if (camp.nullableString() && el.isJsonNull()) continue;
+            camp.apply().accept(l, el);
+        }
     }
 }

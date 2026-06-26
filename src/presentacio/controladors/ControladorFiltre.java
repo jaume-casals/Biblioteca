@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
@@ -108,42 +111,40 @@ public class ControladorFiltre {
     }
 
     void filtrar() {
-        domini.ConstructorFiltreLlibre b = domini.ConstructorFiltreLlibre.of();
+        domini.LlibreFilter f = domini.LlibreFilter.empty();
 
         String autorTyped = state.vista.obtenirTextAutor().getText().trim();
-        if (!autorTyped.isEmpty()) b.autor(autorTyped);
+        if (!autorTyped.isEmpty()) f.withAutor(autorTyped);
 
         String nomTyped = state.vista.obtenirTextNom().getText().trim();
-        if (!nomTyped.isEmpty()) b.nom(nomTyped);
+        if (!nomTyped.isEmpty()) f.withNom(nomTyped);
 
         String isbnText = state.vista.obtenirTextISBN().getText().trim();
         if (!isbnText.isEmpty()) {
-            b.isbn(analitzarLongField(state.vista.obtenirTextISBN(), isbnText));
+            f.withIsbn(analitzarLongField(state.vista.obtenirTextISBN(), isbnText));
         }
 
-        b.anyMin(analitzarIntField(state.vista.obtenirAnyMin()));
-        b.anyMax(analitzarIntField(state.vista.obtenirAnyMax()));
-        b.valoracioMin(analitzarDoubleField(state.vista.obtenirValoracioMin()));
-        b.valoracioMax(analitzarDoubleField(state.vista.obtenirValoracioMax()));
-        b.preuMin(analitzarDoubleField(state.vista.obtenirPreuMin()));
-        b.preuMax(analitzarDoubleField(state.vista.obtenirPreuMax()));
+        f.withAnyMin(analitzarIntField(state.vista.obtenirAnyMin()));
+        f.withAnyMax(analitzarIntField(state.vista.obtenirAnyMax()));
+        f.withValoracioMin(analitzarDoubleField(state.vista.obtenirValoracioMin()));
+        f.withValoracioMax(analitzarDoubleField(state.vista.obtenirValoracioMax()));
+        f.withPreuMin(analitzarDoubleField(state.vista.obtenirPreuMin()));
+        f.withPreuMax(analitzarDoubleField(state.vista.obtenirPreuMax()));
 
-        if (state.vista.obtenirCasellaLlegit().isSelected())  b.llegit(Boolean.TRUE);
-        if (state.vista.obtenirCasellaNoLlegit().isSelected()) b.llegit(Boolean.FALSE);
+        if (state.vista.obtenirCasellaLlegit().isSelected())  f.withLlegit(Boolean.TRUE);
+        if (state.vista.obtenirCasellaNoLlegit().isSelected()) f.withLlegit(Boolean.FALSE);
 
         Object selTag = state.vista.obtenirComboTagFilter().getSelectedItem();
-        if (selTag instanceof Tag) b.tagId(((Tag) selTag).obtenirId());
+        if (selTag instanceof Tag) f.withTagId(((Tag) selTag).obtenirId());
 
         String editorial = state.vista.obtenirFilterEditorial().getText().trim();
-        if (!editorial.isEmpty()) b.editorial(editorial);
+        if (!editorial.isEmpty()) f.withEditorial(editorial);
         String serie = state.vista.obtenirFilterSerie().getText().trim();
-        if (!serie.isEmpty()) b.serie(serie);
+        if (!serie.isEmpty()) f.withSerie(serie);
         String idioma = state.vista.obtenirFilterIdioma().getText().trim();
-        if (!idioma.isEmpty()) b.idioma(idioma);
+        if (!idioma.isEmpty()) f.withIdioma(idioma);
         String format = (String) state.vista.obtenirFilterFormat().getSelectedItem();
-        if (format != null && !format.isEmpty()) b.format(format);
-
-        LlibreFilter f = b.build();
+        if (format != null && !format.isEmpty()) f.withFormat(format);
 
         boolean dbPath = state.currentLlistaId == null && state.cd.esLargeLibrary();
         if (dbPath) {
@@ -234,22 +235,33 @@ public class ControladorFiltre {
         });
     }
 
+    private record FilterTextField(String key, Supplier<String> get, Consumer<String> set) {}
+
+    private FilterTextField[] textFilterFields() {
+        var v = state.vista;
+        return new FilterTextField[] {
+            new FilterTextField("nom", () -> v.obtenirTextNom().getText(), v.obtenirTextNom()::setText),
+            new FilterTextField("autor", () -> v.obtenirTextAutor().getText(), v.obtenirTextAutor()::setText),
+            new FilterTextField("isbn", () -> v.obtenirTextISBN().getText(), v.obtenirTextISBN()::setText),
+            new FilterTextField("anyMin", () -> v.obtenirAnyMin().getText(), v.obtenirAnyMin()::setText),
+            new FilterTextField("anyMax", () -> v.obtenirAnyMax().getText(), v.obtenirAnyMax()::setText),
+            new FilterTextField("valoracioMin", () -> v.obtenirValoracioMin().getText(), v.obtenirValoracioMin()::setText),
+            new FilterTextField("valoracioMax", () -> v.obtenirValoracioMax().getText(), v.obtenirValoracioMax()::setText),
+            new FilterTextField("preuMin", () -> v.obtenirPreuMin().getText(), v.obtenirPreuMin()::setText),
+            new FilterTextField("preuMax", () -> v.obtenirPreuMax().getText(), v.obtenirPreuMax()::setText),
+            new FilterTextField("editorial", () -> v.obtenirFilterEditorial().getText(), v.obtenirFilterEditorial()::setText),
+            new FilterTextField("serie", () -> v.obtenirFilterSerie().getText(), v.obtenirFilterSerie()::setText),
+            new FilterTextField("idioma", () -> v.obtenirFilterIdioma().getText(), v.obtenirFilterIdioma()::setText),
+        };
+    }
+
     void quitarFiltros() {
         state.vista.obtenirCasellaLlegit().setSelected(false);
         state.vista.obtenirCasellaNoLlegit().setSelected(false);
-        state.vista.obtenirAnyMin().setText("");
-        state.vista.obtenirAnyMax().setText("");
-        state.vista.obtenirValoracioMin().setText("");
-        state.vista.obtenirValoracioMax().setText("");
-        state.vista.obtenirPreuMin().setText("");
-        state.vista.obtenirPreuMax().setText("");
+        for (FilterTextField f : textFilterFields()) f.set().accept("");
         if (state.vista.obtenirComboTagFilter().getItemCount() > 0)
             state.vista.obtenirComboTagFilter().setSelectedIndex(0);
-        state.vista.obtenirFilterEditorial().setText("");
-        state.vista.obtenirFilterSerie().setText("");
-        state.vista.obtenirFilterIdioma().setText("");
         state.vista.obtenirFilterFormat().setSelectedIndex(0);
-        eliminarAlldataFiltros();
         host.pageCtrl().posarCurrentPage(0);
         host.mostrarPage(0);
     }
@@ -299,41 +311,19 @@ public class ControladorFiltre {
 
     Map<String, String> collectFilterState() {
         Map<String, String> m = new LinkedHashMap<>();
-        m.put("nom",          state.vista.obtenirTextNom().getText());
-        m.put("autor",        state.vista.obtenirTextAutor().getText());
-        m.put("isbn",         state.vista.obtenirTextISBN().getText());
-        m.put("anyMin",       state.vista.obtenirAnyMin().getText());
-        m.put("anyMax",       state.vista.obtenirAnyMax().getText());
-        m.put("valoracioMin", state.vista.obtenirValoracioMin().getText());
-        m.put("valoracioMax", state.vista.obtenirValoracioMax().getText());
-        m.put("preuMin",      state.vista.obtenirPreuMin().getText());
-        m.put("preuMax",      state.vista.obtenirPreuMax().getText());
-        m.put("llegit",       state.vista.obtenirCasellaLlegit().isSelected() ? "true"
+        for (FilterTextField f : textFilterFields()) m.put(f.key(), f.get().get());
+        m.put("llegit", state.vista.obtenirCasellaLlegit().isSelected() ? "true"
                             : state.vista.obtenirCasellaNoLlegit().isSelected() ? "false" : "");
-        m.put("editorial",    state.vista.obtenirFilterEditorial().getText());
-        m.put("serie",        state.vista.obtenirFilterSerie().getText());
-        m.put("idioma",       state.vista.obtenirFilterIdioma().getText());
         String fmt = (String) state.vista.obtenirFilterFormat().getSelectedItem();
-        m.put("format",       fmt != null ? fmt : "");
+        m.put("format", fmt != null ? fmt : "");
         return m;
     }
 
     void aplicarFilterState(Map<String, String> s) {
-        state.vista.obtenirTextNom().setText(s.getOrDefault("nom", ""));
-        state.vista.obtenirTextAutor().setText(s.getOrDefault("autor", ""));
-        state.vista.obtenirTextISBN().setText(s.getOrDefault("isbn", ""));
-        state.vista.obtenirAnyMin().setText(s.getOrDefault("anyMin", ""));
-        state.vista.obtenirAnyMax().setText(s.getOrDefault("anyMax", ""));
-        state.vista.obtenirValoracioMin().setText(s.getOrDefault("valoracioMin", ""));
-        state.vista.obtenirValoracioMax().setText(s.getOrDefault("valoracioMax", ""));
-        state.vista.obtenirPreuMin().setText(s.getOrDefault("preuMin", ""));
-        state.vista.obtenirPreuMax().setText(s.getOrDefault("preuMax", ""));
+        for (FilterTextField f : textFilterFields()) f.set().accept(s.getOrDefault(f.key(), ""));
         String llegit = s.getOrDefault("llegit", "");
         state.vista.obtenirCasellaLlegit().setSelected("true".equals(llegit));
         state.vista.obtenirCasellaNoLlegit().setSelected("false".equals(llegit));
-        state.vista.obtenirFilterEditorial().setText(s.getOrDefault("editorial", ""));
-        state.vista.obtenirFilterSerie().setText(s.getOrDefault("serie", ""));
-        state.vista.obtenirFilterIdioma().setText(s.getOrDefault("idioma", ""));
         state.vista.obtenirFilterFormat().setSelectedItem(s.getOrDefault("format", ""));
     }
 
@@ -378,51 +368,31 @@ public class ControladorFiltre {
         }
     }
 
-    private Integer analitzarIntField(JTextField field) {
-        String raw = field.getText().trim();
+    private <T> T parseField(JTextField field, String raw, Function<String, T> parser) {
         if (raw.isEmpty()) {
             netejarInvalidField(field);
             return null;
         }
         try {
-            int value = Integer.parseInt(raw);
+            T value = parser.apply(raw);
             netejarInvalidField(field);
             return value;
         } catch (NumberFormatException e) {
             markInvalidField(field);
             return null;
         }
+    }
+
+    private Integer analitzarIntField(JTextField field) {
+        return parseField(field, field.getText().trim(), Integer::parseInt);
     }
 
     private Long analitzarLongField(JTextField field, String raw) {
-        if (raw.isEmpty()) {
-            netejarInvalidField(field);
-            return null;
-        }
-        try {
-            long value = Long.parseLong(raw);
-            netejarInvalidField(field);
-            return value;
-        } catch (NumberFormatException e) {
-            markInvalidField(field);
-            return null;
-        }
+        return parseField(field, raw, Long::parseLong);
     }
 
     private Double analitzarDoubleField(JTextField field) {
-        String raw = field.getText().trim();
-        if (raw.isEmpty()) {
-            netejarInvalidField(field);
-            return null;
-        }
-        try {
-            double value = Double.parseDouble(raw);
-            netejarInvalidField(field);
-            return value;
-        } catch (NumberFormatException e) {
-            markInvalidField(field);
-            return null;
-        }
+        return parseField(field, field.getText().trim(), Double::parseDouble);
     }
 
     private void markInvalidField(JTextField field) {

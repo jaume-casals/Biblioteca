@@ -1,13 +1,12 @@
 package presentacio.renderers;
 
-import java.awt.Color;
 import java.awt.Component;
 import javax.swing.*;
 import javax.swing.table.*;
 
 import domini.Llibre;
-import herramienta.ui.UITheme;
 import presentacio.models.ModelTaulaBiblioteca;
+import presentacio.util.UIComponents;
 
 public class RenderitzadorBarraProgres extends JProgressBar implements TableCellRenderer {
 
@@ -36,8 +35,7 @@ public class RenderitzadorBarraProgres extends JProgressBar implements TableCell
         } else {
             setMaximum(1); setValue(0); setString("\u2014");
         }
-        setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
-        setForeground(selected ? Color.WHITE : UITheme.palette().textDark());
+        UIComponents.applySelectedColors(this, selected);
         return this;
     }
 }

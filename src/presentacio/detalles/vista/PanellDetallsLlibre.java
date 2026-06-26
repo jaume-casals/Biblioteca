@@ -10,8 +10,6 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -32,6 +30,8 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 import herramienta.i18n.I18n;
+import herramienta.text.EstatOptions;
+import herramienta.text.FormatOptions;
 import herramienta.ui.UITheme;
 
 public class PanellDetallsLlibre extends JDialog {
@@ -172,42 +172,14 @@ public class PanellDetallsLlibre extends JDialog {
 		afegirFieldEntry(grid, "textVolum",           I18n.t("field_volume"));
 		afegirFieldEntry(grid, "textIdioma",          I18n.t("field_language"));
 		afegirFieldEntry(grid, "textPaisOrigen",      I18n.t("field_country"));
-		afegirComboEntry(grid, "comboFormat",         I18n.t("field_format"),
-				herramienta.text.FormatOptions.withBlank());
-		afegirComboEntry(grid, "comboEstat",          I18n.t("field_estat"),
-				new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")});
+		afegirComboEntry(grid, "comboFormat",         I18n.t("field_format"), FormatOptions.withBlank());
+		afegirComboEntry(grid, "comboEstat",          I18n.t("field_estat"), EstatOptions.withBlank());
 		afegirCheckEntry(grid, "chckDesitjat",        I18n.t("field_wishlist"),
 				I18n.t("tip_desitjat"));
 		afegirCheckEntry(grid, "chckLlegit",          I18n.t("field_read"), null);
 		afegirFieldEntry(grid, "textPortada",         I18n.t("col_cover"));
 
-		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(UITheme.palette().bgPanel());
-		wrapper.add(grid, BorderLayout.NORTH);
-
-		JScrollPane scroll = new JScrollPane(wrapper,
-				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		scroll.setBorder(null);
-		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
-
-		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int ultimCols = 2;
-			@Override
-			public void componentResized(ComponentEvent e) {
-				int vpW = scroll.getViewport().getWidth();
-				if (vpW <= 0) return;
-				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != ultimCols) {
-					ultimCols = cols;
-					((GridLayout) grid.getLayout()).setColumns(cols);
-					grid.revalidate();
-					grid.repaint();
-				}
-			}
-		});
-
-		return scroll;
+		return UIComponents.responsiveGridScroll(grid, ENTRY_MIN_W);
 	}
 
 	JPanel buildNotesTab() {
@@ -251,51 +223,18 @@ public class PanellDetallsLlibre extends JDialog {
 		afegirFieldEntry(grid, "textNomEs",           I18n.t("field_title_es"));
 		afegirFieldEntry(grid, "textNomEn",           I18n.t("field_title_en"));
 
-		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(UITheme.palette().bgPanel());
-		wrapper.add(grid, BorderLayout.NORTH);
-
-		JScrollPane scroll = new JScrollPane(wrapper,
-				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		scroll.setBorder(null);
-		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
-
-		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int ultimCols = 2;
-			@Override
-			public void componentResized(ComponentEvent e) {
-				int vpW = scroll.getViewport().getWidth();
-				if (vpW <= 0) return;
-				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != ultimCols) {
-					ultimCols = cols;
-					((GridLayout) grid.getLayout()).setColumns(cols);
-					grid.revalidate();
-					grid.repaint();
-				}
-			}
-		});
-
-		return scroll;
+		return UIComponents.responsiveGridScroll(grid, ENTRY_MIN_W);
 	}
 
 	JTextField afegirFieldEntry(JPanel grid, String key, String label) {
-		JPanel entry = entryPanel();
-		JLabel lbl = makeLabel(label);
-		entry.add(lbl, BorderLayout.WEST);
 		JTextField field = new JTextField();
 		field.setEnabled(false);
 		field.setColumns(10);
 		UIComponents.styleField(field);
-		// Enllaça l'etiqueta al camp per a lectors de pantalla i
-		// navegació amb teclat. La implementació anterior també
-		// desava la parella a un RegistreCampsFormulari, però cap
-		// consumidor no el consultava mai (veure finding MEDIUM
-		// de tot.txt) — l'emmagatzematge era mort. La crida a
-		// setLabelFor té comportament visible per si sola, de
-		// manera que es conserva.
+		JPanel entry = entryPanel();
+		JLabel lbl = makeLabel(label);
 		lbl.setLabelFor(field);
+		entry.add(lbl, BorderLayout.WEST);
 		entry.add(field, BorderLayout.CENTER);
 		grid.add(entry);
 		registry.register(key, field);
@@ -303,31 +242,29 @@ public class PanellDetallsLlibre extends JDialog {
 	}
 
 	JComboBox<String> afegirComboEntry(JPanel grid, String key, String label, String[] items) {
-		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
 		JComboBox<String> combo = new JComboBox<>(items);
 		combo.setEnabled(false);
-		combo.setBackground(UITheme.palette().bgMain());
-		combo.setForeground(UITheme.palette().textDark());
-		combo.setFont(UITheme.fontBase());
-		entry.add(combo, BorderLayout.CENTER);
-		grid.add(entry);
-		registry.register(key, combo);
+		UIComponents.styleCombo(combo);
+		addEntry(grid, key, label, combo, null);
 		return combo;
 	}
 
 	JCheckBox afegirCheckEntry(JPanel grid, String key, String label, String tooltip) {
-		JPanel entry = entryPanel();
-		entry.add(makeLabel(label), BorderLayout.WEST);
 		JCheckBox chk = new JCheckBox("");
 		chk.setEnabled(false);
 		chk.setBackground(UITheme.palette().bgPanel());
 		chk.setHorizontalAlignment(SwingConstants.LEFT);
-		if (tooltip != null) chk.setToolTipText(tooltip);
-		entry.add(chk, BorderLayout.CENTER);
-		grid.add(entry);
-		registry.register(key, chk);
+		addEntry(grid, key, label, chk, tooltip);
 		return chk;
+	}
+
+	private void addEntry(JPanel grid, String key, String label, JComponent comp, String tooltip) {
+		JPanel entry = entryPanel();
+		entry.add(makeLabel(label), BorderLayout.WEST);
+		if (tooltip != null) comp.setToolTipText(tooltip);
+		entry.add(comp, BorderLayout.CENTER);
+		grid.add(entry);
+		registry.register(key, comp);
 	}
 
 	JPanel entryPanel() {

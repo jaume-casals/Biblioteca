@@ -1,14 +1,10 @@
 package presentacio.detalles.vista;
 
-
-
 import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -27,6 +23,8 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 import herramienta.i18n.I18n;
+import herramienta.text.EstatOptions;
+import herramienta.text.FormatOptions;
 import herramienta.ui.UITheme;
 import presentacio.formularis.RegistreCampsFormulari;
 import presentacio.formularis.RegistreCampsFormulari.Camp;
@@ -170,15 +168,11 @@ public class DialegDesarLlibres extends JDialog {
 		textNomEn      = reg.textField("textNomEn");
 
 		comboFormat    = reg.comboBox("comboFormat");
-		comboFormat.setModel(new javax.swing.DefaultComboBoxModel<>(herramienta.text.FormatOptions.withBlank()));
-		comboFormat.setBackground(UITheme.palette().bgMain());
-		comboFormat.setForeground(UITheme.palette().textDark());
-		comboFormat.setFont(UITheme.fontBase());
+		comboFormat.setModel(new javax.swing.DefaultComboBoxModel<>(FormatOptions.withBlank()));
+		UIComponents.styleCombo(comboFormat);
 		comboEstat     = reg.comboBox("comboEstat");
-		comboEstat.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"", I18n.t("estat_nou"), I18n.t("estat_bo"), I18n.t("estat_usat"), I18n.t("estat_deteriorat")}));
-		comboEstat.setBackground(UITheme.palette().bgMain());
-		comboEstat.setForeground(UITheme.palette().textDark());
-		comboEstat.setFont(UITheme.fontBase());
+		comboEstat.setModel(new javax.swing.DefaultComboBoxModel<>(EstatOptions.withBlank()));
+		UIComponents.styleCombo(comboEstat);
 		chckDesitjat   = reg.comprovarBox("chckDesitjat");
 		chckDesitjat.setBackground(UITheme.palette().bgPanel());
 		chckDesitjat.setHorizontalAlignment(SwingConstants.LEFT);
@@ -224,22 +218,7 @@ public class DialegDesarLlibres extends JDialog {
 		scroll.setBorder(null);
 		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
 		add(scroll, BorderLayout.CENTER);
-
-		scroll.getViewport().addComponentListener(new ComponentAdapter() {
-			private int ultimCols = 2;
-			@Override
-			public void componentResized(ComponentEvent e) {
-				int vpW = scroll.getViewport().getWidth();
-				if (vpW <= 0) return;
-				int cols = Math.max(1, vpW / ENTRY_MIN_W);
-				if (cols != ultimCols) {
-					ultimCols = cols;
-					((GridLayout) grid.getLayout()).setColumns(cols);
-					grid.revalidate();
-					grid.repaint();
-				}
-			}
-		});
+		UIComponents.attachResponsiveColumns(scroll, grid, ENTRY_MIN_W);
 
 		JPanel south = new JPanel(new BorderLayout(0, 2));
 		south.setBackground(UITheme.palette().bgPanel());

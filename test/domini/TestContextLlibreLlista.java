@@ -21,9 +21,9 @@ class TestContextLlibreLlista {
     }
 
     @Test
-    @DisplayName("of() factory returns equivalent record")
-    void ofFactory() {
-        var ctx = LlibreLlistaContext.of(123L, 4, "S", 0, null, null, null);
+    @DisplayName("canonical constructor returns expected record")
+    void canonicalConstructor() {
+        var ctx = new LlibreLlistaContext(123L, 4, "S", 0, null, null, null);
         assertThat(ctx.isbn()).isEqualTo(123L);
         assertThat(ctx.llistaId()).isEqualTo(4);
         assertThat(ctx.nom()).isEqualTo("S");

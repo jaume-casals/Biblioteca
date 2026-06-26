@@ -130,8 +130,8 @@ public class ControladorPersistencia {
 
 	public synchronized void afegirLlibre(Llibre llibre) throws java.sql.SQLException { libreDaoCore.insert(llibre); }
 	public synchronized void eliminarLlibre(Llibre llibre) throws java.sql.SQLException {
-		libreDaoCore.delete(llibre);
-		tagDao.invalidateLlibreTagCache();
+		if (llibre != null) eliminarLlibre(llibre.obtenirISBN());
+		else tagDao.invalidateLlibreTagCache();
 	}
 	public synchronized void eliminarLlibre(long ISBN) throws java.sql.SQLException {
 		libreDaoCore.delete(ISBN);
@@ -272,19 +272,20 @@ public class ControladorPersistencia {
 		public java.util.List<persistencia.row.PrestecRow> prestecs;
 		public java.util.List<persistencia.row.LecturaRow> lectures;
 	}
+	private static <T> java.util.List<Object[]> toObjectArray(java.util.List<T> rows,
+			java.util.function.Function<T, Object[]> mapper) {
+		return rows.stream().map(mapper).collect(java.util.stream.Collectors.toList());
+	}
+
 	/** @deprecated usa {@link #obtenirAllAutorRows()} — conservat per a consumidors que necessiten la forma Object[]. */
 	@Deprecated
 	public synchronized java.util.List<Object[]> obtenirAllAutors() {
-		return autorDao.obtenirAll().stream()
-				.map(r -> new Object[]{r.id(), r.nom()})
-				.collect(java.util.stream.Collectors.toList());
+		return toObjectArray(autorDao.obtenirAll(), r -> new Object[]{r.id(), r.nom()});
 	}
 	/** @deprecated usa {@link #obtenirAllLlibreAutorRows()} — conservat per a consumidors que necessiten la forma Object[]. */
 	@Deprecated
 	public synchronized java.util.List<Object[]> obtenirAllLlibreAutor() {
-		return autorDao.obtenirAllLlibreAutor().stream()
-				.map(r -> new Object[]{r.isbn(), r.autorId()})
-				.collect(java.util.stream.Collectors.toList());
+		return toObjectArray(autorDao.obtenirAllLlibreAutor(), r -> new Object[]{r.isbn(), r.autorId()});
 	}
 
 	public synchronized java.util.List<LlibreAutorRow> obtenirAllLlibreAutorRows() {

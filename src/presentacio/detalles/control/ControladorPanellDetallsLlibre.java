@@ -13,6 +13,7 @@ import herramienta.text.FieldAutoComplete;
 import herramienta.i18n.I18n;
 import herramienta.text.ValidadorLlibre;
 import herramienta.text.ParseHelpers;
+import herramienta.ui.Documents;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.listener.EnEliminarLlibre;
 import presentacio.detalles.vista.PanellDetallsLlibre;
@@ -92,31 +93,12 @@ public class ControladorPanellDetallsLlibre {
 		this.vista.obtenirBtnHistorialPrestecs().addActionListener(e -> historyHandler.mostrarHistorialPrestecs(l));
 		this.vista.obtenirBtnImprimir().addActionListener(e -> imprimirFitxa(l));
 
-		this.vista.obtenirTextPortada().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { previewPortada(); }
-		});
+		this.vista.obtenirTextPortada().getDocument().addDocumentListener(
+			Documents.onChange(this::previewPortada));
 
-		new javax.swing.SwingWorker<java.util.List<java.util.List<String>>, Void>() {
-			@Override protected java.util.List<java.util.List<String>> doInBackground() {
-				java.util.List<java.util.List<String>> lists = new java.util.ArrayList<>();
-				lists.add(cLlibres.obtenirDistinctAutorNames());
-				lists.add(cLlibres.obtenirDistinctValues("editorial"));
-				lists.add(cLlibres.obtenirDistinctValues("serie"));
-				lists.add(cLlibres.obtenirDistinctValues("idioma"));
-				return lists;
-			}
-			@Override protected void done() {
-				try {
-					java.util.List<java.util.List<String>> lists = get();
-					FieldAutoComplete.attach(vista.obtenirTextAutor(), lists.get(0));
-					FieldAutoComplete.attach(vista.obtenirTextEditorial(), lists.get(1));
-					FieldAutoComplete.attach(vista.obtenirTextSerie(), lists.get(2));
-					FieldAutoComplete.attach(vista.obtenirTextIdioma(), lists.get(3));
-				} catch (Exception e) { /* l'autocompletat és best-effort; el diàleg continua funcionant sense */ }
-			}
-		}.execute();
+		FieldAutoComplete.attachDistinct(cLlibres,
+			vista.obtenirTextAutor(), vista.obtenirTextEditorial(),
+			vista.obtenirTextSerie(), vista.obtenirTextIdioma());
 
 		this.vista.obtenirTextAny().setText(java.util.Objects.toString(l.obtenirAny(), ""));
 		this.vista.obtenirTextAutor().setText(java.util.Objects.toString(l.obtenirAutor(), ""));
@@ -148,11 +130,8 @@ public class ControladorPanellDetallsLlibre {
 
 		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.obtenirDisplayNom(herramienta.config.Configuracio.obtenirLang())));
 
-		this.vista.obtenirTextPaginesLlegides().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent e) { clampPaginesLlegides(); }
-		});
+		this.vista.obtenirTextPaginesLlegides().getDocument().addDocumentListener(
+			Documents.onChange(this::clampPaginesLlegides));
 	}
 
 	private void clampPaginesLlegides() {
@@ -382,19 +361,15 @@ public class ControladorPanellDetallsLlibre {
 					a.posarDataLectura(vista.obtenirTextDataLectura().getText().trim());
 					a.posarIdioma(vista.obtenirTextIdioma().getText().trim());
 					a.posarPaisOrigen(vista.obtenirTextPaisOrigen().getText().trim());
-					String fmt = (String) vista.obtenirComboFormat().getSelectedItem();
-					a.posarFormat(fmt != null && !fmt.isEmpty() ? fmt : null);
-					String estat = (String) vista.obtenirComboEstat().getSelectedItem();
-					a.posarEstat(estat != null && !estat.isEmpty() ? estat : null);
+					a.posarFormat(ParseHelpers.blankToNull((String) vista.obtenirComboFormat().getSelectedItem()));
+					a.posarEstat(ParseHelpers.blankToNull((String) vista.obtenirComboEstat().getSelectedItem()));
 					a.posarExemplars(exemplars);
 					a.posarLlenguaOriginal(vista.obtenirTextLlenguaOriginal().getText().trim());
-					String nc = vista.obtenirTextNomCa().getText().trim(); a.posarNomCa(nc.isEmpty() ? null : nc);
-					String nse = vista.obtenirTextNomEs().getText().trim(); a.posarNomEs(nse.isEmpty() ? null : nse);
-					String nen = vista.obtenirTextNomEn().getText().trim(); a.posarNomEn(nen.isEmpty() ? null : nen);
+					a.posarNomCa(ParseHelpers.blankToNull(vista.obtenirTextNomCa().getText().trim()));
+					a.posarNomEs(ParseHelpers.blankToNull(vista.obtenirTextNomEs().getText().trim()));
+					a.posarNomEn(ParseHelpers.blankToNull(vista.obtenirTextNomEn().getText().trim()));
 					a.posarDesitjat(vista.obtenirChckDesitjat().isSelected());
-					java.util.List<String> autors = java.util.Arrays.stream(vista.obtenirTextAutor().getText().split(","))
-						.map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
-					a.posarAutors(autors);
+					a.posarAutors(ParseHelpers.splitAutors(vista.obtenirTextAutor().getText()));
 					a.posarNotes(vista.obtenirTextNotes().getText());
 					a.posarPagines(pagines);
 					a.posarPaginesLlegides(paginesLlegides);
@@ -434,7 +409,7 @@ public class ControladorPanellDetallsLlibre {
 				new DialegError(e).mostrarErrorMessage();
 			}
 		}
-	}
+		}
 	}
 
 	private void posarEditMode(boolean enabled) {

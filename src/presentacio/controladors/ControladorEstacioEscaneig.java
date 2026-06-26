@@ -10,6 +10,7 @@ import presentacio.listener.EnActualitzarBBDD;
 import java.awt.Color;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
@@ -20,6 +21,15 @@ import javax.swing.SwingWorker;
 public class ControladorEstacioEscaneig {
 
 	public enum Outcome { ADDED, DUPLICATE, INVALID, NETWORK_ERROR, OTHER_ERROR }
+
+	private static final EnumMap<Outcome, Color> OUTCOME_COLORS = new EnumMap<>(Outcome.class);
+	static {
+		OUTCOME_COLORS.put(Outcome.ADDED, new Color(0, 128, 0));
+		OUTCOME_COLORS.put(Outcome.DUPLICATE, new Color(180, 140, 0));
+		OUTCOME_COLORS.put(Outcome.INVALID, new Color(170, 0, 0));
+		OUTCOME_COLORS.put(Outcome.NETWORK_ERROR, new Color(170, 0, 0));
+		OUTCOME_COLORS.put(Outcome.OTHER_ERROR, new Color(170, 0, 0));
+	}
 
 	public static final class Result {
 		public final Outcome outcome;
@@ -46,6 +56,14 @@ public class ControladorEstacioEscaneig {
 	private final LongAdder countAdded = new LongAdder();
 	private final LongAdder countDuplicate = new LongAdder();
 	private final LongAdder countError = new LongAdder();
+
+	private LongAdder counterFor(Outcome o) {
+		return switch (o) {
+			case ADDED -> countAdded;
+			case DUPLICATE -> countDuplicate;
+			default -> countError;
+		};
+	}
 	private volatile String statusText;
 	private volatile Color statusColor;
 
@@ -174,14 +192,9 @@ public class ControladorEstacioEscaneig {
 	}
 
 	private void finishOneResult(Result r) {
-		switch (r.outcome) {
-			case ADDED: countAdded.increment(); break;
-			case DUPLICATE: countDuplicate.increment(); break;
-			case INVALID: case NETWORK_ERROR: case OTHER_ERROR:
-				countError.increment(); break;
-		}
+		counterFor(r.outcome).increment();
 		statusText = r.message;
-		statusColor = colorFor(r.outcome);
+		statusColor = OUTCOME_COLORS.getOrDefault(r.outcome, Color.DARK_GRAY);
 
 		Runnable cb = onResult;
 		if (cb != null) {
@@ -201,16 +214,6 @@ public class ControladorEstacioEscaneig {
 				return;
 			}
 			runWorker(next);
-		}
-	}
-
-	private static Color colorFor(Outcome o) {
-		switch (o) {
-			case ADDED: return new Color(0, 128, 0);
-			case DUPLICATE: return new Color(180, 140, 0);
-			case INVALID: case NETWORK_ERROR: case OTHER_ERROR:
-				return new Color(170, 0, 0);
-			default: return Color.DARK_GRAY;
 		}
 	}
 

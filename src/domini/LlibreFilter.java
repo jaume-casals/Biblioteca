@@ -77,13 +77,15 @@ public class LlibreFilter {
     }
 
     public boolean teAnyFilter() {
-        return autor != null || nom != null || isbn != null
-            || anyMin != null || anyMax != null
-            || valoracioMin != null || valoracioMax != null
-            || preuMin != null || preuMax != null
-            || llegit != null || tagId != null
-            || editorial != null || serie != null
-            || format != null || idioma != null
-            || llistaId != null;
+        return java.util.stream.Stream.of(
+            autor, nom, isbn,
+            anyMin, anyMax,
+            valoracioMin, valoracioMax,
+            preuMin, preuMax,
+            llegit, tagId,
+            editorial, serie,
+            format, idioma,
+            llistaId
+        ).anyMatch(java.util.Objects::nonNull);
     }
 }

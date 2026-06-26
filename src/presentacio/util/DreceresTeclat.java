@@ -1,6 +1,7 @@
 package presentacio.util;
 
 import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
@@ -16,11 +17,18 @@ public final class DreceresTeclat {
     private DreceresTeclat() {}
 
     public static void bind(JRootPane root, KeyStroke ks, String name, Runnable action) {
-        InputMap im = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        ActionMap am = root.getActionMap();
+        bind(root, JComponent.WHEN_IN_FOCUSED_WINDOW, ks, name, action);
+    }
+
+    public static void bind(JComponent c, int when, KeyStroke ks, String name, Runnable action) {
+        InputMap im = c.getInputMap(when);
+        ActionMap am = c.getActionMap();
         im.put(ks, name);
         am.put(name, new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); }
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                action.run();
+            }
         });
     }
 }

@@ -54,15 +54,10 @@ public class UITheme {
             java.awt.Color cercarHighlightBg,
             java.awt.Color cercarHighlightFg) {}
 
-    /** Captura l'estat actual de Color en un registre Paleta immutable.
-     *  Els consumidors haurien de preferir {@code UITheme.palette().xxx} sobre
-     *  els accessos als camps crus {@code UITheme.XXX}. */
+    /** Retorna la paleta de temes activa (registre immutable). Els consumidors
+     *  haurien de preferir {@code UITheme.palette().xxx}. */
     public static Paleta palette() {
-        return new Paleta(BG_MAIN, BG_PANEL, ACCENT, ACCENT_ALT, TEXT_DARK, TEXT_MID,
-                BORDER_CLR, HEADER_BG, HEADER_FG, TABLE_GRID, TABLE_ALT,
-                SECONDARY_BTN_BG, FIELD_BG, NIMBUS_BLUE_GREY, DANGER, GREEN,
-                SIDEBAR_BG, SIDEBAR_ACCENT, SIDEBAR_HOVER_BG, SIDEBAR_TEXT, SIDEBAR_TEXT_MID, SIDEBAR_SEL_BG,
-                SEARCH_HIGHLIGHT_BG, SEARCH_HIGHLIGHT_FG);
+        return CURRENT;
     }
 
     public enum Tema {
@@ -90,28 +85,11 @@ public class UITheme {
     public static Tema obtenirTheme() { return currentTheme; }
     public static boolean esDark() { return currentTheme.dark; }
 
-    // ── Palette (updated by setDark) ─────────────────────────────────────────
-    // Tots els camps de paleta són private volatile — l'única porta pública
-    // és {@link #palette()}, que retorna una instantània nova a cada crida
-    // i per tant reflecteix sempre l'estat actual. Això evita que un lector
-    // fora de l'EDT observi un estat parcial durant un canvi de tema
-    // (BG_MAIN ja fosc mentre BG_PANEL encara és clar).
-    private static volatile Color BG_MAIN;
-    private static volatile Color BG_PANEL;
-    private static volatile Color ACCENT;
-    private static volatile Color ACCENT_ALT;
-    private static volatile Color TEXT_DARK;
-    private static volatile Color TEXT_MID;
-    private static volatile Color BORDER_CLR;
-    private static volatile Color HEADER_BG;
-    private static volatile Color HEADER_FG;
-    private static volatile Color TABLE_GRID;
-    private static volatile Color TABLE_ALT;
-
-    // Derivats — usats pels helpers d'estil de UIComponents (estil de la capa de panell).
-    private static volatile Color SECONDARY_BTN_BG;
-    private static volatile Color FIELD_BG;
-    private static volatile Color NIMBUS_BLUE_GREY;
+    // ── Palette ──────────────────────────────────────────────────────────────
+    // La paleta activa es manté com una sola referència immutable
+    // {@link #CURRENT}; {@link #palette()} la retorna directament. Com que
+    // {@code posarTheme} la canvia atòmicament, cap lector fora de l'EDT pot
+    // observar un estat parcial durant un canvi de tema.
 
     // ── Fixed colors (theme-independent) ─────────────────────────────────────
     public static final Color DANGER = new Color(0xC0392B);
@@ -122,14 +100,6 @@ public class UITheme {
      *  que la combinació àmbar fons / negre primer pla és compartida per tots els temes. */
     public static final Color SEARCH_HIGHLIGHT_BG = new Color(0xF39C12);
     public static final Color SEARCH_HIGHLIGHT_FG = new Color(0x000000);
-
-    // ── Sidebar colors (updated by setDark) ───────────────────────────────────
-    private static volatile Color SIDEBAR_BG;
-    private static volatile Color SIDEBAR_ACCENT;
-    private static volatile Color SIDEBAR_HOVER_BG;
-    private static volatile Color SIDEBAR_TEXT;
-    private static volatile Color SIDEBAR_TEXT_MID;
-    private static volatile Color SIDEBAR_SEL_BG;
 
     // ── Light palette (warm library theme) ───────────────────────────────────
     private static final Color L_BG_MAIN        = new Color(0xF5F3EE);
@@ -195,6 +165,53 @@ public class UITheme {
     private static final Color OC_FIELD_BG      = new Color(0xF5FBFF);
     private static final Color OC_NIMBUS_BG     = new Color(0x0077A8);
 
+    /** Munta una {@link Paleta} combinant els 14 colors principals del tema, els
+     *  6 colors de barra lateral i els colors fixos (danger/green/destacat de cerca). */
+    private static Paleta buildPaleta(
+            Color bgMain, Color bgPanel, Color accent, Color accentAlt, Color textDark, Color textMid,
+            Color borderClr, Color headerBg, Color headerFg, Color tableGrid, Color tableAlt,
+            Color secondaryBtn, Color fieldBg, Color nimbus,
+            Color sbBg, Color sbAccent, Color sbHover, Color sbText, Color sbTextMid, Color sbSel) {
+        return new Paleta(bgMain, bgPanel, accent, accentAlt, textDark, textMid, borderClr,
+                headerBg, headerFg, tableGrid, tableAlt, secondaryBtn, fieldBg, nimbus,
+                DANGER, GREEN, sbBg, sbAccent, sbHover, sbText, sbTextMid, sbSel,
+                SEARCH_HIGHLIGHT_BG, SEARCH_HIGHLIGHT_FG);
+    }
+
+    private static final java.util.EnumMap<Tema, Paleta> PALETTES = buildPalettes();
+
+    private static java.util.EnumMap<Tema, Paleta> buildPalettes() {
+        java.util.EnumMap<Tema, Paleta> m = new java.util.EnumMap<>(Tema.class);
+        m.put(Tema.LIGHT, buildPaleta(
+                L_BG_MAIN, L_BG_PANEL, L_ACCENT, L_ACCENT_ALT, L_TEXT_DARK, L_TEXT_MID,
+                L_BORDER_CLR, L_HEADER_BG, L_HEADER_FG, L_TABLE_GRID, L_TABLE_ALT,
+                L_SECONDARY_BTN, L_FIELD_BG, L_NIMBUS_BG,
+                new Color(0x2A2520), new Color(0xC48F45), new Color(0x3E342A),
+                new Color(0xE8E0D8), new Color(0x9B8E84), new Color(0x3D3028)));
+        m.put(Tema.DARK, buildPaleta(
+                D_BG_MAIN, D_BG_PANEL, D_ACCENT, D_ACCENT_ALT, D_TEXT_DARK, D_TEXT_MID,
+                D_BORDER_CLR, D_HEADER_BG, D_HEADER_FG, D_TABLE_GRID, D_TABLE_ALT,
+                D_SECONDARY_BTN, D_FIELD_BG, D_NIMBUS_BG,
+                new Color(0x1A1510), new Color(0xC48F45), new Color(0x2E241A),
+                new Color(0xE0D8D0), new Color(0x8B7E74), new Color(0x2A2010)));
+        m.put(Tema.SEPIA, buildPaleta(
+                SP_BG_MAIN, SP_BG_PANEL, SP_ACCENT, SP_ACCENT_ALT, SP_TEXT_DARK, SP_TEXT_MID,
+                SP_BORDER_CLR, SP_HEADER_BG, SP_HEADER_FG, SP_TABLE_GRID, SP_TABLE_ALT,
+                SP_SECONDARY_BTN, SP_FIELD_BG, SP_NIMBUS_BG,
+                new Color(0x2A1800), new Color(0xD4A040), new Color(0x3E270A),
+                new Color(0xF0E8D8), new Color(0x9B8870), new Color(0x4A3020)));
+        m.put(Tema.OCEAN, buildPaleta(
+                OC_BG_MAIN, OC_BG_PANEL, OC_ACCENT, OC_ACCENT_ALT, OC_TEXT_DARK, OC_TEXT_MID,
+                OC_BORDER_CLR, OC_HEADER_BG, OC_HEADER_FG, OC_TABLE_GRID, OC_TABLE_ALT,
+                OC_SECONDARY_BTN, OC_FIELD_BG, OC_NIMBUS_BG,
+                new Color(0x071828), new Color(0x40C8E0), new Color(0x1B2732),
+                new Color(0xC8E8F8), new Color(0x6898B0), new Color(0x102840)));
+        return m;
+    }
+
+    /** Paleta de temes activa. Es canvia atòmicament per {@link #posarTheme}. */
+    private static volatile Paleta CURRENT = PALETTES.get(Tema.LIGHT);
+
     // ── Fonts (rebuilt by rebuildFonts) ──────────────────────────────────────
     // Font privats amb accessors — la font pot ser nul·la després de
     // {@link #shutdown()}, per la qual cosa els accessors retornen
@@ -252,72 +269,7 @@ public class UITheme {
             java.util.logging.Logger.getLogger(UITheme.class.getName())
                 .warning("[UITheme] setTheme() called off EDT — theme changes must happen on the EDT");
         currentTheme = t;
-        switch (t) {
-            case DARK:
-                SIDEBAR_BG       = new Color(0x1A1510);
-                SIDEBAR_ACCENT   = new Color(0xC48F45);
-                SIDEBAR_HOVER_BG = new Color(0x2E241A);
-                SIDEBAR_TEXT     = new Color(0xE0D8D0);
-                SIDEBAR_TEXT_MID = new Color(0x8B7E74);
-                SIDEBAR_SEL_BG   = new Color(0x2A2010);
-                BG_MAIN          = D_BG_MAIN;   BG_PANEL    = D_BG_PANEL;
-                ACCENT           = D_ACCENT;    ACCENT_ALT  = D_ACCENT_ALT;
-                TEXT_DARK        = D_TEXT_DARK; TEXT_MID    = D_TEXT_MID;
-                BORDER_CLR       = D_BORDER_CLR;
-                HEADER_BG        = D_HEADER_BG; HEADER_FG   = D_HEADER_FG;
-                TABLE_GRID       = D_TABLE_GRID; TABLE_ALT  = D_TABLE_ALT;
-                SECONDARY_BTN_BG = D_SECONDARY_BTN;
-                FIELD_BG         = D_FIELD_BG;  NIMBUS_BLUE_GREY = D_NIMBUS_BG;
-                break;
-            case SEPIA:
-                SIDEBAR_BG       = new Color(0x2A1800);
-                SIDEBAR_ACCENT   = new Color(0xD4A040);
-                SIDEBAR_HOVER_BG = new Color(0x3E270A);
-                SIDEBAR_TEXT     = new Color(0xF0E8D8);
-                SIDEBAR_TEXT_MID = new Color(0x9B8870);
-                SIDEBAR_SEL_BG   = new Color(0x4A3020);
-                BG_MAIN          = SP_BG_MAIN;  BG_PANEL    = SP_BG_PANEL;
-                ACCENT           = SP_ACCENT;   ACCENT_ALT  = SP_ACCENT_ALT;
-                TEXT_DARK        = SP_TEXT_DARK; TEXT_MID   = SP_TEXT_MID;
-                BORDER_CLR       = SP_BORDER_CLR;
-                HEADER_BG        = SP_HEADER_BG; HEADER_FG  = SP_HEADER_FG;
-                TABLE_GRID       = SP_TABLE_GRID; TABLE_ALT = SP_TABLE_ALT;
-                SECONDARY_BTN_BG = SP_SECONDARY_BTN;
-                FIELD_BG         = SP_FIELD_BG; NIMBUS_BLUE_GREY = SP_NIMBUS_BG;
-                break;
-            case OCEAN:
-                SIDEBAR_BG       = new Color(0x071828);
-                SIDEBAR_ACCENT   = new Color(0x40C8E0);
-                SIDEBAR_HOVER_BG = new Color(0x1B2732);
-                SIDEBAR_TEXT     = new Color(0xC8E8F8);
-                SIDEBAR_TEXT_MID = new Color(0x6898B0);
-                SIDEBAR_SEL_BG   = new Color(0x102840);
-                BG_MAIN          = OC_BG_MAIN;  BG_PANEL    = OC_BG_PANEL;
-                ACCENT           = OC_ACCENT;   ACCENT_ALT  = OC_ACCENT_ALT;
-                TEXT_DARK        = OC_TEXT_DARK; TEXT_MID   = OC_TEXT_MID;
-                BORDER_CLR       = OC_BORDER_CLR;
-                HEADER_BG        = OC_HEADER_BG; HEADER_FG   = OC_HEADER_FG;
-                TABLE_GRID       = OC_TABLE_GRID; TABLE_ALT  = OC_TABLE_ALT;
-                SECONDARY_BTN_BG = OC_SECONDARY_BTN;
-                FIELD_BG         = OC_FIELD_BG;  NIMBUS_BLUE_GREY = OC_NIMBUS_BG;
-                break;
-            default: // LIGHT
-                SIDEBAR_BG       = new Color(0x2A2520);
-                SIDEBAR_ACCENT   = new Color(0xC48F45);
-                SIDEBAR_HOVER_BG = new Color(0x3E342A);
-                SIDEBAR_TEXT     = new Color(0xE8E0D8);
-                SIDEBAR_TEXT_MID = new Color(0x9B8E84);
-                SIDEBAR_SEL_BG   = new Color(0x3D3028);
-                BG_MAIN          = L_BG_MAIN;   BG_PANEL    = L_BG_PANEL;
-                ACCENT           = L_ACCENT;    ACCENT_ALT  = L_ACCENT_ALT;
-                TEXT_DARK        = L_TEXT_DARK; TEXT_MID    = L_TEXT_MID;
-                BORDER_CLR       = L_BORDER_CLR;
-                HEADER_BG        = L_HEADER_BG; HEADER_FG   = L_HEADER_FG;
-                TABLE_GRID       = L_TABLE_GRID; TABLE_ALT  = L_TABLE_ALT;
-                SECONDARY_BTN_BG = L_SECONDARY_BTN;
-                FIELD_BG         = L_FIELD_BG;  NIMBUS_BLUE_GREY = L_NIMBUS_BG;
-                break;
-        }
+        CURRENT = PALETTES.get(t);
         aplicarUIManager();
     }
 
@@ -345,14 +297,15 @@ public class UITheme {
     }
 
     public static void aplicarUIManager() {
-        UIManager.put("control",                   BG_MAIN);
-        UIManager.put("text",                      TEXT_DARK);
-        UIManager.put("nimbusBase",                ACCENT);
-        UIManager.put("nimbusBlueGrey",            NIMBUS_BLUE_GREY);
-        UIManager.put("nimbusFocus",               ACCENT);
-        UIManager.put("nimbusSelectionBackground", ACCENT);
+        Paleta p = CURRENT;
+        UIManager.put("control",                   p.bgMain());
+        UIManager.put("text",                      p.textDark());
+        UIManager.put("nimbusBase",                p.accent());
+        UIManager.put("nimbusBlueGrey",            p.nimbusBlueGrey());
+        UIManager.put("nimbusFocus",               p.accent());
+        UIManager.put("nimbusSelectionBackground", p.accent());
         UIManager.put("nimbusSelectedText",        Color.WHITE);
-        UIManager.put("Table.alternateRowColor",   TABLE_ALT);
+        UIManager.put("Table.alternateRowColor",   p.tableAlt());
         // Prevé el ClassCastException del pintor SynthBorder de Nimbus
         // als renderers de cel·la basats en label
         UIManager.put("Table.cellNoFocusBorder",      BorderFactory.createEmptyBorder(0, 2, 0, 2));

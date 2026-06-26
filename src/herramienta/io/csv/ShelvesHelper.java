@@ -58,4 +58,17 @@ public final class ShelvesHelper {
         if (llista == null) return;
         cd.afegirLlibreToLlista(isbn, llista.obtenirId(), valoracio, llegit);
     }
+
+    /**
+     * Divideix {@code raw} per {@code separador} i, per a cada nom no buit, crea o
+     * recupera el prestatge i hi afegeix el llibre. No fa res si {@code raw} és buit.
+     */
+    public static void afegirLlibreAPrestatges(EscritorBiblioteca cd, Map<String, Llista> cache,
+                                       long isbn, String raw, String separador,
+                                       double valoracio, boolean llegit) {
+        if (raw == null || raw.isEmpty()) return;
+        for (String s : raw.split(separador)) {
+            afegirLlibreAPrestatge(cd, cache, isbn, s.trim(), valoracio, llegit);
+        }
+    }
 }

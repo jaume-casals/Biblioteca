@@ -6,9 +6,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import herramienta.io.JsonHelpers;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Predicate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -97,8 +100,7 @@ public class ClientOpenLibrary {
 		put(r, "editorial",  jsonStr(info, "publisher"));
 		put(r, "descripcio", jsonStr(info, "description"));
 		put(r, "idioma",     jsonStr(info, "language"));
-		if (info.has("authors") && info.getAsJsonArray("authors").size() > 0)
-			r.put("autor", info.getAsJsonArray("authors").get(0).getAsString());
+		putFirstString(r, "autor", info, "authors");
 		if (info.has("pageCount")) r.put("pagines", String.valueOf(info.get("pageCount").getAsInt()));
 		if (info.has("publishedDate")) {
 			Matcher yr = Pattern.compile("^(\\d{4})").matcher(info.get("publishedDate").getAsString());
@@ -133,10 +135,8 @@ public class ClientOpenLibrary {
 			if (!root.has("docs") || root.getAsJsonArray("docs").isEmpty()) return r;
 			JsonObject doc = root.getAsJsonArray("docs").get(0).getAsJsonObject();
 			put(r, "title", jsonStr(doc, "title"));
-			if (doc.has("author_name") && doc.getAsJsonArray("author_name").size() > 0)
-				r.put("autor", doc.getAsJsonArray("author_name").get(0).getAsString());
-			if (doc.has("isbn") && doc.getAsJsonArray("isbn").size() > 0)
-				r.put("isbn", doc.getAsJsonArray("isbn").get(0).getAsString());
+			putFirstString(r, "autor", doc, "author_name");
+			putFirstString(r, "isbn", doc, "isbn");
 			if (doc.has("first_publish_year"))
 				r.put("any", String.valueOf(doc.get("first_publish_year").getAsInt()));
 		} catch (Exception e) {
@@ -157,28 +157,13 @@ public class ClientOpenLibrary {
 		String coverBase = testBaseUrl != null ? testBaseUrl : COVER_BASE;
 		String url = coverBase + "/b/isbn/" + isbn + COVER_SIZE + ".jpg";
 		byte[] result = null;
-		HttpURLConnection conn = null;
 		try {
-			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-			conn.setReadTimeout(READ_TIMEOUT_MS);
-			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
-			if (conn.getResponseCode() == 200) {
-				String ct = conn.getContentType();
-				boolean esGif = ct != null && ct.startsWith("image/gif");
-				if (!esGif) {
-					try (java.io.InputStream is = conn.getInputStream()) {
-						result = is.readAllBytes();
-					}
-				}
-			}
+			result = fetchBytes(url, c -> {
+				String ct = c.getContentType();
+				return ct == null || !ct.startsWith("image/gif");
+			});
 		} catch (Exception e) {
 			LOG.log(Level.FINE, "fetchCoverByISBN: ha fallat l'URL primària per a " + isbn, e);
-		} finally {
-			if (conn != null) {
-				try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
-				conn.disconnect();
-			}
 		}
 		if (result != null || testBaseUrl != null) return result;
 		try {
@@ -207,19 +192,7 @@ public class ClientOpenLibrary {
 			JsonObject imageLinks = volumeInfo.getAsJsonObject("imageLinks");
 			if (!imageLinks.has("thumbnail")) return null;
 			String thumbUrl = imageLinks.get("thumbnail").getAsString().replace("http://", "https://");
-			HttpURLConnection c2 = null;
-			try {
-				c2 = (HttpURLConnection) URI.create(thumbUrl).toURL().openConnection();
-				c2.setConnectTimeout(CONNECT_TIMEOUT_MS); c2.setReadTimeout(READ_TIMEOUT_MS);
-				c2.setRequestProperty("User-Agent", "Biblioteca/1.0");
-				if (c2.getResponseCode() != 200) return null;
-				try (java.io.InputStream is = c2.getInputStream()) { result = is.readAllBytes(); }
-			} finally {
-				if (c2 != null) {
-					try { if (c2.getErrorStream() != null) c2.getErrorStream().close(); } catch (Exception ignored) {}
-					c2.disconnect();
-				}
-			}
+			result = fetchBytes(thumbUrl);
 		} catch (Exception e) {
 			LOG.log(Level.FINE, "Ha fallat el fallback de Google a fetchCoverByISBN per a " + isbn, e);
 		}
@@ -249,28 +222,62 @@ public class ClientOpenLibrary {
 		throw last != null ? last : new java.io.IOException("No s'han fet reintents per a " + url);
 	}
 
-	private static String fetch(String url) throws java.io.IOException {
+	/** Obre una connexió HTTP amb els timeouts i el User-Agent estàndard de l'aplicació. */
+	private static HttpURLConnection open(String url) throws java.io.IOException {
 		HttpURLConnection conn;
 		try {
 			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
 		} catch (IllegalArgumentException e) {
 			throw new java.io.IOException("Malformed URL: " + url, e);
 		}
+		conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+		conn.setReadTimeout(READ_TIMEOUT_MS);
+		conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
+		return conn;
+	}
+
+	/** Tanca l'error stream (si n'hi ha) i desconnecta, ignorant qualsevol error. */
+	private static void disconnectQuietly(HttpURLConnection c) {
+		if (c == null) return;
+		try { if (c.getErrorStream() != null) c.getErrorStream().close(); } catch (Exception ignored) {}
+		c.disconnect();
+	}
+
+	private static String fetch(String url) throws java.io.IOException {
+		HttpURLConnection conn = open(url);
 		try {
-			conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-			conn.setReadTimeout(READ_TIMEOUT_MS);
-			conn.setRequestProperty("User-Agent", "Biblioteca/1.0");
 			int code = conn.getResponseCode();
-			if (code != 200) {
-				try { if (conn.getErrorStream() != null) conn.getErrorStream().close(); } catch (Exception ignored) {}
-				throw new java.io.IOException("HTTP " + code);
-			}
-			try (java.io.InputStream is = conn.getInputStream()) {
+			if (code != 200) throw new java.io.IOException("HTTP " + code);
+			try (InputStream is = conn.getInputStream()) {
 				return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 			}
 		} finally {
-			conn.disconnect();
+			disconnectQuietly(conn);
 		}
+	}
+
+	/** Descarrega el cos de la resposta; retorna {@code null} si el codi no és 200
+	 *  o si {@code accept} rebutja la connexió oberta (p. ex. GIF placeholder d'OL). */
+	private static byte[] fetchBytes(String url) throws IOException {
+		return fetchBytes(url, c -> true);
+	}
+
+	private static byte[] fetchBytes(String url, Predicate<HttpURLConnection> accept) throws IOException {
+		HttpURLConnection conn = open(url);
+		try {
+			if (conn.getResponseCode() != 200) return null;
+			if (!accept.test(conn)) return null;
+			try (InputStream is = conn.getInputStream()) {
+				return is.readAllBytes();
+			}
+		} finally {
+			disconnectQuietly(conn);
+		}
+	}
+
+	private static void putFirstString(Map<String, String> r, String dest, JsonObject o, String key) {
+		if (o.has(key) && o.getAsJsonArray(key).size() > 0)
+			r.put(dest, o.getAsJsonArray(key).get(0).getAsString());
 	}
 
 	private static String jsonStr(JsonObject obj, String key) {

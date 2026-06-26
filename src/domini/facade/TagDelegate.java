@@ -1,11 +1,12 @@
 package domini.facade;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import domini.BibliotecaException;
+import domini.SqlOp;
 import domini.Tag;
 import herramienta.i18n.I18n;
 
@@ -17,13 +18,18 @@ import herramienta.i18n.I18n;
  * mapa d'índex per id atòmicament sota el
  * {@link StateContext#lock() lock d'estat}.
  */
-public final class TagDelegate {
-
-    private final StateContext state;
+public final class TagDelegate extends NamedEntityDelegate<Tag> {
 
     public TagDelegate(StateContext state) {
-        this.state = state;
+        super(state);
     }
+
+    @Override protected List<Tag> list() { return state.tags(); }
+    @Override protected Map<Integer, Tag> mapById() { return state.tagsById(); }
+    @Override protected int createInDb(String nom) throws java.sql.SQLException { return state.persistence().crearTag(nom); }
+    @Override protected void renameInDb(int id, String newNom) throws java.sql.SQLException { state.persistence().reanomenarTag(id, newNom); }
+    @Override protected void deleteFromDb(int id) throws java.sql.SQLException { state.persistence().eliminarTag(id); }
+    @Override protected Tag newEntity(int id, String nom) { return new Tag(id, nom); }
 
     public List<Tag> obtenirAllTags() { return new ArrayList<>(state.tags()); }
 
@@ -35,47 +41,25 @@ public final class TagDelegate {
 
     public Tag afegirTag(String nom) {
         if (nom == null || nom.isBlank()) throw new BibliotecaException.Validacio(I18n.t("val_tag_blank"));
-        return state.withLockReturning(() -> {
-            try {
-                int id = state.persistence().crearTag(nom);
-                Tag t = new Tag(id, nom);
-                state.tags().add(t);
-                state.tagsById().put(id, t);
-                return t;
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-        });
+        return addInternal(nom);
     }
 
     public void eliminarTag(Tag tag) {
-        state.withLock(() -> {
-            try {
-                state.persistence().eliminarTag(tag.obtenirId());
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            state.tags().remove(tag);
-            state.tagsById().remove(tag.obtenirId());
-        });
+        deleteInternal(tag.obtenirId());
     }
 
     public void reanomenarTag(int id, String newNom) {
-        state.withLock(() -> {
-            try {
-                state.persistence().reanomenarTag(id, newNom);
-            } catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
-            Tag t = state.tagsById().get(id);
-            if (t != null) t.posarNom(newNom);
-        });
+        renameInternal(id, newNom);
     }
 
     public Set<Long> obtenirLlibresWithTag(int tagId) { return state.persistence().obtenirLlibresWithTag(tagId); }
     public List<Tag> obtenirTagsForLlibre(long isbn) { return state.persistence().obtenirTagsForLlibre(isbn); }
 
     public void afegirLlibreToTag(long isbn, int tagId) {
-        try { state.persistence().afegirLlibreToTag(isbn, tagId); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().afegirLlibreToTag(isbn, tagId));
     }
 
     public void eliminarLlibreFromTag(long isbn, int tagId) {
-        try { state.persistence().eliminarLlibreFromTag(isbn, tagId); }
-        catch (SQLException e) { throw new BibliotecaException(e.getMessage(), e); }
+        SqlOp.domain(() -> state.persistence().eliminarLlibreFromTag(isbn, tagId));
     }
 }

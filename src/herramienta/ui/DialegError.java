@@ -88,6 +88,26 @@ public class DialegError {
         else mostrarSystemErrorDialog();
     }
 
+    /** Bastida comuna de {@link JDialog} modal: títol, cos, botó per defecte,
+     *  empaquetat, centrat i visible. {@code beforeShow} s'executa després de
+     *  {@code pack} i abans de {@code setVisible}. */
+    private static JDialog buildModalDialog(String title, JComponent body, JButton defaultBtn,
+            java.util.function.Consumer<JDialog> beforeShow) {
+        JDialog dialog = new JDialog();
+        dialog.setTitle(title);
+        dialog.setModal(true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(body, BorderLayout.CENTER);
+        dialog.getRootPane().setDefaultButton(defaultBtn);
+        defaultBtn.addActionListener(ev -> dialog.dispose());
+        dialog.pack();
+        dialog.setLocationRelativeTo(null);
+        if (beforeShow != null) beforeShow.accept(dialog);
+        dialog.setVisible(true);
+        return dialog;
+    }
+
     // ── Validació (error de l'usuari) ──────────────────────────────────────────
 
     private void mostrarValidationDialog() {
@@ -131,26 +151,19 @@ public class DialegError {
         content.add(msgLbl, BorderLayout.CENTER);
         content.add(btnPanel, BorderLayout.SOUTH);
 
-        JDialog dialog = new JDialog();
-        dialog.setTitle(titol);
-        dialog.setModal(true);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setLayout(new BorderLayout());
-        dialog.add(header, BorderLayout.NORTH);
-        dialog.add(content, BorderLayout.CENTER);
-        dialog.pack();
-        dialog.setMinimumSize(new Dimension(360, dialog.getHeight()));
-        dialog.setLocationRelativeTo(null);
-        dialog.setResizable(false);
+        JPanel body = new JPanel(new BorderLayout());
+        body.setBackground(UITheme.palette().bgMain());
+        body.add(header, BorderLayout.NORTH);
+        body.add(content, BorderLayout.CENTER);
 
-        btnOk.addActionListener(ev -> dialog.dispose());
-        dialog.getRootPane().setDefaultButton(btnOk);
-        dialog.getRootPane().registerKeyboardAction(
-            ev -> dialog.dispose(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-            JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        dialog.setVisible(true);
+        buildModalDialog(titol, body, btnOk, d -> {
+            d.setMinimumSize(new Dimension(360, d.getHeight()));
+            d.setResizable(false);
+            d.getRootPane().registerKeyboardAction(
+                ev -> d.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        });
     }
 
     // ── Error del sistema / tècnic ────────────────────────────────────────────
@@ -185,23 +198,13 @@ public class DialegError {
         btnPanel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
         btnPanel.add(btnTancar);
 
-        JDialog dialog = new JDialog();
-        dialog.setTitle(titol);
-        dialog.setModal(true);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.getContentPane().setBackground(UITheme.palette().bgMain());
-        dialog.setLayout(new BorderLayout());
-        dialog.add(lblTitol, BorderLayout.NORTH);
-        dialog.add(scroll, BorderLayout.CENTER);
-        dialog.add(btnPanel, BorderLayout.SOUTH);
-        dialog.pack();
-        dialog.setLocationRelativeTo(null);
-        dialog.setResizable(true);
+        JPanel body = new JPanel(new BorderLayout());
+        body.setBackground(UITheme.palette().bgMain());
+        body.add(lblTitol, BorderLayout.NORTH);
+        body.add(scroll, BorderLayout.CENTER);
+        body.add(btnPanel, BorderLayout.SOUTH);
 
-        btnTancar.addActionListener(ev -> dialog.dispose());
-        dialog.getRootPane().setDefaultButton(btnTancar);
-
-        dialog.setVisible(true);
+        buildModalDialog(titol, body, btnTancar, d -> d.setResizable(true));
     }
 
     private static String escHtml(String s) {

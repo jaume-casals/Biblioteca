@@ -214,15 +214,7 @@ public class PanelTaulaCentral extends JPanel {
 	}
 
 	public void nameScrollBarButtons() {
-		nameScrollBar(scrollPaneJTable.getVerticalScrollBar());
-	}
-
-	private void nameScrollBar(javax.swing.JScrollBar sb) {
-		Component[] comps = sb.getComponents();
-		for (int i = 0; i < comps.length; i++) {
-			comps[i].getAccessibleContext().setAccessibleName(
-				i == 0 ? I18n.t("acc_scroll_up") : I18n.t("acc_scroll_down"));
-		}
+		UIComponents.nameScrollBar(scrollPaneJTable.getVerticalScrollBar());
 	}
 
 	public JButton obtenirBtnPaginaAnterior()     { return btnPaginaAnterior; }
