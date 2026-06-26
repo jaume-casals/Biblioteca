@@ -25,7 +25,7 @@ Walk every source file in the project, one by one. For each file, apply expert-l
 
 Before writing anything:
 
-1. Read `tot.txt` in the project root. It contains prior reviews. Ignore the `## Calibration` section from the prior run when learning — that section is self-critique metadata, not findings.
+1. Read `docs/code-reviewtot.txt`. It contains prior reviews. Ignore the `## Calibration` section from the prior run when learning — that section is self-critique metadata, not findings.
 2. Study the recurring themes, ignored issues, and patterns. Use them to raise the bar this run.
 3. Re-raise a prior issue only if (a) it was not fixed in the code AND (b) you can add new information (a more precise line range, a stronger fix, a previously missed edge case, or a new occurrence in another file). If neither condition holds, drop it.
 4. Drop issues that are pure style taste with no measurable impact. Escalate issues that affect correctness, performance, security, threading, or long-term maintainability.
@@ -45,8 +45,6 @@ Severity guide:
 - HIGH: clear anti-pattern, performance issue, or anything an expert would block a PR for.
 - MEDIUM: suboptimal but works; expert would rewrite on a refactor pass.
 - LOW: nitpick; only flag the most severe nitpick per file, and only if no CRITICAL/HIGH/MEDIUM exists for that file.
-
-Cap: at most 3 findings per file, ranked by severity. If a file genuinely has more, that means you are not ranking — re-rank and cut. Do not use an overflow bucket.
 
 Be nitpicky. Flag things like:
 - Works but not idiomatic Java (e.g. `new Integer(x)` → `Integer.valueOf(x)`)
@@ -80,4 +78,4 @@ Do not fabricate rejected findings. Only call out a rejection if one actually ha
 
 ## Output
 
-Write the complete review to `/home/j/Documents/DeV/Biblioteca/docs/code-review/tot.txt` in the project root. If `/home/j/Documents/DeV/Biblioteca/docs/code-review/tot.txt` already exists, REPLACE its contents (do not append). Do not modify any source file.
+Write the complete review to `docs/code-review/tot.txt` in the project root. If `docs/code-review/tot.txt` already exists, REPLACE its contents (do not append). Do not modify any source file.

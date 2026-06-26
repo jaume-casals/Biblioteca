@@ -1,21 +1,380 @@
-# tot.txt — Biblioteca code review (per-file findings)
+# Biblioteca — Code Review (autonomous pass)
 
-Severity guide: CRITICAL (bug / data loss / security / thread-safety / leak) · HIGH (anti-pattern, perf, PR-blocker) · MEDIUM (suboptimal but works) · LOW (most severe nitpick only if no CRITICAL/HIGH/MEDIUM). Cap: ≤3 findings per file, ranked.
-
-All per-file findings resolved.
+Scope: entire `src/` tree, file by file. Prior `tot.txt` declared "all per-file
+findings resolved", so this is a fresh, independent audit. Findings below were
+re-verified against current code (line ranges are current). Files not listed were
+judged correct enough to skip.
 
 ---
 
-## main/
+**[src/presentacio/util/EstatVistaBiblioteca.java]** — CRITICAL
+- `public final Deque<Llibre> undoBuffer = new ArrayDeque<>();` (line 27) is a
+  non-thread-safe collection that is mutated from background `SwingWorker`
+  threads (see `ControladorMenuContextual` / `ControladorAccionsLlibre`) and
+  read/popped on the EDT (`undoDelete`, line 181). `ArrayDeque` gives no happens-before and
+  is not safe for concurrent `push`/`removeLast`/`pop`; two concurrent batch
+  deletes (e.g. gallery delete + table delete) corrupt internal head/tail
+  indices → lost undo entries, `NullPointerException`, or an inconsistent size.
+  Root cause: shared mutable state crossing the EDT/worker boundary without
+  synchronization. Fix: use `java.util.concurrent.ConcurrentLinkedDeque` (and an
+  `AtomicInteger`/`size()` cap), or confine ALL mutations to the EDT by pushing
+  inside `done()` instead of `doInBackground()`.
 
-Files reviewed and skipped (clean).
+**[src/presentacio/controladors/ControladorMenuContextual.java]** — CRITICAL
+- `eliminarLlibresGaleria` (178-222) calls `state.undoBuffer.push(l)` and
+  `state.undoBuffer.removeLast()` (lines 194-195) inside `doInBackground()` —
+  i.e. off the EDT — on the shared `ArrayDeque`. This is one of the two writer
+  sites of the undo-buffer data race. Fix: collect the deleted `Llibre`s in the
+  worker and push them onto the deque in `done()` (EDT), or switch the field to a
+  concurrent deque.
+
+**[src/presentacio/controladors/ControladorAccionsLlibre.java]** — CRITICAL, HIGH
+- CRITICAL: `state.undoBuffer.push(l)` / `removeLast()` (lines 130, 137) run
+  inside `doInBackground()` while `undoDelete()` pops on the EDT — concurrent
+  access to the non-thread-safe `ArrayDeque` (same race as above). Fix as above.
+- HIGH: `mostrarEstadistiques` (~192) performs CPU-heavy aggregation plus several
+  synchronous data fetches directly on the EDT; for a large library this freezes
+  the UI. Fix: compute in a `SwingWorker.doInBackground()` and only build the
+  dialog in `done()`.
+- (Covered by DelegatLlibre fix) line 364 calls `state.cd.esLargeLibrary()` in a
+  worker's `done()` (EDT), which runs a `SELECT COUNT(*)`.
+
+**[src/domini/facade/DelegatLlibre.java]** — HIGH
+- `esLargeLibrary()` (92-93) → `comptarLlibresDB()` (237) → `persistence()
+  .comptarLlibres()` issues `SELECT COUNT(*) FROM llibre` on every call. The full
+  library is already resident in memory: `ControladorDomini` loads it at
+  construction (`new ArrayList<>(cp.obtenirAllLlibres())`, ControladorDomini:82)
+  and `getSize()` (88-90) already returns `state.bib().size()`. These methods are
+  invoked on the EDT from at least 8 sites — `ControladorAccionsLlibre:364`,
+  `ControladorPrestatgeria:69/85/90`, `ControladorPaginaTaula:65/70`,
+  `ControladorFiltre:148`, `ControladorMostrarBiblioteca:180` — so every list
+  selection, filter, page change and refresh blocks the EDT on a JDBC round-trip
+  for a number it already has in RAM. Fix: implement
+  `comptarLlibresDB()` as `state.withLockReturning(() -> state.bib().size())` and
+  derive `esLargeLibrary()` from it; this removes JDBC from all EDT call sites at
+  once.
+
+**[src/domini/ControladorDomini.java]** — MEDIUM
+- The constructor (80-85) eagerly loads the ENTIRE `llibre` table into
+  `state.bib()` unconditionally. This contradicts the whole "large library"
+  subsystem (`esLargeLibrary` → DB pagination via `obtenirLlibresPage` /
+  `comptarLlibresDB`): if every book is already in memory, the DB-pagination path
+  is dead weight; if a library is genuinely large, the startup `obtenirAllLlibres`
+  is the real scalability problem, not the `COUNT`. Pick one strategy — either
+  keep the in-memory model and serve counts/pages from `bib`, or make loading
+  lazy and never materialize the whole list. Today both coexist inconsistently.
+
+**[src/persistencia/dao/LlibreDaoCore.java]** — HIGH, MEDIUM
+- HIGH (wrong query result): `obtenirRecentlyAdded` (213-232) builds its SQL from
+  `LLIBRE_COLUMNS` (line 112), the unprefixed projection. `buildSelect` strips the
+  alias with `frag.replace("l.", "")` (line 134). Applied to the correlated author
+  subquery (line 48,
+  `... WHERE la.isbn = l.ISBN) AS autor`) this yields `... WHERE la.isbn = ISBN`.
+  In the subquery scope the only `isbn`-named column belongs to the inner
+  `llibre_autor la`, so unqualified `ISBN` binds to `la.isbn` (SQL is
+  case-insensitive), making the predicate `la.isbn = la.isbn` — a tautology. The
+  correlation to the outer `llibre` row is lost, so `GROUP_CONCAT` returns EVERY
+  author in the database for EVERY recently-added row. The in-code comment
+  (216-220) reasons only about column-name lookup and misses the broken
+  correlation; the doc comment at 110-111 even claims `LLIBRE_COLUMNS` has no
+  consumer ("cap avui") and marks it `@SuppressWarnings("unused")`, both untrue.
+  Fix: use the aliased form like `obtenirAll` —
+  `"SELECT " + LLIBRE_COLUMNS_L + " FROM llibre l ORDER BY l.data_afegit DESC LIMIT ?"`
+  — then delete the now-truly-unused `LLIBRE_COLUMNS` and its stale comment/suppression.
+- MEDIUM: every public method is `synchronized` (192, 213, 234, 249, …) even
+  though all access funnels through `ControladorPersistencia`, which serializes on
+  its own monitor, and sibling DAOs (`LlistaDao`, `AutorDao`) explicitly document
+  that DAO-level locking is unnecessary. The redundant `synchronized` is
+  inconsistent and misleads maintainers into thinking the DAO is independently
+  thread-safe. Same applies to `TagDao`, `LlibreBlobDao`, `LlibreLecturaDao`.
+  Fix: drop `synchronized` from the DAOs and centralize the contract in one
+  Javadoc on `ControladorPersistencia`.
+
+**[src/persistencia/dao/AutorDao.java]** — MEDIUM
+- `crearAutor` (41), `actualitzarAutor` (55) and `eliminarAutor` (65) have no
+  callers anywhere in `src/` — author rows are actually created/linked inside
+  `LlibreDaoCore.sincronitzarAutors`. They are dead public API that also duplicate
+  the author-write responsibility, inviting future drift (two code paths to keep
+  in sync). Fix: remove them, or route all author writes through them and delete
+  the duplicated logic in `LlibreDaoCore`.
+
+**[src/presentacio/controladors/ControladorPrestatgeria.java]** — HIGH
+- `onLlistaSelected` (60-…) calls `state.cd.obtenirLlibresInLlista(...)` (line 64)
+  and `state.cd.esLargeLibrary()` (line 69) synchronously inside the selection
+  handler — i.e. JDBC on the EDT — and the stats block does the same with
+  `comptarLlibresDB()` (85) and `esLargeLibrary()` (90). Selecting a shelf with a
+  cold DB freezes the UI. Fix: wrap the queries in a `SwingWorker`; apply results
+  in `done()`. (`esLargeLibrary` itself is fixed at the root in `DelegatLlibre`.)
+
+**[src/presentacio/controladors/ControladorFiltre.java]** — HIGH
+- `filtrar()` (110-…) runs DB queries on the EDT: `esLargeLibrary()` (148),
+  `obtenirLlibresWithTag(...)` (194) and `obtenirLlibresInLlista(...)` (196).
+  Typing in the filter / changing a tag therefore blocks the EDT on JDBC. Fix:
+  move the data acquisition into a `SwingWorker`; keep only model/table updates on
+  the EDT.
+
+**[src/presentacio/controladors/ControladorPaginaTaula.java]** — MEDIUM
+- `mostrarPage` (65-70) calls `cd.esLargeLibrary()` (65) and `cd.comptarLlibresDB()`
+  (70) on the EDT to decide pagination. Same JDBC-on-EDT class as above; lower
+  severity because it is gated behind `esUseDBPagination()`. Resolved once
+  `DelegatLlibre.comptarLlibresDB` serves from memory; otherwise wrap in a worker.
+
+**[src/herramienta/io/ServeiCopiaSeguretat.java]** — HIGH, MEDIUM
+- HIGH (backup integrity): `copiaSegToSQL` (~179) snapshots the main book rows but
+  then reads the relational tables (authors, lists, tags, loans, lectures) live,
+  outside the state lock, one DAO call at a time. While the auto-backup scheduler
+  runs (`scheduleAutoBackup`, started from `ControladorDomini:94`) the user can be
+  editing concurrently, so the dump can contain `llibre_autor`/`llibre_llista`
+  rows referencing an ISBN that is not in the book snapshot → dangling FK in the
+  `.sql`. On restore the FK-bearing `INSERT` fails and the whole transaction rolls
+  back (restore aborts) — a silent "my backup won't restore" failure. Fix: take
+  the entire snapshot (books + all relations) under a single
+  `state.withLockReturning(...)`, or run the dump inside one repeatable-read JDBC
+  transaction so all reads see one consistent point in time.
+- MEDIUM (fidelity): `sqlEsc` (~376) replaces newlines with spaces, so multi-line
+  text fields (description/notes) silently lose their line breaks on a
+  backup→restore round-trip. Fix: emit `\n` as `'...' || CHAR(10) || '...'` or
+  keep the literal newline and make the restore splitter (which already tracks
+  quote state) preserve in-quote newlines.
+
+**[src/domini/facade/DelegatCopiaSeguretat.java]** — HIGH
+- `copiaSegToSQL` (~47) takes `bib`/`llistes`/`tags` snapshots under
+  `state.lock()` but then hands off to `ServeiCopiaSeguretat`, which reads the
+  relational rows live without the lock (see finding above). The partial locking
+  gives a false sense of atomicity. Fix: snapshot the relational rows under the
+  same lock and pass them in, instead of letting the service re-read them.
+
+**[src/herramienta/io/ServeiCoberta.java]** — MEDIUM
+- Lock granularity: `obtenirCachedBytes` (63-79) holds `L1_LOCK` across
+  `Files.isRegularFile` + `Files.readAllBytes` (lines 69-70), so a single L2 disk
+  read serializes every other thread touching the cover cache (`putL1`,
+  `cacheBytes`, other reads). It is reachable on the EDT via
+  `ControladorExportacio.fetchMissingCovers` → `submitCoverFetch` →
+  `enqueueFetch` (which calls `obtenirCachedBytes` synchronously, line 117), so a
+  cache hit can perform disk I/O under a global lock on the EDT while six
+  `WRITE_POOL` threads contend the same lock. Fix: double-check — look up L1 under
+  the lock, release it, read the disk outside the lock, then `putL1` under the
+  lock.
+- Dead public API: `fetchAsync` (92), `obtenirCachedImage` (81) and the
+  `@Deprecated POOL` alias (48) have no callers. Remove them.
+- `cacheBytes` (164-177) swallows disk-write failures with an empty
+  `catch (Exception ignored)` (176) while the rest of the class logs at FINE;
+  inconsistent and hides a full/again-read-only cache dir. Log it.
+
+**[src/presentacio/controladors/ControladorExportacio.java]** — MEDIUM
+- `exportarPDF` (119-121) calls `ExportadorLlibres.exportarPDF(...)` directly from
+  the button handler — i.e. on the EDT. Unlike CSV/JSON/HTML (which all use a
+  `SwingWorker` + `DialegCarrega`), the print job (`PrinterJob.print()`) blocks the
+  calling thread until the spooler finishes, freezing the UI for a large library.
+  Fix: keep `printDialog()` on the EDT but run `print()` in a `SwingWorker`.
+
+**[src/herramienta/ExportadorLlibres.java]** — LOW
+- `exportarPDF` (~187) does the print dialog and `print()` on the calling thread,
+  which is the EDT today (see above); and the image MIME sniff (~257) is a
+  length/byte heuristic that can mislabel WebP/AVIF. Lower priority than the
+  call-site fix; consider `URLConnection.guessContentTypeFromStream`.
+
+**[src/persistencia/internal/ConnexioServidor.java]** — MEDIUM
+- `carregarDriverFromLib` opens a `URLClassLoader` that is never closed — a
+  resource/handle leak (minor in a long-lived app, but it keeps the jar file
+  locked on Windows). Use try-with-resources or retain and close it on shutdown.
+- `testConnection` (~147) ignores the supplied `password` for H2, passing an empty
+  `char[]`, so a "test connection" can succeed where the real connection would
+  fail (or vice-versa). Pass the actual credentials.
+
+**[src/herramienta/api/ClientOpenLibrary.java]** — MEDIUM
+- Dead code: `fetchJsonWithRetry` (~262) has no callers; the private helpers
+  `jsonStrNested` (~300) and `jsonArrayFirstField` (~304) merely wrap
+  `JsonHelpers` methods that callers already use directly. Remove the unused
+  members to cut the maintenance surface.
+
+**[src/herramienta/text/ValidadorLlibre.java]** — MEDIUM
+- ISBN-10/13 checksum validation is duplicated between `comprovarLlibre`
+  (~99-117) and `comprovarLlibreFromString` (~28-33). Worse, the ISBN-10 'X'
+  check-digit branch (~114) is unreachable: the value is parsed as a `long`
+  first, which cannot carry a trailing 'X', so a valid `...X` ISBN-10 is rejected
+  earlier. Fix: extract one `boolean isValidIsbn(String)` that validates on the
+  raw string (preserving 'X') and call it from both paths.
+
+**[src/persistencia/internal/LlibreFieldBindings.java]** — MEDIUM
+- `inserirColumnsSql()` (~110) and `inserirPlaceholders()` (~121) are dead.
+  Separately, `COLUMNS_INSERT` (~101) is a SECOND source of truth for INSERT
+  column order (used by `ServeiCopiaSeguretat`), parallel to
+  `LlibreDaoCore.Columna`. If one list is reordered without the other, INSERTs
+  bind values to the wrong columns — silent data corruption with no compile-time
+  signal. Fix: derive both the bind order and the backup column list from the
+  single `Columna` enum, and delete the dead helpers.
+
+**[src/domini/Llibre.java]** — MEDIUM
+- The cover blob getter (~220) returns the internal `byte[] imatgeBlob` by
+  reference, exposing mutable internal state — a caller can mutate the array in
+  place. Fix: return `imatgeBlob.clone()` (and clone on the setter), or document
+  the array as immutable and never hand it out.
+- Unused import `persistencia.dao.LlibreDaoCore` (line 7): a domain class importing
+  a persistence DAO is a layering smell (and the import is dead). Remove it.
+
+**[src/domini/AnalitzadorPrestatgeria.java]** — LOW
+- `exportarToCsv` (~43) hand-rolls CSV quoting instead of reusing `UtilitatsCsv`
+  used elsewhere, so quoting/escaping rules can diverge between exporters. Fix:
+  route through `UtilitatsCsv`.
+
+**[src/main/Executable.java]** — LOW
+- The static `splashRef` field (~24) is written/read across the splash thread and
+  the EDT without `volatile`, so there is no visibility guarantee on the
+  reference. Impact is low (splash lifecycle), but mark it `volatile` for
+  correctness.
+
+**[src/presentacio/detalles/control/ControladorPanellDetallsLlibre.java]** — MEDIUM
+- `imprimirFitxa` unboxes nullable boxed getters inside the `Printable` and NPEs:
+  line 240 `if (l.obtenirAny() > 0)` unboxes a nullable `Integer` (null when no
+  year, `Llibre.java:170`) and line 247 `l.obtenirLlegit() ? ...` unboxes a
+  nullable `Boolean` (`Llibre.java:204`). Printing a book with an unset year or
+  read-state aborts the print job, whereas the rest of the code guards these
+  (`Boolean.TRUE.equals`, `Objects.toString`). Fix:
+  `l.obtenirAny() != null && l.obtenirAny() > 0` and
+  `Boolean.TRUE.equals(l.obtenirLlegit())`.
+- The constructor guards `if (l != null && !l.teCampsPesatsCarregats())` (line 56)
+  but then dereferences `l` unconditionally (`l.obtenirImatgeBlob()` at 77, all
+  field reads from 121). The `l != null` guard is misleading: if `l` can be null
+  it NPEs at 77 regardless; drop the guard so the non-null contract is explicit.
+
+**[src/presentacio/galeria/ServeiImatgesCoberta.java]** — MEDIUM
+- The LRU `imageCache` is an access-ordered `LinkedHashMap` (`accessOrder=true`,
+  57-58), but `obtenirCached` (85-92) and `submit` (120-129) call
+  `imageCache.get(isbn)` holding only the READ lock. On an access-ordered map
+  `get()` relinks the node (`afterNodeAccess`) — a structural mutation — so the
+  concurrent readers the shared read lock permits would corrupt the list, making
+  the class's documented "concurrent EDT reads" guarantee (Javadoc 35-41) false.
+  Latent only because every caller currently runs on the EDT. Fix: take the write
+  lock in `obtenirCached`/`submit`, or set `accessOrder=false` and track recency
+  separately, and correct the Javadoc.
+
+**[src/presentacio/util/AjudaVisualitzacioCoberta.java]** — MEDIUM
+- Dead class: `carregarAndDisplay` (line 24) has no callers, so the whole utility
+  is unused. Its Javadoc (16-19) also claims `done()` verifies "the JLabel still
+  shows the same target", but the code only checks `isCancelled() || target == null`
+  (line 33) — no staleness guard, so a reused label could be overwritten by a slow
+  worker. Fix: delete the class, or wire it in and add the per-label token check
+  the Javadoc promises.
+
+**[src/presentacio/models/ModelTaulaLlista.java]** — MEDIUM
+- Dead class: never instantiated (`new ModelTaulaLlista(` appears nowhere). It also
+  hardcodes headers `{ "ID", "Nom", "Recompte", "Color" }` (line 17) instead of
+  `I18n.t(...)` like sibling models, and omits `getColumnClass`, so Integer
+  id/count columns would render left-aligned as strings. Fix: delete it, or route
+  headers through `I18n` and override `getColumnClass` if it is meant to be used.
+
+**[src/presentacio/panells/PanellBarraEsquerra.java]** — MEDIUM
+- Reused shelf buttons keep a stale `Llista` in their rename handler. The
+  double-click listener is created once (259-265) capturing `l`, but the reuse
+  branch (227-238) only refreshes text/icon/name, never the listener, and buttons
+  are cached by id in `sidebarShelfBtnMap`. So `onShelfRename.accept(l)` keeps the
+  first-seen snapshot; after a rename the label updates (228) but a later
+  double-click still offers the old name. Fix: capture `l.obtenirId()` and resolve
+  the current `Llista` at click time, or re-bind the listener on reuse.
+
+**[src/presentacio/panells/PanelGaleriaCobertes.java]** — MEDIUM
+- `aplicarTheme()` (268-272) silently drops the gallery selection and keyboard
+  focus: it calls `actualitzarLlibres(currentLlibres)`, which unconditionally
+  clears `selectedISBNs` and resets `focusedRef[0] = -1` (249-250). `adjustZoom`
+  (209-216) deliberately saves/restores both around the same rebuild; `aplicarTheme`
+  does not, so a theme/font toggle wipes the user's selection. Fix: extract the
+  save-rebuild-restore from `adjustZoom` into a shared helper and reuse it here.
+
+**[src/presentacio/renderers/RenderitzadorDestacatCerca.java]** — MEDIUM
+- Per-cell regex compilation on the render hot path (50-57): while a query is
+  active, every non-selected visible cell runs
+  `text.replaceAll("(?i)(" + escapedQ + ")", ...)`, recompiling a `Pattern` and
+  rebuilding the regex/replacement on every repaint of every cell. Fix: precompile
+  the `Pattern` and prebuild the replacement once in `posarSearchText(...)`
+  (refresh on palette change) and reuse them in the render loop.
+
+**[src/presentacio/renderers/EditorCasellaLlegit.java]** — MEDIUM
+- Toggling the "read" checkbox on a book with a blank/non-numeric ISBN throws and
+  shows an error dialog instead of persisting (listener 45-66): ISBN is nullable
+  and the model renders null as `""`, but the guard `if (isbnStr != null)` (52)
+  still passes for `""`, so `Long.parseLong(isbn)` (56) throws, is caught (61-63)
+  into a `DialegError`, and the flag is never saved. Fix: guard with
+  `isbnStr != null && !isbnStr.isBlank()` (and confirm it parses) before submitting.
+
+**[src/presentacio/formularis/LligadorFormulariLlibre.java]** — MEDIUM
+- `carregarCore` (line 28) does `vincularString(isbn, String.valueOf(l.obtenirISBN()))`;
+  `obtenirISBN()` is a nullable `Long`, so for a null ISBN this writes the literal
+  string `"null"` into the field (the null guard in `vincularString` only sees the
+  already-stringified value). Note `obtenirAny()` is correctly guarded on line 31.
+  Fix: `vincularString(isbn, l.obtenirISBN() != null ? String.valueOf(l.obtenirISBN()) : "")`.
+
+**[src/presentacio/config/SeccioAparençaConfiguracio.java]** — MEDIUM
+- `reloadFromConfig` (line 110) sets the theme combo from
+  `UITheme.obtenirTheme().ordinal()` (the live applied theme) while every other
+  field in the method (111-119) and `build()` (39) read from the freshly
+  `Configuracio.reload()`'d persisted values. `Configuracio.reload()` does not
+  update `UITheme.currentTheme`, so after an external/API config change the theme
+  combo shows the stale applied value. Fix: use `Configuracio.obtenirTheme().ordinal()`.
+
+**[src/presentacio/panells/PanelTaulaCentral.java]** — LOW
+- Dead field `headerLabel` (line 75) with a misleading comment (71-74) claiming it
+  is a reused cache for the header renderer; the renderer (120-151) mutates
+  `super`'s returned `JLabel` and never reads it. Remove the field and comment.
+
+**[src/presentacio/panells/PantallaInici.java]** — LOW
+- Unused local `ScheduledFuture<?> future` in `hide()` (70-72): the
+  `SCHEDULER.schedule(...)` result is assigned but never read or cancelled. Drop
+  the assignment.
+
+**[src/presentacio/renderers/RenderitzadorBarraProgres.java]** — LOW
+- Exception-driven control flow (22-34): `((ModelTaulaBiblioteca) t.getModel())`
+  (24) is an unguarded cast and `catch (Exception)` (32) is used for the normal
+  "no data" path, swallowing genuine errors into a "—" cell. Sibling renderers use
+  `instanceof ... model`. Fix: `if (t.getModel() instanceof ModelTaulaBiblioteca model)`
+  and reserve the catch for unexpected errors.
+
+**[src/presentacio/detalles/control/ControladorDialegDesarLlibres.java]** — LOW
+- The convenience constructors `(vista)` (36-38) and `(vista, callback)` (40-42)
+  delegate with `cd = null`, but the 3-arg constructor throws
+  `IllegalArgumentException` on null `cd` (60), so they unconditionally throw if
+  called. Both real call sites use the 3-arg form. Remove the two dead constructors.
+
+**[src/presentacio/util/AjudaEstadistiques.java]** — LOW
+- `buildReadingPacePanel` uses `int daysLeft = 365 - dayOfYear;` (191); in a leap
+  year `dayOfYear` reaches 366, so on Dec 31 `daysLeft` is `-1` (and off-by-one all
+  year). Fix: `LocalDate.now().lengthOfYear() - dayOfYear`.
+
+**[src/presentacio/config/SeccioDbConfiguracio.java]** — LOW
+- Unused imports: `javax.swing.JFileChooser` (11) is never referenced and
+  `persistencia.internal.ConnexioServidor` (21) is redundant (the sole use at 87 is
+  fully qualified). Remove both.
+
+**[src/presentacio/dialegs/DialegCarrega.java]** — LOW
+- Wildcard imports `javax.swing.*` / `java.awt.*` (4-5) deviate from the
+  explicit-import convention used elsewhere in `presentacio`. Replace with explicit
+  imports.
 
 ---
 
 ## Calibration
 
-1. **Weakest finding.** The HIGH in `ControladorAccionsLlibre.java` about JDBC-on-EDT in `enRefrescarDades` is grounded — the sibling `refresh()` already uses a `SwingWorker` so the safe pattern is one method away — but I did not produce a runnable measurement (latency spike after Save in Settings on a 10k library). To strengthen: a thread-dump or jstack of `enRefrescarDades` against a synthetic 10k library, demonstrating the EDT block exceeds the 100 ms "Noticeable" threshold of the Swing repaint budget. As-is, the finding is correct but the magnitude is inferred, not measured.
+1. Weakest finding: the `ServeiCoberta` lock-across-I/O (MEDIUM). The reasoning
+   that it stalls the EDT depends on the `fetchMissingCovers` path hitting an L2
+   *cache hit* (the only branch that calls `Files.readAllBytes` under the lock);
+   in that flow the covers are by definition missing, so most calls only do a
+   `Files.isRegularFile` stat under the lock. Stronger evidence would be an EDT
+   sample/stack capture showing time parked on `L1_LOCK` during a real
+   `readAllBytes`, or a microbenchmark of cache-access latency under WRITE_POOL
+   contention. The lock-granularity defect itself is real regardless.
+2. New class to look for next run: this run surfaced a recurring pattern — NPEs and
+   `NumberFormatException`s from unboxing/stringifying nullable boxed getters
+   (`obtenirISBN():Long`, `obtenirAny():Integer`, `obtenirLlegit():Boolean`) at
+   `imprimirFitxa`, `EditorCasellaLlegit`, and `LligadorFormulariLlibre`. Next run
+   I will do a dedicated codebase-wide sweep for every unguarded use of those
+   nullable getters. Still un-audited: (a) dynamic `ORDER BY`/sort-column
+   whitelisting in `LlibreSearchDao` for SQL-injection via user-chosen sort keys,
+   and (b) i18n key coverage (hardcoded user-facing strings / missing `I18n.t`).
+3. Rejected this run (verified, then dropped to avoid false positives): the
+   "restore corrupts on `;`/`--` inside data" idea — `processarLine` correctly
+   tracks quote state, so only multi-line literals lose newlines, which `sqlEsc`
+   already prevents; and the "cover write sets has_blob=true with a null blob"
+   idea — `has_blob` is a computed subquery `(imatge_blob IS NOT NULL)`, so a null
+   blob simply reports `false`.
 
-2. **New class to look for next run.** I did not systematically audit `try-finally` blocks on `HttpURLConnection` and `InputStream` returns across the codebase beyond `ClientOpenLibrary` and `ServeiCoberta`. Several SwingWorkers call `cd.obtenirLlibreBlob(isbn)` via `LlibreBlobDao` and discard the byte[] return without `try-with-resources`-aware guarantees on the underlying stream. The next pass should trace every byte[]-returning JDBC path through `try { ... } finally { ... }` to confirm no stream/connection escape on the JDBC side (e.g., `LlibreDaoCore.obtenirRecentlyAdded` and `obtenirAll` both run unbuffered on the same `con` field without per-query resource isolation — fine for sync but a hazard under future async migrations).
-
-3. **confidence: 70.** I read ~165 source files directly (no subagents), so every line cited in a finding is in the editor; CRITICAL and HIGH are grounded in concrete code paths (lock-ordering violation in `DelegatLlibre.actualitzarLlibre`, JDBC-on-EDT in `ControladorAccionsLlibre.enRefrescarDades`, static `synchronized rateLimit()` in `ClientOpenLibrary`, un-synced disk read in `ServeiCoberta.obtenirCachedBytes`). MEDIUM and LOW carry more uncertainty — many of the LOWs would be dismissed by the author with "we know, it's not worth fixing now." The dominant confidence risk is the JDBC-on-EDT cluster: I spot-checked the EDT path in `enRefrescarDades` once but did not exhaustively trace every EDT listener in `ConfiguracioDialogListener` callers; a config dialog that fires `enCanviarTema` from another branch could be worse than what I report.
+confidence: 72

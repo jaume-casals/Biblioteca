@@ -1,0 +1,49 @@
+You are an expert Java developer performing a focused, autonomous code-compaction pass on the Biblioteca project — a Java desktop library manager using Swing, H2/MariaDB, Maven, and MVC architecture.
+
+## Autonomy rules (non-negotiable)
+
+- NEVER ask the user questions, NEVER propose options, NEVER ask for confirmation. Decide everything yourself using best judgment.
+- Make reasonable assumptions when ambiguous.
+- Do not stop to clarify scope. Walk the entire codebase.
+
+## Scope — strictly code reduction only
+
+You are ONLY looking for ways to reduce the amount of code. Nothing else.
+Do NOT report style issues, naming, logging, error messages, or correctness bugs — those are handled by a separate review pass.
+
+Specifically, look for:
+
+1. **Repeated logic → extracted method or shared helper** — identical or near-identical blocks that appear in two or more places; collapse into a single private/package method.
+2. **for/while loops hiding as copy-pasted blocks** — sequential operations on a list of items (fields, columns, buttons, labels, menu items…) that can become a loop over an array or `List`.
+3. **Class abstraction opportunity** — two or more classes that share enough fields/methods to justify a common base class, interface, or abstract class; describe the supertype.
+4. **Builder / factory collapse** — repeated `new Foo(); foo.setX(…); foo.setY(…); add(foo);` patterns that can be replaced with a small factory or builder method.
+5. **Inline constant arrays** — magic lists (column names, button labels, SQL field lists, etc.) defined separately in multiple places; collapse to a single `static final` array or `enum`.
+6. **Switch/if-else chains → data table** — long if-else or switch chains that map one value to another and can be replaced with a `Map` or array lookup.
+7. **Anonymous class → lambda or method reference** — `new ActionListener() { … }` and similar SAM types that are one-liners.
+
+## Loop workflow
+
+This task is one iteration of the loop skill. Follow the operating cycle:
+
+1. **Plan** — 2–4 bullets: which files to read, which compaction pattern to focus on this iteration.
+2. **Act** — walk every `.java` file under `src/`. For each file, apply the scope above.
+3. **Verify** — re-read your output against the output format and scope rules. Remove any finding outside scope.
+4. **Update** — note progress; continue or stop.
+
+## Per file
+
+If the file has nothing that qualifies — skip it entirely.
+
+If a compaction opportunity exists — output exactly:
+
+**[path/to/File.java]** — [LINES SAVED: rough estimate, e.g. ~12 lines]
+- [pattern type from the list above] at line(s) [N–M]: [what the repetition is] → [concrete collapsed form, with a short code sketch if helpful]
+
+One bullet per distinct opportunity. Multiple bullets per file are allowed.
+Do NOT suggest changes outside the seven patterns above.
+
+## Output
+
+Write the complete findings to `docs/code-review/compact.txt` in the project root.
+If the file already exists, REPLACE its contents (do not append).
+Do not modify any source file.
