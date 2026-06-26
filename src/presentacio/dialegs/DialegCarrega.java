@@ -1,8 +1,17 @@
 package presentacio.dialegs;
 
 import herramienta.ui.UITheme;
-import javax.swing.*;
-import java.awt.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingConstants;
+import javax.swing.Timer;
+
+import java.awt.BorderLayout;
+import java.awt.Frame;
 
 public class DialegCarrega {
 

@@ -59,17 +59,26 @@ public class ControladorPrestatgeria {
 
     void onLlistaSelected() {
         Object sel = state.vista.obtenirComboLlistes().getSelectedItem();
-        if (sel instanceof Llista) {
-            state.currentLlistaId = ((Llista) sel).obtenirId();
-            state.biblio = new ArrayList<>(state.cd.obtenirLlibresInLlista(state.currentLlistaId));
-            host.pageCtrl().posarUseDBPagination(false);
-        } else {
-            state.currentLlistaId = null;
-            state.biblio = new ArrayList<>(state.cd.obtenirAllLlibres());
-            host.pageCtrl().posarUseDBPagination(state.cd.esLargeLibrary());
-        }
-        host.pageCtrl().posarCurrentPage(0);
-        host.mostrarPage(0);
+        final Integer selectedId = sel instanceof Llista ? ((Llista) sel).obtenirId() : null;
+        final boolean largeLib = state.cd.esLargeLibrary();
+        new javax.swing.SwingWorker<java.util.List<domini.Llibre>, Void>() {
+            @Override protected java.util.List<domini.Llibre> doInBackground() {
+                if (selectedId != null) return new ArrayList<>(state.cd.obtenirLlibresInLlista(selectedId));
+                return new ArrayList<>(state.cd.obtenirAllLlibres());
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                try {
+                    state.biblio = get();
+                    state.currentLlistaId = selectedId;
+                    host.pageCtrl().posarUseDBPagination(selectedId == null && largeLib);
+                    host.pageCtrl().posarCurrentPage(0);
+                    host.mostrarPage(0);
+                } catch (Exception ex) {
+                    new herramienta.ui.DialegError(ex).mostrarErrorMessage();
+                }
+            }
+        }.execute();
     }
 
     void refrescarComboLlistes() {

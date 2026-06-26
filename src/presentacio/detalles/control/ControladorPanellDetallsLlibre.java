@@ -53,7 +53,7 @@ public class ControladorPanellDetallsLlibre {
 
 		this.enActualizarBBDD = enActualizarBBDD;
 		cLlibres = cd != null ? cd : domini.ControladorDomini.getInstance();
-				if (l != null && !l.teCampsPesatsCarregats()) {
+				if (!l.teCampsPesatsCarregats()) {
 					final Llibre book = l;
 					heavyFieldsWorker = new javax.swing.SwingWorker<Void, Void>() {
 						@Override protected Void doInBackground() {
@@ -237,14 +237,15 @@ public class ControladorPanellDetallsLlibre {
 			g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 12));
 			g2.drawString(I18n.t("field_author") + ": " + l.obtenirAutor(), x, y += lineH + 4);
 			g2.drawString("ISBN: " + l.obtenirISBN(), x, y += lineH);
-			if (l.obtenirAny() > 0) g2.drawString(I18n.t("field_year") + ": " + l.obtenirAny(), x, y += lineH);
+			Integer any = l.obtenirAny();
+			if (any != null && any > 0) g2.drawString(I18n.t("field_year") + ": " + any, x, y += lineH);
 			if (l.obtenirEditorial() != null && !l.obtenirEditorial().isEmpty())
 				g2.drawString(I18n.t("field_publisher") + ": " + l.obtenirEditorial(), x, y += lineH);
 			if (l.obtenirSerie() != null && !l.obtenirSerie().isEmpty())
 				g2.drawString(I18n.t("field_series") + ": " + l.obtenirSerie()
 					+ (l.obtenirVolum() > 0 ? " #" + l.obtenirVolum() : ""), x, y += lineH);
 			g2.drawString(I18n.t("field_rating") + ": " + l.obtenirValoracio() + "/10", x, y += lineH);
-			g2.drawString(I18n.t("field_read") + ": " + (l.obtenirLlegit() ? I18n.t("yes_lbl") : I18n.t("no_lbl")), x, y += lineH);
+			g2.drawString(I18n.t("field_read") + ": " + (Boolean.TRUE.equals(l.obtenirLlegit()) ? I18n.t("yes_lbl") : I18n.t("no_lbl")), x, y += lineH);
 			if (l.obtenirPagines() > 0) g2.drawString(I18n.t("field_pages") + ": " + l.obtenirPagines(), x, y += lineH);
 			if (pendingBlob != null) {
 				javax.swing.ImageIcon icon = herramienta.ui.UITheme.scaledIcon(pendingBlob, 120);

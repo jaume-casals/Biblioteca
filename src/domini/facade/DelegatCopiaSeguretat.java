@@ -40,8 +40,15 @@ public final class DelegatCopiaSeguretat {
      *   <li>Pren una captura atòmica de {@code bib}, {@code llistes},
      *       {@code tags} sota el lock (còpies defensives; les mutacions
      *       posteriors a la captura no afecten la còpia).</li>
-     *   <li>Lliura la captura a {@link herramienta.io.ServeiCopiaSeguretat#copiaSegToSQL} sense
-     *       tenir el lock agafat.</li>
+     *   <li>Passa la captura a {@link herramienta.io.ServeiCopiaSeguretat#copiaSegToSQL},
+     *       que llegeix les files relacionals ({@code llibre_autor},
+     *       {@code llibre_llista}, …) des de
+     *       {@link persistencia.internal.ControladorPersistencia#snapshotForBackup()}
+     *       sota el monitor de {@code cp} — un editor concurrent que
+     *       intenti mutar qualsevol taula durant la captura esperarà
+     *       fins que acabi, de manera que el fitxer resultant no pot
+     *       contenir files amb ISBN absent del {@code Llibre} capturat
+     *       (el finding HIGH de tot.txt sobre la còpia de seguretat).</li>
      * </ol>
      */
     public void copiaSegToSQL(File file) {
@@ -54,8 +61,15 @@ public final class DelegatCopiaSeguretat {
             llistesSnapshot = new ArrayList<>(state.llistes());
             tagsSnapshot = new ArrayList<>(state.tags());
         }
-        try { copiaSegService.copiaSegToSQL(file, bibSnapshot, llistesSnapshot, tagsSnapshot); }
-        catch (Exception e) { throw new BibliotecaException(e.getMessage(), e); }
+        try {
+            persistencia.internal.ControladorPersistencia.BackupSnapshot snap =
+                state.persistence().snapshotForBackup();
+            snap.bib = bibSnapshot;
+            snap.llistes = llistesSnapshot;
+            snap.tags = tagsSnapshot;
+            copiaSegService.copiaSegToSQL(file, snap);
+        }
+        catch (java.io.IOException e) { throw new BibliotecaException(e.getMessage(), e); }
     }
 
     /**

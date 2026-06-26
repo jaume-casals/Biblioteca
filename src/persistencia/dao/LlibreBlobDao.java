@@ -14,7 +14,7 @@ public class LlibreBlobDao {
 
     public LlibreBlobDao(Connection con) { this.con = con; }
 
-    public synchronized byte[] obtenirBlob(long isbn) {
+    public byte[] obtenirBlob(long isbn) {
         try {
             try (PreparedStatement ps = con.prepareStatement("SELECT imatge_blob FROM llibre WHERE ISBN = ?")) {
                 ps.setLong(1, isbn);
@@ -28,7 +28,7 @@ public class LlibreBlobDao {
         return null;
     }
 
-    public synchronized void setBlob(long isbn, byte[] blob) throws SQLException {
+    public void setBlob(long isbn, byte[] blob) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("UPDATE llibre SET imatge_blob = ? WHERE ISBN = ?")) {
             ps.setBytes(1, blob);
             ps.setLong(2, isbn);
@@ -36,7 +36,7 @@ public class LlibreBlobDao {
         }
     }
 
-    public synchronized void carregarHeavyFields(long isbn, Llibre target) {
+    public void carregarHeavyFields(long isbn, Llibre target) {
         try (PreparedStatement ps = con.prepareStatement(
                 "SELECT descripcio, notes FROM llibre WHERE ISBN = ?")) {
             ps.setLong(1, isbn);
@@ -63,7 +63,7 @@ public class LlibreBlobDao {
      * (té la referència en memòria) per evitar un {@code target.posar*}
      * no-op innecessari.
      */
-    public synchronized void carregarHeavyFieldsBatched(java.util.List<Long> isbns,
+    public void carregarHeavyFieldsBatched(java.util.List<Long> isbns,
                                                     java.util.Map<Long, Llibre> targets) {
         if (isbns == null || isbns.isEmpty()) return;
         // Construeix una sola consulta "IN (?, ?, …)". El recompte de

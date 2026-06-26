@@ -12,6 +12,10 @@ import presentacio.models.ModelTaulaBiblioteca;
 
 public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
     private String cercarText = "";
+    private java.util.regex.Pattern cercarPattern;
+    private String cercarReplacement = "";
+    private static final java.util.regex.Pattern HTML_ESC =
+        java.util.regex.Pattern.compile("[&<>]");
     /** Referència al conjunt en caché — refrescada via {@link #setLoanedISBNs(Set)} des
      *  de {@link presentacio.controladors.ControladorTaula} cada cop que es reassigna
      *  el {@code state.loanedISBNs} del host. Evita el despatx
@@ -28,7 +32,20 @@ public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
         this.loanedISBNs = loanedISBNs != null ? loanedISBNs : Collections.emptySet();
     }
 
-    public void posarSearchText(String text) { this.cercarText = text != null ? text : ""; }
+    public void posarSearchText(String text) {
+        this.cercarText = text != null ? text : "";
+        String trimmed = this.cercarText.trim();
+        if (trimmed.isEmpty()) {
+            this.cercarPattern = null;
+            this.cercarReplacement = "";
+            return;
+        }
+        this.cercarPattern = java.util.regex.Pattern.compile(
+            "(?i)(" + java.util.regex.Pattern.quote(trimmed) + ")");
+        String bg = hexColor(UITheme.palette().cercarHighlightBg());
+        String fg = hexColor(UITheme.palette().cercarHighlightFg());
+        this.cercarReplacement = "<span style='background:" + bg + ";color:" + fg + "'>$1</span>";
+    }
     public void posarLoanedISBNs(Set<Long> isbns) { this.loanedISBNs = isbns != null ? isbns : Collections.emptySet(); }
 
     @Override
@@ -44,17 +61,11 @@ public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
                 }
             } catch (Exception ignored) {}
         }
-        String query = cercarText.trim();
         String text = value != null ? value.toString() : "";
-        if (!query.isEmpty() && !selected) {
-            String escaped = text
-                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-            String escapedQ = java.util.regex.Pattern.quote(query);
-            String bg = hexColor(UITheme.palette().cercarHighlightBg());
-            String fg = hexColor(UITheme.palette().cercarHighlightFg());
-            String highlighted = escaped.replaceAll(
-                "(?i)(" + escapedQ + ")",
-                "<span style='background:" + bg + ";color:" + fg + "'>$1</span>");
+        if (cercarPattern != null && !selected) {
+            String escaped = HTML_ESC.matcher(text)
+                .replaceAll(m -> m.group().equals("&") ? "&amp;" : m.group().equals("<") ? "&lt;" : "&gt;");
+            String highlighted = cercarPattern.matcher(escaped).replaceAll(cercarReplacement);
             if (!highlighted.equals(escaped))
                 setText("<html>" + highlighted + "</html>");
         }

@@ -54,6 +54,28 @@ public class ValidadorLlibre {
 		return (last - '0') == check;
 	}
 
+	/** Valida un ISBN cru (10 o 13 dígits, amb 'X' permesa a la posició
+	 *  de control ISBN-10) sense convertir-lo a {@code long}. Preserva
+	 *  el dígit 'X' que es perd en una conversió a tipus primitiu. */
+	public static boolean isValidIsbn(String isbn) {
+		if (isbn == null) return false;
+		String raw = isbn.replaceAll("[^0-9Xx]", "").toUpperCase(java.util.Locale.ROOT);
+		if (raw.length() == 10) return isValidIsbn10(raw);
+		if (raw.length() == 13) {
+			String digits = raw;
+			int sum = 0;
+			for (int i = 0; i < 12; i++) {
+				char c = digits.charAt(i);
+				if (c < '0' || c > '9') return false;
+				sum += (c - '0') * (i % 2 == 0 ? 1 : 3);
+			}
+			char last = digits.charAt(12);
+			if (last < '0' || last > '9') return false;
+			return (last - '0') == (10 - sum % 10) % 10;
+		}
+		return false;
+	}
+
 	private static String normalizeIsbn13(String isbn) {
 		if (isbn == null) return null;
 		// ISBN-10 amb dígit de control X (p. ex. "019853110X") — converteix a ISBN-13
@@ -96,25 +118,18 @@ public class ValidadorLlibre {
 		if (digits != 13 && digits != 10)
 			throw new IllegalArgumentException(I18n.t("val_isbn_digits"));
 
-		// Validació del dígit de control ISBN-10: suma ponderada *
-		// (10 - posició), mòd 11. El dígit de control X (p. ex.
-		// "020161622X") és vàlid; la implementació anterior el tractava
-		// com a error. El finding MEDIUM de tot.txt va assenyalar la
-		// manca de suport per X; aquesta és la correcció.
+		// Validació del dígit de control ISBN-10. La comprovació X
+		// (p.ex. "020161622X") es delega a {@link #isValidIsbn(String)};
+		// aquest mètode rep un {@code Long} que ja ha perdut el 'X',
+		// per la qual cosa la validació X es fa exclusivament al camí
+		// d'entrada de cadena.
 		if (digits == 10) {
 			String s = Long.toString(isbn);
 			int sum = 0;
 			for (int i = 0; i < 9; i++) sum += (s.charAt(i) - '0') * (10 - i);
 			int check = (11 - sum % 11) % 11;
-			int last = s.charAt(9) - '0';
-			if (check != last) {
-				// Torna a comprovar per X: 10-1=9 a la posició de
-				// control quan l'últim caràcter és 'X' (ASCII 88). Si
-				// el càlcul quadra amb X, accepta; altrament falla.
-				if (s.charAt(9) != 'X' || check != 10) {
-					throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
-				}
-			}
+			if (check != (s.charAt(9) - '0'))
+				throw new IllegalArgumentException(I18n.t("val_isbn_invalid"));
 		}
 
 		if (nom == null || nom.isBlank())

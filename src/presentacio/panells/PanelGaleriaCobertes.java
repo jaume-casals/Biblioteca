@@ -206,17 +206,20 @@ public class PanelGaleriaCobertes extends JPanel {
         ConfiguracioUi.posarGalleryZoom(zoomLevel);
         aplicarZoom(zoomLevel);
         imageService.clear();
-        if (currentLlibres != null) {
-            Set<Long> savedSelection = new LinkedHashSet<>(selectedISBNs);
-            int savedFocus = focusedRef[0];
-            actualitzarLlibres(currentLlibres);
-            selectedISBNs.addAll(savedSelection);
-            if (savedFocus >= 0 && savedFocus < currentLlibres.size()) {
-                focusedRef[0] = savedFocus;
-            }
-            revalidate();
-            repaint();
+        rebuildPreservingSelection();
+    }
+
+    private void rebuildPreservingSelection() {
+        if (currentLlibres == null) return;
+        Set<Long> savedSelection = new LinkedHashSet<>(selectedISBNs);
+        int savedFocus = focusedRef[0];
+        actualitzarLlibres(currentLlibres);
+        selectedISBNs.addAll(savedSelection);
+        if (savedFocus >= 0 && savedFocus < currentLlibres.size()) {
+            focusedRef[0] = savedFocus;
         }
+        revalidate();
+        repaint();
     }
 
     private void aplicarZoom(int level) {
@@ -268,7 +271,8 @@ public class PanelGaleriaCobertes extends JPanel {
     public void aplicarTheme() {
         setBackground(UITheme.palette().bgMain());
         wrap.setBackground(UITheme.palette().bgMain());
-        if (currentLlibres != null) actualitzarLlibres(currentLlibres);
+        imageService.clear();
+        rebuildPreservingSelection();
     }
 
     // ── Targeted repaint helpers ──────────────────────────────────────────────

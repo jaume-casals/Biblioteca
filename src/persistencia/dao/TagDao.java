@@ -64,7 +64,7 @@ public class TagDao {
 
     public void invalidateLlibreTagCache() { llibreTagCache = null; }
 
-    public synchronized ArrayList<Tag> obtenirAll() {
+    public ArrayList<Tag> obtenirAll() {
         ArrayList<Tag> tags = new ArrayList<>();
         try {
             try (Statement s = con.createStatement();
@@ -77,7 +77,7 @@ public class TagDao {
         return tags;
     }
 
-    public synchronized int create(String nom) throws SQLException {
+    public int create(String nom) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT INTO tag (nom) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, nom);
@@ -89,7 +89,7 @@ public class TagDao {
         }
     }
 
-    public synchronized void delete(int id) throws SQLException {
+    public void delete(int id) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("DELETE FROM tag WHERE id = ?")) {
             ps.setInt(1, id);
             ps.execute();
@@ -97,7 +97,7 @@ public class TagDao {
         invalidateLlibreTagCache();
     }
 
-    public synchronized void rename(int id, String newNom) throws SQLException {
+    public void rename(int id, String newNom) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("UPDATE tag SET nom = ? WHERE id = ?")) {
             ps.setString(1, newNom);
             ps.setInt(2, id);
@@ -105,7 +105,7 @@ public class TagDao {
         }
     }
 
-    public synchronized ArrayList<Tag> obtenirForLlibre(long isbn) {
+    public ArrayList<Tag> obtenirForLlibre(long isbn) {
         ArrayList<Tag> tags = new ArrayList<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -121,7 +121,7 @@ public class TagDao {
         return tags;
     }
 
-    public synchronized void afegirToLlibre(long isbn, int tagId) throws SQLException {
+    public void afegirToLlibre(long isbn, int tagId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "INSERT IGNORE INTO llibre_tag (isbn, tag_id) VALUES (?, ?)")) {
             ps.setLong(1, isbn);
@@ -131,7 +131,7 @@ public class TagDao {
         invalidateLlibreTagCache();
     }
 
-    public synchronized void eliminarFromLlibre(long isbn, int tagId) throws SQLException {
+    public void eliminarFromLlibre(long isbn, int tagId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "DELETE FROM llibre_tag WHERE isbn = ? AND tag_id = ?")) {
             ps.setLong(1, isbn);
@@ -141,7 +141,7 @@ public class TagDao {
         invalidateLlibreTagCache();
     }
 
-    public synchronized Set<Long> obtenirLlibresWithTag(int tagId) {
+    public Set<Long> obtenirLlibresWithTag(int tagId) {
         Set<Long> isbns = new HashSet<>();
         try {
             try (PreparedStatement ps = con.prepareStatement(
@@ -157,7 +157,7 @@ public class TagDao {
         return isbns;
     }
 
-    public synchronized java.util.List<LlibreTagRow> obtenirAllLlibreTag() {
+    public java.util.List<LlibreTagRow> obtenirAllLlibreTag() {
         if (llibreTagCache != null) return llibreTagCache;
         java.util.List<LlibreTagRow> rows = new java.util.ArrayList<>();
         try {
@@ -182,7 +182,7 @@ public class TagDao {
      * camí alternatiu en memòria per a columnes que ja són a {@code Llibre};
      * veure'n el Javadoc per a la justificació del doble camí.
      */
-    public synchronized java.util.List<String> obtenirDistinctValues(String column) {
+    public java.util.List<String> obtenirDistinctValues(String column) {
         java.util.List<String> vals = new java.util.ArrayList<>();
         if (!AUTOCOMPLETE_COLUMNS.contains(column)) return vals;
         try {

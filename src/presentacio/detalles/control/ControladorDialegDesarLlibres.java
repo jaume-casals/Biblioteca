@@ -33,14 +33,6 @@ public class ControladorDialegDesarLlibres {
 	private final EnActualitzarBBDD callback;
 	private volatile TascaCercaOpenLibrary cercarTask;
 
-	public ControladorDialegDesarLlibres(DialegDesarLlibres vista) {
-		this(vista, null, null);
-	}
-
-	public ControladorDialegDesarLlibres(DialegDesarLlibres vista, EnActualitzarBBDD callback) {
-		this(vista, callback, null);
-	}
-
 	public ControladorDialegDesarLlibres(DialegDesarLlibres vista, EnActualitzarBBDD callback, EscritorBiblioteca cd) {
 		this.callback = callback;
 		this.vista = vista;

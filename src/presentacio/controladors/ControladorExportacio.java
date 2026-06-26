@@ -117,7 +117,17 @@ public class ControladorExportacio {
     }
 
     public void exportarPDF() {
-        ExportadorLlibres.exportarPDF(currentBooks.get());
+        java.util.List<Llibre> view = currentBooks.get();
+        new SwingWorker<Void, Void>() {
+            @Override protected Void doInBackground() throws Exception {
+                ExportadorLlibres.exportarPDF(view);
+                return null;
+            }
+            @Override protected void done() {
+                try { get(); }
+                catch (Exception e) { new DialegError(e).mostrarErrorMessage(); }
+            }
+        }.execute();
     }
 
     public void fetchMissingCovers(JButton fetchBtn) {

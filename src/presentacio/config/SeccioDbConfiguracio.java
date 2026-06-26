@@ -8,7 +8,6 @@ import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -17,8 +16,6 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
 import static herramienta.i18n.I18n.t;
-
-import persistencia.internal.ConnexioServidor;
 /** Secció de base de dades: tipus / host / usuari / contrasenya + botó de provar connexió. */
 public final class SeccioDbConfiguracio {
     private SeccioDbConfiguracio() {}

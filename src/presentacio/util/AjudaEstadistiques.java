@@ -167,11 +167,12 @@ public class AjudaEstadistiques {
 
         int currentYear = java.time.LocalDate.now().getYear();
         int dayOfYear = java.time.LocalDate.now().getDayOfYear();
+        int lengthOfYear = java.time.LocalDate.now().lengthOfYear();
 
         long finishedThisYear = byYear.getOrDefault(currentYear, 0L);
         double booksPerDay = dayOfYear > 0 ? (double) finishedThisYear / dayOfYear : 0;
         double booksPerMonth = booksPerDay * 30.44;
-        double projectedYear = booksPerDay * 365;
+        double projectedYear = booksPerDay * lengthOfYear;
 
         long totalPages = books.stream().mapToLong(Llibre::obtenirPaginesLlegides).sum();
         int goal = herramienta.config.Configuracio.obtenirReadingGoal();
@@ -188,7 +189,7 @@ public class AjudaEstadistiques {
         afegirLine.accept(I18n.t("stats_pace_projected", String.format("%.0f", projectedYear)));
         if (goal > 0) {
             int remaining = Math.max(0, (int) (goal - finishedThisYear));
-            int daysLeft = 365 - dayOfYear;
+            int daysLeft = lengthOfYear - dayOfYear;
             afegirLine.accept(I18n.t("stats_pace_goal_remaining", goal, remaining, daysLeft));
         }
         afegirLine.accept(I18n.t("stats_pace_total_pages", totalPages));

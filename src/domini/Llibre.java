@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import persistencia.dao.LlibreDaoCore;
 public class Llibre {
 
 	private Long isbn;
@@ -217,8 +216,8 @@ public class Llibre {
 		this.imatge = imatge;
 	}
 
-	public byte[] obtenirImatgeBlob() { return imatgeBlob; }
-	public void posarImatgeBlob(byte[] blob) { imatgeBlob = blob; }
+	public byte[] obtenirImatgeBlob() { return imatgeBlob == null ? null : imatgeBlob.clone(); }
+	public void posarImatgeBlob(byte[] blob) { imatgeBlob = blob == null ? null : blob.clone(); }
 	public boolean teBlob() { return teBlob; }
 	public void posarHasBlob(boolean teBlob) { this.teBlob = teBlob; }
 

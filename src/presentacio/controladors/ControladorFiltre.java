@@ -190,24 +190,48 @@ public class ControladorFiltre {
             return;
         }
 
-        Map<Long, Llibre> isbnMap = obtenirIsbnMap();
-        java.util.Set<Long> tagISBNs = f.obtenirTagId() != null ? state.cd.obtenirLlibresWithTag(f.obtenirTagId()) : null;
-        java.util.Set<Long> llistaISBNs = f.obtenirLlistaId() != null
-            ? state.cd.obtenirLlibresInLlista(f.obtenirLlistaId()).stream().map(Llibre::obtenirISBN).collect(Collectors.toSet())
-            : null;
+        final Map<Long, Llibre> isbnMap = obtenirIsbnMap();
+        final Integer tagId = f.obtenirTagId();
+        final Integer llistaId = f.obtenirLlistaId();
+        if (tagId != null || llistaId != null) {
+            new SwingWorker<java.util.Map<String, java.util.Set<Long>>, Void>() {
+                @Override protected java.util.Map<String, java.util.Set<Long>> doInBackground() {
+                    java.util.Map<String, java.util.Set<Long>> sets = new java.util.HashMap<>();
+                    sets.put("tag",     tagId     != null ? state.cd.obtenirLlibresWithTag(tagId) : null);
+                    sets.put("llista",  llistaId  != null ? state.cd.obtenirLlibresInLlista(llistaId).stream().map(Llibre::obtenirISBN).collect(Collectors.toSet()) : null);
+                    return sets;
+                }
+                @Override protected void done() {
+                    if (isCancelled()) return;
+                    java.util.Map<String, java.util.Set<Long>> sets;
+                    try { sets = get(); }
+                    catch (Exception ex) { new herramienta.ui.DialegError(ex).mostrarErrorMessage(); return; }
+                    aplicarRowFilterInMemory(drs, f, isbnMap, sets.get("tag"), sets.get("llista"));
+                    host.actualitzarTitleBar();
+                }
+            }.execute();
+            return;
+        }
 
+        aplicarRowFilterInMemory(drs, f, isbnMap, null, null);
+        host.actualitzarTitleBar();
+    }
+
+    private void aplicarRowFilterInMemory(
+            javax.swing.DefaultRowSorter<? extends javax.swing.table.TableModel, Integer> drs,
+            LlibreFilter f, Map<Long, Llibre> isbnMap,
+            java.util.Set<Long> tagISBNs, java.util.Set<Long> llistaISBNs) {
         drs.setRowFilter(new javax.swing.RowFilter<javax.swing.table.TableModel, Integer>() {
             @Override
             public boolean include(javax.swing.RowFilter.Entry<? extends javax.swing.table.TableModel, ? extends Integer> entry) {
                 try {
-                        long isbn = Long.parseLong(entry.getStringValue(ModelTaulaBiblioteca.COL_ISBN));
+                    long isbn = Long.parseLong(entry.getStringValue(ModelTaulaBiblioteca.COL_ISBN));
                     Llibre l = isbnMap.get(isbn);
                     if (l == null) return false;
                     return FiltreUtils.matches(l, f, tagISBNs, llistaISBNs);
                 } catch (Exception ignored) { return false; }
             }
         });
-        host.actualitzarTitleBar();
     }
 
     void quitarFiltros() {

@@ -40,12 +40,6 @@ public final class ServeiCoberta {
         t.setDaemon(true);
         return t;
     });
-    /** @deprecated Usa {@link #FETCHER} per a cerques d'OL i
-     *  {@link #WRITE_POOL} per a escriptures JDBC. Es conserva com a àlies
-     *  de WRITE_POOL per compatibilitat enrere amb consumidors que abans
-     *  enviaven una sola tasca combinada de cerca+escriptura. */
-    @Deprecated
-    public static final ExecutorService POOL = WRITE_POOL;
 
     private static final java.util.logging.Logger LOG =
         java.util.logging.Logger.getLogger(ServeiCoberta.class.getName());
@@ -61,21 +55,22 @@ public final class ServeiCoberta {
     static { main.ShutdownHooks.register(ServeiCoberta::shutdown); }
 
     public static byte[] obtenirCachedBytes(String isbn) {
+        byte[] mem;
         synchronized (L1_LOCK) {
-            byte[] mem = L1.get(isbn);
-            if (mem != null) return mem;
-            try {
-                Path f = diskDir().resolve(isbn + ".jpg");
-                if (Files.isRegularFile(f)) {
-                    byte[] disk = Files.readAllBytes(f);
-                    putL1(isbn, disk);
-                    return disk;
-                }
-            } catch (Exception e) {
-                LOG.log(java.util.logging.Level.FINE, "obtenirCachedBytes: error llegint la caché al disc per a " + isbn, e);
-            }
+            mem = L1.get(isbn);
+        }
+        if (mem != null) return mem;
+        Path f = diskDir().resolve(isbn + ".jpg");
+        if (!Files.isRegularFile(f)) return null;
+        byte[] disk;
+        try {
+            disk = Files.readAllBytes(f);
+        } catch (Exception e) {
+            LOG.log(java.util.logging.Level.FINE, "obtenirCachedBytes: error llegint la caché al disc per a " + isbn, e);
             return null;
         }
+        putL1(isbn, disk);
+        return disk;
     }
 
     public static BufferedImage obtenirCachedImage(String isbn) {
@@ -86,12 +81,6 @@ public final class ServeiCoberta {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /** Obté els bytes de la coberta per a {@code isbn}, desa el blob a la BBDD, invoca el callback en cas d'èxit. */
-    public static void fetchAsync(EscritorLlibre cd, String isbn, Runnable onDone) {
-        enqueueFetch(cd, isbn, () -> escriureCoverAsync(cd, isbn, /* data */ null, onDone),
-            cached -> escriureCoverAsync(cd, isbn, cached, onDone));
     }
 
     /** Envia una cerca de coberta i una escriptura a la BBDD per a
@@ -106,7 +95,7 @@ public final class ServeiCoberta {
             cached -> submitWrite(cd, isbn, cached, onComplete));
     }
 
-    /** Implementació comuna a {@link #fetchAsync} i {@link #submitCoverFetch}.
+    /** Implementació comuna a {@link #submitCoverFetch}.
      *  Consulta la caché (disc/L1); si encert, delega a {@code onCacheHit} amb
      *  els bytes. Si falla, envia una cerca a OL a {@link #FETCHER}; quan torna,
      *  desa a la caché i delega a {@code onFetched}. Si OL no retorna res,
@@ -132,18 +121,8 @@ public final class ServeiCoberta {
     }
 
     /** Planifica una escriptura JDBC de {@code data} per a {@code isbn} a
-     *  {@link #WRITE_POOL}, cridant {@code onDone} (al fil WRITE_POOL)
+     *  {@link #WRITE_POOL}, cridant {@code onComplete} (al fil WRITE_POOL)
      *  quan acabi. */
-    private static void escriureCoverAsync(EscritorLlibre cd, String isbn, byte[] data, Runnable onDone) {
-        long lIsbn;
-        try { lIsbn = Long.parseLong(isbn); }
-        catch (Exception e) { if (onDone != null) onDone.run(); return; }
-        WRITE_POOL.submit(() -> {
-            try { cd.posarLlibreBlob(lIsbn, data); } catch (Exception ignored) {}
-            if (onDone != null) onDone.run();
-        });
-    }
-
     private static void submitWrite(persistencia.contract.EscritorBiblioteca cd, String isbn, byte[] data, java.util.function.Consumer<Boolean> onComplete) {
         long lIsbn;
         try { lIsbn = Long.parseLong(isbn); }
@@ -173,7 +152,12 @@ public final class ServeiCoberta {
             if (Files.exists(target) && hashesMatch(target, data)) return;
             Files.createDirectories(diskDir());
             Files.write(target, data);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            LOG.log(java.util.logging.Level.WARNING,
+                "cacheBytes: no s'ha pogut escriure la coberta a la caché per a " + isbn
+                    + " (" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage())
+                    + "); la propera lectura repetirà la descàrrega", e);
+        }
     }
 
     /** Compara el contingut d'un fitxer amb un buffer per SHA-256.

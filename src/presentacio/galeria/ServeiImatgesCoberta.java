@@ -32,13 +32,20 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * pla i la mutació de la memòria cau s'executen a l'executor, amb el
  * callback de repaint enviat de tornada a l'EDT.
  *
- * <p>La LRU està protegida per un {@link ReentrantReadWriteLock} de
+ * <p>La memòria cau està protegida per un {@link ReentrantReadWriteLock} de
  * manera que les lectures EDT (el camí de pintat, dominant) s'executen
  * concurrentment mentre que les escriptures (cache miss → load)
  * prenen un lock exclusiu. L'embolcall anterior
  * {@code Collections.synchronizedMap} serialitzava cada {@code get()}
  * contra cada altre {@code get()}, cosa que blocava l'EDT en un
  * repaint de 200 targetes (segons la troballa LOW de tot.txt).
+ *
+ * <p>El {@link LinkedHashMap} s'ordena per inserció
+ * ({@code accessOrder=false}) perquè un {@code get()} amb
+ * {@code accessOrder=true} mutaria estructuralment la llista
+ * ({@code afterNodeAccess}), corrompent les lectures concurrents
+ * protegides pel lock de lectura — el finding MEDIUM de tot.txt
+ * sobre aquesta classe.
  */
 public final class ServeiImatgesCoberta {
 
@@ -55,7 +62,7 @@ public final class ServeiImatgesCoberta {
 
     private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
     private final LinkedHashMap<Long, BufferedImage> imageCache =
-        new LinkedHashMap<Long, BufferedImage>(CACHE_LOAD_FACTOR, CACHE_LOAD_F, true) {
+        new LinkedHashMap<Long, BufferedImage>(CACHE_LOAD_FACTOR, CACHE_LOAD_F, false) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Long, BufferedImage> e) {
                 return size() > CACHE_CAPACITY;

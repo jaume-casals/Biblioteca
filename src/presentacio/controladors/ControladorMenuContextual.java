@@ -183,25 +183,32 @@ public class ControladorMenuContextual {
         if (JOptionPane.showConfirmDialog(state.vista, msg, I18n.t("dlg_confirm_delete_title"),
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         final List<Long> isbns = llibres.stream().map(Llibre::obtenirISBN).collect(Collectors.toList());
-        new SwingWorker<Void, Void>() {
-            @Override protected Void doInBackground() {
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                List<Llibre> toPush = new java.util.ArrayList<>();
                 for (long isbn : isbns) {
                     try {
                         Llibre l = state.cd.obtenirLlibre(isbn);
                         EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
                         state.enActualizarBBDD.enEliminantLlibre(ev);
                         if (!EnEliminarLlibre.hauriaProceed(ev)) continue;
-                        state.undoBuffer.push(l);
-                        if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                        toPush.add(l);
                         state.cd.eliminarLlibre(l);
                     } catch (Exception e) {
                         SwingUtilities.invokeLater(() -> new DialegError(e).mostrarErrorMessage());
                     }
                 }
-                return null;
+                return toPush;
             }
             @Override protected void done() {
                 if (isCancelled()) return;
+                List<Llibre> toPush;
+                try { toPush = get(); }
+                catch (Exception e) { new DialegError(e).mostrarErrorMessage(); return; }
+                for (Llibre l : toPush) {
+                    state.undoBuffer.push(l);
+                    if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                }
                 for (long isbn : isbns) {
                     Llibre found = null;
                     if (state.biblio != null) {

@@ -32,10 +32,10 @@ public class LlibreDaoCore {
     /**
      * Font única de veritat per a l'esquema de columnes de {@code llibre}.
      * Les tres projeccions SELECT ({@link #LLIBRE_COLUMNS_L_LIGHT},
-     * {@link #LLIBRE_COLUMNS_L}, {@link #LLIBRE_COLUMNS}) i les sentències
-     * INSERT/UPDATE següents deriven totes d'aquest array — afegir una
-     * columna nova a l'esquema significa afegir una entrada aquí i la
-     * resta es manté en sincronia automàticament. Les columnes
+     * {@link #LLIBRE_COLUMNS_L}, {@link #LLIBRE_COLUMNS_L_SHELF}) i les
+     * sentències INSERT/UPDATE següents deriven totes d'aquest array —
+     * afegir una columna nova a l'esquema significa afegir una entrada
+     * aquí i la resta es manté en sincronia automàticament. Les columnes
      * {@code autor} i {@code has_blob} són subconsultes, de manera que
      * el seu {@code selectFragment} és la subselect sencera (no una
      * referència de columna) i el seu {@code bind} és no-op (no hi ha
@@ -104,12 +104,9 @@ public class LlibreDaoCore {
      * i sense camps pesats (descripcio / notes). La fan servir {@link #getAll}
      * i qualsevol consumidor que vulgui una fila barata.
      */
-    static final String LLIBRE_COLUMNS_L_LIGHT = buildSelect(/*prefixed*/ true, /*heavy*/ false, java.util.Collections.emptyMap());
+    static final String LLIBRE_COLUMNS_L_LIGHT = buildSelect(true, false, java.util.Collections.emptyMap());
     /** Mateixa forma que {@link #LLIBRE_COLUMNS_L_LIGHT} però amb descripcio + notes inclosos. */
     static final String LLIBRE_COLUMNS_L = buildSelect(true, true, java.util.Collections.emptyMap());
-    /** Sense prefix d'àlies (per a consultes sense àlies al FROM — cap avui, es conserva per completesa). */
-    @SuppressWarnings("unused")
-    static final String LLIBRE_COLUMNS = buildSelect(false, true, java.util.Collections.emptyMap());
     /** Forma per a {@link persistencia.dao.LlistaDao#obtenirLlibres}: projecta la
      *  taula {@code llibre} amb els camps {@code valoracio} i {@code llegit}
      *  sobreescrits des de {@code llibre_llista} (la fila de la unió). */
@@ -189,7 +186,7 @@ public class LlibreDaoCore {
 
     public LlibreDaoCore(Connection con) { this.con = con; }
 
-    public synchronized ArrayList<Llibre> obtenirAll() {
+    public ArrayList<Llibre> obtenirAll() {
         ArrayList<Llibre> biblio = new ArrayList<>();
         try {
             try (Statement stmt = con.createStatement();
@@ -210,20 +207,13 @@ public class LlibreDaoCore {
         return biblio;
     }
 
-    public synchronized ArrayList<Llibre> obtenirRecentlyAdded(int n) {
+    public ArrayList<Llibre> obtenirRecentlyAdded(int n) {
         ArrayList<Llibre> result = new ArrayList<>();
-        try {
-            // La clàusula FROM no té àlies `l`, de manera que aquest
-            // SELECT ha d'utilitzar la llista de columnes sense prefix
-            // (LLIBRE_COLUMNS). LlibreMapper cerca les columnes per nom
-            // (no per índex), de manera que la resolució és independent
-            // de l'ordre de projecció.
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT " + LLIBRE_COLUMNS + " FROM llibre ORDER BY data_afegit DESC LIMIT ?")) {
-                ps.setInt(1, n);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) result.add(LlibreMapper.buildLlibre(rs));
-                }
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT " + LLIBRE_COLUMNS_L + " FROM llibre l ORDER BY l.data_afegit DESC LIMIT ?")) {
+            ps.setInt(1, n);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) result.add(LlibreMapper.buildLlibre(rs));
             }
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant els llibres recents: " + e.getMessage(), e);
@@ -231,7 +221,7 @@ public class LlibreDaoCore {
         return result;
     }
 
-    public synchronized void insert(Llibre ll) throws SQLException {
+    public void insert(Llibre ll) throws SQLException {
         if (ll == null) return;
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
@@ -246,7 +236,7 @@ public class LlibreDaoCore {
         });
     }
 
-    public synchronized void update(Llibre ll) throws SQLException {
+    public void update(Llibre ll) throws SQLException {
         if (ll == null) return;
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
@@ -262,18 +252,18 @@ public class LlibreDaoCore {
         });
     }
 
-    public synchronized void delete(long isbn) throws SQLException {
+    public void delete(long isbn) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("DELETE FROM llibre WHERE ISBN = ?")) {
             ps.setLong(1, isbn);
             ps.execute();
         }
     }
 
-    public synchronized void delete(Llibre ll) throws SQLException {
+    public void delete(Llibre ll) throws SQLException {
         if (ll != null) delete(ll.obtenirISBN());
     }
 
-    public synchronized int count() {
+    public int count() {
         try (PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM llibre");
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getInt(1);
@@ -283,7 +273,7 @@ public class LlibreDaoCore {
         return 0;
     }
 
-    public synchronized void netejarAllData() throws SQLException {
+    public void netejarAllData() throws SQLException {
         withTransaction(this::netejarAllDataNoTx);
     }
 
@@ -296,7 +286,7 @@ public class LlibreDaoCore {
         }
     }
 
-    public synchronized long obtenirDbSizeBytes() {
+    public long obtenirDbSizeBytes() {
         try {
             String url = con.getMetaData().getURL();
             if (url != null && url.startsWith("jdbc:h2:")) {
@@ -328,7 +318,7 @@ public class LlibreDaoCore {
      * del fitxer (uns quants KB per a insercions típiques), de manera
      * que el pic de memòria és O(mida-màxima-sentència), no O(fitxer).
      */
-    public synchronized void executarSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+    public void executarSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
             try { executarSQLFileNoTx(file); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
@@ -415,7 +405,7 @@ public class LlibreDaoCore {
      * captura pre-restauració pel camí d'undoing iniciat per l'usuari;
      * aquest mètode és la xarxa de seguretat.
      */
-    public synchronized void restaurarFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+    public void restaurarFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         withTransaction(() -> {
             netejarAllDataNoTx();
             try { executarSQLFileNoTx(file); }

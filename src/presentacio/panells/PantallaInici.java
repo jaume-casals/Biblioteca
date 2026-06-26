@@ -6,7 +6,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class PantallaInici {
@@ -67,7 +66,7 @@ public class PantallaInici {
         long elapsed = System.currentTimeMillis() - mostrarTime;
         long remaining = MIN_DISPLAY_MS - elapsed;
         if (remaining > 0) {
-            ScheduledFuture<?> future = SCHEDULER.schedule(
+            SCHEDULER.schedule(
                 () -> SwingUtilities.invokeLater(dialog::dispose),
                 remaining, TimeUnit.MILLISECONDS);
         } else {

@@ -118,36 +118,32 @@ public class ControladorAccionsLlibre {
             catch (NumberFormatException nfe) { /* salta cel·les no numèriques */ }
         }
         final List<Long> toDelete = isbns;
-        new SwingWorker<Integer, Void>() {
-            @Override protected Integer doInBackground() {
-                int deleted = 0;
+        new SwingWorker<List<Llibre>, Void>() {
+            @Override protected List<Llibre> doInBackground() {
+                List<Llibre> toPush = new java.util.ArrayList<>();
                 for (long isbn : toDelete) {
                     try {
                         state.cd.cercarLlibre(isbn).ifPresent(l -> {
                             EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
                             state.enActualizarBBDD.enEliminantLlibre(ev);
                             if (!EnEliminarLlibre.hauriaProceed(ev)) return;
-                            state.undoBuffer.push(l);
-                            // Limita la cua d'undoing a UNDO_MAX (20). Quan
-                            // l'usuari elimina més de UNDO_MAX llibres en un sol
-                            // lot, les entrades més antigues es descarten en
-                            // silenci — el límit és un topall de memòria, no un
-                            // contracte de "només els 20 primers". La pila
-                            // undo() n'és l'única consumidora.
-                            if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                            toPush.add(l);
                             state.cd.eliminarLlibre(l);
                         });
-                        deleted++;
                     } catch (Exception e) {
                         SwingUtilities.invokeLater(() -> new DialegError(e).mostrarErrorMessage());
                     }
                 }
-                return deleted;
+                return toPush;
             }
             @Override protected void done() {
                 if (isCancelled()) return;
                 try {
-                    int deleted = get();
+                    List<Llibre> toPush = get();
+                    for (Llibre l : toPush) {
+                        state.undoBuffer.push(l);
+                        if (state.undoBuffer.size() > EstatVistaBiblioteca.UNDO_MAX) state.undoBuffer.removeLast();
+                    }
                     for (long isbn : toDelete) eliminarFilaPerIsbn(isbn);
                 } catch (Exception e) {
                     new DialegError(e).mostrarErrorMessage();
@@ -190,29 +186,40 @@ public class ControladorAccionsLlibre {
     }
 
     void mostrarEstadistiques() {
-        List<Llibre> global = state.cd.obtenirAllLlibres();
-        if (global.isEmpty()) {
-            JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_empty_library"), I18n.t("dlg_stats_title"),
-                JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+        new SwingWorker<AjudaEstadistiques.EstadistiquesLlibre, Void>() {
+            @Override protected AjudaEstadistiques.EstadistiquesLlibre doInBackground() {
+                List<Llibre> global = state.cd.obtenirAllLlibres();
+                if (global.isEmpty()) return null;
+                return AjudaEstadistiques.computeStats(global);
+            }
+            @Override protected void done() {
+                if (isCancelled()) return;
+                AjudaEstadistiques.EstadistiquesLlibre globalStats;
+                try { globalStats = get(); }
+                catch (Exception e) { new DialegError(e).mostrarErrorMessage(); return; }
+                if (globalStats == null) {
+                    JOptionPane.showMessageDialog(state.vista, I18n.t("dlg_empty_library"), I18n.t("dlg_stats_title"),
+                        JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                List<Llibre> global = state.cd.obtenirAllLlibres();
+                javax.swing.JPanel tab1 = AjudaEstadistiques.buildGeneralTab(global, globalStats, state.cd);
 
-        AjudaEstadistiques.EstadistiquesLlibre globalStats = AjudaEstadistiques.computeStats(global);
-        javax.swing.JPanel tab1 = AjudaEstadistiques.buildGeneralTab(global, globalStats, state.cd);
+                javax.swing.JPanel tab2 = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 8));
+                tab2.setBackground(UITheme.palette().bgPanel());
+                tab2.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
+                tab2.add(AjudaEstadistiques.buildReadingChart(globalStats.booksByReadYear));
+                tab2.add(AjudaEstadistiques.buildPublisherChart(global));
 
-        javax.swing.JPanel tab2 = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 8));
-        tab2.setBackground(UITheme.palette().bgPanel());
-        tab2.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        tab2.add(AjudaEstadistiques.buildReadingChart(globalStats.booksByReadYear));
-        tab2.add(AjudaEstadistiques.buildPublisherChart(global));
+                javax.swing.JPanel tab3 = AjudaEstadistiques.buildTagCloud(global, state.cd);
+                javax.swing.JPanel tab4 = AjudaEstadistiques.buildReadingPacePanel(global, globalStats.booksByReadYear);
 
-        javax.swing.JPanel tab3 = AjudaEstadistiques.buildTagCloud(global, state.cd);
-        javax.swing.JPanel tab4 = AjudaEstadistiques.buildReadingPacePanel(global, globalStats.booksByReadYear);
-
-        AjudaEstadistiques.showDialog(SwingUtilities.getWindowAncestor(state.vista),
-            new javax.swing.JComponent[] { tab1, tab2, tab3, tab4 },
-            new String[] { I18n.t("stats_tab_general"), I18n.t("stats_tab_charts"),
-                I18n.t("stats_tab_tags"), I18n.t("stats_tab_pace") });
+                AjudaEstadistiques.showDialog(SwingUtilities.getWindowAncestor(state.vista),
+                    new javax.swing.JComponent[] { tab1, tab2, tab3, tab4 },
+                    new String[] { I18n.t("stats_tab_general"), I18n.t("stats_tab_charts"),
+                        I18n.t("stats_tab_tags"), I18n.t("stats_tab_pace") });
+            }
+        }.execute();
     }
 
     void mostrarLlibreAleatori() {

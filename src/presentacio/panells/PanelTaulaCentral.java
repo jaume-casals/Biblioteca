@@ -68,11 +68,6 @@ public class PanelTaulaCentral extends JPanel {
 		scrollPaneJTable.getVerticalScrollBar().setUnitIncrement(16);
 
 		taulaLlibres = new JTable() {
-			// Etiqueta caché reutilitzada pel renderer de capçalera
-			// (assignació única) — el renderer per defecte crea un JLabel
-			// nou per cel·la per render, cosa que es malgasta en taules
-			// de més de 1000 files.
-			private final JLabel headerLabel = new JLabel();
 			// FontMetrics en caché — recalcular-lo a cada crida a
 			// getToolTipText era el cost dominant per píxel. Es
 			// refresca de manera mandrosa quan canvia la font

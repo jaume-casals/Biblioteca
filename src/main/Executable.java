@@ -21,7 +21,7 @@ import persistencia.internal.ControladorPersistencia;
 public class Executable {
 
     private static final Logger LOG = Logger.getLogger(Executable.class.getName());
-    private static PantallaInici splashRef;
+    private static volatile PantallaInici splashRef;
 
     /** Tanca la pantalla d'inici (si n'hi ha) passant pel EDT quan
      *  l'invocador no hi és. Sense això, una excepció no capturada en

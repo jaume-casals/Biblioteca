@@ -25,7 +25,8 @@ public final class LligadorFormulariLlibre {
 
     /** Omple els quatre camps de text principals des d'un Llibre. Redueix el copy-paste als diàlegs. */
     public static void carregarCore(Llibre l, JTextField isbn, JTextField nom, JTextField autor, JTextField any) {
-        vincularString(isbn, String.valueOf(l.obtenirISBN()));
+        Long isbnVal = l.obtenirISBN();
+        vincularString(isbn, isbnVal != null ? String.valueOf(isbnVal) : "");
         vincularString(nom, l.obtenirNom());
         vincularString(autor, l.obtenirAutor());
         vincularString(any, l.obtenirAny() != null ? String.valueOf(l.obtenirAny()) : "");

@@ -16,7 +16,7 @@ public class LlibreLecturaDao {
 
     public LlibreLecturaDao(Connection con) { this.con = con; }
 
-    public synchronized List<LecturaRow> obtenirAllLectures() {
+    public List<LecturaRow> obtenirAllLectures() {
         List<LecturaRow> rows = new ArrayList<>();
         try (Statement s = con.createStatement();
              ResultSet rs = s.executeQuery(

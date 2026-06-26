@@ -107,7 +107,7 @@ public final class SeccioAparençaConfiguracio {
     public static void reloadFromConfig(JPanel root) {
         JComponent jc;
         jc = SeccionsConfiguracio.cercarById(root, "cmbTheme");
-        if (jc instanceof JComboBox) ((JComboBox<?>) jc).setSelectedIndex(UITheme.obtenirTheme().ordinal());
+        if (jc instanceof JComboBox) ((JComboBox<?>) jc).setSelectedIndex(Configuracio.obtenirTheme().ordinal());
         jc = SeccionsConfiguracio.cercarById(root, "cmbFont");
         if (jc instanceof JComboBox) {
             String fs = Configuracio.obtenirFontSize();

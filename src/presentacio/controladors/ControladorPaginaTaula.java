@@ -62,7 +62,7 @@ public class ControladorPaginaTaula {
             posarTable.accept(new ArrayList<>());
             return;
         }
-        if (model.esUseDBPagination() && cd.esLargeLibrary()) {
+        if (model.esUseDBPagination()) {
             final int requestedPage = page;
             new javax.swing.SwingWorker<PageLoad, Void>() {
                 @Override protected PageLoad doInBackground() {

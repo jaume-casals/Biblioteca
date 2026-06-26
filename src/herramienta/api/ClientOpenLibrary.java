@@ -249,26 +249,6 @@ public class ClientOpenLibrary {
 		throw last != null ? last : new java.io.IOException("No s'han fet reintents per a " + url);
 	}
 
-	/**
-	 * Com {@link #fetchWithRetry(String)} però tracta una resposta JSON
-	 * malformada com a error no reintentable. La implementació anterior
-	 * reintentava 4 vegades per a cada fallada d'anàlisi (malbaratament
-	 * del pressupost de backoff de 3500 ms — el servidor no començarà
-	 * de cop a retornar JSON vàlid per a la mateixa URL) i finalment
-	 * deixava escapar la {@code JsonSyntaxException}. Els consumidors
-	 * ara poden distingir "ho hem provat, el servidor està trencat" de
-	 * "fallada transitòria de xarxa".
-	 */
-	private static String fetchJsonWithRetry(String url) throws java.io.IOException {
-		String body = fetchWithRetry(url);
-		try {
-			JsonParser.parseString(body);
-			return body;
-		} catch (RuntimeException analitzarEx) {
-			throw new java.io.IOException("JSON mal format des de " + url + ": " + analitzarEx.getMessage(), analitzarEx);
-		}
-	}
-
 	private static String fetch(String url) throws java.io.IOException {
 		HttpURLConnection conn;
 		try {
@@ -295,14 +275,6 @@ public class ClientOpenLibrary {
 
 	private static String jsonStr(JsonObject obj, String key) {
 		return JsonHelpers.jsonStr(obj, key);
-	}
-
-	private static String jsonStrNested(JsonObject obj, String key, String subKey) {
-		return JsonHelpers.jsonStrNested(obj, key, subKey);
-	}
-
-	private static String jsonArrayFirstField(JsonObject obj, String arrayKey, String fieldKey) {
-		return JsonHelpers.jsonArrayFirstField(obj, arrayKey, fieldKey);
 	}
 
 	private static String encode(String s) {

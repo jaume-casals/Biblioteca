@@ -113,9 +113,12 @@ public class ConnexioServidor {
 	};
 
 	/** Assignada un sol cop dins de {@link #crearDatabase(ConnectionConfig)} o
-	 *  {@link #crearDatabase()} i mai reassignada; {@link #tancarConnection()}
-	 *  posa el camp a null després de tancar. No assignis una nova Connection en un altre lloc. */
+	 * {@link #crearDatabase()} i mai reassignada; {@link #tancarConnection()}
+	 * posa el camp a null després de tancar. No assignis una nova Connection en un altre lloc. */
 	private Connection con;
+	private static final java.util.List<java.net.URLClassLoader> driverLoaders =
+		java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+	static { main.ShutdownHooks.register(() -> { synchronized (driverLoaders) { for (java.net.URLClassLoader cl : driverLoaders) try { cl.close(); } catch (Exception ignored) {} } }); }
 
 	public ConnexioServidor() {}
 
@@ -144,7 +147,11 @@ public class ConnexioServidor {
 			String profile = sanitizeH2Profile(props.getProperty("dbProfile", "biblioteca"));
 			String url = "jdbc:h2:" + dir.trim().replaceAll("^\\s+|\\s+$", "").replaceAll("/+$", "")
 				+ "/" + profile + ";MODE=MySQL;NON_KEYWORDS=VALUE";
-			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", new char[0]);
+			// H2 admet contrasenya no buida — passem el que el consumidor
+			// hagi subministrat perquè "prova la connexió" coincideixi amb
+			// el comportament real (el finding MEDIUM de tot.txt).
+			char[] h2Pwd = password != null && password.length > 0 ? password : new char[0];
+			return sc.connectViaDriver("org.h2.Driver", "h2", url, "sa", h2Pwd);
 		} else {
 			String host = props.getProperty("dbHost", "localhost");
 			String url = "jdbc:mariadb://" + host + "/?characterEncoding=UTF-8&useUnicode=true";
@@ -427,6 +434,7 @@ public class ConnexioServidor {
 		java.net.URLClassLoader cl = new java.net.URLClassLoader(
 			new java.net.URL[]{jars[0].toURI().toURL()},
 			ClassLoader.getSystemClassLoader());
+		driverLoaders.add(cl);
 		return (java.sql.Driver) Class.forName(driverClass, true, cl).getDeclaredConstructor().newInstance();
 	}
 

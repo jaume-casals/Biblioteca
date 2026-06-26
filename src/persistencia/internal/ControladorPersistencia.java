@@ -42,6 +42,9 @@ import persistencia.row.PrestecRow;
  * <p><b>TODO (perf):</b> substituir el {@code synchronized} per un
  * {@link java.util.concurrent.locks.ReadWriteLock} (lectures concurrents, escriptures
  * exclusives). Conversió mecànica però tediosa.
+ *
+ * <p><b>Contracte de concurrència:</b> tot l'accés als DAO ha de passar per aquesta
+ * façana; els DAO individuals <em>no</em> són thread-safe per si mateixos.
  */
 public class ControladorPersistencia {
 
@@ -232,6 +235,42 @@ public class ControladorPersistencia {
 
 	public synchronized java.util.List<persistencia.row.AutorRow> obtenirAllAutorRows() {
 		return autorDao.obtenirAll();
+	}
+
+	/** Captura atòmica de totes les files relacionals necessàries per
+	 *  produir un fitxer de còpia de seguretat coherent. Totes les
+	 *  consultes es fan sota el monitor d'aquesta instància — un fil
+	 *  d'edició concurrent (EDT) que intenti mutar qualsevol taula
+	 *  durant la captura esperarà fins que la captura acabi, de
+	 *  manera que el fitxer resultant no pot contenir files
+	 *  {@code llibre_autor}/{@code llibre_llista}/{@code llibre_tag}
+	 *  amb ISBN absent del {@code Llibre} capturat. */
+	public BackupSnapshot snapshotForBackup() {
+		synchronized (this) {
+			BackupSnapshot s = new BackupSnapshot();
+			s.bib = libreDaoCore.obtenirAll();
+			s.llistes = llistaDao.obtenirAll();
+			s.tags = tagDao.obtenirAll();
+			s.autors = autorDao.obtenirAll();
+			s.llibreAutors = autorDao.obtenirAllLlibreAutor();
+			s.llibreLlistes = llistaDao.obtenirAllLlibreLlista();
+			s.llibreTags = tagDao.obtenirAllLlibreTag();
+			s.prestecs = prestecDao.obtenirAll();
+			s.lectures = libreLecturaDao.obtenirAllLectures();
+			return s;
+		}
+	}
+
+	public static final class BackupSnapshot {
+		public java.util.ArrayList<Llibre> bib;
+		public java.util.ArrayList<Llista> llistes;
+		public java.util.ArrayList<Tag> tags;
+		public java.util.List<persistencia.row.AutorRow> autors;
+		public java.util.List<persistencia.row.LlibreAutorRow> llibreAutors;
+		public java.util.List<persistencia.row.LlibreLlistaRow> llibreLlistes;
+		public java.util.List<persistencia.row.LlibreTagRow> llibreTags;
+		public java.util.List<persistencia.row.PrestecRow> prestecs;
+		public java.util.List<persistencia.row.LecturaRow> lectures;
 	}
 	/** @deprecated usa {@link #obtenirAllAutorRows()} — conservat per a consumidors que necessiten la forma Object[]. */
 	@Deprecated

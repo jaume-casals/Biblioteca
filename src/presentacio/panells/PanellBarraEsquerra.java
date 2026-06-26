@@ -259,7 +259,13 @@ public class PanellBarraEsquerra extends JPanel {
 				if (onShelfRename != null) {
 					btn.addMouseListener(new java.awt.event.MouseAdapter() {
 						@Override public void mouseClicked(java.awt.event.MouseEvent e) {
-							if (e.getClickCount() == 2) onShelfRename.accept(l);
+							if (e.getClickCount() != 2) return;
+							Llista current = null;
+							for (int i = 0; i < comboLlistes.getItemCount(); i++) {
+								Object item = comboLlistes.getItemAt(i);
+								if (item instanceof Llista ll && ll.obtenirId() == id) { current = ll; break; }
+							}
+							if (current != null) onShelfRename.accept(current);
 						}
 					});
 				}

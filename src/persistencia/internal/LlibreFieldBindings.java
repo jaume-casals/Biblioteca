@@ -105,28 +105,6 @@ public final class LlibreFieldBindings {
         "pais_origen", "estat", "exemplars", "llengua_original", "nom_ca", "nom_es", "nom_en"
     };
 
-    /** Genera la llista de columnes com un únic fragment SQL separat per comes
-     *  (p.ex. {@code "`ISBN`,`nom`,`any`,..."}) per usar en un INSERT. */
-    public static String inserirColumnsSql() {
-        StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 12);
-        for (int i = 0; i < COLUMNS_INSERT.length; i++) {
-            if (i > 0) sb.append(',');
-            sb.append('`').append(COLUMNS_INSERT[i]).append('`');
-        }
-        return sb.toString();
-    }
-
-    /** Genera la llista de placeholders per a un INSERT de 27 valors
-     *  (p.ex. {@code "?,?,?,...,?"}). */
-    public static String inserirPlaceholders() {
-        StringBuilder sb = new StringBuilder(COLUMNS_INSERT.length * 2);
-        for (int i = 0; i < COLUMNS_INSERT.length; i++) {
-            if (i > 0) sb.append(',');
-            sb.append('?');
-        }
-        return sb.toString();
-    }
-
     private static Object dateOrNull(String s) {
         if (s == null) return new Nul(Types.DATE);
         try { return java.sql.Date.valueOf(s); }

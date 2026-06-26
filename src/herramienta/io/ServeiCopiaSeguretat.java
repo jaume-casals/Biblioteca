@@ -177,39 +177,43 @@ public class ServeiCopiaSeguretat {
     }
 
     public void copiaSegToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws java.io.IOException, java.sql.SQLException {
-        // La llista de columnes és la font única de veritat — el finding
-        // MEDIUM de tot.txt sobre la duplicació de l'INSERT printf es
-        // tanca derivant el SQL de LlibreFieldBindings (que la nova
-        // font LlibreDaoCore.ColumnSpec alimenta).
+        persistencia.internal.ControladorPersistencia.BackupSnapshot snap = cp.snapshotForBackup();
+        snap.bib = new java.util.ArrayList<>(bib);
+        snap.llistes = new java.util.ArrayList<>(llistes);
+        snap.tags = new java.util.ArrayList<>(tags);
+        copiaSegToSQL(file, snap);
+    }
+
+    public void copiaSegToSQL(File file, persistencia.internal.ControladorPersistencia.BackupSnapshot snap) throws java.io.IOException {
         try (java.io.PrintWriter pw = new java.io.PrintWriter(
                 new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8))) {
             pw.println("-- Biblioteca backup " + java.time.LocalDate.now());
             for (String t : persistencia.internal.Schema.CLEAR_ORDER) pw.println("DELETE FROM " + t + ";");
-            for (Llibre l : bib) {
+            for (Llibre l : snap.bib) {
                 escriureLlibreINSERT(pw, l);
             }
-            for (persistencia.row.AutorRow row : cp.obtenirAllAutorRows()) {
+            for (persistencia.row.AutorRow row : snap.autors) {
                 escriureAutorINSERT(pw, row.id(), row.nom());
             }
-            for (persistencia.row.LlibreAutorRow row : cp.obtenirAllLlibreAutorRows()) {
+            for (persistencia.row.LlibreAutorRow row : snap.llibreAutors) {
                 escriureLlibreAutorINSERT(pw, row.isbn(), row.autorId());
             }
-            for (Llista ll : llistes) {
+            for (Llista ll : snap.llistes) {
                 escriureLlistaINSERT(pw, ll);
             }
-            for (persistencia.row.LlibreLlistaRow row : cp.obtenirAllLlibreLlista()) {
+            for (persistencia.row.LlibreLlistaRow row : snap.llibreLlistes) {
                 escriureLlibreLlistaINSERT(pw, row);
             }
-            for (Tag t : tags) {
+            for (Tag t : snap.tags) {
                 escriureTagINSERT(pw, t);
             }
-            for (persistencia.row.LlibreTagRow row : cp.obtenirAllLlibreTag()) {
+            for (persistencia.row.LlibreTagRow row : snap.llibreTags) {
                 escriureLlibreTagINSERT(pw, row);
             }
-            for (persistencia.row.PrestecRow row : cp.obtenirAllPrestecs()) {
+            for (persistencia.row.PrestecRow row : snap.prestecs) {
                 escriurePrestecINSERT(pw, row);
             }
-            for (persistencia.row.LecturaRow row : cp.obtenirAllLectures()) {
+            for (persistencia.row.LecturaRow row : snap.lectures) {
                 escriureLecturaINSERT(pw, row);
             }
         }
@@ -354,7 +358,15 @@ public class ServeiCopiaSeguretat {
 
     private static String sqlNullable(String s) {
         if (s == null) return "NULL";
-        return "'" + sqlEsc(s) + "'";
+        String esc = sqlEsc(s);
+        if (esc.indexOf('\n') < 0) return "'" + esc + "'";
+        StringBuilder sb = new StringBuilder(esc.length() + 32);
+        String[] parts = esc.split("\n", -1);
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(" || CHAR(10) || ");
+            sb.append('\'').append(parts[i]).append('\'');
+        }
+        return sb.toString();
     }
 
     /**
@@ -367,16 +379,16 @@ public class ServeiCopiaSeguretat {
      *       backslashes dins literals</li>
      *   <li>{@code '} → {@code ''} — estàndard SQL</li>
      *   <li>{@code \u0000} → buit — el null byte trenca JDBC i molts CLIs</li>
-     *   <li>{@code \n}, {@code \r} → espais — un newline dins un literal
-     *       és vàlid per JDBC però trenca el parser del MySQL CLI; per seguretat
-     *       es normalitza a espai (la pèrdua d'informació és negligible per camps
-     *       de text lliure com {@code notes})</li>
      * </ul>
+     * Els salts de línia es preserven via la concatenació
+     * {@code '...' || CHAR(10) || '...'} que composa {@link #sqlNullable} —
+     * un newline real dins d'un literal trencaria el lector de línies
+     * del restaurador ({@code br.lines()}).
      */
     private static String sqlEsc(String s) {
         if (s == null) return "";
         String out = s.replace("\\", "\\\\").replace("'", "''");
-        out = out.replace("\u0000", "").replace("\n", " ").replace("\r", " ").replace("\u001A", "");
+        out = out.replace("\u0000", "").replace("\u001A", "");
         return out;
     }
 }

@@ -234,7 +234,9 @@ public final class DelegatLlibre {
         return state.persistence().cercarLlibres(LlibreFilter.empty(), offset, pageSize);
     }
 
-    public int comptarLlibresDB() { return state.persistence().comptarLlibres(); }
+    public int comptarLlibresDB() {
+        return state.withLockReturning(state.bib()::size);
+    }
 
     // ── Internals ─────────────────────────────────────────────────────────────
 

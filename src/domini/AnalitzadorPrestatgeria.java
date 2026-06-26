@@ -61,10 +61,15 @@ public final class AnalitzadorPrestatgeria {
                 Double valoracio = l.obtenirValoracio() != null ? l.obtenirValoracio() : 0.0;
                 Double preu = l.obtenirPreu() != null ? l.obtenirPreu() : 0.0;
                 boolean llegit = l.obtenirLlegit() != null && l.obtenirLlegit();
-                pw.printf(java.util.Locale.ROOT, "\"%s\",\"%s\",\"%s\",%d,\"%s\",%.1f,%.2f,%b,\"%s\",\"%s\"%n",
-                    l.obtenirISBN(), esc(l.obtenirNom()), esc(l.obtenirAutor()), any,
-                    esc(l.obtenirDescripcio()), valoracio, preu, llegit,
-                    esc(l.obtenirImatge()), llistesStr);
+                pw.printf(java.util.Locale.ROOT, "%s,%s,%s,%d,%s,%.1f,%.2f,%b,%s,%s%n",
+                    UtilitatsCsv.csvQ(l.obtenirISBN() == null ? "" : String.valueOf(l.obtenirISBN())),
+                    UtilitatsCsv.csvQ(l.obtenirNom()),
+                    UtilitatsCsv.csvQ(l.obtenirAutor()),
+                    any,
+                    UtilitatsCsv.csvQ(l.obtenirDescripcio()),
+                    valoracio, preu, llegit,
+                    UtilitatsCsv.csvQ(l.obtenirImatge()),
+                    UtilitatsCsv.csvQ(llistesStr.toString()));
                 } catch (RuntimeException e) {
                     LOG.log(Level.WARNING, "ShelfParser.exportToCsv: skipped ISBN " + l.obtenirISBN(), e);
                 }

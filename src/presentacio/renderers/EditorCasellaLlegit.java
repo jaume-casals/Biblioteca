@@ -49,11 +49,17 @@ public class EditorCasellaLlegit extends AbstractCellEditor implements TableCell
             String isbnStr = tbl != null && row >= 0 && row < tbl.getRowCount()
                 ? (String) tbl.getValueAt(row, COLUMNA_ISBN) : null;
             fireEditingStopped();
-            if (isbnStr != null) {
-                String isbn = isbnStr;
+            if (isbnStr != null && !isbnStr.isBlank()) {
+                final String isbn = isbnStr;
+                final long isbnLong;
+                try { isbnLong = Long.parseLong(isbn); }
+                catch (NumberFormatException nfe) {
+                    new DialegError(nfe).mostrarErrorMessage();
+                    return;
+                }
                 LLEGIT_EXEC.submit(() -> {
                     try {
-                        Llibre l = ControladorMarcPrincipal.getInstance().obtenirLlibreIsbn(Long.parseLong(isbn));
+                        Llibre l = ControladorMarcPrincipal.getInstance().obtenirLlibreIsbn(isbnLong);
                         if (l == null) return;
                         l.posarLlegit(newLlegit);
                         cd.actualitzarLlibre(l);
