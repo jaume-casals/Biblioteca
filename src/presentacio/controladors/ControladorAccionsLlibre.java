@@ -85,13 +85,18 @@ public class ControladorAccionsLlibre {
     void abrirDetallesDeLlibre(Llibre l, boolean editMode) {
         if (l == null) return;
         try {
-            ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(l, state.enActualizarBBDD, state.cd);
-            detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
+            ControladorPanellDetallsLlibre detalles = obrirPanellDetalls(l);
             if (editMode) detalles.obtenirDetallesLlibrePanel().obtenirBtnEditar().doClick();
-            detalles.obtenirDetallesLlibrePanel().setVisible(true);
         } catch (Exception e) {
             new DialegError(e).mostrarErrorMessage();
         }
+    }
+
+    private ControladorPanellDetallsLlibre obrirPanellDetalls(Llibre l) {
+        ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(l, state.enActualizarBBDD, state.cd);
+        detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
+        detalles.obtenirDetallesLlibrePanel().setVisible(true);
+        return detalles;
     }
 
     void refrescarLlibre(Llibre l, boolean nuevo) {
@@ -118,6 +123,15 @@ public class ControladorAccionsLlibre {
             try { isbns.add(Long.parseLong(cell.toString())); }
             catch (NumberFormatException nfe) { /* salta cel·les no numèriques */ }
         }
+        eliminarLlibresBatchAsync(isbns, null);
+    }
+
+    /** Elimina una llista de llibres en segon pla amb el camí d'undo
+     *  estàndard. {@code afterUndo} (opcional) s'invoca a l'EDT un cop
+     *  el camí d'undo s'ha registrat i la taula ja reflecteix la
+     *  supressió; la galeria l'usa per refrescar les seves pròpies
+     *  targetes després d'una eliminació feta des del menú contextual. */
+    void eliminarLlibresBatchAsync(List<Long> isbns, Runnable afterUndo) {
         final List<Long> toDelete = isbns;
         new SwingWorker<List<Llibre>, Void>() {
             @Override protected List<Llibre> doInBackground() {
@@ -141,6 +155,7 @@ public class ControladorAccionsLlibre {
                 if (isCancelled()) return;
                 try {
                     finalizeDeleteWithUndo(get(), toDelete);
+                    if (afterUndo != null) SwingUtilities.invokeLater(afterUndo);
                 } catch (Exception e) {
                     new DialegError(e).mostrarErrorMessage();
                 }
@@ -241,9 +256,7 @@ public class ControladorAccionsLlibre {
                 break;
             }
         }
-        ControladorPanellDetallsLlibre detalles = new ControladorPanellDetallsLlibre(aleatori, state.enActualizarBBDD, state.cd);
-        detalles.obtenirDetallesLlibrePanel().setLocationRelativeTo(state.vista);
-        detalles.obtenirDetallesLlibrePanel().setVisible(true);
+        obrirPanellDetalls(aleatori);
     }
 
     private void applyAsCurrentView(List<Llibre> result) {

@@ -63,7 +63,7 @@ public class EstacioEscaneigDialog extends JDialog {
 		content.setBorder(BorderFactory.createEmptyBorder(14, 18, 14, 18));
 		content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 
-		JLabel lblHint = new JLabel("<html>" + escapeHtml(I18n.t("estacio_hint")).replace("\n", "<br>") + "</html>");
+		JLabel lblHint = new JLabel("<html>" + herramienta.i18n.Escapers.htmlWithBreaks(I18n.t("estacio_hint")) + "</html>");
 		lblHint.setFont(UITheme.fontBase());
 		lblHint.setForeground(UITheme.palette().textDark());
 		lblHint.setAlignmentX(JComponent.LEFT_ALIGNMENT);
@@ -105,19 +105,6 @@ public class EstacioEscaneigDialog extends JDialog {
 		content.add(bottom);
 
 		setContentPane(content);
-	}
-
-	private static String escapeHtml(String s) {
-		if (s == null) return "";
-		StringBuilder sb = new StringBuilder(s.length());
-		for (int i = 0; i < s.length(); i++) {
-			char c = s.charAt(i);
-			if (c == '<') sb.append("&lt;");
-			else if (c == '>') sb.append("&gt;");
-			else if (c == '&') sb.append("&amp;");
-			else sb.append(c);
-		}
-		return sb.toString();
 	}
 
 	private void wireListeners() {

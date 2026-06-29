@@ -15,13 +15,10 @@ public class LlibreLecturaDao {
     public LlibreLecturaDao(Connection con) { this.con = con; }
 
     public List<LecturaRow> obtenirAllLectures() {
-        try {
-            return MapejadorsFiles.queryAll(con,
-                "SELECT isbn, data_inici, data_fi, pagines_llegides FROM lectura ORDER BY id",
-                rs -> new LecturaRow(rs.getLong(1), LecturaRow.analitzarDateOrNull(rs.getString(2)),
-                    LecturaRow.analitzarDateOrNull(rs.getString(3)), rs.getInt(4)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les lectures: " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT isbn, data_inici, data_fi, pagines_llegides FROM lectura ORDER BY id",
+            "Error carregant les lectures",
+            rs -> new LecturaRow(rs.getLong(1), LecturaRow.analitzarDateOrNull(rs.getString(2)),
+                LecturaRow.analitzarDateOrNull(rs.getString(3)), rs.getInt(4)));
     }
 }

@@ -6,7 +6,6 @@ import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -86,17 +85,15 @@ public final class SeccioAparençaConfiguracio {
     }
 
     public static void reloadFromConfig(JPanel root) {
-        JComponent jc;
-        jc = SeccionsConfiguracio.cercarById(root, "cmbTheme");
-        if (jc instanceof JComboBox) ((JComboBox<?>) jc).setSelectedIndex(Configuracio.obtenirTheme().ordinal());
-        jc = SeccionsConfiguracio.cercarById(root, "cmbFont");
-        if (jc instanceof JComboBox) {
+        SeccionsConfiguracio.apply(root, "cmbTheme", JComboBox.class,
+            c -> c.setSelectedIndex(Configuracio.obtenirTheme().ordinal()));
+        SeccionsConfiguracio.apply(root, "cmbFont", JComboBox.class, c -> {
             String fs = Configuracio.obtenirFontSize();
-            ((JComboBox<?>) jc).setSelectedIndex("small".equals(fs) ? 0 : "large".equals(fs) ? 2 : 1);
-        }
-        jc = SeccionsConfiguracio.cercarById(root, "cmbCurrency");
-        if (jc instanceof JComboBox) ((JComboBox<?>) jc).setSelectedItem(Configuracio.getCurrencySymbol());
-        jc = SeccionsConfiguracio.cercarById(root, "txtDefVal");
-        if (jc instanceof JTextField) ((JTextField) jc).setText(String.valueOf(Configuracio.obtenirDefaultValoracio()));
+            c.setSelectedIndex("small".equals(fs) ? 0 : "large".equals(fs) ? 2 : 1);
+        });
+        SeccionsConfiguracio.apply(root, "cmbCurrency", JComboBox.class,
+            c -> c.setSelectedItem(Configuracio.getCurrencySymbol()));
+        SeccionsConfiguracio.apply(root, "txtDefVal", JTextField.class,
+            c -> c.setText(String.valueOf(Configuracio.obtenirDefaultValoracio())));
     }
 }

@@ -4,6 +4,7 @@ package presentacio.detalles.vista;
 
 import presentacio.formularis.RegistreCampsFormulari;
 import presentacio.util.UIComponents;
+import domini.Llibre;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -320,4 +321,34 @@ public class PanellDetallsLlibre extends JDialog {
 	public JButton    obtenirBtnGestioTags()         { return registry.button("btnGestioTags"); }
 	public JButton    obtenirBtnHistorialPrestecs()  { return registry.button("btnHistorialPrestecs"); }
 	public JButton    obtenirBtnImprimir()           { return registry.button("btnImprimir"); }
+
+	public void omplir(Llibre l) {
+		registry.textField("textAny").setText(java.util.Objects.toString(l.obtenirAny(), ""));
+		registry.textField("textAutor").setText(java.util.Objects.toString(l.obtenirAutor(), ""));
+		registry.textField("textISBN").setText(java.util.Objects.toString(l.obtenirISBN(), ""));
+		registry.textField("textDescripcio").setText(java.util.Objects.toString(l.obtenirDescripcio(), ""));
+		registry.textField("textNom").setText(java.util.Objects.toString(l.obtenirNom(), ""));
+		registry.textField("textPortada").setText(l.obtenirImatge() != null ? l.obtenirImatge() : "");
+		registry.textField("textPreu").setText(java.util.Objects.toString(l.obtenirPreu(), ""));
+		registry.textField("textValoracio").setText(java.util.Objects.toString(l.obtenirValoracio(), ""));
+		registry.comprovarBox("chckLlegit").setSelected(Boolean.TRUE.equals(l.obtenirLlegit()));
+		((JTextArea) registry.get("textNotes")).setText(l.obtenirNotes() != null ? l.obtenirNotes() : "");
+		registry.textField("textEditorial").setText(l.obtenirEditorial() != null ? l.obtenirEditorial() : "");
+		registry.textField("textSerie").setText(l.obtenirSerie() != null ? l.obtenirSerie() : "");
+		registry.textField("textVolum").setText(l.obtenirVolum() > 0 ? String.valueOf(l.obtenirVolum()) : "");
+		registry.textField("textDataCompra").setText(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "");
+		registry.textField("textDataLectura").setText(herramienta.text.UtilitatsData.formatejarDateForDisplay(l.obtenirDataLectura()));
+		registry.textField("textIdioma").setText(l.obtenirIdioma() != null ? l.obtenirIdioma() : "");
+		registry.textField("textPaisOrigen").setText(l.obtenirPaisOrigen() != null ? l.obtenirPaisOrigen() : "");
+		registry.comboBox("comboFormat").setSelectedItem(l.obtenirFormat() != null ? l.obtenirFormat() : "");
+		registry.comboBox("comboEstat").setSelectedItem(l.obtenirEstat() != null ? l.obtenirEstat() : "");
+		registry.textField("textExemplars").setText(l.obtenirExemplars() > 1 ? String.valueOf(l.obtenirExemplars()) : "");
+		registry.textField("textLlenguaOriginal").setText(l.obtenirLlenguaOriginal() != null ? l.obtenirLlenguaOriginal() : "");
+		registry.comprovarBox("chckDesitjat").setSelected(l.esDesitjat());
+		registry.textField("textPagines").setText(l.obtenirPagines() > 0 ? String.valueOf(l.obtenirPagines()) : "");
+		registry.textField("textPaginesLlegides").setText(l.obtenirPaginesLlegides() > 0 ? String.valueOf(l.obtenirPaginesLlegides()) : "");
+		registry.textField("textNomCa").setText(l.obtenirNomCa() != null ? l.obtenirNomCa() : "");
+		registry.textField("textNomEs").setText(l.obtenirNomEs() != null ? l.obtenirNomEs() : "");
+		registry.textField("textNomEn").setText(l.obtenirNomEn() != null ? l.obtenirNomEn() : "");
+	}
 }

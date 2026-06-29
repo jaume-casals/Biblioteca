@@ -31,13 +31,14 @@ public class ImportadorLlibres {
      *  veure el tall. */
     private static final int MAX_NOTES_CHARS = 10_000;
 
+    private static final java.util.List<herramienta.io.csv.CsvImportStrategy> CSV_STRATEGIES = java.util.List.of(
+        new herramienta.io.csv.LibraryThingCsvStrategy(),
+        new herramienta.io.csv.GoodreadsCsvStrategy(),
+        new herramienta.io.csv.NativeCsvStrategy());
+
     public static ResultatImportacio importarCSV(java.io.File file, EscritorBiblioteca cd) {
         int ok = 0, skipped = 0, err = 0;
         java.util.List<String> errors = new java.util.ArrayList<>();
-        java.util.List<herramienta.io.csv.CsvImportStrategy> strategies = java.util.List.of(
-            new herramienta.io.csv.LibraryThingCsvStrategy(),
-            new herramienta.io.csv.GoodreadsCsvStrategy(),
-            new herramienta.io.csv.NativeCsvStrategy());
         try (java.io.Reader reader = new java.io.BufferedReader(
                 new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
             herramienta.io.csv.Rfc4180Reader br = new herramienta.io.csv.Rfc4180Reader(reader);
@@ -51,10 +52,10 @@ public class ImportadorLlibres {
             }
             String headerLine = String.join(",", headerRow);
             herramienta.io.csv.CsvImportStrategy strategy = null;
-            for (herramienta.io.csv.CsvImportStrategy s : strategies) {
+            for (herramienta.io.csv.CsvImportStrategy s : CSV_STRATEGIES) {
                 if (s.potHandle(headerLine)) { strategy = s; break; }
             }
-            if (strategy == null) strategy = new herramienta.io.csv.NativeCsvStrategy();
+            if (strategy == null) strategy = CSV_STRATEGIES.get(CSV_STRATEGIES.size() - 1);
             // Reutilitza el headerRow ja analitzat — no cal tornar a
             // concatenar i dividir les mateixes dades a través de
             // CsvUtils.parseLine (malbaratament d'una passada de 5-10 ms

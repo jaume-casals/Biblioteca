@@ -23,6 +23,7 @@ import javax.swing.JTextField;
 import javax.swing.border.Border;
 import javax.swing.plaf.basic.BasicButtonUI;
 
+import herramienta.i18n.Escapers;
 import herramienta.i18n.I18n;
 import herramienta.ui.UITheme;
 
@@ -227,5 +228,10 @@ public final class UIComponents {
         scroll.getViewport().setBackground(UITheme.palette().bgPanel());
         attachResponsiveColumns(scroll, grid, entryMinW);
         return scroll;
+    }
+
+    /** Escapa text per incrustar en HTML Swing (etiquetes, botons amb HTML) respectant salts de línia. */
+    public static String escapeHtml(String s) {
+        return Escapers.htmlWithBreaks(s);
     }
 }

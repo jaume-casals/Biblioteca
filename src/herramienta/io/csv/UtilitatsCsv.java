@@ -1,5 +1,6 @@
 package herramienta.io.csv;
 
+import herramienta.i18n.Escapers;
 import persistencia.contract.LectorLlibre;
 
 import java.util.ArrayList;
@@ -99,8 +100,7 @@ public final class UtilitatsCsv {
     }
 
     public static String csvQ(String s) {
-        if (s == null) return "";
-        return "\"" + s.replace("\"", "\"\"") + "\"";
+        return Escapers.csv(s);
     }
 
     /** Analitza una cadena ISBN, convertint qualsevol ISBN-10 vàlid a ISBN-13.

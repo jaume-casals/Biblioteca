@@ -107,8 +107,7 @@ public class ControladorEstacioEscaneig {
 				Result r;
 				try { r = get(); }
 				catch (Exception e) {
-					r = new Result(Outcome.OTHER_ERROR,
-						I18n.t("estacio_status_error", e.getMessage()), 0L, null);
+					r = result(Outcome.OTHER_ERROR, 0L, null, "estacio_status_error", e.getMessage());
 				}
 				finishOneResult(r);
 			}
@@ -116,50 +115,47 @@ public class ControladorEstacioEscaneig {
 		worker.execute();
 	}
 
+	private static Result result(Outcome o, long isbn, String title, String i18nKey, Object... args) {
+		return new Result(o, I18n.t(i18nKey, args), isbn, title);
+	}
+
 	private Result processIsbn(String trimmed) {
 		long isbn;
 		try {
 			isbn = Long.parseLong(trimmed);
 		} catch (NumberFormatException e) {
-			return new Result(Outcome.INVALID, I18n.t("estacio_status_invalid"), 0L, null);
+			return result(Outcome.INVALID, 0L, null, "estacio_status_invalid");
 		}
 		try {
 			if (cd.existsLlibre(isbn)) {
-				return new Result(Outcome.DUPLICATE,
-					I18n.t("estacio_status_duplicate", trimmed), isbn, null);
+				return result(Outcome.DUPLICATE, isbn, null, "estacio_status_duplicate", trimmed);
 			}
 		} catch (Exception e) {
-			return new Result(Outcome.OTHER_ERROR,
-				I18n.t("estacio_status_error", e.getMessage()), isbn, null);
+			return result(Outcome.OTHER_ERROR, isbn, null, "estacio_status_error", e.getMessage());
 		}
 
 		Map<String, String> meta;
 		try {
 			meta = ClientOpenLibrary.lookupByISBN(trimmed);
 		} catch (Exception e) {
-			return new Result(Outcome.NETWORK_ERROR,
-				I18n.t("estacio_status_network"), isbn, null);
+			return result(Outcome.NETWORK_ERROR, isbn, null, "estacio_status_network");
 		}
 		if (meta.containsKey("error")) {
-			return new Result(Outcome.NETWORK_ERROR,
-				I18n.t("estacio_status_network"), isbn, null);
+			return result(Outcome.NETWORK_ERROR, isbn, null, "estacio_status_network");
 		}
 
 		String title = meta.get("title");
 		if (title == null || title.isBlank()) {
-			return new Result(Outcome.OTHER_ERROR,
-				I18n.t("estacio_status_error", "no title"), isbn, null);
+			return result(Outcome.OTHER_ERROR, isbn, null, "estacio_status_error", "no title");
 		}
 
 		Llibre book = buildBook(isbn, meta);
 		try {
 			cd.afegirLlibre(book);
 		} catch (BibliotecaException.Duplicat dup) {
-			return new Result(Outcome.DUPLICATE,
-				I18n.t("estacio_status_duplicate", trimmed), isbn, title);
+			return result(Outcome.DUPLICATE, isbn, title, "estacio_status_duplicate", trimmed);
 		} catch (Exception e) {
-			return new Result(Outcome.OTHER_ERROR,
-				I18n.t("estacio_status_error", e.getMessage()), isbn, title);
+			return result(Outcome.OTHER_ERROR, isbn, title, "estacio_status_error", e.getMessage());
 		}
 
 		if (listener != null) {
@@ -168,8 +164,7 @@ public class ControladorEstacioEscaneig {
 				catch (Exception ignored) {}
 			});
 		}
-		return new Result(Outcome.ADDED,
-			I18n.t("estacio_status_added", title), isbn, title);
+		return result(Outcome.ADDED, isbn, title, "estacio_status_added", title);
 	}
 
 	private static Llibre buildBook(long isbn, Map<String, String> meta) {

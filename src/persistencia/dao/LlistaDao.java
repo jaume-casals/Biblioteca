@@ -21,18 +21,15 @@ public class LlistaDao {
     // mateixos.
 
     public ArrayList<Llista> obtenirAll() {
-        try {
-            return new ArrayList<>(MapejadorsFiles.queryAll(con,
-                "SELECT id, nom, ordre, color FROM llista ORDER BY ordre, nom",
-                rs -> {
-                    Llista l = new Llista(rs.getInt(1), rs.getString(2));
-                    l.posarOrdre(rs.getInt(3));
-                    l.posarColor(rs.getString(4));
-                    return l;
-                }));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les llistes: " + e.getMessage(), e);
-        }
+        return new ArrayList<>(MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT id, nom, ordre, color FROM llista ORDER BY ordre, nom",
+            "Error carregant les llistes",
+            rs -> {
+                Llista l = new Llista(rs.getInt(1), rs.getString(2));
+                l.posarOrdre(rs.getInt(3));
+                l.posarColor(rs.getString(4));
+                return l;
+            }));
     }
 
     // La subconsulta SELECT COALESCE(MAX(ordre),0)+1 no s'envolta
@@ -50,25 +47,22 @@ public class LlistaDao {
         MapejadorsFiles.exec(con, "DELETE FROM llista WHERE id = ?", ps -> ps.setInt(1, id));
     }
 
-    public void actualitzarNom(int id, String newNom) throws SQLException {
-        MapejadorsFiles.exec(con, "UPDATE llista SET nom = ? WHERE id = ?", ps -> {
-            ps.setString(1, newNom);
-            ps.setInt(2, id);
-        });
+    public void actualitzarNom(int id, String newNom) {
+        MapejadorsFiles.execOrThrow(con, "UPDATE llista SET nom = ? WHERE id = ?",
+            "Error actualitzant el nom de la llista", ps -> {
+                ps.setString(1, newNom);
+                ps.setInt(2, id);
+            });
     }
 
     // getCount() es podria servir dels resultats de getAllCounts() en
     // una optimització futura per evitar una anada i tornada a la BBDD
     // per prestatgeria.
     public int obtenirRecompte(int llistaId) {
-        try {
-            java.util.List<Integer> r = MapejadorsFiles.queryWithParams(con,
-                "SELECT COUNT(*) FROM llibre_llista WHERE llista_id = ?",
-                ps -> ps.setInt(1, llistaId), rs -> rs.getInt(1));
-            return r.isEmpty() ? 0 : r.get(0);
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error comptant els llibres de la llista: " + e.getMessage(), e);
-        }
+        java.util.List<Integer> r = MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT COUNT(*) FROM llibre_llista WHERE llista_id = ?",
+            ps -> ps.setInt(1, llistaId), "Error comptant els llibres de la llista", rs -> rs.getInt(1));
+        return r.isEmpty() ? 0 : r.get(0);
     }
 
     // Optimització futura: els consumidors que necessitin tant
@@ -77,36 +71,25 @@ public class LlistaDao {
     // prestatgeria.
     public java.util.Map<Integer, Integer> obtenirAllCounts() {
         java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
-        try {
-            for (int[] row : MapejadorsFiles.queryAll(con,
-                    "SELECT llista_id, COUNT(*) FROM llibre_llista GROUP BY llista_id",
-                    rs -> new int[]{rs.getInt(1), rs.getInt(2)}))
-                counts.put(row[0], row[1]);
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error comptant els llibres de les llistes: " + e.getMessage(), e);
-        }
+        for (int[] row : MapejadorsFiles.queryAllOrThrow(con,
+                "SELECT llista_id, COUNT(*) FROM llibre_llista GROUP BY llista_id",
+                "Error comptant els llibres de les llistes",
+                rs -> new int[]{rs.getInt(1), rs.getInt(2)}))
+            counts.put(row[0], row[1]);
         return counts;
     }
 
     public ArrayList<Llibre> obtenirLlibres(int llistaId) {
-        try {
-            return new ArrayList<>(MapejadorsFiles.queryWithParams(con,
-                "SELECT " + LlibreDaoCore.LLIBRE_COLUMNS_L_SHELF +
-                " FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN",
-                ps -> ps.setInt(1, llistaId), LlibreMapper::buildLlibre));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant els llibres de la llista: " + e.getMessage(), e);
-        }
+        return new ArrayList<>(MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT " + LlibreDaoCore.LLIBRE_COLUMNS_L_SHELF +
+            " FROM llibre l JOIN llibre_llista ll ON l.ISBN = ll.isbn WHERE ll.llista_id = ? ORDER BY l.ISBN",
+            ps -> ps.setInt(1, llistaId), "Error carregant els llibres de la llista", LlibreMapper::buildLlibre));
     }
 
     public java.util.Set<Long> obtenirISBNsInLlista(int llistaId) {
-        try {
-            return new java.util.HashSet<>(MapejadorsFiles.queryWithParams(con,
-                "SELECT isbn FROM llibre_llista WHERE llista_id = ?",
-                ps -> ps.setInt(1, llistaId), rs -> rs.getLong(1)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant ISBNs de llista: " + e.getMessage(), e);
-        }
+        return new java.util.HashSet<>(MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT isbn FROM llibre_llista WHERE llista_id = ?",
+            ps -> ps.setInt(1, llistaId), "Error carregant ISBNs de llista", rs -> rs.getLong(1)));
     }
 
     public void afegirLlibre(long isbn, int llistaId, double valoracio, boolean llegit) throws SQLException {
@@ -178,42 +161,38 @@ public class LlistaDao {
      * 0=id, 1=nom, 2=valoracio, 3=llegit, 4=ordre, 5=color.
      */
     private java.util.List<Object[]> queryLlistesForLlibreRaw(long isbn) {
-        try {
-            return MapejadorsFiles.queryWithParams(con,
-                "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
-                "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.ordre, l.nom",
-                ps -> ps.setLong(1, isbn),
-                rs -> new Object[] {
-                    rs.getInt(1), rs.getString(2),
-                    rs.getObject(3, Double.class), rs.getBoolean(4),
-                    rs.getInt(5), rs.getString(6)
-                });
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les llistes del llibre: " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT l.id, l.nom, ll.valoracio, ll.llegit, l.ordre, l.color FROM llista l " +
+            "JOIN llibre_llista ll ON l.id = ll.llista_id WHERE ll.isbn = ? ORDER BY l.ordre, l.nom",
+            ps -> ps.setLong(1, isbn),
+            "Error carregant les llistes del llibre",
+            rs -> new Object[] {
+                rs.getInt(1), rs.getString(2),
+                rs.getObject(3, Double.class), rs.getBoolean(4),
+                rs.getInt(5), rs.getString(6)
+            });
     }
 
-    public void actualitzarOrdre(int id, int ordre) throws SQLException {
-        MapejadorsFiles.exec(con, "UPDATE llista SET ordre = ? WHERE id = ?", ps -> {
-            ps.setInt(1, ordre);
-            ps.setInt(2, id);
-        });
+    public void actualitzarOrdre(int id, int ordre) {
+        MapejadorsFiles.execOrThrow(con, "UPDATE llista SET ordre = ? WHERE id = ?",
+            "Error actualitzant l'ordre de la llista", ps -> {
+                ps.setInt(1, ordre);
+                ps.setInt(2, id);
+            });
     }
 
-    public void actualitzarColor(int id, String color) throws SQLException {
-        MapejadorsFiles.exec(con, "UPDATE llista SET color = ? WHERE id = ?", ps -> {
-            if (color == null) ps.setNull(1, java.sql.Types.VARCHAR); else ps.setString(1, color);
-            ps.setInt(2, id);
-        });
+    public void actualitzarColor(int id, String color) {
+        MapejadorsFiles.execOrThrow(con, "UPDATE llista SET color = ? WHERE id = ?",
+            "Error actualitzant el color de la llista", ps -> {
+                if (color == null) ps.setNull(1, java.sql.Types.VARCHAR); else ps.setString(1, color);
+                ps.setInt(2, id);
+            });
     }
 
     public java.util.List<persistencia.row.LlibreLlistaRow> obtenirAllLlibreLlista() {
-        try {
-            return MapejadorsFiles.queryAll(con,
-                "SELECT isbn, llista_id, valoracio, llegit FROM llibre_llista ORDER BY llista_id, isbn",
-                rs -> new persistencia.row.LlibreLlistaRow(rs.getLong(1), rs.getInt(2), rs.getDouble(3), rs.getBoolean(4)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les dades de llista: " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT isbn, llista_id, valoracio, llegit FROM llibre_llista ORDER BY llista_id, isbn",
+            "Error carregant les dades de llista",
+            rs -> new persistencia.row.LlibreLlistaRow(rs.getLong(1), rs.getInt(2), rs.getDouble(3), rs.getBoolean(4)));
     }
 }

@@ -165,24 +165,31 @@ public class ValidadorLlibre {
 			v.obtenirDescripcio(), v.obtenirValoracio(), v.obtenirPreu(), v.obtenirLlegit(), v.obtenirImatge());
 	}
 
+	private record LimitCamp(String i18nKey, int max) {}
+	private static final LimitCamp[] EXTRA_LIMITS = {
+		new LimitCamp("val_editorial_llarg", 255),
+		new LimitCamp("val_serie_llarg", 255),
+		new LimitCamp("val_idioma_llarg", 100),
+		new LimitCamp("val_format_llarg", 50),
+		new LimitCamp("val_pais_llarg", 100),
+		new LimitCamp("val_estat_llarg", 50),
+	};
+	private static void checkLimits(String[] vals) {
+		for (int i = 0; i < EXTRA_LIMITS.length && i < vals.length; i++) {
+			String v = vals[i];
+			LimitCamp l = EXTRA_LIMITS[i];
+			if (v != null && v.length() > l.max())
+				throw new IllegalArgumentException(I18n.t(l.i18nKey()));
+		}
+	}
+
 	/** Valida els camps de cadena opcionals que tenen un límit VARCHAR a la BBDD. Llança si el superen. */
 	public static void validarExtras(String editorial, String serie) {
-		if (editorial != null && editorial.length() > 255)
-			throw new IllegalArgumentException(I18n.t("val_editorial_llarg"));
-		if (serie != null && serie.length() > 255)
-			throw new IllegalArgumentException(I18n.t("val_serie_llarg"));
+		checkLimits(new String[]{editorial, serie});
 	}
 
 	public static void validarExtrasAll(String editorial, String serie, String idioma, String format, String paisOrigen, String estat) {
-		validarExtras(editorial, serie);
-		if (idioma != null && idioma.length() > 100)
-			throw new IllegalArgumentException(I18n.t("val_idioma_llarg"));
-		if (format != null && format.length() > 50)
-			throw new IllegalArgumentException(I18n.t("val_format_llarg"));
-		if (paisOrigen != null && paisOrigen.length() > 100)
-			throw new IllegalArgumentException(I18n.t("val_pais_llarg"));
-		if (estat != null && estat.length() > 50)
-			throw new IllegalArgumentException(I18n.t("val_estat_llarg"));
+		checkLimits(new String[]{editorial, serie, idioma, format, paisOrigen, estat});
 	}
 
 	private static int comptarDig(long n) {

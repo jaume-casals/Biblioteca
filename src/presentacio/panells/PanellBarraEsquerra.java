@@ -193,23 +193,14 @@ public class PanellBarraEsquerra extends JPanel {
 				applyShelfColor(btn, l.obtenirColor(), false);
 				final int id = l.obtenirId();
 				btn.addActionListener(e -> {
-					for (int i = 0; i < comboLlistes.getItemCount(); i++) {
-						Object item = comboLlistes.getItemAt(i);
-						if (item instanceof Llista && ((Llista) item).obtenirId() == id) {
-							comboLlistes.setSelectedIndex(i);
-							break;
-						}
-					}
+					int idx = findLlistaIndex(id);
+					if (idx >= 0) comboLlistes.setSelectedIndex(idx);
 				});
 				if (onShelfRename != null) {
 					btn.addMouseListener(new java.awt.event.MouseAdapter() {
 						@Override public void mouseClicked(java.awt.event.MouseEvent e) {
 							if (e.getClickCount() != 2) return;
-							Llista current = null;
-							for (int i = 0; i < comboLlistes.getItemCount(); i++) {
-								Object item = comboLlistes.getItemAt(i);
-								if (item instanceof Llista ll && ll.obtenirId() == id) { current = ll; break; }
-							}
+							Llista current = findLlista(id);
 							if (current != null) onShelfRename.accept(current);
 						}
 					});
@@ -260,6 +251,22 @@ public class PanellBarraEsquerra extends JPanel {
 		UIComponents.styleSidebarButton(btn);
 		btn.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
 		btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height + 4));
+	}
+
+	private int findLlistaIndex(int id) {
+		for (int i = 0; i < comboLlistes.getItemCount(); i++) {
+			Object item = comboLlistes.getItemAt(i);
+			if (item instanceof Llista ll && ll.obtenirId() == id) return i;
+		}
+		return -1;
+	}
+
+	private Llista findLlista(int id) {
+		for (int i = 0; i < comboLlistes.getItemCount(); i++) {
+			Object item = comboLlistes.getItemAt(i);
+			if (item instanceof Llista ll && ll.obtenirId() == id) return ll;
+		}
+		return null;
 	}
 
 	private JButton makeSidebarBtn(String text) {

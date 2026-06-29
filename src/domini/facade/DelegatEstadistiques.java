@@ -59,7 +59,7 @@ public final class DelegatEstadistiques {
     public List<String> obtenirDistinctValues(String column) {
         Function<Llibre, String> extractor = IN_MEMORY_EXTRACTORS.get(column);
         if (extractor != null) {
-            List<Llibre> snapshot = state.withLockReturning(() -> new ArrayList<>(state.bib()));
+            List<Llibre> snapshot = snapshotBibLocked();
             return snapshot.stream()
                 .map(extractor)
                 .filter(s -> s != null && !s.isEmpty())
@@ -72,8 +72,7 @@ public final class DelegatEstadistiques {
 
     public List<String> obtenirDistinctAutorNames() {
         TreeSet<String> names = new TreeSet<>();
-        List<Llibre> snapshot = state.withLockReturning(() -> new ArrayList<>(state.bib()));
-        for (Llibre l : snapshot) {
+        for (Llibre l : snapshotBibLocked()) {
             // Prefereix la llista canònica d'autors; cau al camp
             // `autor` concatenat antic per als llibres que arriben
             // pel camí del validador (que només estableix la cadena
@@ -97,4 +96,8 @@ public final class DelegatEstadistiques {
     public List<Object[]>        obtenirLlibreAutorData()     { return state.persistence().obtenirAllLlibreAutor(); }
     public List<PrestecRow>      obtenirAllPrestecs()         { return state.persistence().obtenirAllPrestecs(); }
     public List<LecturaRow>      obtenirAllLecturesData()     { return state.persistence().obtenirAllLectures(); }
+
+    private List<Llibre> snapshotBibLocked() {
+        return state.withLockReturning(() -> new ArrayList<>(state.bib()));
+    }
 }

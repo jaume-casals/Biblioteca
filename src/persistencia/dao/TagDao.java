@@ -69,12 +69,8 @@ public class TagDao {
     public void invalidateLlibreTagCache() { llibreTagCache = null; }
 
     public ArrayList<Tag> obtenirAll() {
-        try {
-            return new ArrayList<>(MapejadorsFiles.queryAll(con,
-                "SELECT id, nom FROM tag ORDER BY nom", TAG_MAPPER));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les etiquetes: " + e.getMessage(), e);
-        }
+        return new ArrayList<>(MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT id, nom FROM tag ORDER BY nom", "Error carregant les etiquetes", TAG_MAPPER));
     }
 
     public int create(String nom) throws SQLException {
@@ -95,13 +91,9 @@ public class TagDao {
     }
 
     public ArrayList<Tag> obtenirForLlibre(long isbn) {
-        try {
-            return new ArrayList<>(MapejadorsFiles.queryWithParams(con,
-                "SELECT t.id, t.nom FROM tag t JOIN llibre_tag lt ON t.id = lt.tag_id WHERE lt.isbn = ? ORDER BY t.nom",
-                ps -> ps.setLong(1, isbn), TAG_MAPPER));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les etiquetes del llibre: " + e.getMessage(), e);
-        }
+        return new ArrayList<>(MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT t.id, t.nom FROM tag t JOIN llibre_tag lt ON t.id = lt.tag_id WHERE lt.isbn = ? ORDER BY t.nom",
+            ps -> ps.setLong(1, isbn), "Error carregant les etiquetes del llibre", TAG_MAPPER));
     }
 
     public void afegirToLlibre(long isbn, int tagId) throws SQLException {
@@ -121,24 +113,17 @@ public class TagDao {
     }
 
     public Set<Long> obtenirLlibresWithTag(int tagId) {
-        try {
-            return new HashSet<>(MapejadorsFiles.queryWithParams(con,
-                "SELECT isbn FROM llibre_tag WHERE tag_id = ?",
-                ps -> ps.setInt(1, tagId), rs -> rs.getLong(1)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant els llibres de l'etiqueta: " + e.getMessage(), e);
-        }
+        return new HashSet<>(MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT isbn FROM llibre_tag WHERE tag_id = ?",
+            ps -> ps.setInt(1, tagId), "Error carregant els llibres de l'etiqueta", rs -> rs.getLong(1)));
     }
 
     public java.util.List<LlibreTagRow> obtenirAllLlibreTag() {
         if (llibreTagCache != null) return llibreTagCache;
-        try {
-            llibreTagCache = java.util.List.copyOf(MapejadorsFiles.queryAll(con,
-                "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn",
-                rs -> new LlibreTagRow(rs.getLong(1), rs.getInt(2))));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant les dades d'etiquetes: " + e.getMessage(), e);
-        }
+        llibreTagCache = java.util.List.copyOf(MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT isbn, tag_id FROM llibre_tag ORDER BY tag_id, isbn",
+            "Error carregant les dades d'etiquetes",
+            rs -> new LlibreTagRow(rs.getLong(1), rs.getInt(2))));
         return llibreTagCache;
     }
 
@@ -152,14 +137,10 @@ public class TagDao {
      */
     public java.util.List<String> obtenirDistinctValues(String column) {
         if (!AUTOCOMPLETE_COLUMNS.contains(column)) return new java.util.ArrayList<>();
-        try {
-            return MapejadorsFiles.queryAll(con,
-                "SELECT DISTINCT `" + column + "` FROM llibre WHERE `" + column +
-                "` IS NOT NULL AND `" + column + "` <> '' ORDER BY `" + column + "`",
-                rs -> rs.getString(1));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant valors de " + column + ": " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT DISTINCT `" + column + "` FROM llibre WHERE `" + column +
+            "` IS NOT NULL AND `" + column + "` <> '' ORDER BY `" + column + "`",
+            "Error carregant valors de " + column, rs -> rs.getString(1));
     }
 
 }

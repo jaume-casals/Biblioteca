@@ -5,7 +5,6 @@ import presentacio.util.UIComponents;
 
 import javax.swing.GroupLayout;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -39,10 +38,9 @@ public final class SeccioIdiomaConfiguracio {
     }
 
     public static void reloadFromConfig(JPanel root) {
-        JComponent jc = SeccionsConfiguracio.cercarById(root, "cmbLang");
-        if (jc instanceof JComboBox) {
+        SeccionsConfiguracio.apply(root, "cmbLang", JComboBox.class, c -> {
             String lang = Configuracio.obtenirLang();
-            ((JComboBox<?>) jc).setSelectedIndex("es".equals(lang) ? 1 : "en".equals(lang) ? 2 : 0);
-        }
+            c.setSelectedIndex("es".equals(lang) ? 1 : "en".equals(lang) ? 2 : 0);
+        });
     }
 }

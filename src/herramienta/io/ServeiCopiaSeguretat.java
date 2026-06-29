@@ -4,6 +4,7 @@ import domini.Llibre;
 import domini.Llista;
 import domini.Tag;
 import herramienta.config.Configuracio;
+import herramienta.i18n.Escapers;
 import persistencia.internal.ControladorPersistencia;
 
 import java.io.File;
@@ -332,8 +333,9 @@ public class ServeiCopiaSeguretat {
      */
     private static String sqlEsc(String s) {
         if (s == null) return "";
-        String out = s.replace("\\", "\\\\").replace("'", "''");
-        out = out.replace("\u0000", "").replace("\u001A", "");
-        return out;
+        return Escapers.sql(s)
+            .replace("\\", "\\\\")
+            .replace("\u0000", "")
+            .replace("\u001A", "");
     }
 }

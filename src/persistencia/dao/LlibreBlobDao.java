@@ -16,17 +16,11 @@ public class LlibreBlobDao {
     public LlibreBlobDao(Connection con) { this.con = con; }
 
     public byte[] obtenirBlob(long isbn) {
-        try {
-            try (PreparedStatement ps = con.prepareStatement("SELECT imatge_blob FROM llibre WHERE ISBN = ?")) {
-                ps.setLong(1, isbn);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) return rs.getBytes(1);
-                }
-            }
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant la imatge del llibre: " + e.getMessage(), e);
-        }
-        return null;
+        return MapejadorsFiles.queryOneWithParamsOrThrow(con,
+            "SELECT imatge_blob FROM llibre WHERE ISBN = ?",
+            ps -> ps.setLong(1, isbn),
+            "Error carregant la imatge del llibre",
+            rs -> rs.getBytes(1));
     }
 
     public void setBlob(long isbn, byte[] blob) throws SQLException {
@@ -44,15 +38,11 @@ public class LlibreBlobDao {
     }
 
     public void carregarHeavyFields(long isbn, Llibre target) {
-        try (PreparedStatement ps = con.prepareStatement(
-                "SELECT descripcio, notes FROM llibre WHERE ISBN = ?")) {
-            ps.setLong(1, isbn);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) applyHeavyFields(target, rs);
-            }
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant camps pesats: " + e.getMessage(), e);
-        }
+        MapejadorsFiles.useOneRowOrThrow(con,
+            "SELECT descripcio, notes FROM llibre WHERE ISBN = ?",
+            ps -> ps.setLong(1, isbn),
+            "Error carregant camps pesats",
+            rs -> applyHeavyFields(target, rs));
     }
 
     /**

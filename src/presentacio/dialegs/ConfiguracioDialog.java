@@ -54,16 +54,16 @@ public class ConfiguracioDialog extends JDialog {
         JPanel languageSection = seccions.get(3).build(this);
         JPanel dataSection = seccions.get(4).build(this);
         JPanel buttonBar = BarraBotonsConfiguracio.build(this,
-            (JComboBox<String>) SeccionsConfiguracio.cercarById(dbSection, "cmbType"),
-            (JTextField) SeccionsConfiguracio.cercarById(dbSection, "txtHost"),
-            (JTextField) SeccionsConfiguracio.cercarById(dbSection, "txtUser"),
-            (JPasswordField) SeccionsConfiguracio.cercarById(dbSection, "txtPass"),
-            (JTextField) SeccionsConfiguracio.cercarById(imgSection, "txtImgDir"),
-            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbTheme"),
-            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbFont"),
-            (JComboBox<String>) SeccionsConfiguracio.cercarById(appearanceSection, "cmbCurrency"),
-            (JComboBox<String>) SeccionsConfiguracio.cercarById(languageSection, "cmbLang"),
-            (JTextField) SeccionsConfiguracio.cercarById(appearanceSection, "txtDefVal"),
+            SeccionsConfiguracio.cercar(dbSection, "cmbType", JComboBox.class),
+            SeccionsConfiguracio.cercar(dbSection, "txtHost", JTextField.class),
+            SeccionsConfiguracio.cercar(dbSection, "txtUser", JTextField.class),
+            SeccionsConfiguracio.cercar(dbSection, "txtPass", JPasswordField.class),
+            SeccionsConfiguracio.cercar(imgSection, "txtImgDir", JTextField.class),
+            SeccionsConfiguracio.cercar(appearanceSection, "cmbTheme", JComboBox.class),
+            SeccionsConfiguracio.cercar(appearanceSection, "cmbFont", JComboBox.class),
+            SeccionsConfiguracio.cercar(appearanceSection, "cmbCurrency", JComboBox.class),
+            SeccionsConfiguracio.cercar(languageSection, "cmbLang", JComboBox.class),
+            SeccionsConfiguracio.cercar(appearanceSection, "txtDefVal", JTextField.class),
             this.listener);
 
         JPanel content = new JPanel();

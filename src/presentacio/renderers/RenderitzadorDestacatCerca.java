@@ -14,8 +14,6 @@ public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
     private String cercarText = "";
     private java.util.regex.Pattern cercarPattern;
     private String cercarReplacement = "";
-    private static final java.util.regex.Pattern HTML_ESC =
-        java.util.regex.Pattern.compile("[&<>]");
     /** Referència al conjunt en caché — refrescada via {@link #setLoanedISBNs(Set)} des
      *  de {@link presentacio.controladors.ControladorTaula} cada cop que es reassigna
      *  el {@code state.loanedISBNs} del host. Evita el despatx
@@ -63,8 +61,7 @@ public class RenderitzadorDestacatCerca extends DefaultTableCellRenderer {
         }
         String text = value != null ? value.toString() : "";
         if (cercarPattern != null && !selected) {
-            String escaped = HTML_ESC.matcher(text)
-                .replaceAll(m -> m.group().equals("&") ? "&amp;" : m.group().equals("<") ? "&lt;" : "&gt;");
+            String escaped = herramienta.i18n.Escapers.html(text);
             String highlighted = cercarPattern.matcher(escaped).replaceAll(cercarReplacement);
             if (!highlighted.equals(escaped))
                 setText("<html>" + highlighted + "</html>");

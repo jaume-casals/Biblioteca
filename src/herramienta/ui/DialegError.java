@@ -208,8 +208,6 @@ public class DialegError {
     }
 
     private static String escHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                .replace("\"", "&quot;").replace("\n", "<br>");
+        return herramienta.i18n.Escapers.htmlWithBreaks(s);
     }
 }

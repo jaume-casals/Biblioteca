@@ -1,5 +1,6 @@
 package persistencia.internal;
 
+import domini.BibliotecaException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +15,7 @@ public final class MapejadorsFiles {
 
     @FunctionalInterface public interface MapejadorFiles<T> { T map(ResultSet rs) throws SQLException; }
     @FunctionalInterface public interface LligadorPs { void bind(PreparedStatement ps) throws SQLException; }
+    @FunctionalInterface public interface UsuariResultSet { void use(ResultSet rs) throws SQLException; }
 
     public static <T> List<T> queryAll(Connection con, String sql, MapejadorFiles<T> mapper) throws SQLException {
         try (Statement s = con.createStatement();
@@ -36,6 +38,51 @@ public final class MapejadorsFiles {
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             binder.bind(ps);
             ps.execute();
+        }
+    }
+
+    /** Com {@link #queryAll} però re-llança {@link SQLException} com {@link BibliotecaException} amb el missatge donat. */
+    public static <T> List<T> queryAllOrThrow(Connection con, String sql, String errMsg, MapejadorFiles<T> mapper) {
+        try {
+            return queryAll(con, sql, mapper);
+        } catch (SQLException e) {
+            throw new BibliotecaException(errMsg + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Com {@link #queryWithParams} però re-llança {@link SQLException} com {@link BibliotecaException} amb el missatge donat. */
+    public static <T> List<T> queryWithParamsOrThrow(Connection con, String sql, LligadorPs binder, String errMsg, MapejadorFiles<T> mapper) {
+        try {
+            return queryWithParams(con, sql, binder, mapper);
+        } catch (SQLException e) {
+            throw new BibliotecaException(errMsg + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Com {@link #exec} però re-llança {@link SQLException} com {@link BibliotecaException} amb el missatge donat. */
+    public static void execOrThrow(Connection con, String sql, String errMsg, LligadorPs binder) {
+        try {
+            exec(con, sql, binder);
+        } catch (SQLException e) {
+            throw new BibliotecaException(errMsg + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Com {@link #queryWithParams} però retorna només la primera fila mapejada o {@code null} si no n'hi ha cap. */
+    public static <T> T queryOneWithParamsOrThrow(Connection con, String sql, LligadorPs binder, String errMsg, MapejadorFiles<T> mapper) {
+        List<T> all = queryWithParamsOrThrow(con, sql, binder, errMsg, mapper);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /** Com {@link #queryWithParams} però invoca {@code use} sobre la primera fila (si n'hi ha) i no retorna res. */
+    public static void useOneRowOrThrow(Connection con, String sql, LligadorPs binder, String errMsg, UsuariResultSet use) {
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            binder.bind(ps);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) use.use(rs);
+            }
+        } catch (SQLException e) {
+            throw new BibliotecaException(errMsg + ": " + e.getMessage(), e);
         }
     }
 

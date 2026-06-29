@@ -62,7 +62,7 @@ public final class DelegatLlibre {
     }
 
     public List<Llibre> obtenirUnmodifiableLlibres() {
-        return state.withLockReturning(() -> Collections.unmodifiableList(new ArrayList<>(state.bib())));
+        return Collections.unmodifiableList(obtenirAllLlibres());
     }
 
     public List<Llibre> get10Llibres() {
@@ -86,7 +86,7 @@ public final class DelegatLlibre {
     }
 
     public int getSize() {
-        return state.withLockReturning(state.bib()::size);
+        return comptarLlibresDB();
     }
 
     public boolean esLargeLibrary() {

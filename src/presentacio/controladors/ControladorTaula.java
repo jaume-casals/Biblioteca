@@ -46,8 +46,9 @@ public class ControladorTaula {
         {85, 85, Integer.MAX_VALUE},
     };
 
-    private static String[] colNames() {
-        return new String[]{
+    private static String[] colNames() { return ColNamesHolder.NAMES; }
+    private static final class ColNamesHolder {
+        static final String[] NAMES = {
             I18n.t("col_cover"), I18n.t("col_isbn"), I18n.t("col_title"),
             I18n.t("col_author"), I18n.t("col_year"), I18n.t("col_rating"),
             I18n.t("col_price"), I18n.t("col_read"), I18n.t("col_progress"),

@@ -132,14 +132,13 @@ public final class SeccioDbConfiguracio {
     }
 
     public static void reloadFromConfig(JPanel root) {
-        javax.swing.JComponent jc;
-        jc = SeccionsConfiguracio.cercarById(root, "cmbType");
-        if (jc instanceof JComboBox<?> cmb) cmb.setSelectedIndex("h2".equals(Configuracio.obtenirDbType()) ? 0 : 1);
-        jc = SeccionsConfiguracio.cercarById(root, "txtHost");
-        if (jc instanceof JTextField tf) tf.setText(Configuracio.obtenirDbHost());
-        jc = SeccionsConfiguracio.cercarById(root, "txtUser");
-        if (jc instanceof JTextField tf) tf.setText(Configuracio.obtenirDbUser());
-        jc = SeccionsConfiguracio.cercarById(root, "txtPass");
-        if (jc instanceof javax.swing.JPasswordField pf) pf.setText(Configuracio.obtenirDbPassword());
+        SeccionsConfiguracio.apply(root, "cmbType", JComboBox.class,
+            cmb -> cmb.setSelectedIndex("h2".equals(Configuracio.obtenirDbType()) ? 0 : 1));
+        SeccionsConfiguracio.apply(root, "txtHost", JTextField.class,
+            tf -> tf.setText(Configuracio.obtenirDbHost()));
+        SeccionsConfiguracio.apply(root, "txtUser", JTextField.class,
+            tf -> tf.setText(Configuracio.obtenirDbUser()));
+        SeccionsConfiguracio.apply(root, "txtPass", javax.swing.JPasswordField.class,
+            pf -> pf.setText(Configuracio.obtenirDbPassword()));
     }
 }

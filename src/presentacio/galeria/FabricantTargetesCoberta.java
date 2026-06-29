@@ -492,7 +492,6 @@ public final class FabricantTargetesCoberta {
     }
 
     private static String htmlEsc(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        return herramienta.i18n.Escapers.html(s);
     }
 }

@@ -44,6 +44,8 @@ Do NOT suggest changes outside the seven patterns above.
 
 ## Output
 
-Write the complete findings to `docs/code-review/compact.txt` in the project root.
-If the file already exists, REPLACE its contents (do not append).
-Do not modify any source file.
+If the file has nothing that qualifies — skip it entirely.
+
+If a compaction opportunity exists — implement it. One change at a time per file; verify build after each file if changes are significant.
+
+Do NOT report opportunities without implementing them. Do NOT modify any file for reasons outside the seven patterns above.

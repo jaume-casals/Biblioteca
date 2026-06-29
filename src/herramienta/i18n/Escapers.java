@@ -47,4 +47,10 @@ public final class Escapers {
         if (s == null) return "";
         return "\"" + s.replace("\"", "\"\"") + "\"";
     }
+
+    /** Com {@link #html} però converteix els salts de línia en {@code <br>}, per a missatges d'error Swing. */
+    public static String htmlWithBreaks(String s) {
+        if (s == null) return "";
+        return html(s).replace("\n", "<br>");
+    }
 }

@@ -52,7 +52,7 @@ public final class SeccioImatgesConfiguracio {
     }
 
     public static void reloadFromConfig(JPanel root) {
-        javax.swing.JComponent jc = SeccionsConfiguracio.cercarById(root, "txtImgDir");
-        if (jc instanceof JTextField) ((JTextField) jc).setText(Configuracio.obtenirDefaultImgDir());
+        SeccionsConfiguracio.apply(root, "txtImgDir", JTextField.class,
+            c -> c.setText(Configuracio.obtenirDefaultImgDir()));
     }
 }

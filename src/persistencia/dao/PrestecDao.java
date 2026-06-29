@@ -50,12 +50,8 @@ public class PrestecDao {
      *  {@code ControladorDomini.obtenirAllActiveLoans}). */
     /** Consulta compartida per {@link #obtenirAll} i {@link #obtenirActiveLoans}; només varia el WHERE i el missatge. */
     private List<PrestecRow> query(String sql, String errMsg) {
-        try {
-            return MapejadorsFiles.queryAll(con, sql, rs ->
-                PrestecRow.fromStrings(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException(errMsg + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryAllOrThrow(con, sql, errMsg,
+            rs -> PrestecRow.fromStrings(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)));
     }
 
     public List<persistencia.row.PrestecRow> obtenirAll() {
@@ -69,49 +65,36 @@ public class PrestecDao {
     }
 
     public Set<Long> obtenirLoanedISBNs() {
-        try {
-            return new HashSet<>(MapejadorsFiles.queryAll(con,
-                "SELECT DISTINCT isbn FROM prestec WHERE retornat = FALSE", rs -> rs.getLong(1)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant els préstecs: " + e.getMessage(), e);
-        }
+        return new HashSet<>(MapejadorsFiles.queryAllOrThrow(con,
+            "SELECT DISTINCT isbn FROM prestec WHERE retornat = FALSE",
+            "Error carregant els préstecs", rs -> rs.getLong(1)));
     }
 
     public List<persistencia.row.PrestecRow> obtenirForIsbn(long isbn) {
-        try {
-            return MapejadorsFiles.queryWithParams(con,
-                "SELECT nom_persona, data_prestec, retornat FROM prestec WHERE isbn = ? ORDER BY id",
-                ps -> ps.setLong(1, isbn),
-                rs -> PrestecRow.fromStrings(isbn, rs.getString(1), rs.getString(2), rs.getBoolean(3)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant els préstecs per ISBN: " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT nom_persona, data_prestec, retornat FROM prestec WHERE isbn = ? ORDER BY id",
+            ps -> ps.setLong(1, isbn),
+            "Error carregant els préstecs per ISBN",
+            rs -> PrestecRow.fromStrings(isbn, rs.getString(1), rs.getString(2), rs.getBoolean(3)));
     }
 
     public int count(long isbn) {
-        try {
-            List<Integer> r = MapejadorsFiles.queryWithParams(con,
-                "SELECT COUNT(*) FROM prestec WHERE isbn = ?",
-                ps -> ps.setLong(1, isbn), rs -> rs.getInt(1));
-            return r.isEmpty() ? 0 : r.get(0);
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error comptant els préstecs per ISBN: " + e.getMessage(), e);
-        }
+        List<Integer> r = MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT COUNT(*) FROM prestec WHERE isbn = ?",
+            ps -> ps.setLong(1, isbn), "Error comptant els préstecs per ISBN", rs -> rs.getInt(1));
+        return r.isEmpty() ? 0 : r.get(0);
     }
 
     public List<PrestecEndarrerit> obtenirOverdue(int daysThreshold) {
         java.sql.Date cutoff = java.sql.Date.valueOf(
             java.time.LocalDate.now().minusDays(daysThreshold));
-        try {
-            return MapejadorsFiles.queryWithParams(con,
-                "SELECT p.nom_persona, l.nom, p.data_prestec FROM prestec p " +
-                "JOIN llibre l ON p.isbn = l.ISBN " +
-                "WHERE p.retornat = FALSE AND p.data_prestec < ? " +
-                "ORDER BY p.data_prestec",
-                ps -> ps.setDate(1, cutoff),
-                rs -> PrestecEndarrerit.fromStrings(rs.getString(1), rs.getString(2), rs.getString(3)));
-        } catch (SQLException e) {
-            throw new domini.BibliotecaException("Error carregant préstecs vençuts: " + e.getMessage(), e);
-        }
+        return MapejadorsFiles.queryWithParamsOrThrow(con,
+            "SELECT p.nom_persona, l.nom, p.data_prestec FROM prestec p " +
+            "JOIN llibre l ON p.isbn = l.ISBN " +
+            "WHERE p.retornat = FALSE AND p.data_prestec < ? " +
+            "ORDER BY p.data_prestec",
+            ps -> ps.setDate(1, cutoff),
+            "Error carregant préstecs vençuts",
+            rs -> PrestecEndarrerit.fromStrings(rs.getString(1), rs.getString(2), rs.getString(3)));
     }
 }

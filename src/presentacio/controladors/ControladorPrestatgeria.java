@@ -119,14 +119,10 @@ public class ControladorPrestatgeria {
                     }
                     int selectIdx = 0;
                     if (state.currentLlistaId != null) {
-                        for (int i = 1; i < combo.getItemCount(); i++) {
-                            Object item = combo.getItemAt(i);
-                            if (item instanceof Llista ll && ll.obtenirId() == state.currentLlistaId) {
-                                selectIdx = i;
-                                break;
-                            }
-                        }
-                        if (selectIdx == 0) state.currentLlistaId = null;
+                        int idx = herramienta.ui.UtilitatsSwing.findComboIndex(combo,
+                            item -> item instanceof Llista ll && ll.obtenirId() == state.currentLlistaId);
+                        if (idx > 0) selectIdx = idx;
+                        else state.currentLlistaId = null;
                     }
                     combo.setSelectedIndex(selectIdx);
                     for (java.awt.event.ActionListener al : listeners) combo.addActionListener(al);

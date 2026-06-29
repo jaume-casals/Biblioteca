@@ -100,33 +100,7 @@ public class ControladorPanellDetallsLlibre {
 			vista.obtenirTextAutor(), vista.obtenirTextEditorial(),
 			vista.obtenirTextSerie(), vista.obtenirTextIdioma());
 
-		this.vista.obtenirTextAny().setText(java.util.Objects.toString(l.obtenirAny(), ""));
-		this.vista.obtenirTextAutor().setText(java.util.Objects.toString(l.obtenirAutor(), ""));
-		this.vista.obtenirTextISBN().setText(java.util.Objects.toString(l.obtenirISBN(), ""));
-		this.vista.obtenirTextDescripcio().setText(java.util.Objects.toString(l.obtenirDescripcio(), ""));
-		this.vista.obtenirTextNom().setText(java.util.Objects.toString(l.obtenirNom(), ""));
-		this.vista.obtenirTextPortada().setText(l.obtenirImatge() != null ? l.obtenirImatge() : "");
-		this.vista.obtenirTextPreu().setText(java.util.Objects.toString(l.obtenirPreu(), ""));
-		this.vista.obtenirTextValoracio().setText(java.util.Objects.toString(l.obtenirValoracio(), ""));
-		this.vista.obtenirChckLlegit().setSelected(Boolean.TRUE.equals(l.obtenirLlegit()));
-		this.vista.obtenirTextNotes().setText(l.obtenirNotes() != null ? l.obtenirNotes() : "");
-		this.vista.obtenirTextEditorial().setText(l.obtenirEditorial() != null ? l.obtenirEditorial() : "");
-		this.vista.obtenirTextSerie().setText(l.obtenirSerie() != null ? l.obtenirSerie() : "");
-		this.vista.obtenirTextVolum().setText(l.obtenirVolum() > 0 ? String.valueOf(l.obtenirVolum()) : "");
-		this.vista.obtenirTextDataCompra().setText(l.obtenirDataCompra() != null ? l.obtenirDataCompra() : "");
-		this.vista.obtenirTextDataLectura().setText(herramienta.text.UtilitatsData.formatejarDateForDisplay(l.obtenirDataLectura()));
-		this.vista.obtenirTextIdioma().setText(l.obtenirIdioma() != null ? l.obtenirIdioma() : "");
-		this.vista.obtenirTextPaisOrigen().setText(l.obtenirPaisOrigen() != null ? l.obtenirPaisOrigen() : "");
-		this.vista.obtenirComboFormat().setSelectedItem(l.obtenirFormat() != null ? l.obtenirFormat() : "");
-		this.vista.obtenirComboEstat().setSelectedItem(l.obtenirEstat() != null ? l.obtenirEstat() : "");
-		this.vista.obtenirTextExemplars().setText(l.obtenirExemplars() > 1 ? String.valueOf(l.obtenirExemplars()) : "");
-		this.vista.obtenirTextLlenguaOriginal().setText(l.obtenirLlenguaOriginal() != null ? l.obtenirLlenguaOriginal() : "");
-		this.vista.obtenirChckDesitjat().setSelected(l.esDesitjat());
-		this.vista.obtenirTextPagines().setText(l.obtenirPagines() > 0 ? String.valueOf(l.obtenirPagines()) : "");
-		this.vista.obtenirTextPaginesLlegides().setText(l.obtenirPaginesLlegides() > 0 ? String.valueOf(l.obtenirPaginesLlegides()) : "");
-		this.vista.obtenirTextNomCa().setText(l.obtenirNomCa() != null ? l.obtenirNomCa() : "");
-		this.vista.obtenirTextNomEs().setText(l.obtenirNomEs() != null ? l.obtenirNomEs() : "");
-		this.vista.obtenirTextNomEn().setText(l.obtenirNomEn() != null ? l.obtenirNomEn() : "");
+		this.vista.omplir(l);
 
 		this.vista.setTitle(I18n.t("dlg_book_detail_title", l.obtenirDisplayNom(herramienta.config.Configuracio.obtenirLang())));
 

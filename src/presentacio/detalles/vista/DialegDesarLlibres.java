@@ -26,6 +26,7 @@ import herramienta.i18n.I18n;
 import herramienta.text.EstatOptions;
 import herramienta.text.FormatOptions;
 import herramienta.ui.UITheme;
+import domini.Llibre;
 import presentacio.formularis.RegistreCampsFormulari;
 import presentacio.formularis.RegistreCampsFormulari.Camp;
 import presentacio.formularis.ConstructorGraellaFormulari;
@@ -271,4 +272,20 @@ public class DialegDesarLlibres extends JDialog {
 	public JTextField    obtenirTextNomCa()          { return textNomCa; }
 	public JTextField    obtenirTextNomEs()          { return textNomEs; }
 	public JTextField    obtenirTextNomEn()          { return textNomEn; }
+
+	public void omplir(Llibre l) {
+		textNom.setText(l.obtenirNom() != null ? l.obtenirNom() : "");
+		textAutor.setText(l.obtenirAutor() != null ? l.obtenirAutor() : "");
+		textAny.setText(l.obtenirAny() != null && l.obtenirAny() != 0 ? String.valueOf(l.obtenirAny()) : "");
+		textDescripcio.setText(l.obtenirDescripcio() != null ? l.obtenirDescripcio() : "");
+		textValoracio.setText(l.obtenirValoracio() != null && l.obtenirValoracio() != 0.0 ? String.valueOf(l.obtenirValoracio()) : "");
+		textPreu.setText(l.obtenirPreu() != null && l.obtenirPreu() != 0.0 ? String.valueOf(l.obtenirPreu()) : "");
+		textEditorial.setText(l.obtenirEditorial());
+		textSerie.setText(l.obtenirSerie());
+		textVolum.setText(l.obtenirVolum() > 0 ? String.valueOf(l.obtenirVolum()) : "");
+		textIdioma.setText(l.obtenirIdioma() != null ? l.obtenirIdioma() : "");
+		chckLlegit.setSelected(Boolean.TRUE.equals(l.obtenirLlegit()));
+		chckDesitjat.setSelected(l.esDesitjat());
+		textISBN.setText("");
+	}
 }
