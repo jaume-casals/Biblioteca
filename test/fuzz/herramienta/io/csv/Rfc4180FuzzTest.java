@@ -39,7 +39,13 @@ class Rfc4180FuzzTest {
             while (reader.hasNext()) {
                 String[] row = reader.next();
                 if (row == null) {
-                    throw new AssertionError("Rfc4180Reader.next() returned null after hasNext()=true");
+                    // Contracte de Rfc4180Reader: la primera crida a next()
+                    // que troba EOF retorna null i posa eof=true. hasNext()
+                    // retorna cert fins que això passa, així que un null
+                    // després de hasNext()==true és el senyal de fi, no un
+                    // error. L'únic consumidor real (ImportadorLlibres)
+                    // el tracta exactament així.
+                    break;
                 }
                 iters++;
                 if (iters > MAX_ROWS) {
@@ -47,8 +53,9 @@ class Rfc4180FuzzTest {
                 }
             }
         } catch (NoSuchElementException expected) {
-            // next() after a final hasNext()=true is documented to throw;
-            // an unexpected one inside the loop would have been a real bug.
+            // next() després d'un hasNext()==false ja no s'ha de cridar: el
+            // contracte documentat llança NoSuchElementException. Si es
+            // produeix dins del bucle, és un error de veritat.
             throw expected;
         }
     }

@@ -28,12 +28,19 @@ class TestValidadorLlibre {
     }
 
     @ParameterizedTest
-    @ValueSource(longs = {1L, 123456789L, 12345678901L, 12345678901234L})
+    @ValueSource(longs = {1L, 123456780L, 12345678901L, 12345678901234L})
     @DisplayName("comprovarLlibre: ISBN amb longitud incorrecta rebutjats")
     void invalidIsbnLengths(long isbn) {
         assertThatThrownBy(() ->
             ValidadorLlibre.comprovarLlibre(isbn, "X", null, null, null, null, null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("comprovarLlibre: ISBN de 9 dígits acceptat si el ISBN-10 amb zero inicial és vàlid")
+    void isbn9DigitsPaddedToIsbn10() {
+        Llibre l = ValidadorLlibre.comprovarLlibre(132354187L, "X", null, null, null, null, null, null, null);
+        assertThat(l.obtenirISBN()).isEqualTo(9780132354189L);
     }
 
     @Test
@@ -167,8 +174,17 @@ class TestValidadorLlibre {
     @DisplayName("comprovarLlibreFromString: ISBN-10 amb dígit de control X → ISBN-13")
     void fromStringIsbn10X() {
         Llibre l = ValidadorLlibre.comprovarLlibreFromString(
-            "019853110X", "X", null, null, null, null, null, null, null);
-        assertThat(l.obtenirISBN()).isEqualTo(9780198531104L);
+            "020161622X", "X", null, null, null, null, null, null, null);
+        assertThat(l.obtenirISBN()).isEqualTo(9780201616224L);
+    }
+
+    @Test
+    @DisplayName("comprovarLlibreFromString: ISBN-10 amb dígit de control X incorrecte rebutjat")
+    void fromStringIsbn10BadXCheckDigit() {
+        assertThatThrownBy(() ->
+            ValidadorLlibre.comprovarLlibreFromString(
+                "019853110X", "X", null, null, null, null, null, null, null))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

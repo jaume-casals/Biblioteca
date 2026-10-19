@@ -48,6 +48,21 @@ class TestAnalitzadorPrestatgeria {
     }
 
     @Test
+    @DisplayName("parseShelfEntries: nom sense contingut real (Unicode en blanc o NUL) es descarta")
+    void analitzarNomSenseContingut() {
+        String separadorLinia = String.valueOf((char) 0x2028);
+        String nul = String.valueOf((char) 0);
+        assertThat(AnalitzadorPrestatgeria.analitzarShelfEntries("   |8.0|true")).isEmpty();
+        assertThat(AnalitzadorPrestatgeria.analitzarShelfEntries(separadorLinia + "|8.0|true")).isEmpty();
+        assertThat(AnalitzadorPrestatgeria.analitzarShelfEntries(nul + "|8.0|true")).isEmpty();
+        assertThat(AnalitzadorPrestatgeria.analitzarShelfEntries(nul + nul + "|8.0|true")).isEmpty();
+        var entries = AnalitzadorPrestatgeria.analitzarShelfEntries("Favorits|8.0|true;   ;Altres|1.0|false");
+        assertThat(entries).hasSize(2);
+        assertThat(entries.get(0).nom()).isEqualTo("Favorits");
+        assertThat(entries.get(1).nom()).isEqualTo("Altres");
+    }
+
+    @Test
     @DisplayName("parseShelfEntries: single entry, no valoracio/llegit")
     void analitzarSingleBare() {
         var entries = AnalitzadorPrestatgeria.analitzarShelfEntries("Favorits");
@@ -217,10 +232,16 @@ class TestAnalitzadorPrestatgeria {
 
         File tmp = File.createTempFile("csv_shelf_", ".csv");
         tmp.deleteOnExit();
+        java.util.Map<Integer, Llista> llistaById = new java.util.HashMap<>();
+        for (Llista ll : cd.obtenirAllLlistes()) llistaById.put(ll.obtenirId(), ll);
+        java.util.Map<Long, java.util.List<persistencia.row.LlibreLlistaRow>> llistaRows =
+            new java.util.HashMap<>();
+        for (persistencia.row.LlibreLlistaRow row : cd.obtenirAllLlibreLlistaRows())
+            llistaRows.computeIfAbsent(row.isbn(), k -> new java.util.ArrayList<>()).add(row);
         AnalitzadorPrestatgeria.exportarToCsv(tmp,
             new java.util.ArrayList<>(cd.obtenirAllLlibres()),
-            new java.util.HashMap<>(),
-            new java.util.HashMap<>());
+            llistaById,
+            llistaRows);
 
         String content = Files.readString(tmp.toPath(), StandardCharsets.UTF_8);
         String dataRow = content.split("\n")[1];

@@ -129,6 +129,21 @@ class DominiPersistenciaJUnit5Test {
         assertTrue(wrapped.getCause().getMessage().contains("Nom de perfil de BD H2"));
     }
 
+    @Test
+    void sanitizeDatabaseNameAcceptsPlainNamesAndRejectsInjection() throws Exception {
+        var method = ConnexioServidor.class.getDeclaredMethod("sanitizeDatabaseName", String.class);
+        method.setAccessible(true);
+        // Un nom normal (i el per defecte) s'accepten tal qual.
+        assertEquals("BIBLIOTECA_TEST", method.invoke(null, "BIBLIOTECA_TEST"));
+        assertEquals("BIBLIOTECA", method.invoke(null, (Object) null));
+        assertEquals("BIBLIOTECA", method.invoke(null, "   "));
+        // Qualsevol injecció SQL es rebutja.
+        var wrapped = assertThrows(java.lang.reflect.InvocationTargetException.class,
+            () -> method.invoke(null, "BIBLIOTECA; DROP DATABASE mysql"));
+        assertInstanceOf(IllegalArgumentException.class, wrapped.getCause());
+        assertTrue(wrapped.getCause().getMessage().contains("Nom d'esquema de BD"));
+    }
+
     private static boolean autorColumnExists(ControladorPersistencia cp) throws Exception {
         var scField = ControladorPersistencia.class.getDeclaredField("sc");
         scField.setAccessible(true);

@@ -68,7 +68,8 @@ class TestLlibre {
         Llibre l = newBook();
         l.posarAutors(java.util.List.of("A", "B"));
         java.util.List<String> copy = l.obtenirAutors();
-        copy.add("C");
+        assertThatThrownBy(() -> copy.add("C"))
+            .isInstanceOf(UnsupportedOperationException.class);
         assertThat(l.obtenirAutors()).containsExactly("A", "B");
     }
 
@@ -329,8 +330,11 @@ class TestLlibre {
         byte[] data = {1, 2, 3, 4};
         l.posarImatgeBlob(data);
         l.posarHasBlob(true);
-        assertThat(l.obtenirImatgeBlob()).isSameAs(data);
+        assertThat(l.obtenirImatgeBlob()).containsExactly(1, 2, 3, 4);
         assertThat(l.teBlob()).isTrue();
+        assertThat(l.obtenirImatgeBlob()).isNotSameAs(data);
+        data[0] = 99;
+        assertThat(l.obtenirImatgeBlob()[0]).isEqualTo((byte) 1);
     }
 
     @Test
@@ -363,7 +367,8 @@ class TestLlibre {
         Llibre c = Llibre.copyOf(src);
         assertThat(c.obtenirAutors()).isEqualTo(src.obtenirAutors());
         assertThat(c.obtenirAutors()).isNotSameAs(src.obtenirAutors());
-        c.obtenirAutors().add("C");
+        assertThatThrownBy(() -> c.obtenirAutors().add("C"))
+            .isInstanceOf(UnsupportedOperationException.class);
         assertThat(src.obtenirAutors()).containsExactly("A", "B");
     }
 

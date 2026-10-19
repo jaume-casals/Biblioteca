@@ -1,3 +1,5 @@
+package test;
+
 import domini.ControladorDomini;
 import domini.Llibre;
 import herramienta.text.ValidadorLlibre;

@@ -43,10 +43,11 @@ class LecturaRowTest {
     }
 
     @Test
-    @DisplayName("parseDateOrNull: invalid format → throws DateTimeParseException (caller catches)")
+    @DisplayName("parseDateOrNull: invalid format → null (contracte defensiu, no llança)")
     void analitzarInvalid() {
-        assertThatThrownBy(() -> LecturaRow.analitzarDateOrNull("not a date"))
-            .isInstanceOf(java.time.format.DateTimeParseException.class);
+        assertThat(LecturaRow.analitzarDateOrNull("not a date")).isNull();
+        assertThat(LecturaRow.analitzarDateOrNull("2024-13-45")).isNull();
+        assertThat(LecturaRow.analitzarDateOrNull("15/03/2024")).isNull();
     }
 
     @Test
