@@ -1,4 +1,4 @@
-## The FreeType Project: Freetype v2.14.2
+## The FreeType Project: Freetype v2.14.3
 
 
 ### FreeType Notice
@@ -21,24 +21,24 @@ which fits your needs best.
 ### FreeType License
 ```
 
-Copyright (C) 1996-2025 by David Turner, Robert Wilhelm, and Werner Lemberg.
-Copyright (C) 2007-2025 by Dereg Clegg and Michael Toftdal.
-Copyright (C) 1996-2025 by Just van Rossum, David Turner, Robert Wilhelm, and Werner Lemberg.
-Copyright (C) 2022-2025 by David Turner, Robert Wilhelm, Werner Lemberg, George Williams, and
-Copyright (C) 2004-2025 by Masatake YAMATO and Redhat K.K.
-Copyright (C) 2007-2025 by Derek Clegg and Michael Toftdal.
-Copyright (C) 2003-2025 by Masatake YAMATO, Red Hat K.K.,
-Copyright (C) 1996-2025 by David Turner, Robert Wilhelm, Werner Lemberg, and Dominik Röttsches.
-Copyright (C) 2007-2025 by David Turner.
-Copyright (C) 2022-2025 by David Turner, Robert Wilhelm, Werner Lemberg, and Moazin Khatti.
-Copyright (C) 2007-2025 by Rahul Bhalerao <rahul.bhalerao@redhat.com>, <b.rahul.pm@gmail.com>.
-Copyright (C) 2025 by Behdad Esfahbod.
-Copyright (C) 2008-2025 by David Turner, Robert Wilhelm, Werner Lemberg, and suzuki toshiya.
-Copyright (C) 2013-2025 by Google, Inc.
-Copyright (C) 2019-2025 by Nikhil Ramakrishnan, David Turner, Robert Wilhelm, and Werner Lemberg.
-Copyright (C) 2009-2025 by Oran Agra and Mickey Gabel.
-Copyright (C) 2018-2025 by David Turner, Robert Wilhelm, Dominik Röttsches, and Werner Lemberg.
-Copyright (C) 2004-2025 by David Turner, Robert Wilhelm, Werner Lemberg, and George Williams.
+Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
+Copyright (C) 2007-2026 by Dereg Clegg and Michael Toftdal.
+Copyright (C) 1996-2026 by Just van Rossum, David Turner, Robert Wilhelm, and Werner Lemberg.
+Copyright (C) 2022-2026 by David Turner, Robert Wilhelm, Werner Lemberg, George Williams, and
+Copyright (C) 2004-2026 by Masatake YAMATO and Redhat K.K.
+Copyright (C) 2007-2026 by Derek Clegg and Michael Toftdal.
+Copyright (C) 2003-2026 by Masatake YAMATO, Red Hat K.K.,
+Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, Werner Lemberg, and Dominik Röttsches.
+Copyright (C) 2007-2026 by David Turner.
+Copyright (C) 2022-2026 by David Turner, Robert Wilhelm, Werner Lemberg, and Moazin Khatti.
+Copyright (C) 2007-2026 by Rahul Bhalerao <rahul.bhalerao@redhat.com>, <b.rahul.pm@gmail.com>.
+Copyright (C) 2025-2026 by Behdad Esfahbod.
+Copyright (C) 2008-2026 by David Turner, Robert Wilhelm, Werner Lemberg, and suzuki toshiya.
+Copyright (C) 2013-2026 by Google, Inc.
+Copyright (C) 2019-2026 by Nikhil Ramakrishnan, David Turner, Robert Wilhelm, and Werner Lemberg.
+Copyright (C) 2009-2026 by Oran Agra and Mickey Gabel.
+Copyright (C) 2018-2026 by David Turner, Robert Wilhelm, Dominik Röttsches, and Werner Lemberg.
+Copyright (C) 2004-2026 by David Turner, Robert Wilhelm, Werner Lemberg, and George Williams.
                     The FreeType Project LICENSE
                     ----------------------------
 
@@ -90,7 +90,7 @@ Introduction
 
    """
     Portions of this software are copyright © <year> The FreeType
-    Project (www.freetype.org).  All rights reserved.
+    Project (https://freetype.org).  All rights reserved.
    """
 
   Please replace <year> with the value from the FreeType version you
@@ -204,7 +204,7 @@ Legal Terms
 
   Our home page can be found at
 
-    https://www.freetype.org
+    https://freetype.org
 
 
 ```
@@ -212,15 +212,15 @@ Legal Terms
 ### GPL v2
 
 ```
-		    GNU GENERAL PUBLIC LICENSE
-		       Version 2, June 1991
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 2, June 1991
 
  Copyright (C) 1989, 1991 Free Software Foundation, Inc.
      51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 
-			    Preamble
+                            Preamble
 
   The licenses for most software are designed to take away your
 freedom to share and change it.  By contrast, the GNU General Public
@@ -270,7 +270,7 @@ patent must be licensed for everyone's free use or not licensed at all.
   The precise terms and conditions for copying, distribution and
 modification follow.
 
-		    GNU GENERAL PUBLIC LICENSE
+                    GNU GENERAL PUBLIC LICENSE
    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
   0. This License applies to any program or other work which contains
@@ -469,7 +469,7 @@ make exceptions for this.  Our decision will be guided by the two goals
 of preserving the free status of all derivatives of our free software and
 of promoting the sharing and reuse of software generally.
 
-			    NO WARRANTY
+                            NO WARRANTY
 
   11. BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
 FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN
@@ -491,9 +491,9 @@ YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
 PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGES.
 
-		     END OF TERMS AND CONDITIONS
+                     END OF TERMS AND CONDITIONS
 
-	    How to Apply These Terms to Your New Programs
+            How to Apply These Terms to Your New Programs
 
   If you develop a new program, and you want it to be of the greatest
 possible use to the public, the best way to achieve this is to make it
