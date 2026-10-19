@@ -26,8 +26,7 @@ import java.util.stream.Stream;
         Map<String, String[]> out = new LinkedHashMap<>();
         try (Stream<Path> paths = Files.list(dir)) {
             for (Path p : paths.filter(f -> f.toString().endsWith(".csv")).toList()) {
-                for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
-                    String s = line.trim();
+                for (String s : readLogicalRecords(p)) {
                     if (s.isEmpty() || s.startsWith("#") || s.startsWith("key,")) continue;
                     String[] row = splitCsvLine(s);
                     if (row.length >= 4) {
@@ -141,7 +140,14 @@ import java.util.stream.Stream;
 
     private static void auditJavaKeyUsage(Map<String, String[]> keys, PrintWriter log, int[] failCount, int[] warnCount) {
         Pattern used = Pattern.compile("\\b(?:I18n\\.t|t)\\(\\s*\"([^\"]+)\"");
+        // Ús indirecte: el registre de camps de formulari rep la clau del
+        // tooltip com a tercer argument de Camp.text(key, labelKey,
+        // tooltipKey, width). Sense aquest patró, una clau usada només
+        // així apareixeria com a "mai utilitzada".
+        Pattern usedIndirect = Pattern.compile(
+            "\\bCamp\\.text\\(\\s*\"[^\"]*\"\\s*,\\s*\"[^\"]*\"\\s*,\\s*\"([^\"]+)\"");
         Set<String> seen = new HashSet<>();
+        Set<String> seenIndirect = new HashSet<>();
         try (Stream<Path> walk = Files.walk(Path.of("src"))) {
             for (Path f : walk.filter(p -> p.toString().endsWith(".java")).toList()) {
                 String text = Files.readString(f, StandardCharsets.UTF_8);
@@ -151,10 +157,18 @@ import java.util.stream.Stream;
                     if (k.endsWith("_")) continue;
                     seen.add(k);
                 }
+                Matcher mi = usedIndirect.matcher(text);
+                while (mi.find()) {
+                    String k = mi.group(1);
+                    if (k.endsWith("_")) continue;
+                    seenIndirect.add(k);
+                }
             }
         } catch (IOException ignored) {}
+        Set<String> utilitzades = new HashSet<>(seen);
+        utilitzades.addAll(seenIndirect);
         for (String k : keys.keySet()) {
-            if (!seen.contains(k)) {
+            if (!utilitzades.contains(k)) {
                 warnCount[0]++;
                 log.println("WARN: clau i18n mai utilitzada a src: " + k);
             }
@@ -172,8 +186,7 @@ import java.util.stream.Stream;
         try (Stream<Path> paths = Files.list(dir)) {
             for (Path p : paths.filter(f -> f.toString().endsWith(".csv")).toList()) {
                 Set<String> seenInFile = new HashSet<>();
-                for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
-                    String s = line.trim();
+                for (String s : readLogicalRecords(p)) {
                     if (s.isEmpty() || s.startsWith("#") || s.startsWith("key,")) continue;
                     String key = stripQuotes(splitCsvLine(s)[0]);
                     if (!seenInFile.add(key)) {
@@ -188,5 +201,51 @@ import java.util.stream.Stream;
                 }
             }
         } catch (IOException ignored) {}
+    }
+
+    /**
+     * Llegeix un CSV sencer i retorna els registres lògics, un per element.
+     *
+     * <p>Un registre pot ocupar diverses línies quan un camp citat conté un
+     * salt de línia real (convenció que permet expresses salts de línia
+     * dins d'una cadena traduïda). La lectura línia a línia trencaria
+     * aquests registres i donaria claus falses o absents.
+     */
+    private static List<String> readLogicalRecords(Path p) throws IOException {
+        List<String> out = new ArrayList<>();
+        StringBuilder acc = new StringBuilder();
+        boolean inQuote = false;
+        for (String line : Files.readAllLines(p, StandardCharsets.UTF_8)) {
+            if (acc.length() > 0) acc.append('\n');
+            acc.append(line);
+            inQuote = scanQuotes(line, inQuote);
+            if (!inQuote) {
+                out.add(acc.toString().trim());
+                acc.setLength(0);
+            }
+        }
+        if (acc.length() > 0) out.add(acc.toString().trim());
+        return out;
+    }
+
+    /**
+     * Indica si el text deixa un camp citat obert, seguint la gramàtica CSV:
+     * una cometa només obre un camp si és l'inici del camp i les cometes
+     * dobles dins d'un camp citat representen una cometa literal.
+     */
+    private static boolean scanQuotes(String text, boolean inQuotes) {
+        boolean q = inQuotes;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (q) {
+                if (c == '"') {
+                    if (i + 1 < text.length() && text.charAt(i + 1) == '"') { i++; continue; }
+                    q = false;
+                }
+            } else if (c == '"' && (i == 0 || text.charAt(i - 1) == ',')) {
+                q = true;
+            }
+        }
+        return q;
     }
 }

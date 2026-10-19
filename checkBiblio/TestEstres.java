@@ -15,7 +15,7 @@ import javax.swing.*;
  * Biblioteca StressTest — martell de caòs / casos límit.
  *
  * Compila: javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
- *                 checkBiblio/UiTestSupport.java checkBiblio/StressTest.java -d bin
+ *                 checkBiblio/SuportTestUi.java checkBiblio/TestEstres.java -d bin
  * Executa: java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
  *                 checkBiblio.StressTest
  */
@@ -44,8 +44,8 @@ public class TestEstres {
         System.setProperty("biblioteca.h2.url",
             System.getProperty("biblioteca.h2.url",
                 "jdbc:h2:mem:stress;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"));
-        domini.ControladorDomini.resetForTest();
-        persistencia.ControladorPersistencia.resetForTest();
+        domini.ControladorDomini.reinicialitzarForTest();
+        persistencia.internal.ControladorPersistencia.reinicialitzarForTest();
         stressThreads = Integer.getInteger("biblioteca.stress.threads", 50);
         stressInstances = Integer.getInteger("biblioteca.stress.instances", 0);
         stressSoakSeconds = Integer.getInteger("biblioteca.stress.soak", 0);
@@ -82,7 +82,7 @@ public class TestEstres {
             closeReport(); System.exit(1);
         }
         log("OK: finestra principal visible — \"" + mainFrame.getTitle() + "\"");
-        SuportTestUi.sleep(800);
+        SuportTestUi.settle();
 
         try {
             runAllTests(mainFrame);
@@ -115,7 +115,7 @@ public class TestEstres {
         try {
             fn.run();
             dismissAllDialogs();
-            SuportTestUi.sleep(150);
+            SuportTestUi.settle();
         } catch (Exception e) {
             fail("La fase ha llançat: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             dismissAllDialogs();
@@ -222,7 +222,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "Títol", "SomeTitle");
         // L'ISBN es queda buit
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("ISBN buit");
     }
 
@@ -231,7 +231,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "ISBN", "NOTANISBN!!!");
         SuportTestUi.setFieldNear(dlg, "Títol", "SomeTitle");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("ISBN no numèric");
     }
 
@@ -240,7 +240,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "ISBN", "123");
         SuportTestUi.setFieldNear(dlg, "Títol", "SomeTitle");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("ISBN de 3 dígits");
     }
 
@@ -249,7 +249,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(uniqueISBN()));
         // El títol es queda buit
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("Títol buit");
     }
 
@@ -259,7 +259,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(uniqueISBN()));
         SuportTestUi.setFieldNear(dlg, "Títol", "RatingTest");
         SuportTestUi.setFieldNear(dlg, "Valoració", "11.0");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("Valoració 11.0");
     }
 
@@ -269,7 +269,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(uniqueISBN()));
         SuportTestUi.setFieldNear(dlg, "Títol", "RatingTest");
         SuportTestUi.setFieldNear(dlg, "Valoració", "-1.0");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         checkExpectError("Valoració -1.0");
     }
 
@@ -279,7 +279,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(uniqueISBN()));
         SuportTestUi.setFieldNear(dlg, "Títol", "PriceTest");
         SuportTestUi.setFieldNear(dlg, "Preu", "-9.99");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             pass("Preu negatiu → error de validació");
@@ -301,7 +301,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(uniqueISBN()));
         SuportTestUi.setFieldNear(dlg, "Títol", "YearTest");
         SuportTestUi.setFieldNear(dlg, "Any", "ABCD");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             pass("Any no numèric → error de validació");
@@ -328,7 +328,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "Autor",     "' OR '1'='1' --");
         SuportTestUi.setFieldNear(dlg, "Descripció","\" onload=\"alert(1)\" x=\"");
         SuportTestUi.setFieldNear(dlg, "Editorial", "Robert'); DROP TABLE Students;--");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(800);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             warn("Entrada amb injecció SQL → diàleg de validació (rebutjat inesperadament)");
@@ -351,7 +351,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "ISBN",  String.valueOf(isbn));
         SuportTestUi.setFieldNear(dlg, "Títol", "📚 你好 مرحبا مكتبة 書 🔥💀 Ñöñö");
         SuportTestUi.setFieldNear(dlg, "Autor", "Ångström Ünïcödé Ñoño");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(800);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             warn("Títol unicode/emoji rebutjat");
@@ -371,7 +371,7 @@ public class TestEstres {
         SuportTestUi.setFieldNear(dlg, "Títol", "A".repeat(500));
         SuportTestUi.setFieldNear(dlg, "Autor", "B".repeat(300));
         SuportTestUi.setFieldNear(dlg, "Descripció", "C".repeat(1000));
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(800);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             pass("Títol de 500 caràcters → validació rebutjada (límit nom 255)");
@@ -392,7 +392,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "ISBN",  "   ");
         SuportTestUi.setFieldNear(dlg, "Títol", "   ");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(600);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             pass("ISBN/títol només amb espais → error de validació");
@@ -420,7 +420,7 @@ public class TestEstres {
         JDialog dlg = SuportTestUi.waitForDialog(1500); if (dlg == null) { fail("manca el diàleg de nou llibre"); return; }
         SuportTestUi.setFieldNear(dlg, "ISBN",  existingISBN);
         SuportTestUi.setFieldNear(dlg, "Títol", "DuplicateTest");
-        SuportTestUi.clickSave(dlg); SuportTestUi.sleep(800);
+        SuportTestUi.clickSave(dlg); SuportTestUi.settle();
         JDialog after = SuportTestUi.getTopDialog();
         if (after != null && SuportTestUi.looksLikeError(after)) {
             pass("ISBN duplicat → diàleg d'error: \"" + after.getTitle() + "\"");
@@ -458,7 +458,7 @@ public class TestEstres {
             SuportTestUi.setFieldNear(dlg, "Editorial", "Editorial " + genres[i]);
             SuportTestUi.setFieldNear(dlg, "Sèrie",     "StressSeries");
             SuportTestUi.setFieldNear(dlg, "Volum",     String.valueOf(i + 1));
-            SuportTestUi.clickSave(dlg); SuportTestUi.sleep(700);
+            SuportTestUi.clickSave(dlg); SuportTestUi.settle();
             JDialog after = SuportTestUi.getTopDialog();
             if (after != null && SuportTestUi.looksLikeError(after)) {
                 fail("Llibre vàlid " + i + " (ISBN=" + isbn + ") → error: \"" + after.getTitle() + "\"");
@@ -483,22 +483,22 @@ public class TestEstres {
         if (next == null || prev == null) { warn("No s'han trobat els botons de paginació"); return; }
 
         // Endavant 15 pàgines
-        for (int i = 0; i < 15 && next.isEnabled(); i++) { SuportTestUi.doClick(next); SuportTestUi.sleep(80); }
-        SuportTestUi.sleep(200);
+        for (int i = 0; i < 15 && next.isEnabled(); i++) { SuportTestUi.doClick(next); SuportTestUi.settle(); }
+        SuportTestUi.settle();
 
         // Endarrere 15 pàgines
-        for (int i = 0; i < 15 && prev.isEnabled(); i++) { SuportTestUi.doClick(prev); SuportTestUi.sleep(80); }
-        SuportTestUi.sleep(200);
+        for (int i = 0; i < 15 && prev.isEnabled(); i++) { SuportTestUi.doClick(prev); SuportTestUi.settle(); }
+        SuportTestUi.settle();
 
         // Vés a l'última pàgina (saturat — biblioteques petites acaben en pocs clics)
         int steps = 0;
-        while (next.isEnabled() && steps++ < 40) { SuportTestUi.doClick(next); SuportTestUi.sleep(25); }
-        SuportTestUi.sleep(200);
+        while (next.isEnabled() && steps++ < 40) { SuportTestUi.doClick(next); SuportTestUi.settle(); }
+        SuportTestUi.settle();
 
         // Torna a la primera
         steps = 0;
-        while (prev.isEnabled() && steps++ < 40) { SuportTestUi.doClick(prev); SuportTestUi.sleep(25); }
-        SuportTestUi.sleep(300);
+        while (prev.isEnabled() && steps++ < 40) { SuportTestUi.doClick(prev); SuportTestUi.settle(); }
+        SuportTestUi.settle();
 
         if (SuportTestUi.getTopDialog() != null) { fail("Estrès de paginació → diàleg d'error"); dismissAllDialogs(); }
         else pass("Estrès de paginació: endavant/endarrere/última/primera — sense fallar");
@@ -515,10 +515,10 @@ public class TestEstres {
         };
         boolean crashed = false;
         for (String p : payloads) {
-            SuportTestUi.setField(sf, p); SuportTestUi.sleep(400);
+            SuportTestUi.setField(sf, p); SuportTestUi.settle();
             if (SuportTestUi.getTopDialog() != null) { crashed = true; fail("Cerca SQL \"" + p + "\" → diàleg"); dismissAllDialogs(); }
         }
-        SuportTestUi.setField(sf, ""); SuportTestUi.sleep(300);
+        SuportTestUi.setField(sf, ""); SuportTestUi.settle();
         if (!crashed) pass("Patrons de cerca amb injecció SQL → sense fallar");
     }
 
@@ -528,20 +528,20 @@ public class TestEstres {
         String[] payloads = {".*", ".+", "^.*$", "[a-z]+", "(a|b)*", "\\d+", "?invalid", "a{10000}"};
         boolean crashed = false;
         for (String p : payloads) {
-            SuportTestUi.setField(sf, p); SuportTestUi.sleep(300);
+            SuportTestUi.setField(sf, p); SuportTestUi.settle();
             if (SuportTestUi.getTopDialog() != null) { crashed = true; fail("Cerca regex \"" + p + "\" → diàleg"); dismissAllDialogs(); }
         }
-        SuportTestUi.setField(sf, ""); SuportTestUi.sleep(300);
+        SuportTestUi.setField(sf, ""); SuportTestUi.settle();
         if (!crashed) pass("Cerques amb metacaràcters de regex → sense fallar");
     }
 
     private static void testSearch_empty(JFrame main) throws Exception {
         JTextField sf = findSearchField(main);
         if (sf == null) { fail("No s'ha trobat el camp de cerca"); return; }
-        SuportTestUi.setField(sf, "test"); SuportTestUi.sleep(300);
-        SuportTestUi.setField(sf, ""); SuportTestUi.sleep(300);
-        SuportTestUi.setField(sf, "   "); SuportTestUi.sleep(300);
-        SuportTestUi.setField(sf, ""); SuportTestUi.sleep(200);
+        SuportTestUi.setField(sf, "test"); SuportTestUi.settle();
+        SuportTestUi.setField(sf, ""); SuportTestUi.settle();
+        SuportTestUi.setField(sf, "   "); SuportTestUi.settle();
+        SuportTestUi.setField(sf, ""); SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Cerca buida/amb espais → diàleg"); dismissAllDialogs(); }
         else pass("Cerca buida/amb espais → sense fallar");
     }
@@ -549,10 +549,10 @@ public class TestEstres {
     private static void testSearch_long(JFrame main) throws Exception {
         JTextField sf = findSearchField(main);
         if (sf == null) { fail("No s'ha trobat el camp de cerca"); return; }
-        SuportTestUi.setField(sf, "x".repeat(5000)); SuportTestUi.sleep(600);
+        SuportTestUi.setField(sf, "x".repeat(5000)); SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Cerca de 5000 caràcters → diàleg"); dismissAllDialogs(); }
         else pass("Cerca de 5000 caràcters → sense fallar");
-        SuportTestUi.setField(sf, ""); SuportTestUi.sleep(200);
+        SuportTestUi.setField(sf, ""); SuportTestUi.settle();
     }
 
     // ── FILTRES ────────────────────────────────────────────────────────────────────
@@ -564,17 +564,17 @@ public class TestEstres {
         if (llegit == null || noLlegit == null) { warn("No s'han trobat les caselles de filtre"); closeFilter(main); return; }
         SwingUtilities.invokeAndWait(() -> { llegit.setSelected(true); noLlegit.setSelected(true); });
         AbstractButton filtrarBtn = SuportTestUi.findBtnIn(main, "Filtrar");
-        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.sleep(600); }
+        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.settle(); }
         if (SuportTestUi.getTopDialog() != null) { fail("Filtre llegit+noLlegit → diàleg"); dismissAllDialogs(); }
         else pass("Filtre llegit+noLlegit → sense fallar");
         AbstractButton clear = SuportTestUi.findBtnIn(main, "Treure");
-        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.sleep(300); }
+        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.settle(); }
         closeFilter(main);
     }
 
     private static void testFilter_invertedYears(JFrame main) throws Exception {
         ensureFilterOpen(main);
-        SuportTestUi.sleep(300);
+        SuportTestUi.settle();
         // Troba els dos camps de text d'any (després de l'etiqueta "Any:")
         List<Component> flat = new ArrayList<>();
         for (Window w : Window.getWindows()) if (w.isVisible()) SuportTestUi.flattenVisible((Container)w, flat);
@@ -595,11 +595,11 @@ public class TestEstres {
         final JTextField fMin = yearMin, fMax = yearMax;
         SwingUtilities.invokeAndWait(() -> { fMin.selectAll(); fMin.setText("2020"); fMax.selectAll(); fMax.setText("1900"); });
         AbstractButton filtrarBtn = SuportTestUi.findBtnIn(main, "Filtrar");
-        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.sleep(600); }
+        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.settle(); }
         if (SuportTestUi.getTopDialog() != null) { warn("Rang d'anys invertit → diàleg (pot ser correcte): " + SuportTestUi.getTopDialog().getTitle()); dismissAllDialogs(); }
         else pass("Rang d'anys invertit gestionat sense fallar");
         AbstractButton clear = SuportTestUi.findBtnIn(main, "Treure");
-        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.sleep(300); }
+        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.settle(); }
         closeFilter(main);
     }
 
@@ -608,9 +608,9 @@ public class TestEstres {
         JTextField sf = findSearchField(main);
         if (sf != null) SuportTestUi.setField(sf, "a");
         AbstractButton filtrarBtn = SuportTestUi.findBtnIn(main, "Filtrar");
-        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.sleep(500); }
+        if (filtrarBtn != null) { SuportTestUi.doClick(filtrarBtn); SuportTestUi.settle(); }
         AbstractButton clear = SuportTestUi.findBtnIn(main, "Treure");
-        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.sleep(400); }
+        if (clear != null) { SuportTestUi.doClick(clear); SuportTestUi.settle(); }
         if (SuportTestUi.getTopDialog() != null) { fail("Aplicar/esborrar filtre → diàleg"); dismissAllDialogs(); }
         else pass("Aplicar+esborrar filtre → sense fallar");
         closeFilter(main);
@@ -622,8 +622,8 @@ public class TestEstres {
         AbstractButton btn = SuportTestUi.findBtnByTooltip(main, "clar i fosc", "claro y oscuro", "light/dark");
         if (btn == null) btn = SuportTestUi.findBtnIn(main, "fosc", "clar", "Sèpia", "Sepia", "Oceà", "Ocean", "Light", "Dark");
         if (btn == null) { warn("No s'ha trobat el botó de mode fosc"); return; }
-        for (int i = 0; i < 6; i++) { SuportTestUi.doClick(btn); SuportTestUi.sleep(180); }
-        SuportTestUi.sleep(400);
+        for (int i = 0; i < 6; i++) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
+        SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Commutació ràpida mode fosc → diàleg"); dismissAllDialogs(); }
         else pass("Mode fosc commutat 6 vegades → sense fallar (compteig parell → restaurat)");
     }
@@ -631,8 +631,8 @@ public class TestEstres {
     private static void testRapid_gallery(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Galeria");
         if (btn == null) { warn("No s'ha trobat el botó de galeria"); return; }
-        for (int i = 0; i < 4; i++) { SuportTestUi.doClick(btn); SuportTestUi.sleep(300); }
-        SuportTestUi.sleep(300);
+        for (int i = 0; i < 4; i++) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
+        SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Commutació galeria → diàleg"); dismissAllDialogs(); }
         else pass("Galeria commutada 4 vegades → sense fallar");
     }
@@ -640,8 +640,8 @@ public class TestEstres {
     private static void testRapid_series(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Sèries", "Series");
         if (btn == null) { warn("No s'ha trobat el botó de sèries"); return; }
-        for (int i = 0; i < 4; i++) { SuportTestUi.doClick(btn); SuportTestUi.sleep(300); }
-        SuportTestUi.sleep(300);
+        for (int i = 0; i < 4; i++) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
+        SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Commutació sèries → diàleg"); dismissAllDialogs(); }
         else pass("Sèries commutades 4 vegades → sense fallar");
     }
@@ -649,8 +649,8 @@ public class TestEstres {
     private static void testRapid_filterDrawer(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Filtres");
         if (btn == null) { warn("No s'ha trobat el botó del calaix de filtres"); return; }
-        for (int i = 0; i < 6; i++) { SuportTestUi.doClick(btn); SuportTestUi.sleep(120); }
-        SuportTestUi.sleep(300);
+        for (int i = 0; i < 6; i++) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
+        SuportTestUi.settle();
         if (SuportTestUi.getTopDialog() != null) { fail("Commutació ràpida calaix filtres → diàleg"); dismissAllDialogs(); }
         else pass("Calaix de filtres commutat 6 vegades → sense fallar");
     }
@@ -668,7 +668,7 @@ public class TestEstres {
             if (d != null) {
                 opened++;
                 SuportTestUi.pressEscape(robot);
-                SuportTestUi.sleep(400);
+                SuportTestUi.settle();
                 dismissAllDialogs();
             }
         }
@@ -681,7 +681,7 @@ public class TestEstres {
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Manca el diàleg de detalls (Llistes)"); return; }
         AbstractButton btn = SuportTestUi.findBtnIn(details.getContentPane(), "Llistes", "Listas", "Lists");
         if (btn == null) { warn("Manca el botó Llistes"); dismissAllDialogs(); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(700);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog sub = SuportTestUi.getTopDialogExcept(details);
         if (sub != null) pass("Subdiàleg Llistes: \"" + sub.getTitle() + "\"");
         else warn("No s'ha trobat el subdiàleg Llistes");
@@ -693,7 +693,7 @@ public class TestEstres {
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Manca el diàleg de detalls (Etiquetes)"); return; }
         AbstractButton btn = SuportTestUi.findBtnIn(details.getContentPane(), "Etiquetes", "Etiquetas", "Tags");
         if (btn == null) { warn("Manca el botó Etiquetes"); dismissAllDialogs(); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(700);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog sub = SuportTestUi.getTopDialogExcept(details);
         if (sub != null) pass("Subdiàleg Etiquetes: \"" + sub.getTitle() + "\"");
         else warn("No s'ha trobat el subdiàleg Etiquetes");
@@ -705,7 +705,7 @@ public class TestEstres {
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Manca el diàleg de detalls (Historial)"); return; }
         AbstractButton btn = SuportTestUi.findBtnIn(details.getContentPane(), "Historial");
         if (btn == null) { warn("Manca el botó Historial de prèstecs"); dismissAllDialogs(); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(700);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog sub = SuportTestUi.getTopDialogExcept(details);
         if (sub != null) pass("Diàleg Historial de prèstecs: \"" + sub.getTitle() + "\"");
         else warn("No s'ha trobat el diàleg Historial");
@@ -717,17 +717,17 @@ public class TestEstres {
         JDialog details = openDetailsAndWait(main, 0); if (details == null) { warn("Manca el diàleg de detalls (Imprimir)"); return; }
         AbstractButton btn = SuportTestUi.findBtnIn(details.getContentPane(), "Imprimir", "Print");
         if (btn == null) { warn("Manca el botó Imprimir"); dismissAllDialogs(); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(800);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         // Pot obrir un diàleg d'impressió — simplement cancel·la/fuig
         JDialog sub = SuportTestUi.getTopDialogExcept(details);
         if (sub != null) {
             pass("Imprimir obert: \"" + sub.getTitle() + "\"");
             SuportTestUi.pressEscape(robot);
-            SuportTestUi.sleep(400);
+            SuportTestUi.settle();
         } else {
             pass("Imprimir clicat — sense subdiàleg Swing (la UI d'impressió nativa pot ser headless/no-op)");
             SuportTestUi.pressEscape(robot);
-            SuportTestUi.sleep(400);
+            SuportTestUi.settle();
         }
         dismissAllDialogs();
     }
@@ -737,7 +737,7 @@ public class TestEstres {
     private static void testLlistesManagement(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Gestionar llistes");
         if (btn == null) { warn("No s'ha trobat el botó Gestionar llistes"); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(700);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog dlg = SuportTestUi.waitForDialog(2000);
         if (dlg == null) { warn("Manca el diàleg Gestionar llistes"); return; }
 
@@ -752,7 +752,7 @@ public class TestEstres {
         if (novaBtn != null && nameTF != null) {
             final JTextField tf = nameTF;
             SwingUtilities.invokeAndWait(() -> { tf.selectAll(); tf.setText(""); });
-            SuportTestUi.doClick(novaBtn); SuportTestUi.sleep(400);
+            SuportTestUi.doClick(novaBtn); SuportTestUi.settle();
             JDialog err = SuportTestUi.getTopDialogExcept(dlg);
             if (err != null) { pass("Nom de llista buit → diàleg d'error"); dismissTopDialog(); }
             else warn("Nom de llista buit: ignorat silenciosament");
@@ -764,8 +764,8 @@ public class TestEstres {
             String name = "StressTestList_" + i + "_" + (System.currentTimeMillis() % 1000);
             final JTextField tf = nameTF;
             SwingUtilities.invokeAndWait(() -> { tf.selectAll(); tf.setText(name); });
-            SuportTestUi.sleep(80);
-            SuportTestUi.doClick(novaBtn); SuportTestUi.sleep(500);
+            SuportTestUi.settle();
+            SuportTestUi.doClick(novaBtn); SuportTestUi.settle();
             JDialog err = SuportTestUi.getTopDialogExcept(dlg);
             if (err != null) { warn("Error en crear llista: " + err.getTitle()); dismissTopDialog(); }
             else { created.add(name); log("  Creada: " + name); }
@@ -778,10 +778,10 @@ public class TestEstres {
             JList<Object> listForReorder = (JList<Object>) SuportTestUi.findComponent((Container)dlg, JList.class);
             if (listForReorder != null && listForReorder.getModel().getSize() > 0)
                 SwingUtilities.invokeAndWait(() -> listForReorder.setSelectedIndex(0));
-            SuportTestUi.doClick(downBtn); SuportTestUi.sleep(200);
+            SuportTestUi.doClick(downBtn); SuportTestUi.settle();
             if (listForReorder != null && listForReorder.getModel().getSize() > 0)
                 SwingUtilities.invokeAndWait(() -> listForReorder.setSelectedIndex(0));
-            SuportTestUi.doClick(upBtn); SuportTestUi.sleep(200);
+            SuportTestUi.doClick(upBtn); SuportTestUi.settle();
             pass("Botons de reordenament: pujar/baixar funcionen");
         }
 
@@ -791,12 +791,12 @@ public class TestEstres {
             JList<Object> listForColor = (JList<Object>) SuportTestUi.findComponent((Container)dlg, JList.class);
             if (listForColor != null && listForColor.getModel().getSize() > 0)
                 SwingUtilities.invokeAndWait(() -> listForColor.setSelectedIndex(0));
-            SuportTestUi.doClick(colorBtn); SuportTestUi.sleep(700);
+            SuportTestUi.doClick(colorBtn); SuportTestUi.settle();
             JDialog colorDlg = SuportTestUi.getTopDialogExcept(dlg);
             if (colorDlg != null) {
                 pass("S'ha obert el selector de color");
                 SuportTestUi.pressEscape(robot);
-                SuportTestUi.sleep(400); dismissAllDialogsExcept(dlg);
+                SuportTestUi.settle(); dismissAllDialogsExcept(dlg);
             } else warn("No s'ha obert el selector de color");
         }
 
@@ -809,9 +809,9 @@ public class TestEstres {
                     int idx = listComp.getModel().getSize() - 1;
                     if (idx < 0) break;
                     SwingUtilities.invokeAndWait(() -> listComp.setSelectedIndex(Math.max(0, listComp.getModel().getSize()-1)));
-                    SuportTestUi.sleep(150);
+                    SuportTestUi.settle();
                 }
-                SuportTestUi.doClick(delBtn); SuportTestUi.sleep(400);
+                SuportTestUi.doClick(delBtn); SuportTestUi.settle();
                 JDialog confirm = SuportTestUi.getTopDialogExcept(dlg);
                 if (confirm != null) {
                     if (isStressTestListDeleteConfirm(confirm)) {
@@ -820,13 +820,13 @@ public class TestEstres {
                         warn("Confirmació inesperada en esborrar llista — cancel·lat");
                         cancelTopDialog();
                     }
-                    SuportTestUi.sleep(400);
+                    SuportTestUi.settle();
                 }
             }
             pass("Esborrades " + created.size() + " llistes de test");
         }
 
-        SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.sleep(400);
+        SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.waitForDialogClosed(dlg, 3000);
     }
 
     // ── ESTADÍSTIQUES ──────────────────────────────────────────────────────────────
@@ -834,7 +834,7 @@ public class TestEstres {
     private static void testStats(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Estad");
         if (btn == null) { warn("No s'ha trobat el botó Estadístiques"); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(800);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog dlg = SuportTestUi.waitForDialog(2000); if (dlg == null) { warn("Manca el diàleg d'Estadístiques"); return; }
         List<String> items = new ArrayList<>();
         SuportTestUi.collectComponents((Container)dlg, "", items);
@@ -847,9 +847,9 @@ public class TestEstres {
         if (objField != null) {
             final JTextField tf = objField;
             SwingUtilities.invokeAndWait(() -> { tf.selectAll(); tf.setText("52"); });
-            SuportTestUi.sleep(200); pass("Estadístiques: camp d'objectiu editable");
+            SuportTestUi.settle(); pass("Estadístiques: camp d'objectiu editable");
         }
-        SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.sleep(400);
+        SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.waitForDialogClosed(dlg, 3000);
     }
 
     // ── CONFIGURACIÓ ─────────────────────────────────────────────────────────────
@@ -857,7 +857,7 @@ public class TestEstres {
     private static void testConfiguracio(JFrame main) throws Exception {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Configuració", "Configur");
         if (btn == null) { warn("No s'ha trobat el botó Configuració"); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(900);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog dlg = SuportTestUi.waitForDialog(3000); if (dlg == null) { warn("Manca el diàleg de Configuració"); return; }
         // Verifica que hi ha els camps clau
         List<String> items = new ArrayList<>();
@@ -866,8 +866,8 @@ public class TestEstres {
         else warn("Configuració: manquen quadres combinats");
         // Cancel·la sense desar
         AbstractButton cancel = SuportTestUi.findBtnIn((Container)dlg, "Cancel", "Tancar");
-        if (cancel != null) { SuportTestUi.doClick(cancel); SuportTestUi.sleep(300); }
-        else { SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.sleep(300); }
+        if (cancel != null) { SuportTestUi.doClick(cancel); SuportTestUi.settle(); }
+        else { SwingUtilities.invokeLater(dlg::dispose); SuportTestUi.waitForDialogClosed(dlg, 3000); }
         pass("Diàleg de Configuració obert i tancat sense fallar");
     }
 
@@ -875,7 +875,7 @@ public class TestEstres {
 
     private static void testExport(JFrame main) throws Exception {
         ensureFilterOpen(main);
-        SuportTestUi.sleep(300);
+        SuportTestUi.settle();
         AbstractButton exportBtn = SuportTestUi.findBtnIn(main, "Exportar");
         if (exportBtn == null) { warn("No s'ha trobat el botó Exportar (cal el filtre obert)"); closeFilter(main); return; }
 
@@ -883,20 +883,20 @@ public class TestEstres {
                                {"JSON", "Export JSON", "Exportar JSON"},
                                {"HTML", "Export HTML", "Exportar HTML"}};
         for (String[] exp : exports) {
-            SuportTestUi.doClick(exportBtn); SuportTestUi.sleep(400);
+            SuportTestUi.doClick(exportBtn); SuportTestUi.settle();
             AbstractButton item = SuportTestUi.findBtnIn(main, exp[1], exp[2]);
-            if (item != null) { SuportTestUi.doClick(item); SuportTestUi.sleep(700); }
+            if (item != null) { SuportTestUi.doClick(item); SuportTestUi.settle(); }
             JDialog fc = SuportTestUi.getTopDialog();
             if (fc != null) {
                 pass("Exportar " + exp[0] + " → ha aparegut un diàleg");
                 focusMain(main);
                 SuportTestUi.pressEscape(robot);
-                SuportTestUi.sleep(400); dismissAllDialogs();
+                SuportTestUi.settle(); dismissAllDialogs();
             } else {
                 warn("Exportar " + exp[0] + " → no ha aparegut cap diàleg (pot haver-se cancel·lat o desat automàticament)");
                 focusMain(main);
                 SuportTestUi.pressEscape(robot);
-                SuportTestUi.sleep(200);
+                SuportTestUi.settle();
             }
         }
         closeFilter(main);
@@ -906,15 +906,15 @@ public class TestEstres {
 
     private static void testBackup(JFrame main) throws Exception {
         ensureFilterOpen(main);
-        SuportTestUi.sleep(300);
+        SuportTestUi.settle();
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Backup", "backup");
         if (btn == null) { warn("No s'ha trobat el botó Backup (cal el filtre obert)"); closeFilter(main); return; }
-        SuportTestUi.doClick(btn); SuportTestUi.sleep(800);
+        SuportTestUi.doClick(btn); SuportTestUi.settle();
         JDialog fc = SuportTestUi.getTopDialog();
         if (fc != null) {
             pass("Còpia de seguretat BD → diàleg: \"" + fc.getTitle() + "\"");
             SuportTestUi.pressEscape(robot);
-            SuportTestUi.sleep(400); dismissAllDialogs();
+            SuportTestUi.settle(); dismissAllDialogs();
         } else {
             warn("Còpia de seguretat BD → no ha aparegut cap diàleg");
         }
@@ -926,9 +926,9 @@ public class TestEstres {
     private static void testKbd_ctrlA(JFrame main) throws Exception {
         JTable table = SuportTestUi.findComponent((Container)main, JTable.class);
         if (table == null) { warn("No hi ha taula per al test Ctrl+A"); return; }
-        goAllBooks(main); SuportTestUi.sleep(300);
+        goAllBooks(main); SuportTestUi.settle();
         triggerRootAction(main, "seleccionarTot");
-        SuportTestUi.sleep(200);
+        SuportTestUi.settle();
         int sel = table.getSelectedRowCount();
         if (sel > 0) pass("Ctrl+A ha seleccionat " + sel + " files");
         else warn("Ctrl+A: 0 files seleccionades");
@@ -937,9 +937,12 @@ public class TestEstres {
 
     private static void testKbd_ctrlF(JFrame main) throws Exception {
         triggerRootAction(main, "focusFiltres");
-        SuportTestUi.sleep(200);
-        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        SuportTestUi.settle();
         JTextField search = findSearchField(main);
+        // requestFocusInWindow és asíncron: el focus arriba un=xevent
+        // d'events més tard, no quan l'acció retorna.
+        if (search != null) SuportTestUi.waitForFocus(search, 600);
+        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
         if (search != null && search.isFocusOwner()) pass("Ctrl+F → camp de cerca amb focus");
         else if (focused instanceof JTextField) pass("Ctrl+F → JTextField amb focus");
         else warn("Ctrl+F → focus: " + (focused != null ? focused.getClass().getSimpleName() : "null"));
@@ -947,7 +950,7 @@ public class TestEstres {
 
     private static void testKbd_ctrlN(JFrame main) throws Exception {
         triggerRootAction(main, "nouLlibre");
-        SuportTestUi.sleep(900);
+        SuportTestUi.settle();
         JDialog dlg = SuportTestUi.getTopDialog();
         if (dlg != null) {
             pass("Ctrl+N → diàleg de nou llibre: \"" + dlg.getTitle() + "\"");
@@ -962,7 +965,7 @@ public class TestEstres {
         if (btn == null) { warn("No s'ha trobat el botó Llibre aleatori"); return; }
         // Clica 3 vegades
         for (int i = 0; i < 3; i++) {
-            SuportTestUi.doClick(btn); SuportTestUi.sleep(700);
+            SuportTestUi.doClick(btn); SuportTestUi.settle();
             JDialog dlg = SuportTestUi.getTopDialog();
             if (dlg != null) {
                 log("  Diàleg aleatori " + (i+1) + ": \"" + dlg.getTitle() + "\"");
@@ -985,8 +988,7 @@ public class TestEstres {
             SuportTestUi.setFieldNear(dlg, "ISBN", String.valueOf(isbn));
             SuportTestUi.setFieldNear(dlg, "Títol", "Stress_" + i);
             SuportTestUi.setFieldNear(dlg, "Autor", "Bot");
-            SuportTestUi.clickSave(dlg);
-            SuportTestUi.sleep(350);
+            SuportTestUi.clickSave(dlg); SuportTestUi.settle();
             dismissAllDialogs();
             createdISBNs.add(isbn);
         }
@@ -997,9 +999,9 @@ public class TestEstres {
     private static void testExtreme_pagination(JFrame main, int clicks) throws Exception {
         AbstractButton next = SuportTestUi.findBtnIn(main, "Seguent", "Next");
         if (next == null) { warn("No hi ha botó de pàgina següent"); return; }
-        for (int i = 0; i < clicks; i++) { SuportTestUi.doClick(next); SuportTestUi.sleep(80); }
+        for (int i = 0; i < clicks; i++) { SuportTestUi.doClick(next); SuportTestUi.settle(); }
         AbstractButton prev = SuportTestUi.findBtnIn(main, "Anterior", "Previous");
-        if (prev != null) for (int i = 0; i < Math.min(clicks, 10); i++) { SuportTestUi.doClick(prev); SuportTestUi.sleep(80); }
+        if (prev != null) for (int i = 0; i < Math.min(clicks, 10); i++) { SuportTestUi.doClick(prev); SuportTestUi.settle(); }
         pass("Paginació martellejada amb " + clicks + " clics endavant");
     }
 
@@ -1012,10 +1014,8 @@ public class TestEstres {
         for (int i = 0; i < iterations; i++) {
             if (search != null) SuportTestUi.setField(search, i % 2 == 0 ? "a" : "");
             if (nom != null) SuportTestUi.setField(nom, i % 3 == 0 ? "Stress" : "");
-            if (filtrar != null) SuportTestUi.doClick(filtrar);
-            SuportTestUi.sleep(40);
-            if (clear != null && i % 5 == 0) SuportTestUi.doClick(clear);
-            SuportTestUi.sleep(30);
+            if (filtrar != null) SuportTestUi.doClick(filtrar); SuportTestUi.settle();
+            if (clear != null && i % 5 == 0) SuportTestUi.doClick(clear); SuportTestUi.settle();
         }
         if (search != null) SuportTestUi.setField(search, "");
         pass("Bucle filtre+cerca x" + iterations);
@@ -1024,7 +1024,7 @@ public class TestEstres {
     private static void testExtreme_gallery(JFrame main, int toggles) throws Exception {
         AbstractButton galeria = SuportTestUi.findBtnIn(main, "Galeria");
         if (galeria == null) { warn("Manca el botó Galeria"); return; }
-        for (int i = 0; i < toggles; i++) { SuportTestUi.doClick(galeria); SuportTestUi.sleep(60); }
+        for (int i = 0; i < toggles; i++) { SuportTestUi.doClick(galeria); SuportTestUi.settle(); }
         pass("Galeria commutada x" + toggles);
     }
 
@@ -1057,7 +1057,7 @@ public class TestEstres {
         }
         start.countDown();
         for (Thread th : pool) th.join(8000);
-        SuportTestUi.sleep(500);
+        SuportTestUi.settle();
         dismissAllDialogs();
         if (errors.get() > 0) fail("Errors UI concurrents: " + errors.get());
         else pass("Bombardeig concurrent de la UI (" + threadCount + " fils × 5 clics)");
@@ -1069,7 +1069,7 @@ public class TestEstres {
             for (String hint : opens) {
                 AbstractButton btn = SuportTestUi.findBtnIn(main, hint);
                 if (btn == null) continue;
-                SuportTestUi.doClick(btn); SuportTestUi.sleep(400);
+                SuportTestUi.doClick(btn); SuportTestUi.settle();
                 dismissAllDialogs();
             }
         }
@@ -1104,7 +1104,7 @@ public class TestEstres {
                 (double) (i % 50),
                 i % 2 == 0,
                 null);
-            try { cd.addLlibre(l); createdISBNs.add(isbn); }
+            try { cd.afegirLlibre(l); createdISBNs.add(isbn); }
             catch (Exception e) { fail("inserció massiva " + i + ": " + e.getMessage()); return; }
         }
         long elapsed = (System.nanoTime() - t0) / 1_000_000L;
@@ -1132,12 +1132,12 @@ public class TestEstres {
         for (int round = 0; round < 5; round++) {
             for (int i = 0; i < 200; i++) {
                 long isbn = uniqueISBN();
-                try { cd.addLlibre(new domini.Llibre(isbn, "MemProbe_" + round + "_" + i,
+                try { cd.afegirLlibre(new domini.Llibre(isbn, "MemProbe_" + round + "_" + i,
                     "Bot", 2000, "", 5.0, 1.0, false, null)); scratch.add(isbn); }
                 catch (Exception ignored) {}
             }
             for (long isbn : scratch) {
-                try { cd.deleteLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
+                try { cd.eliminarLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
             }
             scratch.clear();
             System.gc(); SuportTestUi.sleep(80);
@@ -1188,7 +1188,7 @@ public class TestEstres {
                     } catch (Exception e) { exceptions.incrementAndGet(); }
                 });
                 // Cedeix periòdicament perquè l'EDT pugui buidar els diàlegs
-                if (i % 25 == 0) { dismissAllDialogs(); SuportTestUi.sleep(40); }
+                if (i % 25 == 0) { dismissAllDialogs(); SuportTestUi.settle(); }
             } catch (Exception e) { exceptions.incrementAndGet(); }
         }
         long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
@@ -1215,9 +1215,9 @@ public class TestEstres {
             AbstractButton btn = SuportTestUi.findBtnIn(main, hint);
             if (btn == null) continue;
             for (int i = 0; i < perDialog; i++) {
-                SuportTestUi.doClick(btn); SuportTestUi.sleep(150);
+                SuportTestUi.doClick(btn); SuportTestUi.settle();
                 JDialog dlg = SuportTestUi.getTopDialog();
-                if (dlg == null) { SuportTestUi.sleep(200); continue; }
+                if (dlg == null) { SuportTestUi.settle(); continue; }
                 fuzzedDialogs++;
                 // Fuzz de cada camp de text / àrea de text / quadre combinat del diàleg
                 List<Component> comps = new ArrayList<>();
@@ -1255,13 +1255,13 @@ public class TestEstres {
         domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
         // Pre-sembra almenys N llibres
         while (cd.getSize() < threadCount * 2) {
-            try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "StormSeed", "Bot", 2020,
+            try { cd.afegirLlibre(new domini.Llibre(uniqueISBN(), "StormSeed", "Bot", 2020,
                 "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
         }
         java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
         java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger();
         java.util.concurrent.atomic.AtomicInteger updates = new java.util.concurrent.atomic.AtomicInteger();
-        List<domini.Llibre> snapshot = new ArrayList<>(cd.getAllLlibres());
+        List<domini.Llibre> snapshot = new ArrayList<>(cd.obtenirAllLlibres());
         Thread[] pool = new Thread[threadCount];
         for (int t = 0; t < threadCount; t++) {
             pool[t] = new Thread(() -> {
@@ -1270,9 +1270,9 @@ public class TestEstres {
                     for (int i = 0; i < 10; i++) {
                         domini.Llibre l = snapshot.get(FUZZ.nextInt(snapshot.size()));
                         try {
-                            l.setValoracio(FUZZ.nextDouble() * 10.0);
-                            l.setLlegit(FUZZ.nextBoolean());
-                            cd.updateLlibre(l);
+                            l.posarValoracio(FUZZ.nextDouble() * 10.0);
+                            l.posarLlegit(FUZZ.nextBoolean());
+                            cd.actualitzarLlibre(l);
                             updates.incrementAndGet();
                         } catch (Exception e) { errors.incrementAndGet(); }
                     }
@@ -1300,7 +1300,7 @@ public class TestEstres {
         if (cd.getSize() < 100) {
             // Les fases 49/50 haurien d'haver sembrat prou; si no, sembra 100 ràpidament.
             for (int i = 0; i < 100; i++) {
-                try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "Seed_" + i, "Bot",
+                try { cd.afegirLlibre(new domini.Llibre(uniqueISBN(), "Seed_" + i, "Bot",
                     2020, "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
             }
         }
@@ -1418,7 +1418,7 @@ public class TestEstres {
         // Pre-sembra ~200 llibres perquè la cerca/filtrar tingui alguna cosa a fer
         if (cd.getSize() < 200) {
             for (int i = 0; i < 200; i++) {
-                try { cd.addLlibre(new domini.Llibre(uniqueISBN(), "SoakSeed_" + i,
+                try { cd.afegirLlibre(new domini.Llibre(uniqueISBN(), "SoakSeed_" + i,
                     "Bot", 2000, "", 5.0, 1.0, false, null)); } catch (Exception ignored) {}
             }
         }
@@ -1439,26 +1439,26 @@ public class TestEstres {
                         switch (op) {
                             case 0: {
                                 long isbn = uniqueISBN();
-                                cd.addLlibre(new domini.Llibre(isbn, "Soak_" + isbn, "Bot",
+                                cd.afegirLlibre(new domini.Llibre(isbn, "Soak_" + isbn, "Bot",
                                     2000, "", 5.0, 1.0, false, null));
                                 inserts.incrementAndGet();
                                 break;
                             }
                             case 1: {
-                                List<domini.Llibre> all = cd.getAllLlibres();
+                                List<domini.Llibre> all = cd.obtenirAllLlibres();
                                 if (!all.isEmpty()) {
                                     domini.Llibre pick = all.get(r.nextInt(all.size()));
-                                    pick.setValoracio(r.nextDouble() * 10.0);
-                                    try { cd.updateLlibre(pick); updates.incrementAndGet(); }
+                                    pick.posarValoracio(r.nextDouble() * 10.0);
+                                    try { cd.actualitzarLlibre(pick); updates.incrementAndGet(); }
                                     catch (Exception ignored) {}
                                 }
                                 break;
                             }
                             case 2: {
-                                List<domini.Llibre> all = cd.getAllLlibres();
+                                List<domini.Llibre> all = cd.obtenirAllLlibres();
                                 if (all.size() > 50) {
                                     domini.Llibre pick = all.get(r.nextInt(all.size()));
-                                    try { cd.deleteLlibre(Long.valueOf(pick.getISBN())); deletes.incrementAndGet(); }
+                                    try { cd.eliminarLlibre(Long.valueOf(pick.obtenirISBN())); deletes.incrementAndGet(); }
                                     catch (Exception ignored) {}
                                 }
                                 break;
@@ -1482,7 +1482,7 @@ public class TestEstres {
         long lastInsert = 0, lastUpdate = 0, lastDelete = 0, lastSearch = 0;
         long prevInsert = 0, prevUpdate = 0, prevDelete = 0, prevSearch = 0;
         while (System.nanoTime() < deadline) {
-            SuportTestUi.sleep(1000);
+            SuportTestUi.settle();
             if (System.nanoTime() - lastReport > 4_000_000_000L) {
                 long used = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
                 long i = inserts.get(), u = updates.get(), d = deletes.get(), s = searches.get();
@@ -1554,7 +1554,7 @@ public class TestEstres {
         for (String label : btns) {
             AbstractButton btn = SuportTestUi.findBtnIn(main, label);
             if (btn == null) { warn("No s'ha trobat el botó de la barra lateral: \"" + label + "\""); continue; }
-            SuportTestUi.doClick(btn); SuportTestUi.sleep(500);
+            SuportTestUi.doClick(btn); SuportTestUi.settle();
             JDialog d = SuportTestUi.getTopDialog();
             if (d != null) {
                 dismissAllDialogs();
@@ -1573,7 +1573,7 @@ public class TestEstres {
      * informats (inclosos els afegits recentment: nom_ca/es/en, estat,
      * exemplars, idioma, format, serie, volum, pagines), i el rellegeix
      * DIRECTAMENT DE LA BASE DE DADES
-     * ({@link persistencia.ControladorPersistencia#getAllLlibres()}, que
+     * ({@link persistencia.internal.ControladorPersistencia#getAllLlibres()}, que
      * reconstrueix cada Llibre a partir del ResultSet) i afirma una
      * veritable anada i tornada de persistència. Després exercita una
      * anada i tornada de creació/devolució de prèstec i una anada i
@@ -1582,62 +1582,62 @@ public class TestEstres {
      */
     private static void testDataIntegrity(JFrame main) throws Exception {
         domini.ControladorDomini cd = domini.ControladorDomini.getInstance();
-        persistencia.ControladorPersistencia cp = persistencia.ControladorPersistencia.getInstance();
+        persistencia.internal.ControladorPersistencia cp = persistencia.internal.ControladorPersistencia.getInstance();
 
         long isbn = uniqueISBN();
         domini.Llibre l = new domini.Llibre(isbn, "Integrity_" + isbn, "Autor Integ",
             2021, "descripcio round-trip", 7.5, 19.99, true, null);
-        l.setNomCa("Títol CA"); l.setNomEs("Título ES"); l.setNomEn("Title EN");
-        l.setEditorial("Edit Integ"); l.setSerie("Serie Integ"); l.setVolum(3);
-        l.setEstat("nou"); l.setExemplars(4); l.setDesitjat(false);
-        l.setIdioma("Català"); l.setFormat("Tapa dura");
-        l.setPagines(320); l.setPaginesLlegides(160);
+        l.posarNomCa("Títol CA"); l.posarNomEs("Título ES"); l.posarNomEn("Title EN");
+        l.posarEditorial("Edit Integ"); l.posarSerie("Serie Integ"); l.posarVolum(3);
+        l.posarEstat("nou"); l.posarExemplars(4); l.posarDesitjat(false);
+        l.posarIdioma("Català"); l.posarFormat("Tapa dura");
+        l.posarPagines(320); l.posarPaginesLlegides(160);
 
         domini.Tag tag = null;
         try {
-            cd.addLlibre(l);
+            cd.afegirLlibre(l);
 
             // Torna a llegir de la BD (no la memòria cau en memòria) per provar que ha persistit.
             domini.Llibre db = null;
-            for (domini.Llibre b : cp.getAllLlibres())
-                if (b.getISBN() == isbn) { db = b; break; }
+            for (domini.Llibre b : cp.obtenirAllLlibres())
+                if (b.obtenirISBN() == isbn) { db = b; break; }
 
             if (db == null) { fail("IntegritatDades: no s'ha trobat el llibre ISBN=" + isbn + " després de la recàrrega"); return; }
 
-            check("nom persisteix",       "Integrity_" + isbn, db.getNom());
-            check("nom_ca persisteix",    "Títol CA",  db.getNomCa());
-            check("nom_es persisteix",    "Título ES", db.getNomEs());
-            check("nom_en persisteix",    "Title EN",  db.getNomEn());
-            check("editorial persisteix", "Edit Integ", db.getEditorial());
-            check("serie persisteix",     "Serie Integ", db.getSerie());
-            check("volum persisteix",     3, db.getVolum());
-            check("estat persisteix",     "nou", db.getEstat());
-            check("exemplars persisteix", 4, db.getExemplars());
-            check("idioma persisteix",    "Català", db.getIdioma());
+            check("nom persisteix",       "Integrity_" + isbn, db.obtenirNom());
+            check("nom_ca persisteix",    "Títol CA",  db.obtenirNomCa());
+            check("nom_es persisteix",    "Título ES", db.obtenirNomEs());
+            check("nom_en persisteix",    "Title EN",  db.obtenirNomEn());
+            check("editorial persisteix", "Edit Integ", db.obtenirEditorial());
+            check("serie persisteix",     "Serie Integ", db.obtenirSerie());
+            check("volum persisteix",     3, db.obtenirVolum());
+            check("estat persisteix",     "nou", db.obtenirEstat());
+            check("exemplars persisteix", 4, db.obtenirExemplars());
+            check("idioma persisteix",    "Català", db.obtenirIdioma());
             check("format persisteix",    "Tapa dura", db.obtenirFormat());
-            check("pagines persisteix",   320, db.getPagines());
-            check("pagines_llegides persisteix", 160, db.getPaginesLlegides());
-            check("llegit persisteix",    Boolean.TRUE, db.getLlegit());
+            check("pagines persisteix",   320, db.obtenirPagines());
+            check("pagines_llegides persisteix", 160, db.obtenirPaginesLlegides());
+            check("llegit persisteix",    Boolean.TRUE, db.obtenirLlegit());
 
             // ── Anada i tornada de prèstec ──────────────────────────────────────────────
             cd.prestarLlibre(isbn, "Joan Tester");
-            check("prèstec registrat (actiu)", true, cd.getLoanedISBNs().contains(isbn));
-            check("countLoans >= 1", true, cd.countLoans(isbn) >= 1);
+            check("prèstec registrat (actiu)", true, cd.obtenirLoanedISBNs().contains(isbn));
+            check("countLoans >= 1", true, cd.comptarLoans(isbn) >= 1);
             cd.retornarLlibre(isbn);
-            check("prèstec retornat (no actiu)", false, cd.getLoanedISBNs().contains(isbn));
+            check("prèstec retornat (no actiu)", false, cd.obtenirLoanedISBNs().contains(isbn));
 
             // ── Anada i tornada d'etiqueta ───────────────────────────────────────────────
-            tag = cd.addTag("StressTag_" + UUID.randomUUID().toString().substring(0, 8));
-            cd.addLlibreToTag(isbn, tag.getId());
-            check("membresia d'etiqueta afegida", true, cd.getLlibresWithTag(tag.getId()).contains(isbn));
-            cd.removeLlibreFromTag(isbn, tag.getId());
-            check("membresia d'etiqueta eliminada", false, cd.getLlibresWithTag(tag.getId()).contains(isbn));
+            tag = cd.afegirTag("StressTag_" + UUID.randomUUID().toString().substring(0, 8));
+            cd.afegirLlibreToTag(isbn, tag.obtenirId());
+            check("membresia d'etiqueta afegida", true, cd.obtenirLlibresWithTag(tag.obtenirId()).contains(isbn));
+            cd.eliminarLlibreFromTag(isbn, tag.obtenirId());
+            check("membresia d'etiqueta eliminada", false, cd.obtenirLlibresWithTag(tag.obtenirId()).contains(isbn));
         } catch (Exception e) {
             fail("IntegritatDades ha llançat: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         } finally {
             // Teardown a millor esforç — no deixem que les fallades de neteja emmascarin el resultat.
-            try { cd.deleteLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
-            if (tag != null) { try { cd.deleteTag(tag); } catch (Exception ignored) {} }
+            try { cd.eliminarLlibre(Long.valueOf(isbn)); } catch (Exception ignored) {}
+            if (tag != null) { try { cd.eliminarTag(tag); } catch (Exception ignored) {} }
         }
     }
 
@@ -1652,11 +1652,11 @@ public class TestEstres {
     private static void testCleanup(JFrame main) throws Exception {
         if (createdISBNs.isEmpty()) { warn("No hi ha ISBN de test per netejar"); return; }
         log("Netejant " + createdISBNs.size() + " llibres de test...");
-        goAllBooks(main); SuportTestUi.sleep(500);
+        goAllBooks(main); SuportTestUi.settle();
         JTextField sf = findSearchField(main);
         int deleted = 0;
         // Buida la barra de cerca perquè el RowFilter no amagui llibres
-        if (sf != null) { SuportTestUi.setField(sf, ""); SuportTestUi.sleep(400); }
+        if (sf != null) { SuportTestUi.setField(sf, ""); SuportTestUi.settle(); }
         for (long isbn : createdISBNs) {
             JTable table = SuportTestUi.findComponent((Container)main, JTable.class);
             if (table == null) { log("  ISBN " + isbn + " no és a la taula — es salta"); continue; }
@@ -1675,12 +1675,12 @@ public class TestEstres {
             SwingUtilities.invokeAndWait(() -> table.setRowSelectionInterval(fr, fr));
             focusMain(main);
             SuportTestUi.pressDelete(robot);
-            SuportTestUi.sleep(600);
+            SuportTestUi.settle();
             JDialog confirm = SuportTestUi.getTopDialog();
             if (confirm != null) {
                 if (SuportTestUi.isTestBookDeleteConfirm(confirm)) {
                     clickAffirmDelete(confirm);
-                    SuportTestUi.sleep(400);
+                    SuportTestUi.settle();
                     deleted++;
                 } else {
                     warn("Diàleg inesperat durant l'esborrat de neteja per a ISBN " + isbn + " — cancel·lat");
@@ -1690,7 +1690,7 @@ public class TestEstres {
                 warn("No hi ha confirmació d'esborrat per a ISBN " + isbn + " — el llibre pot romandre");
             }
         }
-        if (sf != null) { SuportTestUi.setField(sf, ""); SuportTestUi.sleep(400); }
+        if (sf != null) { SuportTestUi.setField(sf, ""); SuportTestUi.settle(); }
         goAllBooks(main);
         pass("Neteja: esborrats " + deleted + "/" + createdISBNs.size() + " llibres de test");
     }
@@ -1703,10 +1703,10 @@ public class TestEstres {
         if (btn != null) SuportTestUi.doClick(btn);
         else {
             SwingUtilities.invokeAndWait(() -> main.requestFocusInWindow());
-            SuportTestUi.sleep(80);
+            SuportTestUi.settle();
             SuportTestUi.pressCtrlN(robot);
         }
-        SuportTestUi.sleep(600);
+        SuportTestUi.settle();
     }
 
     private static void openRow(JFrame main, int row) throws Exception {
@@ -1721,7 +1721,7 @@ public class TestEstres {
             javax.swing.Action act = table.getActionMap().get("obrirDetalls");
             if (act != null) act.actionPerformed(new java.awt.event.ActionEvent(table, 0, "obrirDetalls"));
         });
-        SuportTestUi.sleep(900);
+        SuportTestUi.settle();
     }
 
     private static void triggerRootAction(JFrame main, String key) throws Exception {
@@ -1731,52 +1731,67 @@ public class TestEstres {
             javax.swing.Action act = main.getRootPane().getActionMap().get(key);
             if (act != null) act.actionPerformed(new java.awt.event.ActionEvent(main.getRootPane(), 0, key));
         });
-        SuportTestUi.sleep(120);
+        SuportTestUi.settle();
     }
 
     /** Porta la finestra principal al davant i sol·licita el focus a nivell de SO. */
     private static void focusMain(JFrame main) throws Exception {
         SwingUtilities.invokeAndWait(() -> { main.toFront(); main.requestFocus(); });
-        SuportTestUi.sleep(120);
+        SuportTestUi.settle();
     }
 
     /** Obre la fila, buida l'EDT, espera més estona el JDialog de detalls i verifica que és un diàleg de detalls de llibre. */
     private static JDialog openDetailsAndWait(JFrame main, int row) throws Exception {
         dismissAllDialogs();
-        SuportTestUi.sleep(200);
+        SuportTestUi.settle();
         openRow(main, row);
         // Buida els esdeveniments EDT pendents perquè el contingut del diàleg estigui completament dibuixat
         SwingUtilities.invokeAndWait(() -> {});
-        SuportTestUi.sleep(400);
-        JDialog d = SuportTestUi.waitForDialog(3000);
+        SuportTestUi.settle();
+        JDialog d = SuportTestUi.waitForDialog(2000);
         if (d == null) return null;
         if (SuportTestUi.isBookDetailsDialog(d)) return d;
         // Assegura't que és el diàleg de detalls, no un d'error
         if (SuportTestUi.looksLikeError(d)) {
             log("  [openDetailsAndWait] s'ha obtingut un diàleg d'error: \"" + d.getTitle() + "\" — es descarta i es reintenta");
             dismissAllDialogs();
-            SuportTestUi.sleep(300);
+            SuportTestUi.settle();
             openRow(main, row);
             SwingUtilities.invokeAndWait(() -> {});
-            SuportTestUi.sleep(400);
-            d = SuportTestUi.waitForDialog(3000);
+            SuportTestUi.settle();
+            d = SuportTestUi.waitForDialog(2000);
         }
         return d;
     }
 
-    private static void goAllBooks(JFrame main) {
+    private static void goAllBooks(JFrame main) throws Exception {
+        // La barra de cerca és un filtre viu: si en queda text, la taula
+        // continua filtrada encara que es torni a "Tots els llibres".
+        JTextField sf = findSearchField(main);
+        if (sf != null && !sf.getText().isEmpty()) SuportTestUi.setField(sf, "");
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Tots els");
-        if (btn != null) { SuportTestUi.doClick(btn); SuportTestUi.sleep(500); }
+        if (btn != null) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
+        // La consulta es resol en un SwingWorker: la taula encara pot mostrar
+        // el filtre anterior quan el clic retorna.
+        SuportTestUi.waitForTableRows(main, 1, 1200);
+        JTable tbl = SuportTestUi.findComponent((Container) main, JTable.class);
+        javax.swing.RowSorter<?> rs = tbl != null ? tbl.getRowSorter() : null;
+        boolean hasFilter = rs instanceof javax.swing.DefaultRowSorter
+                && ((javax.swing.DefaultRowSorter<?, ?>) rs).getRowFilter() != null;
+        log("  [goAllBooks] files=" + (tbl != null ? tbl.getRowCount() : -1)
+            + " model=" + (tbl != null ? tbl.getModel().getRowCount() : -1)
+            + " filtreRowSorter=" + hasFilter
+            + " cerca='" + (sf != null ? sf.getText() : "?") + "'");
     }
 
     private static void ensureFilterOpen(JFrame main) {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Filtres");
-        if (btn != null && btn.getText() != null && !btn.getText().contains("▲")) { SuportTestUi.doClick(btn); SuportTestUi.sleep(400); }
+        if (btn != null && btn.getText() != null && !btn.getText().contains("▲")) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
     }
 
     private static void closeFilter(JFrame main) {
         AbstractButton btn = SuportTestUi.findBtnIn(main, "Filtres ▲");
-        if (btn != null) { SuportTestUi.doClick(btn); SuportTestUi.sleep(300); }
+        if (btn != null) { SuportTestUi.doClick(btn); SuportTestUi.settle(); }
     }
 
     private static void checkExpectError(String label) {
@@ -1808,8 +1823,7 @@ public class TestEstres {
             JDialog d = SuportTestUi.getTopDialog();
             if (d == null || d == keep) break;
             AbstractButton ok = SuportTestUi.findBtnIn((Container)d, "OK", "Tancar", "Cancel·lar", "Close");
-            if (ok != null) SuportTestUi.doClick(ok); else SwingUtilities.invokeLater(d::dispose);
-            SuportTestUi.sleep(300);
+            if (ok != null) SuportTestUi.doClick(ok); else SwingUtilities.invokeLater(d::dispose); SuportTestUi.waitForDialogClosed(d, 3000);
         }
     }
 
@@ -1825,10 +1839,10 @@ public class TestEstres {
         if (cancel != null) SuportTestUi.doClick(cancel);
         else {
             SuportTestUi.pressEscape(robot);
-            SuportTestUi.sleep(200);
+            SuportTestUi.settle();
             if (SuportTestUi.getTopDialog() == d) SwingUtilities.invokeLater(d::dispose);
         }
-        SuportTestUi.sleep(280);
+        SuportTestUi.settle();
     }
 
     private static void clickAffirmDelete(JDialog confirm) {

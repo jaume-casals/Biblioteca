@@ -20,7 +20,7 @@ try {
     if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
         Write-Error "java no es troba al PATH"; exit 1
     }
-    foreach ($jar in @("lib\h2-2.3.232.jar", "lib\mariadb-java-client-3.3.3.jar", "lib\gson-2.11.0.jar")) {
+    foreach ($jar in @("lib\h2-2.5.252.jar", "lib\mariadb-java-client-3.5.10.jar", "lib\gson-2.14.0.jar")) {
         if (-not (Test-Path $jar)) {
             Write-Error "manca $jar"; exit 1
         }
@@ -59,7 +59,7 @@ try {
         $javaOpts = @("-Dbiblioteca.stress.threads=$threads")
     }
 
-    $cp = "bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar"
+    $cp = "bin;lib\h2-2.5.252.jar;lib\mariadb-java-client-3.5.10.jar;lib\gson-2.14.0.jar"
 
     # ── Compila l'aplicació principal ─────────────────────────────────────
     Write-Host ""
@@ -78,7 +78,7 @@ try {
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "  Compilant StressTest"
         Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
-        javac -Xlint:deprecation -cp $cp checkBiblio\UiTestSupport.java checkBiblio\StressTest.java -d bin
+        javac -Xlint:deprecation -cp $cp checkBiblio\SuportTestUi.java checkBiblio\TestEstres.java -d bin
         if ($LASTEXITCODE -ne 0) {
             $stepErrors += "La compilació de StressTest ha fallat (javac)"
             $finalExit = 1
@@ -97,7 +97,7 @@ try {
         $job = Start-Job -ScriptBlock {
             param($cp, $opts, $args)
             Set-Location $using:ProjectRoot
-            java -Xmx512m @opts -cp $cp checkBiblio.StressTest @args
+            java -Xmx512m @opts -cp $cp checkBiblio.TestEstres @args
         } -ArgumentList $cp, $javaOpts, $StressArgs
 
         $completed = Wait-Job $job -Timeout $timeout

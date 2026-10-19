@@ -9,7 +9,7 @@ package checkBiblio;
  * camps i executar un recorregut automatitzat predefinit.
  *
  * Compila:  javac -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
- *                 checkBiblio/UiTestSupport.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
+ *                 checkBiblio/SuportTestUi.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin
  * Executa:  java  -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar \
  *                 checkBiblio.UIAudit [--auto]
  *
@@ -91,7 +91,7 @@ public class UIAudit {
             System.exit(1);
         }
         log("OK: Finestra principal visible — \"" + mainFrame.getTitle() + "\"");
-        SuportTestUi.sleep(600);
+        SuportTestUi.settle();
 
         if (autoMode) {
             runAutomated(mainFrame);
@@ -184,7 +184,7 @@ public class UIAudit {
                 print("Clicant \"" + btn.getText() + "\" a \"" + SuportTestUi.windowTitle(w) + "\"");
                 log("CLICK: \"" + btn.getText() + "\"");
                 SuportTestUi.clickComponent(robot, btn);
-                SuportTestUi.sleep(400);
+                SuportTestUi.settle();
                 // Informa de qualsevol diàleg nou
                 JDialog d = SuportTestUi.getTopDialog();
                 if (d != null) print("  → Ha aparegut un diàleg: \"" + d.getTitle() + "\"");
@@ -272,7 +272,6 @@ public class UIAudit {
             table.scrollRectToVisible(table.getCellRect(rowIndex, 0, true));
             table.requestFocusInWindow();
         });
-        SuportTestUi.sleep(200);
 
         // Dispara directament l'acció registrada "obrirDetalls" — evita Robot totalment (funciona amb Xvfb).
         // Cal invokeLater (no invokeAndWait): els diàlegs modals bloquegen l'EDT dins de setVisible(true),
@@ -287,7 +286,7 @@ public class UIAudit {
                     System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED));
             }
         });
-        SuportTestUi.sleep(800);
+        SuportTestUi.waitForDialog(4000);
 
         JDialog dlg = SuportTestUi.getTopDialog();
         if (dlg != null) {
@@ -325,14 +324,13 @@ public class UIAudit {
             AbstractButton btn = SuportTestUi.findBtnIn((Container)mainFrame, entry[0]);
             if (btn != null) {
                 log("CLICK: barra lateral \"" + btn.getText() + "\"");
-                SwingUtilities.invokeLater(btn::doClick);
-                SuportTestUi.sleep(900);
+                SuportTestUi.clickAndSettle(btn);
                 JDialog d = SuportTestUi.getTopDialog();
                 if (d != null) {
                     log("  -> Diàleg: \"" + d.getTitle() + "\" — escanejant...");
                     collectAndLog((Container)d);
                     SwingUtilities.invokeLater(d::dispose);
-                    SuportTestUi.sleep(400);
+                    SuportTestUi.settle();
                 } else {
                     log("  -> Sense diàleg (actualització del panell)");
                 }
@@ -349,10 +347,10 @@ public class UIAudit {
         log("\n--- CALAIX DE FILTRES ---");
         AbstractButton tog = SuportTestUi.findBtnIn((Container)mainFrame, "Filtre", "Filter");
         if (tog != null) {
-            SwingUtilities.invokeLater(tog::doClick); SuportTestUi.sleep(400);
+            SuportTestUi.clickAndSettle(tog);
             log("Calaix de filtres obert");
             collectAndLog((Container)mainFrame);
-            SwingUtilities.invokeLater(tog::doClick); SuportTestUi.sleep(300);
+            SuportTestUi.clickAndSettle(tog);
         } else {
             warn("botó de commutar el calaix de filtres no trobat");
         }
@@ -368,7 +366,7 @@ public class UIAudit {
 
         // Torna a la vista de tots els llibres abans d'inspeccionar la taula
         AbstractButton allBtn = SuportTestUi.findBtnIn((Container)mainFrame, "Tots els");
-        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); SuportTestUi.sleep(600); }
+        if (allBtn != null) SuportTestUi.clickAndSettle(allBtn);
 
         // --- Inspecció de la taula ---
         log("\n--- TAULA ---");
@@ -395,10 +393,10 @@ public class UIAudit {
                 AbstractButton editBtn = SuportTestUi.findBtnIn((Container)detailsDlg, "Editar", "Edit");
                 if (editBtn != null) {
                     log("Clicant Editar...");
-                    SwingUtilities.invokeLater(editBtn::doClick); SuportTestUi.sleep(500);
+                    SuportTestUi.clickAndSettle(editBtn);
                     log("Mode d'edició actiu. Prement Escape per cancel·lar.");
                     SuportTestUi.pressEscape(robot);
-                    SuportTestUi.sleep(300);
+                    SuportTestUi.settle();
                 } else {
                     warn("Botó Editar no trobat al diàleg de detalls");
                 }
@@ -408,7 +406,8 @@ public class UIAudit {
                 clickSubDialogButton(detailsDlg, "Historial");
                 clickSubDialogButton(detailsDlg, "Imprimir");
 
-                SwingUtilities.invokeLater(detailsDlg::dispose); SuportTestUi.sleep(400);
+                SwingUtilities.invokeLater(detailsDlg::dispose);
+                SuportTestUi.settle();
             } else {
                 warn("No ha aparegut cap diàleg en obrir la fila 0");
             }
@@ -448,8 +447,7 @@ public class UIAudit {
         AbstractButton btn = SuportTestUi.findBtnIn((Container)detailsDlg, btnHint);
         if (btn == null) { warn("Botó de detalls no trobat: \"" + btnHint + "\""); return; }
         log("Clicant \"" + btn.getText() + "\"...");
-        SwingUtilities.invokeLater(btn::doClick);
-        SuportTestUi.sleep(700);
+        SuportTestUi.clickAndSettle(btn);
         JDialog sub = SuportTestUi.getTopDialog();
         if (sub != null && sub != detailsDlg) {
             log("  -> Subdiàleg: \"" + sub.getTitle() + "\"");
@@ -463,7 +461,7 @@ public class UIAudit {
         AbstractButton close = SuportTestUi.findBtnIn((Container)d, "Tancar", "OK", "Cancel");
         if (close != null) SwingUtilities.invokeLater(close::doClick);
         else SwingUtilities.invokeLater(d::dispose);
-        SuportTestUi.sleep(350);
+        SuportTestUi.settle();
     }
 
     private static void dismissAllDialogs() {
@@ -490,19 +488,17 @@ public class UIAudit {
         if (search != null) {
             final JTextField searchField = search;
             SwingUtilities.invokeAndWait(() -> searchField.setText("test"));
-            SuportTestUi.sleep(200);
             log("Barra de cerca posada a \"test\"");
             SwingUtilities.invokeAndWait(() -> searchField.setText(""));
-            SuportTestUi.sleep(200);
         } else {
             warn("Barra de cerca no trobada");
         }
 
         AbstractButton galeria = SuportTestUi.findBtnIn(main, "Galeria");
         if (galeria != null) {
-            SwingUtilities.invokeLater(galeria::doClick); SuportTestUi.sleep(700);
+            SuportTestUi.clickAndSettle(galeria);
             log("Mode galeria activat");
-            SwingUtilities.invokeLater(galeria::doClick); SuportTestUi.sleep(700);
+            SuportTestUi.clickAndSettle(galeria);
             log("Mode galeria desactivat");
         } else {
             warn("Botó Galeria no trobat");
@@ -510,8 +506,8 @@ public class UIAudit {
 
         AbstractButton series = SuportTestUi.findBtnIn(main, "Sèrie", "Series");
         if (series != null) {
-            SwingUtilities.invokeLater(series::doClick); SuportTestUi.sleep(500);
-            SwingUtilities.invokeLater(series::doClick); SuportTestUi.sleep(500);
+            SuportTestUi.clickAndSettle(series);
+            SuportTestUi.clickAndSettle(series);
             log("Agrupació per sèries commutada x2");
         } else {
             warn("Botó Sèries no trobat");
@@ -522,13 +518,13 @@ public class UIAudit {
         AbstractButton next = SuportTestUi.findBtnIn(main, "Seguent", "Next");
         AbstractButton prev = SuportTestUi.findBtnIn(main, "Anterior", "Previous");
         if (next != null) {
-            SwingUtilities.invokeLater(next::doClick); SuportTestUi.sleep(600);
+            SuportTestUi.clickAndSettle(next);
             log("Paginació: pàgina següent");
         } else {
             warn("Botó de pàgina següent no trobat");
         }
         if (prev != null) {
-            SwingUtilities.invokeLater(prev::doClick); SuportTestUi.sleep(600);
+            SuportTestUi.clickAndSettle(prev);
             log("Paginació: pàgina anterior");
         }
     }
@@ -536,17 +532,17 @@ public class UIAudit {
     private static void testFilterActions(JFrame main) throws Exception {
         AbstractButton tog = SuportTestUi.findBtnIn(main, "Filtre", "Filter");
         if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
-            SwingUtilities.invokeLater(tog::doClick); SuportTestUi.sleep(400);
+            SuportTestUi.clickAndSettle(tog);
         }
         SuportTestUi.setFieldNear(main, "Nom", "audit");
         AbstractButton filtrar = SuportTestUi.findBtnIn(main, "Filtrar");
         if (filtrar != null) {
-            SwingUtilities.invokeLater(filtrar::doClick); SuportTestUi.sleep(700);
+            SuportTestUi.clickAndSettle(filtrar);
             log("Filtre aplicat (nom=audit)");
         }
         AbstractButton clear = SuportTestUi.findBtnIn(main, "Treure", "Quitar");
         if (clear != null) {
-            SwingUtilities.invokeLater(clear::doClick); SuportTestUi.sleep(600);
+            SuportTestUi.clickAndSettle(clear);
             log("Filtres esborrats");
         }
     }
@@ -554,7 +550,7 @@ public class UIAudit {
     private static void testIoButtons(JFrame main) throws Exception {
         AbstractButton tog = SuportTestUi.findBtnIn(main, "Filtre", "Filter");
         if (tog != null && (tog.getText() == null || !tog.getText().contains("▲"))) {
-            SwingUtilities.invokeLater(tog::doClick); SuportTestUi.sleep(400);
+            SuportTestUi.clickAndSettle(tog);
         }
         String[] safe = {"Exportar", "Importar", "Fetch", "Escanejar", "Backup", "Restaurar"};
         for (String hint : safe) {
@@ -562,15 +558,15 @@ public class UIAudit {
             if (btn == null) { warn("Botó d'E/S no trobat: " + hint); continue; }
             log("CLICK I/O: \"" + btn.getText() + "\"");
             if (SuportTestUi.norm(btn.getText()).contains("export") || SuportTestUi.norm(btn.getText()).contains("import")) {
-                SwingUtilities.invokeLater(btn::doClick); SuportTestUi.sleep(400);
+                SuportTestUi.clickAndSettle(btn);
                 AbstractButton item = SuportTestUi.findBtnIn(main, "CSV", "JSON", "HTML");
-                if (item != null) { SwingUtilities.invokeLater(item::doClick); SuportTestUi.sleep(500); }
+                if (item != null) SuportTestUi.clickAndSettle(item);
             } else {
-                SwingUtilities.invokeLater(btn::doClick); SuportTestUi.sleep(600);
+                SuportTestUi.clickAndSettle(btn);
             }
             dismissAllDialogs();
             SuportTestUi.pressEscape(robot);
-            SuportTestUi.sleep(250);
+            SuportTestUi.settle();
         }
     }
 
@@ -587,12 +583,7 @@ public class UIAudit {
 
     /** Cert un cop no queda cap diàleg visible amb el títol donat (desar ha funcionat i el diàleg s'ha tancat). */
     private static boolean waitForDialogTitleGone(String title, int maxMs) throws Exception {
-        for (int waited = 0; waited < maxMs; waited += 100) {
-            JDialog d = SuportTestUi.getTopDialog();
-            if (d == null || !title.equals(d.getTitle())) return true;
-            SuportTestUi.sleep(100);
-        }
-        return false;
+        return SuportTestUi.waitForDialogGone(title, maxMs);
     }
 
     /** Obre el diàleg de nou llibre, omple tots els camps amb dades aleatòries i desa. Retorna cert si apareix una fila a la taula. */
@@ -601,7 +592,7 @@ public class UIAudit {
         AbstractButton nouBtn = SuportTestUi.findBtnIn((Container)mainFrame, "Afegir", "Nou", "New");
         if (nouBtn == null) { warn("Botó d'afegir llibre no trobat"); return false; }
 
-        SwingUtilities.invokeLater(nouBtn::doClick); SuportTestUi.sleep(900);
+        SuportTestUi.clickAndWaitDialog(nouBtn, 4000);
         JDialog dlg = SuportTestUi.getTopDialog();
         if (dlg == null) { warn("El diàleg de nou llibre no ha aparegut"); return false; }
         String dlgTitle = dlg.getTitle();
@@ -645,15 +636,14 @@ public class UIAudit {
             return false;
         }
         SwingUtilities.invokeLater(saveBtn::doClick);
-        if (!waitForDialogTitleGone(dlgTitle, 2500)) {
+        if (!waitForDialogTitleGone(dlgTitle, 4000)) {
             warn("El diàleg de crear llibre encara és obert després de desar (la validació pot haver fallat silenciosament en mode test)");
             collectAndLog((Container)dlg);
             SwingUtilities.invokeLater(dlg::dispose);
-            SuportTestUi.sleep(400);
+            SuportTestUi.settle();
             log("Ha fallat el test CREAR LLIBRE. ISBN=" + testIsbn);
             return false;
         }
-        SuportTestUi.sleep(400);
         log("OK: Llibre desat (ISBN=" + testIsbn + ")");
         log("Test CREAR LLIBRE acabat. ISBN=" + testIsbn);
         return true;
@@ -665,7 +655,7 @@ public class UIAudit {
 
         // Torna a la vista de tots els llibres
         AbstractButton allBtn = SuportTestUi.findBtnIn((Container)mainFrame, "Tots els");
-        if (allBtn != null) { SwingUtilities.invokeLater(allBtn::doClick); SuportTestUi.sleep(700); }
+        if (allBtn != null) SuportTestUi.clickAndSettle(allBtn);
 
         cmdOpenRow(mainFrame, 0);
         JDialog detailsDlg = SuportTestUi.getTopDialog();
@@ -674,7 +664,7 @@ public class UIAudit {
 
         AbstractButton editBtn = SuportTestUi.findBtnIn((Container)detailsDlg, "Editar", "Edit");
         if (editBtn == null) { log("WARN: Botó Editar no trobat"); SwingUtilities.invokeLater(detailsDlg::dispose); return; }
-        SwingUtilities.invokeLater(editBtn::doClick); SuportTestUi.sleep(600);
+        SuportTestUi.clickAndSettle(editBtn);
         log("Mode d'edició actiu — omplint camps amb dades aleatòries...");
 
         String[][] fields = {
@@ -702,20 +692,22 @@ public class UIAudit {
         }
 
         AbstractButton saveBtn = SuportTestUi.findBtnIn((Container)detailsDlg, "Desa", "Guardar", "Save");
-        if (saveBtn == null) { log("WARN: Botó Desa no trobat — prement Escape"); SuportTestUi.pressEscape(robot); SuportTestUi.sleep(300); return; }
+        if (saveBtn == null) { log("WARN: Botó Desa no trobat — prement Escape"); SuportTestUi.pressEscape(robot); SuportTestUi.settle(); return; }
         log("Clicant Desa...");
-        SwingUtilities.invokeLater(saveBtn::doClick); SuportTestUi.sleep(1000);
+        SwingUtilities.invokeLater(saveBtn::doClick);
+        SuportTestUi.settle();
 
         JDialog afterDlg = SuportTestUi.getTopDialog();
         if (afterDlg != null) {
             log("Diàleg RESULTAT després de desar l'edició: \"" + afterDlg.getTitle() + "\"");
             collectAndLog((Container)afterDlg);
-            SwingUtilities.invokeLater(afterDlg::dispose); SuportTestUi.sleep(400);
+            SwingUtilities.invokeLater(afterDlg::dispose);
+            SuportTestUi.settle();
         } else {
             log("OK: Cap diàleg d'error — l'edició probablement s'ha desat correctament");
         }
         JDialog still = SuportTestUi.getTopDialog();
-        if (still != null) { SwingUtilities.invokeLater(still::dispose); SuportTestUi.sleep(300); }
+        if (still != null) { SwingUtilities.invokeLater(still::dispose); SuportTestUi.settle(); }
         log("Test EDITAR LLIBRE acabat.");
     }
 

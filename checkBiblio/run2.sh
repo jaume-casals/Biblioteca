@@ -90,7 +90,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 if ! command -v java &>/dev/null; then echo "ERROR: java no es troba al PATH" >&2; exit 1; fi
-for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar; do
+for jar in lib/h2-2.5.252.jar lib/mariadb-java-client-3.5.10.jar lib/gson-2.14.0.jar; do
     [ -f "$jar" ] || { echo "ERROR: manca $jar" >&2; exit 1; }
 done
 
@@ -129,7 +129,7 @@ else
     STRESS_JAVA_OPTS="-Dbiblioteca.stress.threads=${STRESS_THREADS}"
 fi
 
-CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar"
+CP="bin:lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar:lib/gson-2.14.0.jar"
 
 echo "Compilant l'aplicació principal..."
 if ! make compile -s 2>&1; then
@@ -139,7 +139,7 @@ fi
 STRESS_COMPILED=0
 if [ "$FINAL_EXIT" -eq 0 ]; then
     echo "Compilant StressTest..."
-    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/StressTest.java -d bin 2>&1; then
+    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/SuportTestUi.java checkBiblio/TestEstres.java -d bin 2>&1; then
         record_error "La compilació de StressTest ha fallat (javac)"
     else
         STRESS_COMPILED=1
@@ -151,9 +151,9 @@ if [ "$STRESS_COMPILED" -eq 1 ]; then
 
     echo "Iniciant StressTest... (timeout: ${TIMEOUT}s)"
     if command -v setsid &>/dev/null; then
-        setsid java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.StressTest "$@" &
+        setsid java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.TestEstres "$@" &
     else
-        java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.StressTest "$@" &
+        java -Xmx512m $STRESS_JAVA_OPTS -cp "$CP" checkBiblio.TestEstres "$@" &
     fi
     JAVA_PID=$!
 

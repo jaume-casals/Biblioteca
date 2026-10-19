@@ -94,7 +94,7 @@ cleanup() {
 trap cleanup EXIT
 
 if ! command -v java &>/dev/null; then echo "ERROR: java no es troba al PATH" >&2; exit 1; fi
-for jar in lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar; do
+for jar in lib/h2-2.5.252.jar lib/mariadb-java-client-3.5.10.jar lib/gson-2.14.0.jar; do
     [ -f "$jar" ] || { echo "ERROR: manca $jar" >&2; exit 1; }
 done
 
@@ -112,7 +112,7 @@ if [ "$RUN_TESTS" -eq 1 ]; then
 fi
 
 if [ "$RUN_AUDIT" -eq 1 ]; then
-    CP="bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar"
+    CP="bin:lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar:lib/gson-2.14.0.jar"
 
     # Auto-inicia Xvfb si no hi ha cap pantalla disponible
     if [ -z "$DISPLAY" ]; then
@@ -130,7 +130,7 @@ if [ "$RUN_AUDIT" -eq 1 ]; then
     fi
 
     echo "Compilant UIAudit..."
-    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/UiTestSupport.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin 2>&1; then
+    if ! javac -Xlint:deprecation -cp "$CP" checkBiblio/SuportTestUi.java checkBiblio/UIAudit.java checkBiblio/I18nAudit.java -d bin 2>&1; then
         record_error "La compilació d'UIAudit ha fallat (javac)"
     else
         rm -f checkBiblio/audit_report.txt

@@ -48,6 +48,133 @@ public final class SuportTestUi {
         try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
     }
 
+    // ── Espera condicionada ───────────────────────────────────────────────────
+
+    /** Interval de sonda de les esperes condicionades. */
+    private static final long POLL_MS = 20;
+
+    /**
+     * Espera que l'EDT processi tot el que ja era a la cua d'esdeveniments
+     * en el moment de la crida.
+     *
+     * <p>La sonda és un {@code Runnable} publicat a la cua de l'EDT: quan
+     * s'executa, tot el que s'havia publicat abans ja s'ha processat. Si
+     * l'EDT està dins d'un diàleg modal, el bucle d'esdeveniments imbricat
+     * continua repartint tasques, de manera que la sonda també hi arriba.</p>
+     */
+    public static void settle() {
+        try {
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            SwingUtilities.invokeLater(latch::countDown);
+            latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Espera que la condició sigui certa, sondant cada {@link #POLL_MS} ms
+     * fins que passi {@code timeoutMs}. Retorna {@code true} si la condició
+     * s'ha complert, {@code false} si s'ha esgotat el temps.
+     */
+    public static boolean waitFor(java.util.function.BooleanSupplier cond, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (true) {
+            if (cond.getAsBoolean()) return true;
+            if (System.currentTimeMillis() >= deadline) return false;
+            sleep(POLL_MS);
+        }
+    }
+
+    /**
+     * Clica el botó i espera que l'EDT apliqui l'acció.
+     *
+     * <p>Substitueix el patró "publica el clic + dorm N ms": el clic s'aplica
+     * quan l'EDT el processa, i la sonda retorna només quan l'EDT ja ha
+     * quedat lliure. Un marge curt cobreix els SwingWorker de refresc que
+     * apliquen el resultat després, sense pagar els centenars de mil·lisegons
+     * d'un dorm fix.</p>
+     */
+    public static void clickAndSettle(AbstractButton btn) {
+        SwingUtilities.invokeLater(btn::doClick);
+        settle();
+        sleep(GRACE_MS);
+    }
+
+    /**
+     * Clica el botó i espera que aparegui un diàleg nou ( diferent del que
+     * hi havia abans del clic). Retorna el diàleg o {@code null} si no
+     * apareix dins del termini.
+     */
+    public static JDialog clickAndWaitDialog(AbstractButton btn, long timeoutMs) {
+        final JDialog previous = getTopDialog();
+        SwingUtilities.invokeLater(btn::doClick);
+        settle();
+        waitFor(() -> {
+            JDialog d = getTopDialog();
+            return d != null && d != previous;
+        }, timeoutMs);
+        return getTopDialog();
+    }
+
+    /**
+     * Espera que la taula visible tingui com a mínim {@code minRows} files.
+     * Retorna {@code true} si s'ha arribat al mínim dins del termini.
+     *
+     * <p>Necessari després d'un canvi de vista o de filtre: la consulta es
+     * resol en un SwingWorker i el resultat s'aplica a la taula més tard,
+     * de manera que el recompte de files canvia fora de l'EDT.</p>
+     */
+    public static boolean waitForTableRows(JFrame main, int minRows, long timeoutMs) {
+        return waitFor(() -> {
+            JTable t = findComponent((Container) main, JTable.class);
+            return t != null && t.getRowCount() >= minRows;
+        }, timeoutMs);
+    }
+
+    /**
+     * Espera que el focus actual sigui el component donat (o un dels seus
+     * fills). Retorna {@code true} si s'ha aconseguit dins del termini.
+     */
+    public static boolean waitForFocus(Component target, long timeoutMs) {
+        return waitFor(() -> {
+            Component owner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            return owner != null && (owner == target || isDescendant(target, owner));
+        }, timeoutMs);
+    }
+
+    private static boolean isDescendant(Component root, Component maybeChild) {
+        for (Component c = maybeChild; c != null; c = c.getParent())
+            if (c == root) return true;
+        return false;
+    }
+
+    /**
+     * Espera que el diàleg amb el títol donat desaparegui de la pila.
+     */
+    public static boolean waitForDialogGone(String title, long timeoutMs) {
+        return waitFor(() -> {
+            JDialog d = getTopDialog();
+            return d == null || !title.equals(d.getTitle());
+        }, timeoutMs);
+    }
+
+    /**
+     * Espera que el diàleg donat deixi de ser visible (s'ha tancat o s'ha
+     * substituït per un altre). Retorna {@code true} si s'ha tancat dins del
+     * termini.
+     */
+    public static boolean waitForDialogClosed(JDialog dlg, long timeoutMs) {
+        if (dlg == null) return true;
+        return waitFor(() -> !dlg.isVisible(), timeoutMs);
+    }
+
+    /**
+     * Margre addicional després d'un clic perquè els SwingWorker de refresc
+     * apliquin el resultat a la taula o la galeria.
+     */
+    private static final long GRACE_MS = 60;
+
     // ── Recorregut de components ──────────────────────────────────────────────
 
     /**
@@ -211,7 +338,7 @@ public final class SuportTestUi {
     // ── Ajudants de finestra ──────────────────────────────────────────────────
 
     /**
-     * Sonda cada 150 ms durant fins a {@code timeoutMs} i retorna el primer
+     * Sonda cada 50 ms durant fins a {@code timeoutMs} i retorna el primer
      * {@link JFrame} visible amb títol no buit. Retorna {@code null} si no
      * n'apareix cap.
      */
@@ -221,22 +348,22 @@ public final class SuportTestUi {
             for (Window w : Window.getWindows()) {
                 if (w instanceof JFrame f && f.isVisible() && !f.getTitle().isBlank()) return f;
             }
-            Thread.sleep(150);
+            Thread.sleep(50);
         }
         return null;
     }
 
     /**
-     * Sonda cada 100 ms durant fins a {@code timeoutMs} i retorna el primer
-     * {@link JDialog} visible (de dalt a baix). Retorna {@code null} si no
-     * n'apareix cap.
+     * Sonda cada {@link #POLL_MS} ms durant fins a {@code timeoutMs} i
+     * retorna el primer {@link JDialog} visible (de dalt a baix). Retorna
+     * {@code null} si no n'apareix cap.
      */
     public static JDialog waitForDialog(long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
             JDialog d = getTopDialog();
             if (d != null) return d;
-            Thread.sleep(100);
+            Thread.sleep(POLL_MS);
         }
         return null;
     }
@@ -296,7 +423,7 @@ public final class SuportTestUi {
         int cx = loc.x + c.getWidth() / 2;
         int cy = loc.y + c.getHeight() / 2;
         robot.mouseMove(cx, cy);
-        sleep(60);
+        sleep(30);
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
         robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
     }
@@ -314,7 +441,6 @@ public final class SuportTestUi {
             tf.selectAll();
             tf.setText(value);
         });
-        sleep(40);
     }
 
     /**
@@ -328,11 +454,11 @@ public final class SuportTestUi {
         setField(tf, value);
     }
 
-    /** Programa un {@code doClick()} a l'EDT (no bloquejant) i dorm breument
-     *  perquè l'EDT el dispari. */
+    /** Programa un {@code doClick()} a l'EDT (no bloquejant) i espera que
+     *  l'EDT l'hagi aplicat. */
     public static void doClick(AbstractButton btn) {
         SwingUtilities.invokeLater(btn::doClick);
-        sleep(60);
+        settle();
     }
 
     /** Clica el primer botó de desar / guardar / desa trobat a {@code dlg}. */
