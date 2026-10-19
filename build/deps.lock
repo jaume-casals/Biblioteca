@@ -1,0 +1,32 @@
+# build/deps.lock — font única de veritat de les dependències.
+# Format: grup:artifact:versio sha256 etiqueta   (runtime | test | fuzz)
+# Regenera amb: python3 scripts/fetch_deps.py update
+
+# --- runtime ---
+com.h2database:h2:2.5.252 90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20 runtime
+org.mariadb.jdbc:mariadb-java-client:3.5.10 919b8c1c771d9ee3465811462f242c9543ab401e140c64988ddbf1d8abcb18b2 runtime
+com.google.code.gson:gson:2.14.0 2cbd119bf1961c28788310963dc80ba65f58cdeec1dd139c8bdb1240faa2c36f runtime
+org.slf4j:slf4j-api:2.0.20 7e1446499b359675d8aabe6af2de86b85e72ae8a2a932c0b40d0e5ba57097439 runtime
+com.google.errorprone:error_prone_annotations:2.48.0 b49c5c958316ed67a09c699dda9aa749caf434d51d863dea599ef36a49b9c855 runtime
+com.github.waffle:waffle-jna:3.7.0 8ff5b5278305924dcfd029a7774694c93f8e9ea0360a4deb9aa241f43865c190 runtime
+net.java.dev.jna:jna:5.19.1 4fb141dd8ef6b0585ffceea4bc49602fbc6312fa977e2c488794ea3e6aafecae runtime
+net.java.dev.jna:jna-platform:5.19.1 3b3864f5b449e9c3c24b16861524b622b086563f44e0cd8384c8efc5a6052f82 runtime
+
+# --- test ---
+org.junit.platform:junit-platform-console-standalone:1.14.4 7c6968cbcaf4301c729f202b23b7d736c5d88be625fc7d27ad5d746146a8bc28 test
+org.assertj:assertj-core:3.27.7 c4a445426c3c2861666863b842cc4ec7bbb1c4226fefd370b6d2fe83d6c4ff0f test
+org.mockito:mockito-core:5.24.0 97a1f835ad84075255aa37809e4379eff541273c02c6201cbad49bd5950932cd test
+net.bytebuddy:byte-buddy:1.18.15 e64ed8697df67cbce8158a6e926cbe841f97d01719d719b7b84784826a9b2b27 test
+net.bytebuddy:byte-buddy-agent:1.18.15 9744e23dfbed9ca95f576fdd699409b76dc975a93a332022aeda6de0daf0c5b5 test
+org.objenesis:objenesis:3.6 6ecc0fc776af04e2bfd2bf42d618ab5161440dcb8a0e7dff9e84c065c7cec3dd test
+net.jqwik:jqwik-api:1.10.2 7e3b95d4ff78410273921a55aeaaea4294e5ed8171f7284680e9c3a84bf7088e test
+net.jqwik:jqwik-engine:1.10.2 b4cc136a0efc1e2aa31514aae8d80b66fef53894c2d2777e2cc1143ca7511098 test
+
+# --- fuzz ---
+com.code-intelligence:jazzer:0.30.0 8bdeac017bcd3d9473c9772fac62111c4df830188571def1d001a1b743a62b2f fuzz
+com.code-intelligence:jazzer-api:0.30.0 d36a725cfedcb7f3590206866cc2836f84d12afccf7c98912f5c720e4d2208d7 fuzz
+com.code-intelligence:jazzer-junit:0.30.0 1b1ae8658216031c50e989e6008193c04c2ad63c4c9b9876d4c66e23ecb75312 fuzz
+# --- legacy ---
+# H2 de referència per comprovar que una base de dades creada amb una
+# versió anterior s'obre amb la versió actual. No entra en cap classpath.
+com.h2database:h2:2.3.232 8dae62d22db8982c3dcb3826edb9c727c5d302063a67eef7d63d82de401f07d3 legacy

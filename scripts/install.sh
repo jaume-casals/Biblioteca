@@ -3,13 +3,13 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! command -v java >/dev/null 2>&1; then
-    echo "Error: Java is not installed. Please install Java 21 or later." >&2
+    echo "Error: Java is not installed. Please install Java 25 or later." >&2
     exit 1
 fi
 
 JAVA_VER=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | cut -d'.' -f1,2)
-if [ "$(echo "$JAVA_VER < 21" | bc 2>/dev/null || echo 1)" = "1" ]; then
-    echo "Error: Java $JAVA_VER found, but Java 21+ is required." >&2
+if [ "$(echo "$JAVA_VER < 25" | bc 2>/dev/null || echo 1)" = "1" ]; then
+    echo "Error: Java $JAVA_VER found, but Java 25+ is required." >&2
     exit 1
 fi
 
@@ -21,7 +21,23 @@ echo "Installing Biblioteca to ${INST_APP}..."
 mkdir -p "${INST_APP}/lib" "${INST_BIN}" "${INST_DKT}"
 
 cp "${DIR}/build/artifacts/biblioteca-fat.jar" "${INST_APP}/biblioteca.jar"
-cp "${DIR}/lib/"*.jar       "${INST_APP}/lib/"
+
+# Només els jars declarats a build/deps.lock (etiqueta runtime). La carpeta
+# lib/ pot contenir versions antigues que no tenen res a veure amb el
+# build actual: instal·lar-les era una inconsistència entre el lock i el
+# paquet instal·lat. Si el lock no hi és, es manten el comportament antic.
+LOCK="${DIR}/build/deps.lock"
+if [ -f "$LOCK" ]; then
+    while read -r gav sha tag; do
+        case "$gav" in \#*|"") continue ;; esac
+        [ "$tag" = "runtime" ] || continue
+        art=$(echo "$gav" | cut -d: -f2)
+        ver=$(echo "$gav" | cut -d: -f3)
+        [ -f "${DIR}/lib/${art}-${ver}.jar" ] && cp "${DIR}/lib/${art}-${ver}.jar" "${INST_APP}/lib/"
+    done < "$LOCK"
+else
+    cp "${DIR}/lib/"*.jar "${INST_APP}/lib/"
+fi
 
 # Copy icon if available
 [ -f "${DIR}/packaging/icon-256.png" ] && cp "${DIR}/packaging/icon-256.png" "${INST_APP}/Biblioteca.png"

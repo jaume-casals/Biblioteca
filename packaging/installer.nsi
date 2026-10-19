@@ -56,7 +56,7 @@ UninstallIcon   "${APP_ICO}"
 !insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "English"
 
-; ─── Java 21 check ────────────────────────────────────────────────────────────
+; ─── Java 25 check ────────────────────────────────────────────────────────────
 Function CheckJava
   ReadRegStr $0 HKLM "SOFTWARE\JavaSoft\JRE" "CurrentVersion"
   StrCmp $0 "" 0 jre_found
@@ -64,9 +64,9 @@ Function CheckJava
   StrCmp $0 "" no_java jre_found
   no_java:
     MessageBox MB_YESNO|MB_ICONQUESTION \
-      "Java 21 o superior no s'ha detectat.$\r$\nBiblioteca requereix Java 21+.$\r$\n$\r$\nVols anar a la pàgina de descàrrega?" \
+      "Java 25 o superior no s'ha detectat.$\r$\nBiblioteca requereix Java 25+.$\r$\n$\r$\nVols anar a la pàgina de descàrrega?" \
       IDNO continue_anyway
-    ExecShell "open" "https://adoptium.net/temurin/releases/?version=21"
+    ExecShell "open" "https://adoptium.net/temurin/releases/?version=25"
   continue_anyway:
   jre_found:
 FunctionEnd

@@ -21,7 +21,7 @@
   <cmdLine></cmdLine>
   <chdir>.</chdir>
   <priority>normal</priority>
-  <downloadUrl>https://adoptium.net/temurin/releases/?version=21</downloadUrl>
+  <downloadUrl>https://adoptium.net/temurin/releases/?version=25</downloadUrl>
   <stayAlive>false</stayAlive>
   <restartOnCrash>false</restartOnCrash>
   <icon>Biblioteca.ico</icon>
@@ -29,7 +29,7 @@
     <path>jre</path>
     <bundledJre64Bit>true</bundledJre64Bit>
     <bundledJreAsFallback>false</bundledJreAsFallback>
-    <minVersion>21</minVersion>
+    <minVersion>25</minVersion>
     <maxVersion></maxVersion>
     <jdkPreference>preferJre</jdkPreference>
     <runtimeBits>64</runtimeBits>

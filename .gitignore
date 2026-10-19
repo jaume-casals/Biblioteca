@@ -41,6 +41,7 @@ biblioteca-fat.jar
 
 # Test sources
 classes.txt
+classes.*.txt
 test_classes.txt
 test/_test_classes.txt
 
@@ -53,10 +54,15 @@ lib/jqwik-*.jar
 lib/jazzer-*.jar
 
 .jqwik-database
+__pycache__/
 
 # Restructured build outputs (2026-06-21)
 target/                                  # Maven output (pom.xml archived to build/maven-legacy/)
 build/audit/                             # scripts/audit_redo.py output
+# JUnit XML reports (make test)
+build/reports/
+# segells de compilació incremental (make test)
+build/stamp/
 build/fuzz/crashes/                      # archived crash-* files
 .loop-lib/                               # local loop-agent artifacts (mvn distribution, etc.)
 .config/                                 # local-only IDE / agent config

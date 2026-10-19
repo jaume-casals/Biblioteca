@@ -5,109 +5,328 @@
 # the resulting "rm: cannot remove classes.txt" / corrupted class files.
 .NOTPARALLEL:
 
-JAVAC := $(shell which javac 2>/dev/null || find /usr/lib/jvm -name javac 2>/dev/null | head -1)
+# Staging dir for a compile. The build lands here first and is swapped into
+# bin/ in one step, so a half-written bin/ can never replace a good one.
+BUILD_DIR := .build-tmp.$(shell echo $$$$)
+
+# Unique per make invocation. Recipe lines run in separate shells, so a
+# shell-level $$ would differ between the find, the guard and the javac call.
+# These tags keep concurrent make runs from sharing one source list.
+SRC_LIST := classes.$(shell echo $$$$).txt
+TEST_LIST := test_classes.$(shell echo $$$$).txt
+
+# These targets must always run: a stray file named "compile" or "run" in the
+# project root would otherwise make make skip the recipe entirely.
+.PHONY: compile run run-only clean test populate jar fat-jar audit
+
+# Pick the first javac that actually runs. A zero-byte or truncated launcher
+# exits 0 without compiling anything, which silently produces an empty build
+# and then fails at launch with "Could not find or load main class".
+# A zero-byte launcher exits 0 when the shell runs it as an empty script, so
+# the probe must look at the OUTPUT: a real javac prints "javac <version>".
+JAVAC := $(shell for c in $$(which javac 2>/dev/null) $$(find /usr/lib/jvm /home/j/opt /usr/java -name javac -type f 2>/dev/null | sort); do if [ -x "$$c" ] && "$$c" -version 2>&1 | grep -q "javac"; then echo "$$c"; break; fi; done)
 ifeq ($(JAVAC),)
-    JAVAC := /usr/lib/jvm/java-21-openjdk/bin/javac
+    JAVAC := /usr/lib/jvm/java-25-openjdk/bin/javac
 endif
 
-CP := lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:.
-TEST_CP := $(CP):lib/apiguardian-api-1.1.2.jar:lib/junit-jupiter-api-5.11.4.jar:lib/junit-jupiter-params-5.11.4.jar:lib/junit-jupiter-engine-5.11.4.jar:lib/junit-platform-launcher-1.11.4.jar:lib/junit-platform-engine-1.11.4.jar:lib/junit-platform-commons-1.11.4.jar:lib/opentest4j-1.3.0.jar:lib/assertj-core-3.26.3.jar:lib/mockito-core-5.14.2.jar:lib/mockito-junit-jupiter-5.14.2.jar:lib/byte-buddy-1.15.4.jar:lib/byte-buddy-agent-1.15.4.jar:lib/objenesis-3.3.jar
+# Same rule for the runtime: a zero-byte launcher exits 0 as an empty script,
+# so pick the first java that actually reports a version.
+JAVA := $(shell for c in $$(which java 2>/dev/null) $$(find /usr/lib/jvm /home/j/opt /usr/java -name java -type f 2>/dev/null | sort); do if [ -x "$$c" ] && "$$c" -version 2>&1 | grep -qi "version"; then echo "$$c"; break; fi; done)
+ifeq ($(JAVA),)
+    JAVA := java
+endif
 
-APIGUARDIAN_JAR := lib/apiguardian-api-1.1.2.jar
-APIGUARDIAN_URL := https://repo1.maven.org/maven2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar
+# ---------- DEPENDÈNCIES ----------
+#
+# build/deps.lock és l'única font de veritat de les versions: cada línia
+# és "grup:artifact:versió sha256 etiqueta". El classpath es deriva del lock,
+# de manera que Makefile i lock no es poden desincronitzar.
+#
+#   make deps         baixa els jars que falten i verifica els SHA-256
+#   make deps-verify  verifica els SHA-256 sense baixar res
+#   make deps-update  consulta Maven Central i actualitza el lock
+#
+# Sense aquest pas, un checkout net no compila: els jars de lib/ no són
+# versionats (*.jar és al .gitignore) i gson és necessari per compilar.
 
-compile:
+DEPS_LOCK := build/deps.lock
+DEPS_SCRIPT := scripts/fetch_deps.py
+PYTHON := $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null)
+
+# Directori on hi ha els jars. Per defecte lib/, però es pot apuntar a un
+# directori alternatiu (p. ex. un @"farm" de enllaços simbòlics amb només
+# els jars de build/deps.lock) per comprovar que la compilació i els tests
+# no depenen de cap jar sobrant de lib/.
+DEPS_DIR ?= lib
+
+DEPS_CP_RUNTIME := $(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag runtime --dir $(DEPS_DIR) 2>/dev/null)
+DEPS_CP_TEST := $(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag test --dir $(DEPS_DIR) 2>/dev/null)
+DEPS_CP_FUZZ := $(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag fuzz --dir $(DEPS_DIR) 2>/dev/null)
+
+CP := $(DEPS_CP_RUNTIME):.
+TEST_CP := $(CP):$(DEPS_CP_TEST)
+FUZZ_CP := $(TEST_CP):$(DEPS_CP_FUZZ)
+
+# $(filter) separa la llista per espais, no per ':', cal convertir el
+# classpath en paraules abans de filtrar-lo. A més, $(filter) de GNU Make
+# només admet un únic comodí %, així que el cercament es fa amb findstring.
+CP_RUNTIME_WORDS := $(subst :, ,$(DEPS_CP_RUNTIME))
+CP_TEST_WORDS := $(subst :, ,$(DEPS_CP_TEST))
+CP_FUZZ_WORDS := $(subst :, ,$(DEPS_CP_FUZZ))
+
+# jar-with <llista de paraules> <text>: retorna els jars que contenen el text.
+jar-with = $(foreach j,$(1),$(if $(findstring $(2),$(j)),$(j)))
+
+JUNIT5_STANDALONE := $(call jar-with,$(CP_TEST_WORDS),junit-platform-console-standalone)
+JQWIK_API := $(call jar-with,$(CP_TEST_WORDS),jqwik-api)
+JQWIK_ENGINE := $(call jar-with,$(CP_TEST_WORDS),jqwik-engine)
+JAZZER_API := $(call jar-with,$(CP_FUZZ_WORDS),jazzer-api)
+JAZZER_JUNIT := $(call jar-with,$(CP_FUZZ_WORDS),jazzer-junit)
+# El bootstrap de Jazzer és l'únic "jazzer-" que no és api ni junit.
+JAZZER := $(filter-out $(JAZZER_API) $(JAZZER_JUNIT),$(call jar-with,$(CP_FUZZ_WORDS),jazzer-))
+
+.PHONY: deps deps-verify deps-update
+
+deps:
+	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
+	@$(PYTHON) $(DEPS_SCRIPT) fetch --lock $(DEPS_LOCK)
+
+deps-verify:
+	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
+	@$(PYTHON) $(DEPS_SCRIPT) verify --lock $(DEPS_LOCK)
+
+deps-update:
+	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
+	@$(PYTHON) $(DEPS_SCRIPT) update --lock $(DEPS_LOCK)
+
+# ---------- COMPILACIÓ INCREMENTAL ----------
+#
+# Compilar src/ i test/ des de zero cada vegada és la major part del temps
+# de `make test`. Els segells (stamps) permeten reutilitzar bin/ quan res
+# ha canviat:
+#
+#   build/stamp/src.stamp   línia 1 = nombre de .java a src/
+#                          línia 2 = id de build (checksum de deps.lock + timestamp)
+#   build/stamp/test.stamp  línia 1 = nombre de .java a test/
+#                          línia 2 = id de build de src/ amb què es van compilar
+#
+# Es recompila quan: el nombre de fitxers canvia (fitxer afegit o esborrat),
+# algun .java és més nou que el segell, deps.lock ha canviat, o el build id
+# de src/ és diferent del que hi ha al segell de test/. Qualsevol altre cas
+# reutilitza les classes ja compilades.
+STAMP_DIR := build/stamp
+SRC_STAMP := $(STAMP_DIR)/src.stamp
+TEST_STAMP := $(STAMP_DIR)/test.stamp
+
+compile: deps
 	@if [ ! -f "$(JAVAC)" ]; then \
 		echo "ERROR: javac not found. Install the JDK:"; \
-		echo "  sudo dnf install java-21-openjdk-devel"; \
+		echo "  sudo dnf install java-25-openjdk-devel"; \
 		exit 1; \
 	fi
-	@find ./src/ -name "*.java" > classes.txt
-	@$(JAVAC) -g --release 21 -cp $(CP) @classes.txt -d bin
-	@rm -f classes.txt
-	@if [ -d src/herramienta ]; then cp src/herramienta/*.properties bin/herramienta/ 2>/dev/null || true; fi
-	@if [ -d src/web ]; then cp -r src/web bin/web; fi
+	@if ! "$(JAVAC)" -version 2>&1 | grep -q "javac"; then \
+		echo "ERROR: javac at $(JAVAC) is not a working compiler."; \
+		echo "  It prints no version - the file is empty, truncated or not a JDK."; \
+		echo "  Fix JAVA_HOME / PATH, then run: make compile"; \
+		exit 1; \
+	fi
+	@mkdir -p $(STAMP_DIR)
+	@src_count=`find ./src/ -name "*.java" | wc -l | tr -d ' '`; \
+	 prev_count=`sed -n '1p' $(SRC_STAMP) 2>/dev/null | tr -d ' '`; \
+	 newer=`find ./src/ -name "*.java" -newer $(SRC_STAMP) -print -quit 2>/dev/null`; \
+	 newer_deps=`find $(DEPS_LOCK) -newer $(SRC_STAMP) -print -quit 2>/dev/null`; \
+	 if [ -f "$(SRC_STAMP)" ] && [ "$$src_count" = "$$prev_count" ] \
+	     && [ -z "$$newer" ] && [ -z "$$newer_deps" ] \
+	     && [ -f bin/main/Executable.class ]; then \
+		echo "compile: src/ sense canvis — es reutilitza bin/"; \
+	 else \
+		echo "compile: recompilant src/ ..."; \
+		find ./src/ -name "*.java" > $(SRC_LIST); \
+		if [ ! -s $(SRC_LIST) ]; then \
+			echo "ERROR: no Java sources found under ./src/ (source list empty)"; \
+			rm -f $(SRC_LIST); \
+			exit 1; \
+		fi; \
+		rm -rf $(BUILD_DIR) && mkdir -p $(BUILD_DIR); \
+		$(JAVAC) -g --release 25 -cp $(CP) @$(SRC_LIST) -d $(BUILD_DIR) || { rm -rf $(BUILD_DIR); rm -f $(SRC_LIST); exit 1; }; \
+		rm -f $(SRC_LIST); \
+		rm -rf bin && mv $(BUILD_DIR) bin; \
+		printf '%s\n%s\n' "$$src_count" "`cksum $(DEPS_LOCK) | tr -d ' '`-`date +%s%N`" > $(SRC_STAMP); \
+	fi
+	@if [ -d src/herramienta ]; then mkdir -p bin/herramienta && cp src/herramienta/*.properties bin/herramienta/ 2>/dev/null || true; fi
+	@if [ -d src/web ]; then rm -rf bin/web && cp -r src/web bin/web; fi
 	@if [ -f src/LICENSE ]; then cp src/LICENSE bin/; fi
+	@# El ABOUT (QuantADialeg) llegeix /version.properties del classpath: si no
+	@# es copia, el diàleg no mostra la versió en una build de make.
+	@if [ -f src/version.properties ]; then cp src/version.properties bin/; fi
+	@if [ ! -f bin/main/Executable.class ]; then \
+		echo "ERROR: la compilacio no ha produït bin/main/Executable.class"; \
+		exit 1; \
+	fi
 
-run:
-	make clean
-	make compile
-	java -cp bin:$(CP) main.Executable
+# Comprova que una base de dades creada amb una versió anterior del driver
+# H2 s'obre amb la versió actual sense perdre dades. Fa servir una base de
+# dades temporal: la base de dades real de l'usuari no s'ha de tocar.
+H2_LEGACY := $(call jar-with,$(CP_LEGACY_WORDS),h2-)
+CP_LEGACY_WORDS := $(subst :, ,$(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag legacy --dir lib 2>/dev/null))
+
+h2-compat: compile deps
+	@mkdir -p build/h2compat build/h2compat-db
+	@$(JAVAC) -g -cp bin:$(CP) -d build/h2compat scripts/h2compat/CheckH2Compat.java
+	@rm -f build/h2compat-db/biblioteca.mv.db
+	@echo "== Crea la base de dades amb H2 $(H2_LEGACY) =="
+	@$(JAVA) -cp bin:build/h2compat:$(H2_LEGACY):$(DEPS_CP_RUNTIME) \
+		h2compat.CheckH2Compat create "$(CURDIR)/build/h2compat-db/biblioteca"
+	@echo "== Obre la mateixa base de dades amb la versió actual =="
+	@$(JAVA) -cp bin:build/h2compat:$(DEPS_CP_RUNTIME) \
+		h2compat.CheckH2Compat verify "$(CURDIR)/build/h2compat-db/biblioteca"
+	@rm -rf build/h2compat-db
+	@echo "Compatibilitat H2 verificada."
+
+run: compile
+	@if [ -z "$(JAVA)" ]; then echo "ERROR: no working java runtime found."; exit 1; fi
+	@$(JAVA) -version 2>&1 | grep -qi "version" || { echo "ERROR: java is not a working runtime: $(JAVA)"; \
+		echo "  It prints no version - the file is empty, truncated or not a JDK."; \
+		echo "  Fix JAVA_HOME / PATH."; exit 1; }
+	$(JAVA) -cp bin:$(CP) main.Executable
 
 run-only:
 	@if [ ! -f "bin/main/Executable.class" ]; then \
 		echo "ERROR: Classes not found. Run: make compile"; \
 		exit 1; \
 	fi
-	java -cp bin:$(CP) main.Executable
+	@if [ -z "$(JAVA)" ]; then echo "ERROR: no working java runtime found."; exit 1; fi
+	@$(JAVA) -version 2>&1 | grep -qi "version" || { echo "ERROR: java is not a working runtime: $(JAVA)"; exit 1; }
+	$(JAVA) -cp bin:$(CP) main.Executable
 
 # ---------- TEST ----------- #
 
-JUNIT5_STANDALONE := lib/junit-platform-console-standalone-1.11.4.jar
+# Els noms de classe de test es deriven dels fitxers font de test/ en lloc
+# de fer coincidir un glob: així es cobreixen les dues convencions
+# (FooTest.java i TestFoo.java) i el glob antic (*Test.java) deixava 30
+# classes sense executar mai.
+#
+# Els fitxers que importen com.code_intelligence.jazzer són arnesos
+# coverage-guided: només s'executen amb `make fuzz-jazzer` (necessiten
+# l'agent de Jazzer). Per això el bootstrap jar de Jazzer (JAZZER) queda
+# fora del classpath de la suite obligatòria, i només hi entren
+# jazzer-api i jazzer-junit perquè les classes es puguin compilar i
+# carregar sense arrencar l'agent.
+TEST_SRC_DIR := test
+
+# Classes de test: paquet (llegit del fitxer) + nom de la classe.
+TEST_CLASSES := $(shell \
+	for f in $$(find $(TEST_SRC_DIR) -name '*.java' | sort); do \
+		pkg=$$(sed -n 's/^package[[:space:]]\+\([^;]*\);[[:space:]]*$$/\1/p' "$$f" | head -1); \
+		cls=$$(basename "$$f" .java); \
+		if [ -n "$$pkg" ]; then echo "$$pkg.$$cls"; else echo "$$cls"; fi; \
+	done)
+
+# Arnesos Jazzer: s'exclouen de la suite obligatòria.
+JAZZER_TEST_CLASSES := $(shell \
+	for f in $$(grep -rl 'com\.code_intelligence\.jazzer' $(TEST_SRC_DIR) --include='*.java' | sort); do \
+		pkg=$$(sed -n 's/^package[[:space:]]\+\([^;]*\);[[:space:]]*$$/\1/p' "$$f" | head -1); \
+		cls=$$(basename "$$f" .java); \
+		if [ -n "$$pkg" ]; then echo "$$pkg.$$cls"; else echo "$$cls"; fi; \
+	done)
+
+# Suite obligatòria: totes les classes de test menys els arnesos Jazzer.
+MANDATORY_TEST_CLASSES := $(filter-out $(JAZZER_TEST_CLASSES),$(TEST_CLASSES))
+
+# Selectors de classe per al launcher de la plataforma JUnit.
+SELECT_MANDATORY := $(foreach c,$(MANDATORY_TEST_CLASSES),--select-class=$(c))
+SELECT_JAZZER := $(foreach c,$(JAZZER_TEST_CLASSES),--select-class=$(c))
+
+TEST_REPORT_DIR := build/reports/tests
 
 # ---------- FUZZ DEPS ----------
-
-# jqwik 1.9.0 (property-based, JUnit 5)
-JQWIK_API := lib/jqwik-api-1.9.0.jar
-JQWIK_ENGINE := lib/jqwik-engine-1.9.0.jar
-# Jazzer 0.24.0 (coverage-guided libFuzzer for the JVM)
-# jazzer-junit-launcher was renamed to jazzer in 0.x — Maven Central
-# only ships jazzer, jazzer-api, and jazzer-junit. The agent attaches
-# dynamically via ByteBuddyAgent when JAZZER_FUZZ=1 is set.
-JAZZER := lib/jazzer-0.24.0.jar
-JAZZER_API := lib/jazzer-api-0.24.0.jar
-JAZZER_JUNIT := lib/jazzer-junit-0.24.0.jar
-
-# Fuzz jars are added to the test classpath so `make test` compiles the
-# jqwik fuzz tests. The Jazzer @FuzzTest tests are excluded from
-# `make test` (see the per-class JUnit 5 loop below) because Jazzer
-# 0.24.0's agent install requires a working native-lib setup that
-# conflicts with the regression-mode JUnit 5 run; they are run via
-# `make fuzz-jazzer` instead.
-TEST_CP := $(TEST_CP):$(JQWIK_API):$(JQWIK_ENGINE):$(JAZZER_API):$(JAZZER_JUNIT)
-FUZZ_CP := $(TEST_CP):$(JAZZER):$(JAZZER_API):$(JAZZER_JUNIT)
-# Jazzer 0.24.0 has a packaging inconsistency: the native libs in
-# jazzer-0.24.0.jar live at com/.../driver/jazzer_driver_<os>_<arch>/
-# but the bootstrap jar's RulesJni searches at
-# com/.../driver/libjazzer_driver_<os>_<arch>/. The shim jar
-# $(FUZZ_SHIM_JAR) duplicates the .so files at the expected path and
-# must be added to the bootstrap classpath via -Xbootclasspath/a: at
-# JVM startup (the bootstrap RulesJni is loaded by the bootstrap
-# classloader at runtime, and on Java 21 Class.getResource on an
-# unnamed-module bootstrap class delegates to
-# ClassLoader.getBootstrapResource, which only searches the
-# bootclasspath — NOT the application classpath).
+#
+# El shim duplica les biblioteques natives de Jazzer al path que RulesJni
+# espera (com/.../driver/libjazzer_driver_<os>_<arch>/) i s'afegeix al
+# bootstrap classpath: les classes de driver es carreguen pel bootstrap
+# classloader, que no cerca al classpath de l'aplicació.
 FUZZ_SHIM_JAR := fuzz-shim/jazzer-native-shim.jar
 BOOTCP := -Xbootclasspath/a:$(FUZZ_SHIM_JAR)
 
-test-deps:
-	@if [ ! -f "$(APIGUARDIAN_JAR)" ]; then \
-		echo "Fetching $(APIGUARDIAN_JAR)..."; \
-		mkdir -p lib; \
-		curl -fsSL -o "$(APIGUARDIAN_JAR)" "$(APIGUARDIAN_URL)" \
-		|| wget -q -O "$(APIGUARDIAN_JAR)" "$(APIGUARDIAN_URL)"; \
-	fi
-
-test: compile test-deps fuzz-deps
+test: compile
 	@if [ -f scripts/patch_tests_after_web_removal.py ]; then \
-		python3 scripts/patch_tests_after_web_removal.py 2>/dev/null \
+		$(PYTHON) scripts/patch_tests_after_web_removal.py 2>/dev/null \
 		|| python scripts/patch_tests_after_web_removal.py; \
 	fi
-	@find ./test/ -name "*.java" > test_classes.txt
-	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
-	@rm test_classes.txt
-	@java -cp bin:$(TEST_CP) BibliotecaTest
-	@DB_COUNTER=0; for cls in $$(find ./test/ -name '*Test.java' \
-	    | grep -v '/BibliotecaTest\.java$$' \
-	    | grep -v '/fuzz/' \
-	    | sed -e 's|^\./test/||' -e 's|\.java$$||' -e 's|/|.|g'); do \
-	    DB_COUNTER=$$((DB_COUNTER+1)); \
-	    echo "=== Running $$cls (JUnit 5) ==="; \
-	    java $(BOOTCP) -Dbiblioteca.test=true \
-	        -Dbiblioteca.h2.url="jdbc:h2:mem:dyn_$$DB_COUNTER;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
-	        -jar $(JUNIT5_STANDALONE) execute \
-	        --select-class=$$cls --details=summary \
-	        --classpath bin:$(TEST_CP); \
+	@mkdir -p $(STAMP_DIR)
+	@test_count=`find $(TEST_SRC_DIR)/ -name "*.java" | wc -l | tr -d ' '`; \
+	 prev_count=`sed -n '1p' $(TEST_STAMP) 2>/dev/null | tr -d ' '`; \
+	 prev_src=`sed -n '2p' $(TEST_STAMP) 2>/dev/null | tr -d ' '`; \
+	 cur_src=`sed -n '2p' $(SRC_STAMP) 2>/dev/null | tr -d ' '`; \
+	 newer=`find $(TEST_SRC_DIR)/ -name "*.java" -newer $(TEST_STAMP) -print -quit 2>/dev/null`; \
+	 if [ -f "$(TEST_STAMP)" ] && [ "$$test_count" = "$$prev_count" ] \
+	     && [ -z "$$newer" ] && [ "$$prev_src" = "$$cur_src" ] \
+	     && [ -f bin/BibliotecaTest.class ]; then \
+		echo "test: test/ sense canvis — es reutilitzen les classes compilades"; \
+	 else \
+		echo "test: recompilant test/ ..."; \
+		find $(TEST_SRC_DIR)/ -name "*.java" > $(TEST_LIST); \
+		if [ ! -s $(TEST_LIST) ]; then \
+			echo "ERROR: no s'ha trobat cap fitxer de test a $(TEST_SRC_DIR)/"; \
+			rm -f $(TEST_LIST); exit 1; \
+		fi; \
+		$(JAVAC) -g -cp bin:$(FUZZ_CP) @$(TEST_LIST) -d bin || { rm -f $(TEST_LIST); exit 1; }; \
+		rm -f $(TEST_LIST); \
+		printf '%s\n%s\n' "$$test_count" "$$cur_src" > $(TEST_STAMP); \
+	fi
+	@echo "=== Suite legacy (BibliotecaTest) ==="
+	@$(JAVA) -cp bin:$(FUZZ_CP) BibliotecaTest
+	@echo ""
+	@echo "=== Suite JUnit 5 ($$(echo $(MANDATORY_TEST_CLASSES) | wc -w) classes) ==="
+	@echo "    Arnesos Jazzer exclosos de la suite obligatoria: $(JAZZER_TEST_CLASSES)"
+	@echo "    (executa 'make fuzz-jazzer' per a la suite coverage-guided)"
+	@mkdir -p $(TEST_REPORT_DIR)
+	@$(JAVA) $(BOOTCP) -Dbiblioteca.test=true \
+	    -Dbiblioteca.h2.url="jdbc:h2:mem:biblioteca_suite;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
+	    -jar $(JUNIT5_STANDALONE) execute \
+	    $(SELECT_MANDATORY) \
+	    --details=summary --disable-ansi-colors \
+	    --fail-if-no-tests \
+	    --reports-dir=$(TEST_REPORT_DIR) \
+	    --class-path bin:$(FUZZ_CP)
+
+# ---------- CONTRACTE MARIADB ---------- #
+#
+# `make test` arrenca tota la suite en UNA JVM amb
+# -Dbiblioteca.h2.url=..., cosa que obliga el tipus de base de dades a H2.
+# El contracte de MariaDB necessita una JVM separada, sense aquesta
+# propietat, i un servidor MariaDB real: el script aixeca un contenidor de
+# rebut (podman/docker), hi fa correr el contracte i l'esborra al final.
+#
+#   make test-mariadb              → contenidor de rebut, esborra al final
+#   MARIADB_TEST_HOST=... make test-mariadb
+#                                  → servidor MariaDB existent
+#
+# Detall: docs/MARIADB-TEST.md
+MARIADB_TEST_SCRIPT := scripts/mariadb_test.sh
+
+.PHONY: test-mariadb mariadb-up mariadb-down
+
+test-mariadb: compile
+	@if [ ! -x "$(MARIADB_TEST_SCRIPT)" ]; then \
+		echo "ERROR: $(MARIADB_TEST_SCRIPT) no és executable (chmod +x)"; exit 1; \
+	fi
+	@$(MARIADB_TEST_SCRIPT)
+
+# mariadb-up / mariadb-down deixen el servidor de proves en peu per fer
+# proves manuals. Són una comoditat: el flux recomanat és `make test-mariadb`.
+mariadb-up: compile
+	@if [ ! -x "$(MARIADB_TEST_SCRIPT)" ]; then \
+		echo "ERROR: $(MARIADB_TEST_SCRIPT) no és executable (chmod +x)"; exit 1; \
+	fi
+	@KEEP_CONTAINER=1 $(MARIADB_TEST_SCRIPT)
+
+mariadb-down:
+	@for c in $$(podman ps -a --format '{{.Names}}' 2>/dev/null | grep '^biblioteca-mariadb-test-' || true); do \
+		echo "Esborrant $$c"; podman rm -f -v "$$c" || true; \
+	done
+	@for c in $$(docker ps -a --format '{{.Names}}' 2>/dev/null | grep '^biblioteca-mariadb-test-' || true); do \
+		echo "Esborrant $$c"; docker rm -f -v "$$c" || true; \
 	done
 
 # Optional UI audit (requires display; skipped in headless CI unless DISPLAY set)
@@ -123,10 +342,10 @@ audit: compile
 MAX ?= 2000
 
 populate: compile
-	@find ./test/ -name "*.java" > test_classes.txt
-	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
-	@rm test_classes.txt
-	@java -cp bin:$(TEST_CP) -Dbiblioteca.root=$(shell pwd) test.PopulateDB $(MAX)
+	@find ./test/ -name "*.java" > $(TEST_LIST)
+	@$(JAVAC) -g -cp bin:$(FUZZ_CP) @$(TEST_LIST) -d bin
+	@rm -f $(TEST_LIST)
+	@$(JAVA) -cp bin:$(FUZZ_CP) -Dbiblioteca.root=$(shell pwd) test.PopulateDB $(MAX)
 
 # ---------- INSTALLERS ----- #
 #
@@ -144,7 +363,7 @@ populate: compile
 # NSIS (Windows installer builder, runs on Linux):
 #   sudo dnf install mingw32-nsis   OR   sudo apt install nsis
 #
-# installer-windows-bundle also needs a Windows Temurin 21 JRE at
+# installer-windows-bundle also needs a Windows Temurin 25 JRE at
 # packaging/jre/ and a DB snapshot at packaging/data/biblioteca.mv.db.
 # Both are produced automatically by the target — just close the app
 # before running.
@@ -157,7 +376,10 @@ LAUNCH4J ?= $(shell \
 
 # Pick a JDK whose bin/java actually exists (some distros leave stub dirs).
 LAUNCH4J_JAVA_HOME := $(shell \
-    for D in /usr/lib/jvm/temurin-21-jdk \
+    for D in /usr/lib/jvm/temurin-25-jdk \
+             /usr/lib/jvm/java-25-temurin-jdk \
+             /usr/lib/jvm/java-25-openjdk \
+             /usr/lib/jvm/temurin-21-jdk \
              /usr/lib/jvm/java-21-temurin-jdk \
              /usr/lib/jvm/java-21-openjdk \
              /usr/lib/jvm/temurin-17-jdk \
@@ -170,17 +392,15 @@ LAUNCH4J_JAVA_HOME := $(shell \
 # ── slim JAR (manifest points to external lib/ JARs) ─────────────────────────
 jar: compile
 	@mkdir -p build/artifacts
-	@jar cfm build/artifacts/biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: lib/h2-2.3.232.jar lib/mariadb-java-client-3.3.3.jar lib/gson-2.11.0.jar lib/javalin-6.3.0.jar lib/kotlin-stdlib-2.0.21.jar\n\n') -C bin .
+	@jar cfm build/artifacts/biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: $(subst $(CURDIR)/,,$(DEPS_CP_RUNTIME))\n\n') -C bin .
 	@echo "Built build/artifacts/biblioteca.jar"
 
 # ── fat JAR (all deps bundled, standalone) ────────────────────────────────────
 fat-jar: compile
 	@echo "Building fat JAR (bundling all dependencies)..."
 	@rm -rf /tmp/_bib_fat && mkdir -p /tmp/_bib_fat
-	@cd /tmp/_bib_fat && for J in \
-	    h2-2.3.232.jar mariadb-java-client-3.3.3.jar gson-2.11.0.jar \
-	    javalin-6.3.0.jar kotlin-stdlib-2.0.21.jar; do \
-	    [ -f "$(CURDIR)/lib/$$J" ] && unzip -oq "$(CURDIR)/lib/$$J" 2>/dev/null || true; \
+	@cd /tmp/_bib_fat && for J in $(DEPS_CP_RUNTIME); do \
+	    [ -f "$(CURDIR)/$$J" ] && unzip -oq "$(CURDIR)/$$J" 2>/dev/null || true; \
 	done
 	@cp -r $(CURDIR)/bin/. /tmp/_bib_fat/
 	@# Remove JAR signature files — they break fat JARs
@@ -259,22 +479,22 @@ installer-windows-bundle: fat-jar icon packaging/jre packaging/data/biblioteca.m
 	@echo ""
 	@echo "═══════════════════════════════════════════════"
 	@echo "  build/artifacts/install-bundle.exe ready  ($$(du -sh build/artifacts/install-bundle.exe | cut -f1))"
-	@echo "  Double-clickable; bundles Temurin 21 JRE + your DB snapshot."
-	@echo "  No Java 21 install required on the target machine."
+	@echo "  Double-clickable; bundles Temurin 25 JRE + your DB snapshot."
+	@echo "  No Java 25 install required on the target machine."
 	@echo "═══════════════════════════════════════════════"
 
-# ── Windows JRE for the bundled installer (~150 MB Temurin 21 x64) ────────────
+# ── Windows JRE for the bundled installer (~150 MB Temurin 25 x64) ────────────
 # Downloads once. If packaging/jre/ already contains bin/java.exe the
 # download is skipped.
 packaging/jre:
-	@echo "Downloading Temurin 21 JRE (Windows x64)…"
+	@echo "Downloading Temurin 25 JRE (Windows x64)…"
 	@mkdir -p packaging/jre
 	@cd packaging/jre && curl -fsSL -o temurin.zip \
-	    "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk" \
+	    "https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk" \
 	    && unzip -q temurin.zip \
-	    && (mv jdk-21*/* . 2>/dev/null || mv jre-21*/* . 2>/dev/null || true) \
+	    && (mv jdk-25*/* . 2>/dev/null || mv jre-25*/* . 2>/dev/null || true) \
 	    && rm -f temurin.zip \
-	    && rmdir jdk-21* jre-21* 2>/dev/null || true
+	    && rmdir jdk-25* jre-25* 2>/dev/null || true
 	@test -x packaging/jre/bin/java.exe || \
 	    { echo "ERROR: Temurin JRE download failed or did not unpack to packaging/jre/"; exit 1; }
 	@echo "  packaging/jre/ ready ($$(du -sh packaging/jre | cut -f1))"
@@ -409,32 +629,25 @@ installer-linux: fat-jar icon
 strings:
 	@python3 scripts/gen_strings.py
 
+# Comprova que els fitxers generats (.properties) coincideixen amb
+# strings/*.csv. És el mateix gate que executa la CI.
+strings-check:
+	@python3 scripts/gen_strings.py --check --no-java
+
+# Proves de les invariants d'escapament i de llegenda del generador.
+strings-test:
+	@python3 scripts/test_gen_strings.py
+
 # ---------- FUZZ ------------ #
 
-# Downloads the 5 fuzz jars from Maven Central. Idempotent — skips
-# jars already on disk. The fuzz jars are .gitignored.
-# Also rebuilds the $(FUZZ_SHIM_JAR) jar containing the Jazzer
-# native libs at the resource path RulesJni expects (see the FUZZ_SHIM
-# note above). The shim jar is added to the bootstrap classpath via
-# -Xbootclasspath/a:.
-fuzz-deps: $(FUZZ_SHIM_JAR)
-	@mkdir -p lib
-	@for entry in \
-	    jqwik-api:1.9.0:net/jqwik \
-	    jqwik-engine:1.9.0:net/jqwik \
-	    jazzer:0.24.0:com/code-intelligence \
-	    jazzer-api:0.24.0:com/code-intelligence \
-	    jazzer-junit:0.24.0:com/code-intelligence ; do \
-	    art=$$(echo $$entry | cut -d: -f1); ver=$$(echo $$entry | cut -d: -f2); gp=$$(echo $$entry | cut -d: -f3); \
-	    jar=lib/$$art-$$ver.jar; \
-	    if [ ! -f $$jar ]; then \
-	        curl -fsSL -o $$jar https://repo1.maven.org/maven2/$$gp/$$art/$$ver/$$art-$$ver.jar \
-	        || wget -q -O $$jar https://repo1.maven.org/maven2/$$gp/$$art/$$ver/$$art-$$ver.jar; \
-	        echo "  fetched $$jar"; \
-	    fi; \
-	done
+# Les dependències de fuzz ja provenen del lock (etiqueta `fuzz`), així que
+# el target només ha de reconstruir el shim de biblioteques natives.
+fuzz-deps: deps $(FUZZ_SHIM_JAR)
 
-$(FUZZ_SHIM_JAR):
+# El shim conté les biblioteques natives del JAR de Jazzer: si la versió de
+# Jazzer canvia, el shim s'ha de reconstruir (sinó es queda amb les .so
+# de la versió anterior i l'agent no es pot instal·lar).
+$(FUZZ_SHIM_JAR): $(JAZZER)
 	@mkdir -p fuzz-shim
 	@cd fuzz-shim && rm -rf META-INF com && \
 	    for pair in \
@@ -453,18 +666,18 @@ $(FUZZ_SHIM_JAR):
 	        || echo "  WARN: Log.class not in $(JAZZER)"; \
 	    jar cf ../$(FUZZ_SHIM_JAR) .
 
-# Run the jqwik property tests for the domini layer. Per-test try counts
-# are encoded in the test class; `make test` also runs them but in
-# regression-only mode (one try per property). This target uses the
-# dedicated H2 instance name `fuzz_prop` so the in-memory DB is shared
-# across all 5 properties within this run.
+# Property tests de jqwik. La classe es selecciona pel nom real del fitxer
+# (fuzz/domini/TestPropietatsInvariantsLlibre.java): el nom antic
+# fuzz.domini.LlibreInvariantPropertiesTest no existia i el target no
+# executava cap test.
 fuzz-property: compile fuzz-deps fuzz-test-compile
-	@echo "=== jqwik: fuzz.domini.LlibreInvariantPropertiesTest ==="
-	@java $(BOOTCP) -Dbiblioteca.test=true \
+	@echo "=== jqwik: fuzz.domini.TestPropietatsInvariantsLlibre ==="
+	@$(JAVA) $(BOOTCP) -Dbiblioteca.test=true \
 	    -Dbiblioteca.h2.url="jdbc:h2:mem:fuzz_prop;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" \
 	    -jar $(JUNIT5_STANDALONE) execute \
-	    --select-class=fuzz.domini.LlibreInvariantPropertiesTest --details=tree \
-	    --classpath bin:$(FUZZ_CP)
+	    --select-class=fuzz.domini.TestPropietatsInvariantsLlibre --details=tree \
+	    --fail-if-no-tests \
+	    --class-path bin:$(FUZZ_CP)
 
 # Run the Jazzer harnesses. JAZZER_FUZZ=1 switches Jazzer from regression
 # mode (one run with a seed) to coverage-guided fuzzing. The @FuzzTest
@@ -474,33 +687,33 @@ fuzz-property: compile fuzz-deps fuzz-test-compile
 #                    Used by scripts/fuzz-nightly.sh to run both harnesses
 #                    in parallel without them racing on .cifuzz-corpus/.
 #                    If unset, runs every harness serially.
+#
+# La llista d'arnesos es deriva dels fitxers que importen
+# com.code_intelligence.jazzer, no d'una llista escrita a mà: així no
+# es pot quedar obsoleta en silenci.
 fuzz-jazzer: compile fuzz-deps fuzz-test-compile
 	@if [ -n "$(JARZER_SEL)" ]; then \
 	    echo "=== Jazzer: $(JARZER_SEL) ==="; \
-	    JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	    JAZZER_FUZZ=1 $(JAVA) $(BOOTCP) -Dbiblioteca.test=true \
 	        -jar $(JUNIT5_STANDALONE) execute \
 	        --select-class=$(JARZER_SEL) --details=tree \
-	        --classpath bin:$(FUZZ_CP); \
+	        --class-path bin:$(FUZZ_CP); \
 	else \
-	    for h in fuzz.herramienta.Rfc4180FuzzTest \
-	             fuzz.herramienta.CsvUtilsFuzzTest \
-	             fuzz.domini.LlibreFilterBuilderFuzzTest \
-	             fuzz.domini.SortSpecFuzzTest \
-	             fuzz.domini.ShelfParserFuzzTest; do \
+	    for h in $(JAZZER_TEST_CLASSES); do \
 	        echo "=== Jazzer: $$h ==="; \
-	        JAZZER_FUZZ=1 java $(BOOTCP) -Dbiblioteca.test=true \
+	        JAZZER_FUZZ=1 $(JAVA) $(BOOTCP) -Dbiblioteca.test=true \
 	            -jar $(JUNIT5_STANDALONE) execute \
 	            --select-class=$$h --details=tree \
-	            --classpath bin:$(FUZZ_CP) || exit $$?; \
+	            --class-path bin:$(FUZZ_CP) || exit $$?; \
 	    done; \
 	fi
 
 # Compile test sources (including fuzz tests) into bin/. Used by the
 # fuzz targets so they don't depend on `make test` having run first.
-fuzz-test-compile:
-	@find ./test/ -name '*.java' > test_classes.txt
-	@$(JAVAC) -g -cp bin:$(TEST_CP) @test_classes.txt -d bin
-	@rm -f test_classes.txt
+fuzz-test-compile: compile
+	@find ./test/ -name '*.java' > $(TEST_LIST)
+	@$(JAVAC) -g -cp bin:$(FUZZ_CP) @$(TEST_LIST) -d bin || { rm -f $(TEST_LIST); exit 1; }
+	@rm -f $(TEST_LIST)
 
 fuzz: fuzz-property fuzz-jazzer
 

@@ -11,12 +11,12 @@
   <packaging>jar</packaging>
 
   <properties>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.11.4</junit.version>
     <mockito.version>5.14.2</mockito.version>
     <assertj.version>3.26.3</assertj.version>
-    <jacoco.version>0.8.12</jacoco.version>
+    <jacoco.version>0.8.14</jacoco.version>
   </properties>
 
   <!-- ── Source layout ──────────────────────────────── -->
@@ -32,7 +32,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <release>21</release>
+          <release>25</release>
         </configuration>
       </plugin>
 
@@ -53,8 +53,8 @@
         </configuration>
       </plugin>
 
-      <!-- JaCoCo coverage — disabled by default (ASM in 0.8.12 doesn't support
-           Java 25 class files). Enable with: mvn verify -Pcoverage -->
+      <!-- JaCoCo coverage — keep it on a Java 25-capable version so the
+           build remains compatible with the latest LTS runtime. -->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>

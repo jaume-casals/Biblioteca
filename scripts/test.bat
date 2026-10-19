@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-set "CP=bin;lib\h2-2.3.232.jar;lib\mariadb-java-client-3.3.3.jar;lib\gson-2.11.0.jar;lib\apiguardian-api-1.1.2.jar;lib\junit-jupiter-api-5.11.4.jar;lib\junit-jupiter-params-5.11.4.jar;lib\junit-jupiter-engine-5.11.4.jar;lib\junit-platform-launcher-1.11.4.jar;lib\junit-platform-engine-1.11.4.jar;lib\junit-platform-commons-1.11.4.jar;lib\opentest4j-1.3.0.jar;lib\assertj-core-3.26.3.jar;lib\mockito-core-5.14.2.jar;lib\mockito-junit-jupiter-5.14.2.jar;lib\byte-buddy-1.15.4.jar;lib\byte-buddy-agent-1.15.4.jar;lib\objenesis-3.3.jar"
+set "CP=bin;lib\h2-2.5.252.jar;lib\mariadb-java-client-3.5.10.jar;lib\gson-2.14.0.jar;lib\apiguardian-api-1.1.2.jar;lib\junit-jupiter-api-5.14.4.jar;lib\junit-jupiter-params-5.14.4.jar;lib\junit-jupiter-engine-5.14.4.jar;lib\junit-platform-launcher-1.14.4.jar;lib\junit-platform-engine-1.14.4.jar;lib\junit-platform-commons-1.14.4.jar;lib\opentest4j-1.3.0.jar;lib\assertj-core-3.27.7.jar;lib\mockito-core-5.24.0.jar;lib\mockito-junit-jupiter-5.24.0.jar;lib\byte-buddy-1.18.15.jar;lib\byte-buddy-agent-1.18.15.jar;lib\objenesis-3.6.jar"
 if exist bin rmdir /s /q bin
 call scripts\compile.bat
 if errorlevel 1 exit /b 1
@@ -53,7 +53,7 @@ for /f "usebackq delims=" %%L in ("test\_test_classes.txt") do (
     set /a DB_COUNTER+=1
     set "DB_URL=jdbc:h2:mem:dyn_!DB_COUNTER!;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"
     echo === Executant !CLS! (JUnit 5) ===
-    java -Dbiblioteca.test=true -Dbiblioteca.h2.url="!DB_URL!" -jar lib\junit-platform-console-standalone-1.11.4.jar execute --select-class=!CLS! --details=summary --classpath "%CP%"
+    java -Dbiblioteca.test=true -Dbiblioteca.h2.url="!DB_URL!" -jar lib\junit-platform-console-standalone-1.14.4.jar execute --select-class=!CLS! --details=summary --classpath "%CP%"
     if errorlevel 1 set "OVERALL_RC=1"
   )
 )
