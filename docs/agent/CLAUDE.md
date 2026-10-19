@@ -14,11 +14,11 @@ make populate MAX=500 # custom limit
 make clean            # rm -rf bin/*
 ```
 
-Classpath for manual invocation: `lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:.`
+Classpath for manual invocation: `lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar:.`
 
 Run tests manually:
 ```bash
-java -cp bin:lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar test.BibliotecaTest
+java -cp bin:lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar test.BibliotecaTest
 ```
 
 **Always run `make test` before reporting a task complete. All tests must pass.**

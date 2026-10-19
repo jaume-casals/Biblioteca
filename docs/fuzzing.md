@@ -64,7 +64,7 @@ safe to run under `make test`.
 
 To run a single harness:
 ```
-make fuzz-jazzer JARZER_SEL=fuzz.domini.SortSpecFuzzTest
+make fuzz-jazzer JARZER_SEL=fuzz.domini.TestFuzzEspecificacioOrdenacio
 ```
 
 ## Nightly run
@@ -95,8 +95,8 @@ When Jazzer prints a crash, the inputs are saved under
 configured `inputs/` dir). To reproduce:
 
 ```
-JAZZER_FUZZ=0 java -jar lib/junit-platform-console-standalone-1.11.4.jar \
-    execute --select-class=fuzz.herramienta.Rfc4180FuzzTest \
+JAZZER_FUZZ=0 java -jar lib/junit-platform-console-standalone-1.14.4.jar \
+    execute --select-class=fuzz.herramienta.io.csv.Rfc4180FuzzTest \
     --classpath bin:$(TEST_CP) \
     -Djazzer.internal.arg.0=repro \
     -Djazzer.internal.arg.1=fuzz-corpus/.../crash-XXX.bin

@@ -69,14 +69,23 @@ with `;` separators and `dir /s /b` instead of `find`).
 ### Linux / macOS
 
 ```bash
-make compile          # compile src/ → bin/ (uses classes.txt, not glob)
-make test             # runs BibliotecaTest (plain Java) + BibliotecaJUnit5Test (JUnit 5)
+make deps              # baixa els jars de build/deps.lock i verifica el SHA-256
+make compile          # compile src/ → bin/ (usa classes.txt, not glob)
+make test             # BibliotecaTest (plain Java) + suite JUnit 5 i jqwik completa
 make clean            # rm -rf bin/*
 make run              # clean + compile + run GUI
 make run-only         # run without recompile
+make h2-compat        # obre una BD creada amb H2 2.3.232 amb el driver actual
 ./checkBiblio/run.sh           # tests + UIAudit (uses Xvfb if no DISPLAY)
 ./checkBiblio/run2.sh          # compile + StressTest (uses Xvfb if no DISPLAY)
 ```
+
+`make test` executa la suite en un sol JVM amb el launcher de la plataforma
+JUnit: descobreix les dues convencions de nomenyclatura (`FooTest.java` i
+`TestFoo.java`), propaga els errors (sortida ≠ 0 si un test falla), falla si
+no descobreix cap test i deixa els informes XML a `build/reports/tests/`.
+Els 5 arnesos de Jazzer queden fora de la suite obligatòria (necessiten
+l'agent) i s'executen amb `make fuzz-jazzer`.
 
 ### Windows (cmd / PowerShell)
 
@@ -100,7 +109,7 @@ reporting a task complete. All tests must pass.**
 
 After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types. `make test` / `scripts\test.bat` runs `scripts/patch_tests_after_web_removal.py` first (idempotent); or run it manually once per machine.
 
-Manual classpath: `lib/h2-2.3.232.jar:lib/mariadb-java-client-3.3.3.jar:lib/gson-2.11.0.jar:.`
+Manual classpath: `lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar:lib/gson-2.14.0.jar:.`
 
 ## Test System Properties
 
@@ -130,6 +139,6 @@ All runtime config in `~/.biblioteca/config.properties` (dbType, darkMode, fontS
 ## Misc
 
 - Language: Catalan/Spanish mixed
-- `lib/junit-platform-console-standalone-1.11.4.jar` used for JUnit 5 console launch
+- `lib/junit-platform-console-standalone-1.14.4.jar` used for JUnit 5 console launch
 - `opencode.json` sets `instructions: ["AGENTS.md"]`, `lsp`, and bash `rm` permissions — most config is in Makefile
 - **Scripts**: keep them simple and to the point. Upgrade later if needed — don't pre-build flexibility.
