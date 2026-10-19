@@ -76,6 +76,54 @@ public class Executable {
     private static void iniciarSwingWithSplash() {
         EventQueue.invokeLater(() -> {
             try {
+                // La connexió a la base de dades arrenca ABANS de la feina
+                // d'interfície: obrir la BD i muntar el Look & Feel no
+                // depenen l'un de l'altre, de manera que es fan en
+                // paral·lel en lloc d'esperar-se l'un a l'altre.
+                java.util.concurrent.atomic.AtomicReference<EscritorBiblioteca> cdRef =
+                    new java.util.concurrent.atomic.AtomicReference<>();
+                java.util.concurrent.atomic.AtomicReference<PanelMarcPrincipal> vistaRef =
+                    new java.util.concurrent.atomic.AtomicReference<>();
+
+                Thread loader = new Thread(() -> {
+                    try {
+                        SeedorBaseDades.seedSiCal();
+                        cdRef.set(ControladorDomini.getInstance());
+                    } catch (RuntimeException e) {
+                        fatalExit("No s'ha pogut inicialitzar ControladorDomini", e,
+                            () -> javax.swing.JOptionPane.showMessageDialog(null, e.getMessage()));
+                        return;
+                    }
+                    // La continuació s'executa a l'EDT: en aquest punt
+                    // vistaRef ja té el panell (l'EDT no pot executar aquesta
+                    // tasca fins que el bloc d'arrencada s'acabi).
+                    EventQueue.invokeLater(() -> {
+                        hideSplash();
+                        PanelMarcPrincipal vista = vistaRef.get();
+                        if (vista == null || cdRef.get() == null) return;
+                        try {
+                            ControladorMarcPrincipal.getInstance(vista, cdRef.get()).setVisible(true);
+                        } catch (Exception e) {
+                            // Superfície l'error via DialegError perquè
+                            // l'usuari vegi què ha fallat en lloc d'una
+                            // pantalla en blanc amb el procés penjat.
+                            fatalExit("No s'ha pogut iniciar el marc principal", e,
+                                () -> new DialegError(e).mostrarErrorMessage());
+                        }
+                    });
+                }, "app-loader");
+                loader.setDaemon(true);
+                loader.start();
+
+                // El Look & Feel s'instal·la ABANS d'aplicar el tema:
+                // UIManager.put inicialitza el LAF per defecte (Metal) quan
+                // encara no n'hi ha cap d'instal·lat, i instal·lar Nimbus
+                // després tornaria a inicialitzar-ne un altre de zero.
+                try {
+                    UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+                } catch (Exception e) {
+                    LOG.log(Level.WARNING, "No s'ha pogut instal·lar Nimbus; es continua amb el LAF per defecte", e);
+                }
                 UITheme.posarTheme(Configuracio.obtenirTheme());
                 UITheme.rebuildFonts(MidaLletra.fromKey(Configuracio.obtenirFontSize()));
                 UIManager.put("nimbusBase",                UITheme.palette().accent());
@@ -86,42 +134,24 @@ public class Executable {
                 UIManager.put("nimbusSelectionBackground", UITheme.palette().accent());
                 UIManager.put("nimbusSelectedText",        Color.WHITE);
                 UIManager.put("defaultFont",              UITheme.fontBase());
-                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
                 UIManager.put("Table.alternateRowColor",   UITheme.palette().tableAlt());
 
                 PantallaInici splash = new PantallaInici();
                 splashRef = splash;
                 splash.show();
 
-                Thread loader = new Thread(() -> {
-                    java.util.concurrent.atomic.AtomicReference<EscritorBiblioteca> cdRef = new java.util.concurrent.atomic.AtomicReference<>();
-                    try {
-                        SeedorBaseDades.seedSiCal();
-                        cdRef.set(ControladorDomini.getInstance());
-                    } catch (RuntimeException e) {
-                        fatalExit("No s'ha pogut inicialitzar ControladorDomini", e,
-                            () -> javax.swing.JOptionPane.showMessageDialog(null, e.getMessage()));
-                        return;
-                    }
-                    EventQueue.invokeLater(() -> {
-                        splash.hide();
-                        try {
-                            PanelMarcPrincipal vista = new PanelMarcPrincipal();
-                            ControladorMarcPrincipal.getInstance(vista, cdRef.get()).setVisible(true);
-                        } catch (Exception e) {
-                            // Superfície l'error via DialegError perquè
-                            // l'usuari vegi què ha fallat en lloc d'una
-                            // pantalla en blanc amb el procés penjat.
-                            fatalExit("No s'ha pogut iniciar el marc principal", e,
-                                () -> new DialegError(e).mostrarErrorMessage());
-                        }
-                    });
-                });
-                loader.setDaemon(true);
-                loader.start();
+                // El panell es construeix mentre la base de dades s'obre:
+                // és Swing pur i no depèn de la connexió.
+                vistaRef.set(new PanelMarcPrincipal());
             } catch (Exception e) {
                     LOG.log(Level.SEVERE, "No s'ha pogut iniciar la interfície Swing", e);
             }
         });
+    }
+
+    /** Tanca la pantalla d'inici respectant el temps mínim de visualització. */
+    private static void hideSplash() {
+        PantallaInici splash = splashRef;
+        if (splash != null) splash.hide();
     }
 }
