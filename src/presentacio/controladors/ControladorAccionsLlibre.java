@@ -282,12 +282,19 @@ public class ControladorAccionsLlibre {
     }
 
     private void mostrarVistaLlistat(Supplier<List<Llibre>> loader, String emptyMsg, String title) {
+        // Aquesta vista substitueix el resultat vigent, de manera que la
+        // generació evita que una càrrega anterior la sobreposi.
+        final presentacio.util.CoordinadorGeneracions.Fulla<Void> fulla =
+            state.generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_CONSULTA,
+                presentacio.util.CoordinadorGeneracions.FLUX_FILTRE,
+                presentacio.util.CoordinadorGeneracions.FLUX_PAGINA);
         new SwingWorker<List<Llibre>, Void>() {
             @Override protected List<Llibre> doInBackground() {
                 return loader.get();
             }
             @Override protected void done() {
                 if (isCancelled()) return;
+                if (!fulla.esVigent()) return;
                 try {
                     List<Llibre> result = get();
                     if (result.isEmpty() && emptyMsg != null) {
@@ -297,6 +304,7 @@ public class ControladorAccionsLlibre {
                     }
                     applyAsCurrentView(result);
                 } catch (Exception e) {
+                    if (!fulla.esVigent()) return;
                     new DialegError(e).mostrarErrorMessage();
                 }
             }

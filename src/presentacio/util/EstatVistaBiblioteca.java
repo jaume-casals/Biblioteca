@@ -26,6 +26,13 @@ public final class EstatVistaBiblioteca {
     public boolean groupBySeries;
     public final Deque<Llibre> undoBuffer = new ArrayDeque<>();
 
+    /**
+     * Generacions dels resultats asíncrons de la pantalla. La taula i la
+     * galeria comparteixen el flux de consulta, de manera que un resultat
+     * obsolet de la taula tampoc pot modificar l'estat de la galeria.
+     */
+    public final CoordinadorGeneracions generacions = new CoordinadorGeneracions();
+
     public EstatVistaBiblioteca(PanelMostrarBiblioteca vista, java.util.List<Llibre> biblio,
                      EnActualitzarBBDD enActualizarBBDD, EscritorBiblioteca cd) {
         this.vista = vista;

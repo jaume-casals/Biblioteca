@@ -12,6 +12,7 @@ import presentacio.dialegs.QuantADialeg;
 import presentacio.listener.EnActualitzarBBDD;
 import presentacio.panells.PanelMostrarBiblioteca;
 import presentacio.util.AmfitrioPantallaBiblioteca;
+import presentacio.util.CoordinadorGeneracions;
 import presentacio.util.EstatVistaBiblioteca;
 import presentacio.util.MemoriaImatgesCoberta;
 import presentacio.util.UIComponents;
@@ -33,6 +34,7 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
     private final ControladorAccionsLlibre bookActionsCtrl;
     private final ControladorMenuContextual contextMenuCtrl;
     private final ControladorModeVista viewModeCtrl;
+    private final ControladorGaleria galeriaCtrl;
 
     public ControladorMostrarBiblioteca(PanelMostrarBiblioteca vista, java.util.List<Llibre> biblio,
             EnActualitzarBBDD enActualizarBBDD, EscritorBiblioteca cd) {
@@ -41,13 +43,14 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
         this.botonDetalles = new JButton();
         UIComponents.styleAccentButton(this.botonDetalles);
         this.tableCtrl = new ControladorTaula(vista);
-        this.pageCtrl = new ControladorPaginaTaula(vista, cd, this::posarTable);
+        this.pageCtrl = new ControladorPaginaTaula(vista, cd, this::aplicarResultat, state.generacions);
 
         this.filtrarCtrl = new ControladorFiltre(state, this);
         this.shelfCtrl = new ControladorPrestatgeria(state, this, this);
         this.bookActionsCtrl = new ControladorAccionsLlibre(state, this, filtrarCtrl, shelfCtrl);
         this.contextMenuCtrl = new ControladorMenuContextual(state, this, shelfCtrl, bookActionsCtrl);
         this.viewModeCtrl = new ControladorModeVista(state, this, bookActionsCtrl, contextMenuCtrl);
+        this.galeriaCtrl = new ControladorGaleria(vista.obtenirGaleria(), state.generacions);
 
         inicialitzarButtons();
         inicialitzarTable();
@@ -102,13 +105,30 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
     // ── AmfitrioPantallaBiblioteca ──────────────────────────────────────────────────────
 
     @Override public void posarTable(java.util.List<Llibre> llibres) {
+        aplicarResultat(null, llibres);
+    }
+
+    /**
+     * Aplica un resultat a la taula i a la galeria.
+     *
+     * <p>Si es passa una generació, la vigència es comprova just abans de
+     * modificar l'estat de Swing: un resultat obsolet no toca ni la taula ni
+     * la galeria ni els seus comptadors. La taula i la galeria comparteixen
+     * la mateixa consulta, de manera que comparteixen la mateixa generació.
+     *
+     * @param fulla generació del resultat, o null per a una aplicació directa
+     * @param llibres llibres a mostrar
+     */
+    public void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres) {
+        if (fulla != null && !fulla.esVigent()) return;
         state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
         tableCtrl.posarBooks(llibres != null ? llibres : new ArrayList<>(), state.cd, botonDetalles,
             MemoriaImatgesCoberta.cache(), MemoriaImatgesCoberta.loading(), state.loanedISBNs, this::refreshRow);
         tableCtrl.aplicarColumnVisibility();
         filtrarCtrl.aplicarSearchBar();
         if (state.vista.esGaleriaMode()) {
-            state.vista.obtenirGaleria().actualitzarLlibres(llibres instanceof ArrayList<Llibre> a ? a : new ArrayList<>(llibres));
+            galeriaCtrl.actualizarSiVigent(fulla,
+                llibres instanceof ArrayList<Llibre> a ? a : new ArrayList<>(llibres));
         }
     }
 
@@ -165,7 +185,13 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
 
     public void refresh() {
         pageCtrl.posarCurrentPage(0);
+        // Els paràmetres de la consulta es capturen abans de llançar la tasca:
+        // el resultat ha de correspondre sempre a la consulta que el va demanar.
         final Integer currentLlistaId = state.currentLlistaId;
+        final CoordinadorGeneracions.Fulla<Integer> fulla = state.generacions.obrir(
+            CoordinadorGeneracions.FLUX_CONSULTA,
+            state.currentLlistaId,
+            CoordinadorGeneracions.FLUX_FILTRE, CoordinadorGeneracions.FLUX_PAGINA);
         new javax.swing.SwingWorker<java.util.List<Llibre>, Void>() {
             @Override protected java.util.List<Llibre> doInBackground() {
                 return currentLlistaId != null
@@ -174,6 +200,9 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
             }
             @Override protected void done() {
                 if (isCancelled()) return;
+                // Una generació obsoleta no aplica res: ni taula, ni galeria,
+                // ni filtres, ni comptadors.
+                if (!fulla.esVigent()) return;
                 try {
                     state.biblio = new ArrayList<>(get());
                     if (currentLlistaId == null) {
@@ -183,10 +212,26 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
                     }
                     filtrarCtrl.quitarFiltros();
                 } catch (Exception e) {
+                    // L'error d'una generació obsoleta no s'ha de mostrar: la
+                    // generació vigent ja ha informat de la seva.
+                    if (!fulla.esVigent()) return;
                     new herramienta.ui.DialegError(e).mostrarErrorMessage();
                 }
             }
         }.execute();
+    }
+
+    /**
+     * Tanca el cicle de vida dels resultats asíncrons de la pantalla: cap
+     * generació pendent podrà aplicar-se després d'aquesta crida.
+     */
+    public void tancar() {
+        state.generacions.tancar();
+    }
+
+    /** Generacions vigents dels resultats asíncrons de la pantalla. */
+    public CoordinadorGeneracions generacions() {
+        return state.generacions;
     }
 
     public void undoDelete() { bookActionsCtrl.undoDelete(); }

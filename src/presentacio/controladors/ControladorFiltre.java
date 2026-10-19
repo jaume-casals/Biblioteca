@@ -152,19 +152,34 @@ public class ControladorFiltre {
             if (pendingFilterWorker != null && !pendingFilterWorker.isDone()) {
                 pendingFilterWorker.cancel(true);
             }
+            // La cancel·lació és una optimització: la garantia de coherència
+            // és la generació. El filtre substitueix el resultat vigent
+            // (consulta i pàgina), de manera que les seves generacions
+            // queden obsoletes.
+            final presentacio.util.CoordinadorGeneracions.Fulla<LlibreFilter> fulla =
+                state.generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_FILTRE, filter,
+                    presentacio.util.CoordinadorGeneracions.FLUX_CONSULTA,
+                    presentacio.util.CoordinadorGeneracions.FLUX_PAGINA);
             state.vista.obtenirBtnFiltrar().setEnabled(false);
             pendingFilterWorker = new SwingWorker<ArrayList<Llibre>, Void>() {
                 @Override protected ArrayList<Llibre> doInBackground() {
-                    return new ArrayList<>(ControladorMarcPrincipal.getInstance().aplicarFiltres(filter));
+                    // S'usa la dependència injectada (state.cd) i no el
+                    // singleton global: el filtre ha de consultar la mateixa
+                    // biblioteca que la pantalla mostra.
+                    return new ArrayList<>(state.cd.aplicarFiltres(filter));
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
+                    // Resultat obsolet: no toca la taula ni l'indicador de
+                    // càrrega, que pertanyen a la generació vigent.
+                    if (!fulla.esVigent()) return;
                     state.vista.obtenirBtnFiltrar().setEnabled(true);
                     try {
-                        host.posarTable(get());
+                        host.aplicarResultat(fulla, get());
                     } catch (java.util.concurrent.CancellationException ignored) {
                         // Substituït per un worker més nou; el nou és propietari del resultat.
                     } catch (Exception ex) {
+                        if (!fulla.esVigent()) return;
                         new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                     }
                 }
@@ -195,6 +210,11 @@ public class ControladorFiltre {
         final Integer tagId = f.obtenirTagId();
         final Integer llistaId = f.obtenirLlistaId();
         if (tagId != null || llistaId != null) {
+            // Aquest camí no substitueix el resultat (només filtra la vista),
+            // però les seves dades de relació sí que són obsoletes si l'usuari
+            // torna a filtrar: la generació ho impedeix.
+            final presentacio.util.CoordinadorGeneracions.Fulla<Void> fulla =
+                state.generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_FILTRE);
             new SwingWorker<java.util.Map<String, java.util.Set<Long>>, Void>() {
                 @Override protected java.util.Map<String, java.util.Set<Long>> doInBackground() {
                     java.util.Map<String, java.util.Set<Long>> sets = new java.util.HashMap<>();
@@ -204,9 +224,13 @@ public class ControladorFiltre {
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
+                    if (!fulla.esVigent()) return;
                     java.util.Map<String, java.util.Set<Long>> sets;
                     try { sets = get(); }
-                    catch (Exception ex) { new herramienta.ui.DialegError(ex).mostrarErrorMessage(); return; }
+                    catch (Exception ex) {
+                        if (!fulla.esVigent()) return;
+                        new herramienta.ui.DialegError(ex).mostrarErrorMessage(); return;
+                    }
                     aplicarRowFilterInMemory(drs, f, isbnMap, sets.get("tag"), sets.get("llista"));
                     host.actualitzarTitleBar();
                 }

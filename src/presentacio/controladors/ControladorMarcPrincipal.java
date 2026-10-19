@@ -122,13 +122,24 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 		mostrarControl = new ControladorMostrarBiblioteca(
 				libraryPanel, new ArrayList<>(), this, cLlibres);
 
+		// La càrrega inicial comparteix el flux de consulta amb la taula i la
+		// galeria: si l'usuari provoca un refresc mentre aquesta càrrega és en
+		// vol, la inicial ja és obsoleta i no s'ha d'aplicar.
+		final presentacio.util.CoordinadorGeneracions.Fulla<Void> fulla = mostrarControl.generacions().obrir(
+				presentacio.util.CoordinadorGeneracions.FLUX_CONSULTA,
+				presentacio.util.CoordinadorGeneracions.FLUX_FILTRE,
+				presentacio.util.CoordinadorGeneracions.FLUX_PAGINA);
 		new SwingWorker<ArrayList<domini.Llibre>, Void>() {
 			@Override protected ArrayList<domini.Llibre> doInBackground() {
 				return new ArrayList<>(cLlibres.obtenirAllLlibres());
 			}
 			@Override protected void done() {
+				if (isCancelled()) return;
+				if (!fulla.esVigent()) return;
 				try { mostrarControl.posarTable(get()); }
-				catch (Exception e) { java.util.logging.Logger.getLogger(ControladorMarcPrincipal.class.getName())
+				catch (Exception e) {
+					if (!fulla.esVigent()) return;
+					java.util.logging.Logger.getLogger(ControladorMarcPrincipal.class.getName())
 					.log(java.util.logging.Level.WARNING, "No s'ha pogut carregar la biblioteca inicial", e); }
 			}
 		}.execute();
@@ -150,6 +161,9 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 				if (javax.swing.JOptionPane.showConfirmDialog(frame,
 						I18n.t("confirm_exit_msg"), I18n.t("confirm_exit_title"),
 						javax.swing.JOptionPane.YES_NO_OPTION) != javax.swing.JOptionPane.YES_OPTION) return;
+				// Tanca el cicle de vida dels resultats asíncrons: cap generació
+				// pendent podrà aplicar-se després d'això.
+				mostrarControl.tancar();
 				boolean max = (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0;
 				ConfiguracioFinestra.posarMaximized(max);
 				java.awt.Rectangle r = normalBounds[0];

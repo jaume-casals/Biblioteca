@@ -61,6 +61,12 @@ public class ControladorPrestatgeria {
         Object sel = state.vista.obtenirComboLlistes().getSelectedItem();
         final Integer selectedId = sel instanceof Llista ? ((Llista) sel).obtenirId() : null;
         final boolean largeLib = state.cd.esLargeLibrary();
+        // Canviar de prestatgeria és un canvi de consulta: substitueix el
+        // resultat vigent i invalida el filtre i la pàgina en vol.
+        final presentacio.util.CoordinadorGeneracions.Fulla<Integer> fulla =
+            state.generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_CONSULTA, selectedId,
+                presentacio.util.CoordinadorGeneracions.FLUX_FILTRE,
+                presentacio.util.CoordinadorGeneracions.FLUX_PAGINA);
         new javax.swing.SwingWorker<java.util.List<domini.Llibre>, Void>() {
             @Override protected java.util.List<domini.Llibre> doInBackground() {
                 if (selectedId != null) return new ArrayList<>(state.cd.obtenirLlibresInLlista(selectedId));
@@ -68,6 +74,7 @@ public class ControladorPrestatgeria {
             }
             @Override protected void done() {
                 if (isCancelled()) return;
+                if (!fulla.esVigent()) return;
                 try {
                     state.biblio = get();
                     state.currentLlistaId = selectedId;
@@ -75,6 +82,7 @@ public class ControladorPrestatgeria {
                     host.pageCtrl().posarCurrentPage(0);
                     host.mostrarPage(0);
                 } catch (Exception ex) {
+                    if (!fulla.esVigent()) return;
                     new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                 }
             }
@@ -88,6 +96,13 @@ public class ControladorPrestatgeria {
         combo.removeAllItems();
         combo.addItem(I18n.t("lbl_all_lists") + " (...)");
 
+        // La llista que torna d'aquesta càrrega substitueix la visible, de
+        // manera que la generació evita que una càrrega anterior la sobreposi.
+        final presentacio.util.CoordinadorGeneracions.Fulla<Void> fulla =
+            state.generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_CONSULTA,
+                presentacio.util.CoordinadorGeneracions.FLUX_FILTRE,
+                presentacio.util.CoordinadorGeneracions.FLUX_PAGINA);
+
         new javax.swing.SwingWorker<DadesRefresc, Void>() {
             @Override protected DadesRefresc doInBackground() {
                 Map<Integer, Integer> counts = state.cd.obtenirAllCountsInLlistes();
@@ -100,6 +115,10 @@ public class ControladorPrestatgeria {
                 return new DadesRefresc(counts, total, llistes, biblio, largeLib);
             }
             @Override protected void done() {
+                if (isCancelled()) return;
+                // Aquesta càrrega substitueix la llista visible: la generació
+                // evita que una càrrega anterior sobreposi la nova.
+                if (!fulla.esVigent()) return;
                 try {
                     DadesRefresc data = get();
                     Map<Integer, Integer> counts = data.counts();
@@ -132,6 +151,7 @@ public class ControladorPrestatgeria {
                     host.pageCtrl().posarCurrentPage(0);
                     host.mostrarPage(0);
                 } catch (Exception ex) {
+                    if (!fulla.esVigent()) return;
                     new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                 }
             }

@@ -26,6 +26,12 @@ import presentacio.controladors.ControladorTaula;
  */
 public interface AmfitrioPantallaBiblioteca {
     void posarTable(java.util.List<Llibre> llibres);
+    /**
+     * Aplica un resultat a la taula i a la galeria només si la generació
+     * indicada continua vigent. La taula i la galeria representen la mateixa
+     * consulta, de manera que comparteixen la generació.
+     */
+    void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres);
     void mostrarPage(int page);
     void refrescarAll();
     void actualitzarTitleBar();

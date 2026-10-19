@@ -3,7 +3,6 @@ package presentacio.controladors;
 import domini.Llibre;
 import herramienta.i18n.I18n;
 import java.util.ArrayList;
-import java.util.function.Consumer;
 import persistencia.contract.LectorLlibre;
 import presentacio.models.ModelPaginacio;
 import presentacio.models.VistaPaginacio;
@@ -44,13 +43,16 @@ public class ControladorPaginaTaula {
 
     private final PanelMostrarBiblioteca vista;
     private final LectorLlibre cd;
-    private final Consumer<java.util.List<Llibre>> posarTable;
+    private final java.util.function.BiConsumer<presentacio.util.CoordinadorGeneracions.Fulla<?>, java.util.List<Llibre>> posarTable;
+    private final presentacio.util.CoordinadorGeneracions generacions;
 
     ControladorPaginaTaula(PanelMostrarBiblioteca vista, LectorLlibre cd,
-                        Consumer<java.util.List<Llibre>> posarTable) {
+                        java.util.function.BiConsumer<presentacio.util.CoordinadorGeneracions.Fulla<?>, java.util.List<Llibre>> posarTable,
+                        presentacio.util.CoordinadorGeneracions generacions) {
         this.vista = vista;
         this.cd = cd;
         this.posarTable = posarTable;
+        this.generacions = generacions;
         this.paginationView = new VistaPaginacio(vista);
     }
 
@@ -59,11 +61,16 @@ public class ControladorPaginaTaula {
             model.posarPaginatedMode(false);
             model.invalidateCache();
             paginationView.hide();
-            posarTable.accept(new ArrayList<>());
+            posarTable.accept(null, new ArrayList<>());
             return;
         }
         if (model.esUseDBPagination()) {
             final int requestedPage = page;
+            // La pàgina demanada i la generació es capturen abans de llançar
+            // la tasca: una pàgina carregada després de canviar de pàgina no
+            // pot substituir la pàgina vigent.
+            final presentacio.util.CoordinadorGeneracions.Fulla<Integer> fulla =
+                generacions.obrir(presentacio.util.CoordinadorGeneracions.FLUX_PAGINA, requestedPage);
             new javax.swing.SwingWorker<PageLoad, Void>() {
                 @Override protected PageLoad doInBackground() {
                     if (model.obtenirCachedTotalCount() < 0) {
@@ -81,19 +88,22 @@ public class ControladorPaginaTaula {
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
+                    // Pàgina obsoleta: no aplica files, ni comptadors, ni vista.
+                    if (!fulla.esVigent()) return;
                     try {
                         PageLoad r = get();
                         if (!r.paginated) {
                             model.posarPaginatedMode(false);
                             paginationView.hide();
-                            posarTable.accept(r.rows);
+                            posarTable.accept(fulla, r.rows);
                         } else {
                             model.posarCurrentPage(r.page);
                             model.posarPaginatedMode(true);
-                            posarTable.accept(r.rows);
+                            posarTable.accept(fulla, r.rows);
                             paginationView.apply(r.page, r.totalPages);
                         }
                     } catch (Exception ex) {
+                        if (!fulla.esVigent()) return;
                         new herramienta.ui.DialegError(ex).mostrarErrorMessage();
                     }
                 }
@@ -104,7 +114,7 @@ public class ControladorPaginaTaula {
             model.posarPaginatedMode(false);
             model.invalidateCache();
             paginationView.hide();
-            posarTable.accept(biblio instanceof ArrayList<Llibre> a ? a : new ArrayList<>(biblio));
+            posarTable.accept(null, biblio instanceof ArrayList<Llibre> a ? a : new ArrayList<>(biblio));
             return;
         }
         int totalPages = (int) Math.ceil((double) biblio.size() / PAGE_SIZE);
@@ -113,7 +123,7 @@ public class ControladorPaginaTaula {
         model.posarPaginatedMode(true);
         int from = page * PAGE_SIZE;
         int to = Math.min(from + PAGE_SIZE, biblio.size());
-        posarTable.accept(new ArrayList<>(biblio.subList(from, to)));
+        posarTable.accept(null, new ArrayList<>(biblio.subList(from, to)));
         paginationView.apply(page, totalPages);
     }
 
