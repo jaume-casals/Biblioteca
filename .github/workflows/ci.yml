@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Comprovacions que no cal fer a cada commit: fuzzing i dependències.
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '25'
+
+jobs:
+  build-and-test:
+    name: Build i suite completa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Comprova la cadena d'eines
+        run: |
+          java -version
+          javac -version
+          python3 --version
+          make --version | head -1
+
+      - name: Dependències (lock + SHA-256)
+        run: make deps
+
+      - name: Verifica els SHA-256 de les dependències
+        run: make deps-verify
+
+      - name: Compila
+        run: make compile
+
+      - name: Suite de tests
+        run: make test
+
+      - name: Publica els informes JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-reports
+          path: build/reports/tests/
+          if-no-files-found: warn
+
+  i18n:
+    name: Traduccions generades
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Comprova que els fitxers generats estan al dia
+        run: python3 scripts/gen_strings.py --check --no-java
+
+  h2-compat:
+    name: Compatibilitat H2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+      - run: make h2-compat
+
+  package:
+    name: Empaquetat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+      - run: make deps
+      - run: make compile
+      - run: make jar
+      - name: Comprova el contingut del JAR
+        run: |
+          unzip -l build/artifacts/biblioteca.jar | grep -E 'main/Executable.class|version.properties|strings_ca.properties'
+          unzip -p build/artifacts/biblioteca.jar META-INF/MANIFEST.MF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biblioteca-jar
+          path: build/artifacts/biblioteca.jar
+
+  fuzz:
+    name: Fuzzing (programat)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+      - run: make fuzz-deps
+      - name: Property tests (jqwik)
+        run: make fuzz-property
+      - name: Coverage-guided fuzzing (Jazzer)
+        run: make fuzz-jazzer
+
+  dependencies:
+    name: Dependències (programat)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Versions noves disponibles
+        run: python3 scripts/fetch_deps.py update --check --lock build/deps.lock
