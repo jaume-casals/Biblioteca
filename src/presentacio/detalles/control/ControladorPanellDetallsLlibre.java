@@ -26,6 +26,7 @@ public class ControladorPanellDetallsLlibre {
 	private final PanellDetallsLlibre vista;
 	private final EscritorBiblioteca cLlibres;
 	private final EnActualitzarBBDD enActualizarBBDD;
+	private boolean heavyFieldsLoadFailed = false;
 	private byte[] pendingBlob;
 	private javax.swing.SwingWorker<byte[], Void> imageWorker;
 	private javax.swing.SwingWorker<Void, Void> heavyFieldsWorker;
@@ -60,6 +61,7 @@ public class ControladorPanellDetallsLlibre {
 						@Override protected Void doInBackground() {
 							try { cLlibres.carregarHeavyFields(book); }
 							catch (Exception e) {
+								heavyFieldsLoadFailed = true;
 								Logger.getLogger(ControladorPanellDetallsLlibre.class.getName())
 									.log(Level.WARNING, "Ha fallat la càrrega de camps pesats per a l'ISBN " + book.obtenirISBN()
 										+ "; la descripció i les notes es renderitzaran buides i qualsevol desat sobreescriurà els originals", e);
@@ -106,6 +108,24 @@ public class ControladorPanellDetallsLlibre {
 
 		this.vista.obtenirTextPaginesLlegides().getDocument().addDocumentListener(
 			Documents.onChange(this::clampPaginesLlegides));
+	}
+
+	/**
+	 * Si la càrrega inicial dels camps pesats ha fallat, el formulari mostra
+	 * descripció i notes buides. Abans de desar, es torna a demanar a la base
+	 * de dades els valors emmagatzemats perquè el desat no els esborrí. Si la
+	 * relectura també falla, l'actualització deixa les columnes pesades
+	 * intactes perquè el llibre no té els camps pesats carregats.
+	 */
+	private Llibre recarregarCampsPesatsSiCal(Llibre l) {
+		if (!heavyFieldsLoadFailed) return l;
+		try { cLlibres.carregarHeavyFields(l); }
+		catch (Exception e) {
+			Logger.getLogger(ControladorPanellDetallsLlibre.class.getName())
+				.log(Level.WARNING, "No s'han pogut recarregar els camps pesats de l'ISBN " + l.obtenirISBN()
+					+ "; la descripció i les notes originals es conservaran", e);
+		}
+		return l;
 	}
 
 	private void clampPaginesLlegides() {
@@ -345,6 +365,10 @@ public class ControladorPanellDetallsLlibre {
 					a.posarDesitjat(vista.obtenirChckDesitjat().isSelected());
 					a.posarAutors(ParseHelpers.splitAutors(vista.obtenirTextAutor().getText()));
 					a.posarNotes(vista.obtenirTextNotes().getText());
+				// El desat només escriu descripció i notes si el llibre les té
+				// carregades. Si la càrrega va fallar, es deixen intactes a la
+				// base de dades en lloc d'esborrar-les amb el text buit.
+				a.posarCampsPesatsCarregats(llibre.teCampsPesatsCarregats());
 					a.posarPagines(pagines);
 					a.posarPaginesLlegides(paginesLlegides);
 					if (a.obtenirPagines() > 0 && a.obtenirPaginesLlegides() > a.obtenirPagines()) {
@@ -363,7 +387,7 @@ public class ControladorPanellDetallsLlibre {
 				vista.obtenirBtnEditar().setEnabled(false);
 				new javax.swing.SwingWorker<Void, Void>() {
 					@Override protected Void doInBackground() throws Exception {
-						cLlibres.actualitzarLlibre(toSave);
+						cLlibres.actualitzarLlibre(recarregarCampsPesatsSiCal(toSave));
 						return null;
 					}
 					@Override protected void done() {

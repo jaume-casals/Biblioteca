@@ -175,6 +175,15 @@ public class ServeiCopiaSeguretat {
 
     public void copiaSegToSQL(File file, List<Llibre> bib, List<Llista> llistes, List<Tag> tags) throws java.io.IOException, java.sql.SQLException {
         persistencia.internal.ControladorPersistencia.BackupSnapshot snap = cp.snapshotForBackup();
+        // Els llibres que rebi el consumidor poden venir de la vista
+        // lleugera (sense descripcio ni notes). Abans de substituir la
+        // instantània, es carreguen els camps pesats de cadascun: una còpia
+        // de seguretat sense descripcions ni notes no serveix per restaurar.
+        for (Llibre l : bib) {
+            if (l != null && !l.teCampsPesatsCarregats()) {
+                cp.carregarHeavyFields(l.obtenirISBN(), l);
+            }
+        }
         snap.bib = new java.util.ArrayList<>(bib);
         snap.llistes = new java.util.ArrayList<>(llistes);
         snap.tags = new java.util.ArrayList<>(tags);
@@ -306,12 +315,18 @@ public class ServeiCopiaSeguretat {
         if (s == null) return "NULL";
         String esc = sqlEsc(s);
         if (esc.indexOf('\n') < 0) return "'" + esc + "'";
+        // CONCAT() i no '||': a MySQL/MariaDB l'operador '||' és OR lògic
+        // (PIPES_AS_CONCAT és desactivat per defecte) i convertiria el text
+        // multilínia en 0 o 1 en lloc de concatenar-lo. CONCAT() té el mateix
+        // significat a H2 i a MariaDB.
         StringBuilder sb = new StringBuilder(esc.length() + 32);
         String[] parts = esc.split("\n", -1);
+        sb.append("CONCAT(");
         for (int i = 0; i < parts.length; i++) {
-            if (i > 0) sb.append(" || CHAR(10) || ");
+            if (i > 0) sb.append(", CHAR(10), ");
             sb.append('\'').append(parts[i]).append('\'');
         }
+        sb.append(')');
         return sb.toString();
     }
 
@@ -321,20 +336,25 @@ public class ServeiCopiaSeguretat {
      * {@code PreparedStatement} aquí perquè estem escrivint un fitxer de text,
      * no executant SQL contra la BBDD. S'escapa:
      * <ul>
-     *   <li>{@code \\} → {@code \\\\} — per a engines que interpretin
-     *       backslashes dins literals</li>
      *   <li>{@code '} → {@code ''} — estàndard SQL</li>
-     *   <li>{@code \u0000} → buit — el null byte trenca JDBC i molts CLIs</li>
+     *   <li>{@code }{@code \\}{@code } → buit — el null byte trenca JDBC i molts CLIs</li>
      * </ul>
+     * <p><b>La barra invertida no s'escapa.</b> El format del dump és SQL
+     * estàndard, on la barra invertida no és un caràcter d'escapada. H2 ja
+     * funciona així; MySQL/MariaDB, en canvi, la tracten com a escapada dins
+     * les literals, i per això la connexió MariaDB activa
+     * {@code NO_BACKSLASH_ESCAPES} (veure
+     * {@code ConnexioServidor.alinearSqlModeMariaDB()}). Amb els dos motors
+     * igualats, una descripció amb {@code C:\rutes} es desa i es restaura
+     * igual a tots dos — abans, a H2 la barra es duplicava al restaurador.
      * Els salts de línia es preserven via la concatenació
-     * {@code '...' || CHAR(10) || '...'} que composa {@link #sqlNullable} —
+     * {@code CONCAT('...', CHAR(10), '...')} que composa {@link #sqlNullable} —
      * un newline real dins d'un literal trencaria el lector de línies
      * del restaurador ({@code br.lines()}).
      */
     private static String sqlEsc(String s) {
         if (s == null) return "";
         return Escapers.sql(s)
-            .replace("\\", "\\\\")
             .replace("\u0000", "")
             .replace("\u001A", "");
     }

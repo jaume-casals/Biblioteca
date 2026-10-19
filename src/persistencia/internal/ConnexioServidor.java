@@ -188,9 +188,11 @@ public class ConnexioServidor {
 				char[] pwd = (cfgPwd == null || cfgPwd.isEmpty()) ? new char[0] : cfgPwd.toCharArray();
 				con = connectViaDriver("org.mariadb.jdbc.Driver", "mariadb-java-client",
 					url, cfg.user(), pwd);
+				alinearSqlModeMariaDB();
+				String db = sanitizeDatabaseName(cfg.database());
 				try (Statement s = con.createStatement()) {
-					s.executeUpdate("CREATE DATABASE IF NOT EXISTS BIBLIOTECA;");
-					s.executeUpdate("USE BIBLIOTECA;");
+					s.executeUpdate("CREATE DATABASE IF NOT EXISTS " + db + ";");
+					s.executeUpdate("USE " + db + ";");
 				}
 			} else {
 				// dbType desconegut / futur. Llança un missatge precís
@@ -236,6 +238,49 @@ public class ConnexioServidor {
 		if (p.contains("/") || p.contains("\\") || p.contains(".."))
 			throw new IllegalArgumentException("Nom de perfil de BD H2 no vàlid: " + profile);
 		return p;
+	}
+
+	/**
+	 * Valida el nom de l'esquema MariaDB abans d'interpolar-lo al
+	 * {@code CREATE DATABASE}/{@code USE}. El nom s'incrusta a SQL literal
+	 * (no hi ha marcador per a un identificador), així que només s'accepten
+	 * lletres, dígits i guió low. Un esborrany de proves ha de poder triar
+	 * el seu propi esquema sense poder injectar SQL.
+	 */
+	static String sanitizeDatabaseName(String database) {
+		String db = (database == null || database.isBlank())
+			? ConnectionConfig.DEFAULT_DATABASE
+			: database.trim();
+		if (!db.matches("[A-Za-z0-9_]+")) {
+			throw new IllegalArgumentException("Nom d'esquema de BD no vàlid: " + database
+				+ " (només lletres, dígits i guió low '_' admesos)");
+		}
+		return db;
+	}
+
+	/**
+	 * Alinea el {@code sql_mode} de la sessió MariaDB amb la semàntica
+	 * SQL estàndard que té H2.
+	 *
+	 * <p>MySQL/MariaDB tracten la barra invertida com a caràcter d'escapada
+	 * dins de les literals de text; H2 no ho fa. Sense aquestes opcions, un
+	 * valor com {@code C:\rutes} es desa de forma diferent a cada motor i
+	 * el {@code ||} passa a ser OR lògic enlloc de concatenació. Amb
+	 * {@code NO_BACKSLASH_ESCAPES} la literal es llegeix igual que a H2 i el
+	 * format de la còpia de seguretat és portable entre els dos motors.
+	 *
+	 * <p>S'afegeix al {@code sql_mode} existent (no se substitueix) per no
+	 * perdre {@code STRICT_TRANS_TABLES} ni la resta de modes del servidor.
+	 */
+	private void alinearSqlModeMariaDB() {
+		try (Statement s = con.createStatement()) {
+			s.executeUpdate("SET SESSION sql_mode = IF(FIND_IN_SET('NO_BACKSLASH_ESCAPES', @@sql_mode) > 0,"
+				+ " @@sql_mode, CONCAT(@@sql_mode, ',NO_BACKSLASH_ESCAPES'))");
+		} catch (SQLException e) {
+			// Si el servidor rebutja el mode, es continua amb el mode per defecte:
+			// la connexió ha de funcionar encara que el servidor sigui sobredimensionat.
+			System.err.println("[biblioteca] no s'ha pogut aplicar NO_BACKSLASH_ESCAPES: " + e.getMessage());
+		}
 	}
 
 	/**

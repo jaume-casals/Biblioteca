@@ -116,6 +116,7 @@ public class ControladorDomini implements EscritorBiblioteca {
 	public boolean existsLlibre(long ISBN)                                                        { return books.existsLlibre(ISBN); }
 	public Llibre obtenirLlibre(long ISBN)                                                            { return books.obtenirLlibre(ISBN); }
 	@Override public void carregarHeavyFields(Llibre book)                                            { books.carregarHeavyFields(book); }
+	@Override public void carregarHeavyFields(java.util.List<Llibre> llibres)                       { books.carregarHeavyFields(llibres); }
 	public java.util.List<Llibre> obtenirRecentlyAdded()                                              { return books.obtenirRecentlyAdded(); }
 	public byte[] obtenirLlibreBlob(long isbn)                                                        { return books.obtenirLlibreBlob(isbn); }
 	public void posarLlibreBlob(long isbn, byte[] blob)                                             { books.posarLlibreBlob(isbn, blob); }

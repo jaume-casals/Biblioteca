@@ -68,6 +68,12 @@ public class ExportadorLlibres {
         java.util.Map<String, Object> root = new java.util.LinkedHashMap<>();
         root.put("version", 1);
         ArrayList<Llibre> tots = new ArrayList<>(cd.obtenirAllLlibres());
+        // Els camps pesats (descripció i notes) NO venen a la vista lleugera
+        // que retorna el DAO: sense aquesta càrrega l'exportació escriuria
+        // null a descripcio i notes i el fitxer aparentment correcte perdria
+        // el contingut. Si la càrrega falla es propaga l'error: no es crea
+        // cap exportació parcialment buida.
+        carregarCampsPesats(cd, tots);
         java.util.List<java.util.Map<String, Object>> llibresJson = new java.util.ArrayList<>(tots.size());
         for (Llibre l : tots) {
             llibresJson.add(jsonLlibreMap(l,
@@ -82,6 +88,25 @@ public class ExportadorLlibres {
                 new java.io.FileWriter(f, java.nio.charset.StandardCharsets.UTF_8))) {
             GSON.toJson(root, pw);
         }
+    }
+
+    /**
+     * Carrega els camps pesats (descripció i notes) dels llibres que encara
+     * no els tenen, abans de serialitzar-los.
+     *
+     * <p>La càrrega és el pas que distingeix "no carregat" de "carregat
+     * buit": un llibre sense camps pesats mai no ha d'arribar al serialitzador,
+     * perquè aleshores la descripció nul·la seria indistingible d'una
+     * descripció realment absent. Si la càrrega falla, l'error es propaga:
+     * exportar un fitxer incomplet en silenci és pitjor que no exportar res.
+     */
+    private static void carregarCampsPesats(LectorBiblioteca cd, List<Llibre> llibres) {
+        List<Llibre> sensePesats = new ArrayList<>();
+        for (Llibre l : llibres) {
+            if (l != null && !l.teCampsPesatsCarregats()) sensePesats.add(l);
+        }
+        if (sensePesats.isEmpty()) return;
+        cd.carregarHeavyFields(sensePesats);
     }
 
     private static final String HTML_CSS =
@@ -330,6 +355,14 @@ public class ExportadorLlibres {
         m.put("idioma", l.obtenirIdioma());
         m.put("format", l.obtenirFormat());
         m.put("paisOrigen", l.obtenirPaisOrigen());
+        // Camps opcionals que el contracte JSON també admiteix en la lectura:
+        // sense ells, un viatge exporta→importa perdria el valor.
+        m.put("estat", l.obtenirEstat());
+        m.put("exemplars", l.obtenirExemplars());
+        m.put("llenguaOriginal", l.obtenirLlenguaOriginal());
+        m.put("nomCa", l.obtenirNomCa());
+        m.put("nomEs", l.obtenirNomEs());
+        m.put("nomEn", l.obtenirNomEn());
         java.util.List<java.util.Map<String, Object>> llistes = new java.util.ArrayList<>();
         for (persistencia.row.LlibreLlistaRow row : llistaRows) {
             java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();

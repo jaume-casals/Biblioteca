@@ -48,6 +48,11 @@ public final class LlibreFieldBindings {
      *   <li>Si la columna {@code ISBN} s'inclou (només INSERT).</li>
      *   <li>Si la columna {@code imatge_blob} s'inclou
      *       (només INSERT).</li>
+     *   <li>Si les columnes pesades ({@code descripcio}, {@code notes})
+     *       s'inclouen. A l'UPDATE només s'hi inclouen si el llibre les té
+     *       carregades: un objecte que no ha carregat els camps pesats
+     *       (vista lleugera o càrrega fallida) no pot esborrar el que hi ha
+     *       a la base de dades.</li>
      * </ul>
      * Aquest és tot el delta — mateix ordre, mateixos ajudants de coerció de valors,
      * mateix contracte de vinculació. La implementació anterior tenia
@@ -55,18 +60,19 @@ public final class LlibreFieldBindings {
      * s'afegia una columna (el finding HIGH de tot.txt sobre
      * {@code LlibreDaoCore}).
      */
-    public static Object[] forLlibre(Llibre ll, boolean includeIsbn, boolean includeBlob) {
+    public static Object[] forLlibre(Llibre ll, boolean includeIsbn, boolean includeBlob,
+            boolean includeHeavy) {
         java.util.List<Object> vals = new java.util.ArrayList<>(27);
         if (includeIsbn)             vals.add(ll.obtenirISBN());
         vals.add(sOrEmpty(ll.obtenirNom()));
         vals.add(intOrZero(ll.obtenirAny()));
-        vals.add(sOrEmpty(ll.obtenirDescripcio()));
+        if (includeHeavy)            vals.add(sOrEmpty(ll.obtenirDescripcio()));
         vals.add(doubleOrZero(ll.obtenirValoracio()));
         vals.add(doubleOrZero(ll.obtenirPreu()));
         vals.add(Boolean.TRUE.equals(ll.obtenirLlegit()));
         vals.add(sOrEmpty(ll.obtenirImatge()));
         if (includeBlob)             vals.add(ll.obtenirImatgeBlob());
-        vals.add(ll.obtenirNotes());
+        if (includeHeavy)            vals.add(ll.obtenirNotes());
         vals.add(ll.obtenirPagines());
         vals.add(ll.obtenirPaginesLlegides());
         vals.add(ll.obtenirEditorial());
@@ -89,11 +95,16 @@ public final class LlibreFieldBindings {
 
     /** Llista de 27 valors per a l'INSERT (inclou {@code ISBN} i
      *  {@code imatge_blob}). */
-    public static Object[] forInsert(Llibre ll) { return forLlibre(ll, true, true); }
+    public static Object[] forInsert(Llibre ll) { return forLlibre(ll, true, true, true); }
 
-    /** Llista de 25 valors per a l'UPDATE (sense {@code imatge_blob}, sense
-     *  {@code ISBN}). El consumidor afegeix l'ISBN de la clàusula WHERE. */
-    public static Object[] forUpdate(Llibre ll) { return forLlibre(ll, false, false); }
+    /** Llista de valors per a l'UPDATE (sense {@code imatge_blob}, sense
+     *  {@code ISBN}). El consumidor afegeix l'ISBN de la clàusula WHERE.
+     *  Les columnes pesades ({@code descripcio}, {@code notes}) només s'hi
+     *  inclouen si el llibre les té carregades: si no les ha carregades,
+     *  l'UPDATE les deixa intactes a la base de dades en lloc d'esborrar-les. */
+    public static Object[] forUpdate(Llibre ll) {
+        return forLlibre(ll, false, false, ll.teCampsPesatsCarregats());
+    }
 
     /** Llista de 27 columnes per a l'INSERT, en el mateix ordre que
      *  {@link #forInsert(Llibre)}. Usada per {@code ServeiCopiaSeguretat}

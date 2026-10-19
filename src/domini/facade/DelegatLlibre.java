@@ -168,6 +168,22 @@ public final class DelegatLlibre {
         });
     }
 
+    /**
+     * Carrega els camps pesats de molts llibres amb una sola consulta
+     * agrupada. Equivalent a cridar {@link #carregarHeavyFields(Llibre)}
+     * llibre a llibre, però evita N consultes quan cal carregar tota la
+     * biblioteca (p. ex. abans d'una exportació JSON).
+     */
+    public void carregarHeavyFields(java.util.List<Llibre> books) {
+        if (books == null || books.isEmpty()) return;
+        java.util.Map<Long, Llibre> targets = new java.util.HashMap<>();
+        for (Llibre l : books) {
+            if (l != null && !l.teCampsPesatsCarregats()) targets.put(l.obtenirISBN(), l);
+        }
+        if (targets.isEmpty()) return;
+        state.persistence().carregarHeavyFieldsBatched(new ArrayList<>(targets.keySet()), targets::get);
+    }
+
     // ── Blob (cover) access ───────────────────────────────────────────────────
 
     public byte[] obtenirLlibreBlob(long isbn) { return state.persistence().obtenirLlibreBlob(isbn); }

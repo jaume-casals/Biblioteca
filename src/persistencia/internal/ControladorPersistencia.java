@@ -69,6 +69,22 @@ public class ControladorPersistencia {
 		return ControladorPersistencia.inst;
 	}
 
+	/**
+	 * Crea una instància <em>no singleton</em> amb una configuració explícita.
+	 *
+	 * <p>És la costura que permet executar el mateix contracte de persistència
+	 * contra un servidor MariaDB aïllat sense tocar la configuració personal de
+	 * l'usuari ({@code ~/.biblioteca}) ni el singleton global: la instància
+	 * retornada no es registra com a {@link #getInstance()}.
+	 *
+	 * <p>El {@link ConnectionConfig} porta el nom de l'esquema, de manera que
+	 * la prova pot escriure en un esquema de rebut sense riscar la base de
+	 * dades de producció.
+	 */
+	public static ControladorPersistencia create(ConnectionConfig cfg) {
+		return new ControladorPersistencia(cfg);
+	}
+
 	public static synchronized void reinicialitzarForTest() {
 		if (inst != null) {
 			try { inst.libreDaoCore.netejarAllData(); } catch (Exception e) {
@@ -86,8 +102,16 @@ public class ControladorPersistencia {
 	}
 
 	private ControladorPersistencia() {
+		this(defaultConfig());
+	}
+
+	/**
+	 * Configuració que empra el singleton: la URL de test en memòria si n'hi ha,
+	 * altrament el que diu la configuració personal de l'usuari.
+	 */
+	private static ConnectionConfig defaultConfig() {
 		String testUrl = System.getProperty("biblioteca.h2.url");
-		ConnectionConfig cfg = new ConnectionConfig(
+		return new ConnectionConfig(
 			testUrl != null ? "h2" : Configuracio.obtenirDbType(),
 			Configuracio.obtenirDbHost(),
 			Configuracio.obtenirDbUser(),
@@ -95,6 +119,9 @@ public class ControladorPersistencia {
 			Configuracio.obtenirDbProfile(),
 			testUrl
 		);
+	}
+
+	private ControladorPersistencia(ConnectionConfig cfg) {
 		sc = new ConnexioServidor();
 		sc.crearDatabase(cfg);
 		java.sql.Connection con = sc.obtenirConnexio();
@@ -248,7 +275,7 @@ public class ControladorPersistencia {
 	public BackupSnapshot snapshotForBackup() {
 		synchronized (this) {
 			BackupSnapshot s = new BackupSnapshot();
-			s.bib = libreDaoCore.obtenirAll();
+			s.bib = libreDaoCore.obtenirAllComplets();
 			s.llistes = llistaDao.obtenirAll();
 			s.tags = tagDao.obtenirAll();
 			s.autors = autorDao.obtenirAll();

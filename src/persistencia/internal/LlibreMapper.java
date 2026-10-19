@@ -28,6 +28,7 @@ public final class LlibreMapper {
         Llibre l = buildLlibreCore(rs, rs.getString("descripcio"));
         l.posarHasBlob(rs.getBoolean("has_blob"));
         fillLlibreTail(l, rs, true);
+        l.posarCampsPesatsCarregats(true);
         return l;
     }
 

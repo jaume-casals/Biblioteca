@@ -136,10 +136,26 @@ public class LlibreDaoCore {
     }
 
     private static String joinColumns(boolean onlyUpdate, String suffix) {
+        return joinColumns(onlyUpdate, suffix, true);
+    }
+
+    /**
+     * Construeix la llista de columnes de l'INSERT o de l'UPDATE.
+     *
+     * <p>{@code includeHeavy} controla si s'hi inclouen les columnes pesades
+     * ({@code descripcio}, {@code notes}). A l'UPDATE només s'inclouen quan el
+     * llibre les té carregades: un objecte que no les ha carregat (vista
+     * lleugera, o càrrega fallida) no ha de poder esborrar el que hi ha a la
+     * base de dades. La llista de valors de
+     * {@link LlibreFieldBindings#forUpdate(Llibre)} aplica exactament el mateix
+     * criteri, de manera que columnes i valors sempre coincideixen.
+     */
+    private static String joinColumns(boolean onlyUpdate, String suffix, boolean includeHeavy) {
         StringBuilder sb = new StringBuilder(256);
         for (Columna c : Columna.values()) {
             if (c.inserirColumn == null) continue;
             if (onlyUpdate && !c.inUpdate) continue;
+            if (!includeHeavy && c.heavy) continue;
             if (sb.length() > 0) sb.append(",");
             sb.append("`").append(c.inserirColumn).append("`").append(suffix);
         }
@@ -147,10 +163,15 @@ public class LlibreDaoCore {
     }
 
     private static int countColumns(boolean onlyUpdate) {
+        return countColumns(onlyUpdate, true);
+    }
+
+    private static int countColumns(boolean onlyUpdate, boolean includeHeavy) {
         int n = 0;
         for (Columna c : Columna.values()) {
             if (c.inserirColumn == null) continue;
             if (onlyUpdate && !c.inUpdate) continue;
+            if (!includeHeavy && c.heavy) continue;
             n++;
         }
         return n;
@@ -179,6 +200,12 @@ public class LlibreDaoCore {
      *  consumidor. */
     private static int actualitzarSetCount() { return countColumns(true); }
 
+    /** Variants que respecten els camps pesats: si el llibre no els té
+     *  carregats, les columnes {@code descripcio} i {@code notes} queden
+     *  fora de l'UPDATE i el valor emmagatzemat no s'esborra. */
+    private static String actualitzarSetList(boolean includeHeavy) { return joinColumns(true, "=?", includeHeavy); }
+
+    private static int actualitzarSetCount(boolean includeHeavy) { return countColumns(true, includeHeavy); }
     private static List<String> resoldreAutorsSync(Llibre ll) {
         return ll.obtenirAutors().isEmpty() && ll.obtenirAutor() != null && !ll.obtenirAutor().isBlank()
             ? List.of(ll.obtenirAutor()) : ll.obtenirAutors();
@@ -198,6 +225,32 @@ public class LlibreDaoCore {
                     "SELECT " + LLIBRE_COLUMNS_L_LIGHT + " FROM llibre l ORDER BY l.ISBN")) {
                 while (rs.next()) {
                     Llibre l = LlibreMapper.buildLlibreLight(rs);
+                    String autor = l.obtenirAutor();
+                    if (autor != null && !autor.isBlank()) {
+                        l.posarAutors(java.util.Arrays.asList(autor.split(", ", -1)));
+                    }
+                    biblio.add(l);
+                }
+            }
+        } catch (SQLException e) {
+            throw new domini.BibliotecaException("Error al agafar tots els llibres: " + e.getMessage(), e);
+        }
+        return biblio;
+    }
+
+    /**
+     * Tots els llibres amb els camps pesats (descripcio, notes) inclosos.
+     * La vista lleugera de {@link #obtenirAll()} els deixa fora, i una còpia
+     * de seguretat feta amb ella perdria les descripcions i les notes.
+     */
+    public ArrayList<Llibre> obtenirAllComplets() {
+        ArrayList<Llibre> biblio = new ArrayList<>();
+        try {
+            try (Statement stmt = con.createStatement();
+                 ResultSet rs = stmt.executeQuery(
+                    "SELECT " + LLIBRE_COLUMNS_L + " FROM llibre l ORDER BY l.ISBN")) {
+                while (rs.next()) {
+                    Llibre l = LlibreMapper.buildLlibre(rs);
                     String autor = l.obtenirAutor();
                     if (autor != null && !autor.isBlank()) {
                         l.posarAutors(java.util.Arrays.asList(autor.split(", ", -1)));
@@ -241,9 +294,10 @@ public class LlibreDaoCore {
 
     public void update(Llibre ll) throws SQLException {
         if (ll == null) return;
+        boolean heavy = ll.teCampsPesatsCarregats();
         withTransaction(() -> {
             try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE llibre SET " + actualitzarSetList() + " WHERE `ISBN`=?")) {
+                    "UPDATE llibre SET " + actualitzarSetList(heavy) + " WHERE `ISBN`=?")) {
                 Object[] vals = LlibreFieldBindings.forUpdate(ll);
                 bindAll(ps, vals);
                 ps.setLong(vals.length + 1, ll.obtenirISBN());
@@ -405,13 +459,48 @@ public class LlibreDaoCore {
      * consumidor (BackupDelegate) continua sent responsable de fer una
      * captura pre-restauració pel camí d'undoing iniciat per l'usuari;
      * aquest mètode és la xarxa de seguretat.
+     *
+     * <p>Abans d'esborrar res es comprova que el fitxer sembli una còpia de
+     * seguretat: un fitxer buit, truncat o d'un altre format s'executaria
+     * sense error i deixaria la base de dades buida. En aquest cas es
+     * rebutja el fitxer i no es toca la base de dades.
      */
     public void restaurarFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
+        validarCopiaSeguretat(file);
         withTransaction(() -> {
             netejarAllDataNoTx();
             try { executarSQLFileNoTx(file); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         });
+    }
+
+    /**
+     * Comprova que el fitxer contingui una còpia de seguretat de Biblioteca:
+     * o bé la marca que hi posa {@code ServeiCopiaSeguretat}, o bé almenys
+     * una sentència {@code INSERT INTO llibre}. Un fitxer que no conté cap
+     * d'aquestes dues coses no es pot restaurar: si s'executés, esborraria
+     * les dades i no hi afegiria res.
+     */
+    private static void validarCopiaSeguretat(java.io.File file) throws java.io.IOException {
+        boolean teMarca = false;
+        boolean teLlibres = false;
+        try (BufferedReader br = new BufferedReader(
+                new FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String t = line.trim().toUpperCase(java.util.Locale.ROOT);
+                if (t.startsWith("-- BIBLIOTECA BACKUP")) { teMarca = true; break; }
+                if (t.startsWith("INSERT INTO LLIBRE") || t.startsWith("INSERT INTO `LLIBRE`")) {
+                    teLlibres = true;
+                    break;
+                }
+            }
+        }
+        if (!teMarca && !teLlibres) {
+            throw new java.io.IOException(
+                "El fitxer no conté cap INSERT INTO llibre ni la marca de còpia de seguretat: "
+                + "no s'ha restaurat res i la base de dades no s'ha modificat.");
+        }
     }
 
     /** Llista blanca de tipus de sentència SQL acceptables en un fitxer
@@ -476,11 +565,28 @@ public class LlibreDaoCore {
         if (autors == null || autors.isEmpty()) return;
         executarBatchAutors(con, "INSERT IGNORE INTO autor (nom) VALUES (?)",
             (ps, nom) -> ps.setString(1, nom), autors);
-        executarBatchAutors(con,
-            "INSERT IGNORE INTO llibre_autor (isbn, autor_id) SELECT ?, id FROM autor WHERE nom = ?",
-            (ps, nom) -> {
-                ps.setLong(1, isbn);
-                ps.setString(2, nom);
-            }, autors);
+        // L'enllaç a llibre_autor es fa amb un INSERT ... VALUES, no amb un
+        // INSERT ... SELECT: MariaDB no admet l'INSERT ... SELECT dins el
+        // protocol de sentències preparades quan el lot té més d'una fila
+        // (error 1295, "This command is not supported in the prepared
+        // statement protocol yet"). Es resol l'id de l'autor amb un SELECT
+        // i s'insereix amb un INSERT ... VALUES, que sí que funcionen a tots
+        // dos els motors.
+        for (String nom : autors) {
+            if (nom == null || nom.isBlank()) continue;
+            Integer autorId = idAutorPerNom(nom);
+            if (autorId == null) continue;
+            MapejadorsFiles.exec(con, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) VALUES (?, ?)",
+                ps -> { ps.setLong(1, isbn); ps.setInt(2, autorId); });
+        }
+    }
+
+    /** Id de l'autor amb aquest nom, o {@code null} si no existeix. */
+    private Integer idAutorPerNom(String nom) throws SQLException {
+        return MapejadorsFiles.queryOneWithParamsOrThrow(con,
+            "SELECT id FROM autor WHERE nom = ?",
+            ps -> ps.setString(1, nom),
+            "Error buscant l'autor '" + nom + "'",
+            rs -> rs.getInt(1));
     }
 }
