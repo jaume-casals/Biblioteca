@@ -257,6 +257,13 @@ dlg_confirm_restore_title,Confirmar restauració,Confirmar restauración,Confirm
 dlg_restore_done,Base de dades restaurada correctament.,Base de datos restaurada correctamente.,Database restored successfully.
 dlg_restore_done_title,Restauració completada,Restauración completada,Restore complete
 dlg_restore_done_cover_note,"ATENCIÓ: Les portades (imatges) NO s''inclouen a la còpia SQL. Després de restaurar, re-descarrega les portades amb el botó Cerca a Internet.","ATENCIÓN: Las portadas (imágenes) NO se incluyen en la copia SQL. Tras restaurar, re-descarga las portadas con el botón Buscar en Internet.","WARNING: Cover images are NOT included in the SQL backup. After restore, re-fetch covers with the Search Internet button."
+dlg_restore_done_with_note,"{0}
+
+{1}","{0}
+
+{1}","{0}
+
+{1}"
 dlg_restore_rollback_failed,"ERROR: La restauració ha fallat I la recuperació automàtica també ha fallat. La base de dades pot estar en un estat inconsistent.\n\nS''ha guardat una còpia de seguretat d''abans de la restauració a:\n{0}\n\nNO desis dades noves en aquesta base de dades. Re-importa el fitxer de còpia de seguretat anterior des del menú Restaurar per recuperar l''estat.","ERROR: La restauración ha fallado Y la recuperación automática también ha fallado. La base de datos puede estar en un estado inconsistente.\n\nSe ha guardado una copia de seguridad de antes de la restauración en:\n{0}\n\nNO guardes datos nuevos en esta base de datos. Re-importa el fichero de copia de seguridad anterior desde el menú Restaurar para recuperar el estado.","ERROR: Restore failed AND the automatic rollback also failed. The database may be in an inconsistent state.\n\nA pre-restore snapshot is saved at:\n{0}\n\nDO NOT save new data to this database. Re-import the snapshot file above via the Restore menu to recover."
 # ── Java: Book detail panel ───────────────────────────────────────────────────
 "dlg_book_detail_title","Expedient del llibre {0}","Ficha del libro {0}","Book details: {0}"
@@ -386,6 +393,7 @@ filter_idioma_lbl,Idioma,Idioma,Language
 filter_format_lbl,Format,Formato,Format
 filter_etiqueta_lbl,Etiqueta:,Etiqueta:,Tag:
 tip_filter_tag,Filtrar per etiqueta/gènere,Filtrar por etiqueta/género,Filter by tag/genre
+tip_filter_substring,"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït","Coincidencia parcial: busca cualquier libro que contenga el texto introducido","Substring match: finds any book that contains the typed text"
 filter_any_lbl,Any,Año,Year
 filter_valoracio_lbl,Valoració,Valoración,Rating
 filter_preu_lbl,Preu,Precio,Price
@@ -425,6 +433,7 @@ dlg_fetch_portades_title,Fetch portades,Descàrrega portades,Fetch covers
 "dlg_fetch_portades_progress","Descarregant portades {0}/{1}...","Descargando portadas {0}/{1}...","Downloading covers {0}/{1}..."
 "dlg_fetch_portades_done","{0} portades noves descarregades de {1} llibres.","{0} portadas nuevas descargadas de {1} libros.","{0} new covers downloaded for {1} books."
 dlg_fetch_portades_done_title,Fetch portades completat,Descarga portadas completada,Cover fetch complete
+dlg_fetch_portades_done_partial,"{0} portades noves descarregades, {2} sense portada a OpenLibrary.","{0} portadas nuevas descargadas, {2} sin portada en OpenLibrary.","{0} new covers downloaded, {2} had no cover on OpenLibrary."
 "dlg_pdf_title","La meva biblioteca — {0} llibres","Mi biblioteca — {0} libros","My library — {0} books"
 pdf_col_title,Títol,Título,Title
 pdf_col_author,Autor,Autor,Author
@@ -529,6 +538,8 @@ dlg_rename_llista_title,"Renombrar llista","Renombrar lista","Rename list"
 dlg_rename_llista_prompt,"Nou nom per a la llista ""{0}"":","Nuevo nombre para la lista ""{0}"":","New name for list ""{0}"":"
 dlg_perfil_confirmar,"Canviar al perfil ""{0}""? Els canvis s'aplicaran al proper reinici.","¿Cambiar al perfil ""{0}""? Los cambios se aplicarán al próximo reinicio.","Switch to profile ""{0}""? Changes take effect on next restart."
 dlg_perfil_confirmar_title,"Confirmar canvi de perfil","Confirmar cambio de perfil","Confirm Profile Switch"
+dlg_perfil_nom_invalid,"El nom del perfil conté caràcters no permesos. Es desarà com a \""{0}\"". Vols continuar?","El nombre del perfil contiene caracteres no permitidos. Se guardará como \""{0}\"". ¿Quieres continuar?","The profile name contains characters that will be replaced. It will be saved as \""{0}\"". Continue?"
+dlg_perfil_nom_invalid_title,"Nom de perfil no vàlid","Nombre de perfil no válido","Invalid profile name"
 splash_loading,"Carregant biblioteca...","Cargando biblioteca...","Loading library..."
 csv_row_too_short,"La fila CSV té menys de 4 columnes requerides.","La fila CSV tiene menos de 4 columnas requeridas.","CSV row has fewer than 4 required columns."
 no_lbl,"No","No","No"

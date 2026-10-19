@@ -25,6 +25,58 @@ PROP_PATHS = {
     "en": os.path.join(REPO, "src", "herramienta", "strings_en.properties"),
 }
 
+def read_text(path):
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding='utf-8') as f:
+        return f.read()
+
+def _scan_quotes(text, in_quotes):
+    """Indica si el text acumulat deixa un camp citat obert.
+
+    Segueix la gramàtica de CSV: una cometa només obre un camp si és
+    l'inici del camp (principi de línia o després d'una coma) i les
+    cometes dobles dins d'un camp citat representen una cometa literal.
+    """
+    i = 0
+    n = len(text)
+    q = in_quotes
+    while i < n:
+        c = text[i]
+        if q:
+            if c == '"':
+                if i + 1 < n and text[i +1] == '"':
+                    i += 2
+                    continue
+                q = False
+        else:
+            if c == '"' and (i == 0 or text[i - 1] == ','):
+                q = True
+        i += 1
+    return q
+
+
+def _iter_records(text):
+    """Divideix el text en registres CSV, admès registres de diverses línies.
+
+    Abans es processava línia a línia, de manera que un camp citat que
+    contingués un salt de línia real es trencava en dos registres (o
+    s'abaixava del tot). El pipeline Java (Rfc4180Reader) sí que admet
+    registres multilínia: el generador ha d'admetre'ls igualment.
+    """
+    buf = []
+    in_quotes = False
+    for line in text.splitlines(keepends=True):
+        buf.append(line)
+        in_quotes = _scan_quotes(line, in_quotes)
+        if not in_quotes:
+            yield ''.join(buf)
+            buf = []
+            in_quotes = False
+    if buf:
+        yield ''.join(buf)
+
+
 def read_csv():
     entries = []  # list of (key, ca, es, en)
     sources = [os.path.join(STRINGS_DIR, name) for name in SPLIT_FILES
@@ -33,8 +85,8 @@ def read_csv():
         sources = [CSV_PATH]
     for path in sources:
         with open(path, newline='', encoding='utf-8') as f:
-            for line in f:
-                stripped = line.strip()
+            for record in _iter_records(f.read()):
+                stripped = record.strip()
                 if not stripped or stripped.startswith('#'):
                     continue
                 row = next(csv.reader([stripped]))
@@ -43,36 +95,36 @@ def read_csv():
                 entries.append((row[0], row[1], row[2], row[3]))
     return entries
 
-_ESCAPE_CHARS = set('ntr"\\\'0')
-
 def _escape(s, quote_escape='"'):
+    """Escapa un text per a un literal Java o per a un fitxer .properties.
+
+    Es distingeixen dues coses que abans es confonien:
+
+    * un salt de línia REAL (\\n) s'escapa com ``\\n`` i es converteix en un
+      salt de línia en temps d'execució;
+    * la seqüència literal de dos caràcters barra invertida + n s'escapa
+      com ``\\\\n`` i es conserva literal en temps d'execució.
+
+    Abans, les dues formes es normalitzaven a la mateixa sortida, de manera
+    que el generador pnia convertir en silenci un text amb ``\\n`` literal
+    en un text amb salt de línia real. La taula Java editada a mà ja
+    respectava aquesta distinció (una barra invertida més); el generador
+    ara hi coincideix.
+    """
     out = []
-    i = 0
-    n = len(s)
-    while i < n:
-        c = s[i]
+    for c in s:
         if c == '\\':
-            if i + 1 < n and s[i + 1] in _ESCAPE_CHARS:
-                out.append('\\' + s[i + 1])
-                i += 2
-            else:
-                out.append('\\\\')
-                i += 1
+            out.append('\\\\')
         elif c == quote_escape:
             out.append('\\' + quote_escape)
-            i += 1
         elif c == '\n':
             out.append('\\n')
-            i += 1
         elif c == '\r':
             out.append('\\r')
-            i += 1
         elif c == '\t':
             out.append('\\t')
-            i += 1
         else:
             out.append(c)
-            i += 1
     return ''.join(out)
 
 def java_str(s):
@@ -153,20 +205,43 @@ def gen_props(entries, lang_idx):
     return '\n'.join(lines)
 
 def main():
+    check_only = "--check" in sys.argv
+    no_java = "--no-java" in sys.argv
     entries = read_csv()
     print(f"S'han llegit {len(entries)} entrades de cadenes")
 
-    java = gen_java(entries)
-    with open(JAVA_PATH, 'w', encoding='utf-8') as f:
-        f.write(java)
-    print(f"Escrit: {JAVA_PATH}")
+    stale = []
+
+    if not no_java:
+        java = gen_java(entries)
+        if check_only:
+            current = read_text(JAVA_PATH)
+            if current != java:
+                stale.append(JAVA_PATH)
+        else:
+            with open(JAVA_PATH, 'w', encoding='utf-8') as f:
+                f.write(java)
+            print(f"Escrit: {JAVA_PATH}")
 
     for lang_code, path in PROP_PATHS.items():
         lang_idx = {"ca": 0, "es": 1, "en": 2}[lang_code]
         props = gen_props(entries, lang_idx)
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(props)
-        print(f"Escrit: {path}")
+        if check_only:
+            if read_text(path) != props:
+                stale.append(path)
+        else:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(props)
+            print(f"Escrit: {path}")
+
+    if check_only:
+        if stale:
+            for p in stale:
+                print(f"DESACTUALITZAT: {p}")
+            print("Els fitxers generats no coincideixen amb strings/*.csv.")
+            print("Regenera amb: python3 scripts/gen_strings.py --no-java")
+            sys.exit(1)
+        print("OK: els fitxers generats coincideixen amb strings/*.csv")
 
 if __name__ == '__main__':
     main()
