@@ -73,7 +73,7 @@ public class ControladorTaula {
     RenderitzadorDestacatCerca highlightRenderer() { return highlightRenderer; }
 
     void posarBooks(List<Llibre> books, EscritorBiblioteca cd, JButton detallesBtn,
-                  Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
+                  Map<Long, ImageIcon> coverCache, Map<Long, Long> coverLoading,
                   Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         tableModel.posarBooks(books);
         rebuildIsbnIndex();
@@ -210,7 +210,7 @@ public class ControladorTaula {
     }
 
     private void installColumns(JTable t, EscritorBiblioteca cd, JButton detallesBtn,
-                                Map<Long, ImageIcon> coverCache, Set<Long> coverLoading,
+                                Map<Long, ImageIcon> coverCache, Map<Long, Long> coverLoading,
                                 Set<Long> loanedIsbns, Consumer<Llibre> onRowUpdated) {
         t.setRowHeight(ROW_HEIGHT);
         for (int i = 0; i < 9; i++) {

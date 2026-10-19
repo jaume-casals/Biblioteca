@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Carregador asíncron + memòria cau LRU d'imatges de coberta pre-escalades.
+ * Carregador asíncron + memòria cau FIFO d'imatges de coberta pre-escalades.
  *
  * <p>Indexada per {@link Llibre#getISBN()}. El valor de la memòria cau és
  * la imatge ja escalada a les dimensions de targeta sol·licitades, de
@@ -40,17 +40,23 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * contra cada altre {@code get()}, cosa que blocava l'EDT en un
  * repaint de 200 targetes (segons la troballa LOW de tot.txt).
  *
- * <p>El {@link LinkedHashMap} s'ordena per inserció
- * ({@code accessOrder=false}) perquè un {@code get()} amb
+ * <p><b>Política d'evicció: FIFO (per inserció), no LRU.</b> El
+ * {@link LinkedHashMap} s'ordena per inserció
+ * ({@code accessOrder=false}) de manera deliberada: un {@code get()} amb
  * {@code accessOrder=true} mutaria estructuralment la llista
  * ({@code afterNodeAccess}), corrompent les lectures concurrents
  * protegides pel lock de lectura — el finding MEDIUM de tot.txt
- * sobre aquesta classe.
+ * sobre aquesta classe. La conseqüència és que llegir una entrada no
+ * la reastaura: l'elementa més antiga inserida és la primera a
+ * expulsar-se, encara que s'acabi de llegir. Convertir la memòria cau
+ * en LRU exigeix protegir les lectures amb el lock d'escriptura (o un
+ * lock d'actualització d'ordre), no només posar {@code accessOrder=true}.
  */
 public final class ServeiImatgesCoberta {
 
     private static final int CACHE_CAPACITY = 150;
-    private static final int CACHE_LOAD_FACTOR = 200; // capacitat inicial per a la LRU
+    /** Capacitat inicial del mapa subjacent; no és la capacitat de la memòria cau. */
+    private static final int CACHE_LOAD_FACTOR = 200;
     private static final float CACHE_LOAD_F = 0.75f;
     private static final int EXECUTOR_THREADS = 4;
 
@@ -228,10 +234,22 @@ public final class ServeiImatgesCoberta {
         if (path != null && !path.isEmpty()) {
             File f = new File(path);
             if (f.exists()) {
-                try (javax.imageio.stream.ImageInputStream iis = ImageIO.createImageInputStream(f)) {
+                // ImageIO.read(InputStream) tanca el mateix flux que li
+                // dones: un try-with-resources sobre aquest ImageInputStream
+                // llançava "IOException: closed" en sortir del bloc, la
+                // captura el silenciava i la coberta emmagatzemada com a
+                // fitxer local acabava mai d'arribar a la memòria cau.
+                javax.imageio.stream.ImageInputStream iis = null;
+                try {
+                    iis = ImageIO.createImageInputStream(f);
                     BufferedImage img = ImageIO.read(iis);
                     if (img != null) return img;
-                } catch (Exception ignored) { }
+                } catch (Exception ignored) {
+                } finally {
+                    if (iis != null) {
+                        try { iis.close(); } catch (Exception ignored) { }
+                    }
+                }
             }
         }
         return null;

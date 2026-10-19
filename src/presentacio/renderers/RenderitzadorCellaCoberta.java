@@ -30,7 +30,7 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
         }
     }
     private final Map<Long, ImageIcon> coverCache;
-    private final Set<Long> coverLoading;
+    private final Map<Long, Long> coverLoading;
     private final LectorLlibre cd;
     private final JTable table;
     /**
@@ -44,12 +44,12 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
     private final java.util.function.LongFunction<Integer> isbnToRow;
 
     public RenderitzadorCellaCoberta(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, LectorLlibre cd) {
+            Map<Long, Long> coverLoading, LectorLlibre cd) {
         this(table, coverCache, coverLoading, cd, null);
     }
 
     public RenderitzadorCellaCoberta(JTable table, Map<Long, ImageIcon> coverCache,
-            Set<Long> coverLoading, LectorLlibre cd,
+            Map<Long, Long> coverLoading, LectorLlibre cd,
             java.util.function.LongFunction<Integer> isbnToRow) {
         this.table = table;
         this.coverCache = coverCache;
@@ -77,8 +77,11 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
                 if (cached != MemoriaImatgesCoberta.NO_COVER) setIcon(cached);
                 return this;
             }
-            if (!coverLoading.contains(isbn)) {
-                coverLoading.add(isbn);
+            // La marca de càrrega es pren de forma atòmica amb un token propi:
+            // una càrrega obsoleta no pot treure el marcador d'una càrrega
+            // més nova del mateix ISBN.
+            final long token = MemoriaImatgesCoberta.nouTokenCarga();
+            if (coverLoading.putIfAbsent(isbn, token) == null) {
                 final Llibre book = l;
                 LOADER.submit(() -> {
                     try {
@@ -86,7 +89,7 @@ public class RenderitzadorCellaCoberta extends JLabel implements TableCellRender
                             presentacio.galeria.ServeiImatgesCoberta.carregarCoverBytes(book, cd));
                         coverCache.put(isbn, img != null ? img : MemoriaImatgesCoberta.NO_COVER);
                     } finally {
-                        coverLoading.remove(isbn);
+                        coverLoading.remove(isbn, token);
                         SwingUtilities.invokeLater(() -> repaintCoverCell(isbn));
                     }
                 });

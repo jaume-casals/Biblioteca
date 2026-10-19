@@ -246,8 +246,12 @@ public class PanelGaleriaCobertes extends JPanel {
         if (card != null) card.scrollRectToVisible(new Rectangle(0, 0, card.getWidth(), card.getHeight()));
     }
 
-    public void actualitzarLlibres(List<Llibre> llibres) {
-        this.currentLlibres = llibres;
+    /** Llibres que la galeria mostra ara mateix. */
+    public List<Llibre> obtenirLlibresVisibles() {
+        return currentLlibres;
+    }
+
+    public void actualitzarLlibres(List<Llibre> llibres) {        this.currentLlibres = llibres;
         selectedISBNs.clear();
         focusedRef[0] = -1;
         cardMap.clear();
