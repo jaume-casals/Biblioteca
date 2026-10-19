@@ -24,11 +24,13 @@ public final class AnalitzadorPrestatgeria {
         if (raw == null || raw.isBlank()) return entries;
         for (String entry : raw.split(";")) {
             String[] parts = entry.split("\\|", 3);
-            // isBlank() no atrapa caràcters NUL / de control; fem servir
-            // trim().isEmpty() perquè un nom com "\0\0\0" es tracti
-            // correctament com a absent.
-            if (parts.length < 1 || parts[0].trim().isEmpty()) continue;
-            String nom = parts[0].trim();
+            // El nom ha de tenir contingut real. strip() neteja l'espai
+            // Unicode (trim() no elimina el separador de línia U+2028 ni
+            // altres espais Unicode) i el NUL no és espai, així que es
+            // descarta explícitament un nom format només per caràcters de
+            // control. Un prestatge sense nom és una dada sense sentit.
+            String nom = parts.length > 0 ? parts[0].strip() : "";
+            if (nom.isEmpty() || nom.chars().allMatch(c -> c < 0x20)) continue;
             double val = parts.length > 1 ? UtilitatsCsv.analitzarDoubleOrZero(parts[1]) : 0.0;
             boolean llegit = parts.length > 2 && analitzarBool(parts[2].trim());
             entries.add(new ShelfEntry(nom, val, llegit));

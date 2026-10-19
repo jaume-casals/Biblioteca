@@ -77,7 +77,7 @@ public class ValidadorLlibre {
 
 	private static String normalizeIsbn13(String isbn) {
 		if (isbn == null) return null;
-		// ISBN-10 amb dígit de control X (p. ex. "019853110X") — converteix a ISBN-13
+		// ISBN-10 amb dígit de control X (p. ex. "020161622X") — converteix a ISBN-13
 		if (isbn.length() > 0 && Character.toUpperCase(isbn.charAt(isbn.length() - 1)) == 'X') {
 			String core = isbn.substring(0, isbn.length() - 1).replaceAll("[^0-9]", "");
 			if (core.length() == 9) {
