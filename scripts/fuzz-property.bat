@@ -3,20 +3,19 @@ setlocal EnableDelayedExpansion
 
 REM Executa els tests de fuzz basats en propietats de jqwik per a la capa de domini.
 REM Mirror de `make fuzz-property` a Linux.
+REM
+REM El classpath ve del lock (build/deps.lock) i la classe es selecciona pel
+REM nom real del fitxer (test/fuzz/domini/TestPropietatsInvariantsLlibre.java):
+REM el nom antic fuzz.domini.LlibreInvariantPropertiesTest no existia i
+REM l'script no executava cap test.
 
-set "CP=bin;lib\h2-2.5.252.jar;lib\mariadb-java-client-3.5.10.jar;lib\gson-2.14.0.jar;lib\apiguardian-api-1.1.2.jar;lib\junit-jupiter-api-5.14.4.jar;lib\junit-jupiter-params-5.14.4.jar;lib\junit-jupiter-engine-5.14.4.jar;lib\junit-platform-launcher-1.14.4.jar;lib\junit-platform-engine-1.14.4.jar;lib\junit-platform-commons-1.14.4.jar;lib\opentest4j-1.3.0.jar;lib\assertj-core-3.27.7.jar;lib\mockito-core-5.24.0.jar;lib\mockito-junit-jupiter-5.24.0.jar;lib\byte-buddy-1.18.15.jar;lib\byte-buddy-agent-1.18.15.jar;lib\objenesis-3.6.jar;lib\jqwik-api-1.10.2.jar;lib\jqwik-engine-1.10.2.jar;lib\jazzer-0.30.0.jar;lib\jazzer-api-0.30.0.jar;lib\jazzer-junit-0.30.0.jar"
+call scripts\_deps.bat
+if errorlevel 1 exit /b 1
+set "CP=bin;%CP_RUNTIME%%CP_TEST%%CP_FUZZ%"
 
 call scripts\compile.bat
 if errorlevel 1 exit /b 1
 
-if not exist lib\jqwik-api-1.10.2.jar (
-    if not exist lib mkdir lib
-    curl -fsSL -o lib\jqwik-api-1.10.2.jar https://repo1.maven.org/maven2/net/jqwik/jqwik-api/1.10.2/jqwik-api-1.10.2.jar
-)
-if not exist lib\jqwik-engine-1.10.2.jar (
-    curl -fsSL -o lib\jqwik-engine-1.10.2.jar https://repo1.maven.org/maven2/net/jqwik/jqwik-engine/1.10.2/jqwik-engine-1.10.2.jar
-)
-
-echo === jqwik: fuzz.domini.LlibreInvariantPropertiesTest ===
-java -Dbiblioteca.test=true -Dbiblioteca.h2.url="jdbc:h2:mem:fuzz_prop;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" -jar lib\junit-platform-console-standalone-1.14.4.jar execute --select-class=fuzz.domini.LlibreInvariantPropertiesTest --details=tree --classpath "%CP%"
+echo === jqwik: fuzz.domini.TestPropietatsInvariantsLlibre ===
+java -Dbiblioteca.test=true -Dbiblioteca.h2.url="jdbc:h2:mem:fuzz_prop;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1" -jar %JUNIT_STANDALONE% execute --select-class=fuzz.domini.TestPropietatsInvariantsLlibre --details=tree --fail-if-no-tests --classpath "%CP%"
 exit /b %ERRORLEVEL%

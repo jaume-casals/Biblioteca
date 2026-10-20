@@ -1,6 +1,9 @@
 @echo off
 setlocal
-set "CP=lib\h2-2.5.252.jar;lib\mariadb-java-client-3.5.10.jar;lib\gson-2.14.0.jar;."
+REM El classpath ve del lock (build/deps.lock), no d'una llista escrita a mà.
+call scripts\_deps.bat
+if errorlevel 1 exit /b 1
+set "CP=bin;%CP_RUNTIME%"
 if exist bin rmdir /s /q bin
 mkdir bin
 dir /s /b src\*.java > classes.txt

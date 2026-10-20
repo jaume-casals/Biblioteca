@@ -44,13 +44,27 @@ def read_lock(path):
             if not m:
                 problems.append("l\u00ednia %d mal formada: %s" % (num, line))
                 continue
-            group, artifact, version = m.group("coord").split(":")
+            coord = m.group("coord")
+            parts = coord.split(":")
+            if len(parts) != 3:
+                problems.append("l\u00ednia %d: coordenada incorrecte (grup:artifact:versio): %s" % (num, coord))
+                continue
+            group, artifact, version = parts
+            tag = m.group("tag")
+            # L'etiqueta es valida en el moment de llegir-la: una etiqueta
+            # amb error (p. ex. "runtine") feia que el jar es baixés i
+            # es verifiqués correctament, però no quedava en cap
+            # classpath — la dependència faltava en silenci.
+            if tag not in TAGS:
+                problems.append("l\u00ednia %d: etiqueta desconeguda %r (v\u00e0lides: %s)"
+                                % (num, tag, ", ".join(TAGS)))
+                continue
             entries.append({
                 "group": group,
                 "artifact": artifact,
                 "version": version,
                 "sha256": m.group("sha"),
-                "tag": m.group("tag"),
+                "tag": tag,
             })
     if problems:
         for p in problems:
@@ -60,22 +74,72 @@ def read_lock(path):
 
 
 def write_lock(path, entries):
-    lines = ["# build/deps.lock \u2014 font \u00fanica de veritat de les depend\u00e8ncies.",
-             "# Format: grup:artifact:versio sha256 etiqueta   (runtime | test | fuzz)",
-             "# Regenera amb: python3 scripts/fetch_deps.py update",
-             ""]
+    """Escriu el lock conservant-ne l'estructura.
+
+    La capçalera, els encapçalaments de secció i els comentaris lliures
+    es reprodueixen tal qual: només canvien les línies d'entrada whose
+    versió o SHA-256 han canviat. Abans el fitxer es regenerava des de
+    zero i es perdien els comentaris escrits a mà (la nota sobre el H2 de
+    referència de build/deps.lock).
+
+    L'escriptura és atòmica (fitxer temporal + os.replace): un
+    `deps-update` interromput ja no deixa un lock truncat al repositori.
+    """
+    by_key = {}
+    for e in entries:
+        by_key[(e["group"], e["artifact"], e["tag"])] = e
+
+    lines = []
+    seen = set()
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.rstrip("\n")
+                stripped = line.strip()
+                m = None
+                if stripped and not stripped.startswith("#"):
+                    m = LINE_RE.match(stripped)
+                if m:
+                    parts = m.group("coord").split(":")
+                    if len(parts) != 3:
+                        lines.append(line)
+                        continue
+                    key = (parts[0], parts[1], m.group("tag"))
+                    e = by_key.get(key)
+                    if e is None:
+                        continue  # entrada eliminada del lock
+                    lines.append("%s:%s:%s %s %s"
+                                 % (e["group"], e["artifact"], e["version"], e["sha256"], e["tag"]))
+                    seen.add(key)
+                else:
+                    lines.append(line)
+    else:
+        lines = ["# build/deps.lock \u2014 font \u00fanica de veritat de les depend\u00e8ncies.",
+                 "# Format: grup:artifact:versio sha256 etiqueta   (runtime | test | fuzz)",
+                 "# Regenera amb: python3 scripts/fetch_deps.py update",
+                 ""]
+
+    # Entrades que no existien al lock original: s'afegeixen al final,
+    # sota l'encapçalament de la seva etiqueta.
+    missing = [e for e in entries
+               if (e["group"], e["artifact"], e["tag"]) not in seen]
     for tag in TAGS:
-        tagged = [e for e in entries if e["tag"] == tag]
+        tagged = [e for e in missing if e["tag"] == tag]
         if not tagged:
             continue
         lines.append("# --- %s ---" % tag)
         for e in tagged:
-            coord = "%s:%s:%s" % (e["group"], e["artifact"], e["version"])
-            lines.append("%s %s %s" % (coord, e["sha256"], e["tag"]))
+            lines.append("%s:%s:%s %s %s"
+                         % (e["group"], e["artifact"], e["version"], e["sha256"], e["tag"]))
         lines.append("")
+
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(lines))
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
 
 
 def jar_name(entry):
@@ -137,7 +201,27 @@ def cmd_classpath(args, entries):
     for e in entries:
         if args.tag in ("all", e["tag"]) or (args.tag == "all"):
             out.append(os.path.join(args.dir, jar_name(e)))
-    print(":".join(out))
+    print(args.sep.join(out))
+    return 0
+
+
+def cmd_jar(args, entries):
+    """Imprimeix el camí d'un artifacte del lock (un per línia).
+
+    Serveix per als scripts .bat de Windows, que necessiten el camí del
+    runner de JUnit sense escriure'l a mà.
+    """
+    found = []
+    for e in entries:
+        if args.tag in ("all", e["tag"]):
+            if not args.artifact or args.artifact == e["artifact"]:
+                found.append(os.path.join(args.dir, jar_name(e)))
+    if not found:
+        sys.stderr.write("ERROR: no s'ha trobat l'artifacte %r (etiqueta %s)\n"
+                         % (args.artifact, args.tag))
+        return 2
+    for p in found:
+        print(p)
     return 0
 
 
@@ -185,6 +269,7 @@ def cmd_verify(args, entries):
 
 def cmd_update(args, entries):
     changed = []
+    failed = []
     for e in entries:
         if e["tag"] == "legacy":
             print("PIN   %s:%s:%s (refer\u00e8ncia, no s'actualitza)" % (e["group"], e["artifact"], e["version"]))
@@ -194,6 +279,7 @@ def cmd_update(args, entries):
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write("WARN  %s:%s no s'ha pogut consultar: %s\n"
                              % (e["group"], e["artifact"], exc))
+            failed.append("%s:%s no s'ha pogut consultar: %s" % (e["group"], e["artifact"], exc))
             continue
         if rel is not None and rel.startswith(e["version"] + "-"):
             # Mateixa versi\u00f3 en una variant d'arquitectura (p. ex. -jdk5).
@@ -215,6 +301,7 @@ def cmd_update(args, entries):
             sys.stderr.write("ERROR %s:%s -> %s no s'ha pogut baixar: %s\n"
                              % (e["group"], e["artifact"], rel, exc))
             e["version"] = old
+            failed.append("%s:%s -> %s no s'ha pogut baixar: %s" % (e["group"], e["artifact"], rel, exc))
             continue
         e["sha256"] = sha256_of(os.path.join(args.dir, jar_name(e)))
         changed.append("%s:%s %s -> %s" % (e["group"], e["artifact"], old, rel))
@@ -228,7 +315,17 @@ def cmd_update(args, entries):
         else:
             print("")
             print("Cap versio nova disponible.")
-        return 0
+        if failed:
+            print("")
+            print("Consultes fallides:")
+            for f in failed:
+                print("  " + f)
+        # Amb --check el codi de sortida informa del resultat: 1 si hi ha
+        # versions noves (el lock s'ha de revisar) o si alguna consulta
+        # de metadades ha fallat (no es pot saber si hi ha versions noves).
+        # Abans retornava 0 sempre, de manera que la CI quedava verda
+        # tant si hi havia actualitzacions com si no.
+        return 1 if (changed or failed) else 0
     write_lock(args.lock, entries)
     if changed:
         print("")
@@ -244,10 +341,13 @@ def cmd_update(args, entries):
 
 def main(argv):
     ap = argparse.ArgumentParser(description="Gestiona les depend\u00e8ncies de Biblioteca.")
-    ap.add_argument("op", choices=["fetch", "verify", "update", "classpath"])
+    ap.add_argument("op", choices=["fetch", "verify", "update", "classpath", "jar"])
     ap.add_argument("--lock", default=DEFAULT_LOCK)
     ap.add_argument("--dir", default=DEFAULT_DIR)
     ap.add_argument("--tag", default="runtime", choices=list(TAGS) + ["all"])
+    ap.add_argument("--artifact", default="", help="amb 'jar': nom de l'artifacte a localitzar")
+    ap.add_argument("--sep", default=os.pathsep,
+                    help="separador del classpath (per defecte, el del sistema operatiu)")
     ap.add_argument("--skip-missing", action="store_true",
                     help="no baixar els jars que faltin (nom\u00e9s verificaci\u00f3)")
     ap.add_argument("--check", action="store_true",
@@ -260,6 +360,8 @@ def main(argv):
     entries = read_lock(args.lock)
     if args.op == "classpath":
         return cmd_classpath(args, entries)
+    if args.op == "jar":
+        return cmd_jar(args, entries)
     if args.op == "fetch":
         return cmd_fetch(args, entries)
     if args.op == "verify":

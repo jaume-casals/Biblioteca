@@ -89,11 +89,11 @@ JAZZER := $(filter-out $(JAZZER_API) $(JAZZER_JUNIT),$(call jar-with,$(CP_FUZZ_W
 
 deps:
 	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
-	@$(PYTHON) $(DEPS_SCRIPT) fetch --lock $(DEPS_LOCK)
+	@$(PYTHON) $(DEPS_SCRIPT) fetch --lock $(DEPS_LOCK) --dir $(DEPS_DIR)
 
 deps-verify:
 	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
-	@$(PYTHON) $(DEPS_SCRIPT) verify --lock $(DEPS_LOCK)
+	@$(PYTHON) $(DEPS_SCRIPT) verify --lock $(DEPS_LOCK) --dir $(DEPS_DIR)
 
 deps-update:
 	@if [ -z "$(PYTHON)" ]; then echo "ERROR: python3 no trobat (necessari per a scripts/$(DEPS_SCRIPT))"; exit 1; fi
@@ -167,11 +167,21 @@ compile: deps
 # Comprova que una base de dades creada amb una versió anterior del driver
 # H2 s'obre amb la versió actual sense perdre dades. Fa servir una base de
 # dades temporal: la base de dades real de l'usuari no s'ha de tocar.
+#
+# L'ordre de definició importa: CP_LEGACY_WORDS s'ha de definir ABANS que
+# H2_LEGACY, perquè amb := (expansió immediata) una referència endavant
+# donaria una llista buida i la comprovació de compatibilitat es faria
+# amb el driver actual (és a dir, no es comprovava res).
+CP_LEGACY_WORDS := $(subst :, ,$(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag legacy --dir $(DEPS_DIR) 2>/dev/null))
 H2_LEGACY := $(call jar-with,$(CP_LEGACY_WORDS),h2-)
-CP_LEGACY_WORDS := $(subst :, ,$(shell $(PYTHON) $(DEPS_SCRIPT) classpath --tag legacy --dir lib 2>/dev/null))
 
 h2-compat: compile deps
 	@mkdir -p build/h2compat build/h2compat-db
+	@if [ -z "$(H2_LEGACY)" ]; then \
+		echo "ERROR: no s'ha resolt cap jar H2 legacy (etiqueta 'legacy' de build/deps.lock)."; \
+		echo "  La comprovació de compatibilitat seria buida: el 'create' usaria el driver actual."; \
+		exit 1; \
+	fi
 	@$(JAVAC) -g -cp bin:$(CP) -d build/h2compat scripts/h2compat/CheckH2Compat.java
 	@rm -f build/h2compat-db/biblioteca.mv.db
 	@echo "== Crea la base de dades amb H2 $(H2_LEGACY) =="

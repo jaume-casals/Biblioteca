@@ -1,12 +1,18 @@
 @echo off
 setlocal EnableDelayedExpansion
-set "CP=bin;lib\h2-2.5.252.jar;lib\mariadb-java-client-3.5.10.jar;lib\gson-2.14.0.jar;lib\apiguardian-api-1.1.2.jar;lib\junit-jupiter-api-5.14.4.jar;lib\junit-jupiter-params-5.14.4.jar;lib\junit-jupiter-engine-5.14.4.jar;lib\junit-platform-launcher-1.14.4.jar;lib\junit-platform-engine-1.14.4.jar;lib\junit-platform-commons-1.14.4.jar;lib\opentest4j-1.3.0.jar;lib\assertj-core-3.27.7.jar;lib\mockito-core-5.24.0.jar;lib\mockito-junit-jupiter-5.24.0.jar;lib\byte-buddy-1.18.15.jar;lib\byte-buddy-agent-1.18.15.jar;lib\objenesis-3.6.jar"
+
+REM El classpath ve del lock (build/deps.lock): abans hi havia una llista
+REM de jars escrita a mà que referenciava artefactes que el lock no conté
+REM (junit-jupiter-api/params/engine-5.14.4, junit-platform-launcher/
+REM engine/commons-1.14.4, mockito-junit-jupiter-5.24.0, opentest4j,
+REM apiguardian) i la compilació fallava amb
+REM "package org.junit.jupiter.api does not exist".
+call scripts\_deps.bat
+if errorlevel 1 exit /b 1
+set "CP=bin;%CP_RUNTIME%%CP_TEST%"
 if exist bin rmdir /s /q bin
 call scripts\compile.bat
 if errorlevel 1 exit /b 1
-if exist scripts\patch_tests_after_web_removal.py (
-  python scripts\patch_tests_after_web_removal.py 2>nul || python3 scripts\patch_tests_after_web_removal.py 2>nul
-)
 dir /s /b test\*.java > test_classes.txt
 javac -g -cp "%CP%" @test_classes.txt -d bin
 if errorlevel 1 (
@@ -32,7 +38,7 @@ REM en Python via scripts\_build_test_classes.py.
 set "DB_COUNTER=0"
 REM Usa un ajudant de Python per enumerar les classes de test de JUnit 5.
 REM Això evita l'extracció de subcadenes `set X=!Y:*\test\=!` fràgil de
-REM cmd.exe (que es comporta de manera inconsistent quan el camí conté la
+REM cmd.exe (que es comporta de manera inconsistient quan el camí conté la
 REM subcadena literal \test\ múltiples vegades o el camí usa barres
 REM normals/invertides).
 if exist test\_test_classes.txt del test\_test_classes.txt
@@ -53,7 +59,7 @@ for /f "usebackq delims=" %%L in ("test\_test_classes.txt") do (
     set /a DB_COUNTER+=1
     set "DB_URL=jdbc:h2:mem:dyn_!DB_COUNTER!;MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1"
     echo === Executant !CLS! (JUnit 5) ===
-    java -Dbiblioteca.test=true -Dbiblioteca.h2.url="!DB_URL!" -jar lib\junit-platform-console-standalone-1.14.4.jar execute --select-class=!CLS! --details=summary --classpath "%CP%"
+    java -Dbiblioteca.test=true -Dbiblioteca.h2.url="!DB_URL!" -jar %JUNIT_STANDALONE% execute --select-class=!CLS! --details=summary --classpath "%CP%"
     if errorlevel 1 set "OVERALL_RC=1"
   )
 )

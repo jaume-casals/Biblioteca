@@ -133,4 +133,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Versions noves disponibles
+        # El codi de sortida és 1 si hi ha versions noves (el lock s'ha de
+        # revisar) o si alguna consulta de metadades ha fallat: abans el
+        # job quedava verd tant si hi havia actualitzacions com si no.
         run: python3 scripts/fetch_deps.py update --check --lock build/deps.lock
