@@ -54,7 +54,11 @@ class ContractPersistenciaMariaDBTest extends ContractPersistenciaBase {
         String user = System.getProperty(PROP_USER, "root");
         String password = System.getProperty(PROP_PASSWORD, "");
         String database = System.getProperty(PROP_DATABASE, ESQUEMA_PER_DEFECTE);
-        Assumptions.assumeFalse("BIBLIOTECA".equals(database),
+        // La comparació és insensible a majúscules: en un servidor amb
+        // lower_case_table_names=1 (Windows i macOS per defecte) l'esquema
+        // de producció es diu "biblioteca", i la comparació exacta
+        // deixava passar el contracte contra la base de dades real.
+        Assumptions.assumeFalse("BIBLIOTECA".equalsIgnoreCase(database),
             "El contracte de proves no ha d'escriure a l'esquema de producció BIBLIOTECA");
 
         return ControladorPersistencia.create(new ConnectionConfig(
