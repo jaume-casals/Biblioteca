@@ -42,6 +42,10 @@ public final class PerfBench {
     private static int csvRows = 2000;
     private static int coverBooks = 200;
     private static int bulkEdits = 100;
+    private static boolean fileBased;
+    private static String profileScenario;
+    private static int profileSeconds = 20;
+    private static java.io.File dbDir;
 
     private static int sink;
 
@@ -53,6 +57,9 @@ public final class PerfBench {
                 case "--csv-rows" -> csvRows = Integer.parseInt(args[++i]);
                 case "--cover-books" -> coverBooks = Integer.parseInt(args[++i]);
                 case "--bulk-edits" -> bulkEdits = Integer.parseInt(args[++i]);
+                case "--file" -> fileBased = true;
+                case "--profile" -> profileScenario = args[++i];
+                case "--profile-seconds" -> profileSeconds = Integer.parseInt(args[++i]);
                 default -> {
                     System.err.println("Opcio desconeguda: " + args[i]);
                     return;
@@ -60,12 +67,25 @@ public final class PerfBench {
             }
         }
         System.out.printf(Locale.ROOT,
-            "PerfBench  llibres=%d  reps=%d  csvRows=%d  coverBooks=%d  bulkEdits=%d%n%n",
-            books, reps, csvRows, coverBooks, bulkEdits);
+            "PerfBench  llibres=%d  reps=%d  csvRows=%d  coverBooks=%d  bulkEdits=%d  mode=%s%n%n",
+            books, reps, csvRows, coverBooks, bulkEdits, fileBased ? "fitxer" : "memoria");
 
         String dbName = "perfbench-" + Long.toHexString(System.nanoTime());
-        String realUrl = "jdbc:h2:mem:" + dbName + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
+        String realUrl;
+        if (fileBased) {
+            dbDir = java.nio.file.Files.createTempDirectory("perfbench").toFile();
+            dbDir.deleteOnExit();
+            realUrl = "jdbc:h2:" + dbDir.getAbsolutePath() + "/" + dbName
+                + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
+        } else {
+            realUrl = "jdbc:h2:mem:" + dbName + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
+        }
         System.out.printf(Locale.ROOT, "URL: %s%n%n", realUrl);
+
+        if (profileScenario != null) {
+            profile(realUrl, dbName);
+            return;
+        }
 
         ControladorPersistencia cp = ControladorPersistencia.create(
             new ConnectionConfig("h2", "localhost", "sa", "", dbName, realUrl));
@@ -128,6 +148,9 @@ public final class PerfBench {
                 () -> { sink = cp.cercarLlibres(LlibreFilter.empty().withNom("Llibre 1"), 0, 0).size(); return 0; },
                 () -> countStatements(con, () -> { sink = cp.cercarLlibres(LlibreFilter.empty().withNom("Llibre 1"), 0, 0).size(); return 0; }));
 
+            System.out.println("--- SQL en brut (aillant el cost de la projeccio) ---");
+            rawProbes(con, reps);
+
             System.out.println("--- escriptura ---");
 
             measure("actualitza  update x" + bulkEdits, reps,
@@ -144,9 +167,140 @@ public final class PerfBench {
 
     // ── Escriptures ───────────────────────────────────────────────────────────
 
+    /**
+     * Sondeja el SQL en brut per aïllar el cost de la projecció i del DISTINCT
+     * del cost del transport i del mapeig Java.
+     */
+    private static void rawProbes(Connection con, int reps) {
+        String light = "l.ISBN, l.nom, (SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') "
+            + "FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, "
+            + "l.`any`, l.valoracio, l.preu, l.llegit, l.imatge, (l.imatge_blob IS NOT NULL) AS has_blob, "
+            + "l.pagines, l.pagines_llegides, l.editorial, l.serie, l.volum, l.data_compra, l.data_lectura, "
+            + "l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, "
+            + "l.nom_ca, l.nom_es, l.nom_en";
+        String heavy = "l.ISBN, l.nom, (SELECT GROUP_CONCAT(a.nom ORDER BY a.nom SEPARATOR ', ') "
+            + "FROM llibre_autor la JOIN autor a ON la.autor_id = a.id WHERE la.isbn = l.ISBN) AS autor, "
+            + "l.`any`, l.descripcio, l.valoracio, l.preu, l.llegit, l.imatge, (l.imatge_blob IS NOT NULL) AS has_blob, "
+            + "l.pagines, l.pagines_llegides, l.editorial, l.serie, l.volum, l.data_compra, l.data_lectura, "
+            + "l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, l.exemplars, l.llengua_original, "
+            + "l.nom_ca, l.nom_es, l.nom_en, l.notes";
+        String noAutor = "l.ISBN, l.nom, '' AS autor, l.`any`, l.valoracio, l.preu, l.llegit, l.imatge, "
+            + "(l.imatge_blob IS NOT NULL) AS has_blob, l.pagines, l.pagines_llegides, l.editorial, l.serie, "
+            + "l.volum, l.data_compra, l.data_lectura, l.idioma, l.format, l.desitjat, l.pais_origen, l.estat, "
+            + "l.exemplars, l.llengua_original, l.nom_ca, l.nom_es, l.nom_en";
+
+        raw(con, reps, "SQL  llista lleugera (amb subconsulta autor)", "SELECT " + light + " FROM llibre l ORDER BY l.ISBN");
+        raw(con, reps, "SQL  llista lleugera (sense autor)", "SELECT " + noAutor + " FROM llibre l ORDER BY l.ISBN");
+        raw(con, reps, "SQL  llista pesada (amb autor+notes)", "SELECT " + heavy + " FROM llibre l ORDER BY l.ISBN");
+        raw(con, reps, "SQL  pagina DISTINCT pesada (actual)", "SELECT DISTINCT " + heavy + " FROM llibre l ORDER BY l.ISBN LIMIT 100 OFFSET 0");
+        raw(con, reps, "SQL  pagina DISTINCT lleugera", "SELECT DISTINCT " + light + " FROM llibre l ORDER BY l.ISBN LIMIT 100 OFFSET 0");
+        raw(con, reps, "SQL  pagina lleugera sense DISTINCT", "SELECT " + light + " FROM llibre l ORDER BY l.ISBN LIMIT 100 OFFSET 0");
+        raw(con, reps, "SQL  pagina pesada sense DISTINCT", "SELECT " + heavy + " FROM llibre l ORDER BY l.ISBN LIMIT 100 OFFSET 0");
+
+        int off = Math.max(0, books - 100);
+        rawP(con, reps, "SQL  pagina DISTINCT pesada OFFSET " + off,
+            "SELECT DISTINCT " + heavy + " FROM llibre l ORDER BY l.ISBN LIMIT ? OFFSET ?", off);
+        rawP(con, reps, "SQL  pagina DISTINCT lleugera OFFSET " + off,
+            "SELECT DISTINCT " + light + " FROM llibre l ORDER BY l.ISBN LIMIT ? OFFSET ?", off);
+        rawP(con, reps, "SQL  pagina lleugera sense DISTINCT OFFSET " + off,
+            "SELECT " + light + " FROM llibre l ORDER BY l.ISBN LIMIT ? OFFSET ?", off);
+        rawP(con, reps, "SQL  pagina pesada sense DISTINCT OFFSET " + off,
+            "SELECT " + heavy + " FROM llibre l ORDER BY l.ISBN LIMIT ? OFFSET ?", off);
+
+        // Mateixa consulta, però extraient les columnes com ho fa el mapper:
+        // separa el cost del motor del cost del mapeig Java.
+        rawMap(con, reps, "MAP  pagina DISTINCT pesada OFFSET " + off, heavy, off);
+        rawMap(con, reps, "MAP  pagina lleugera sense DISTINCT OFFSET " + off, light, off);
+        rawMap(con, reps, "MAP  llista lleugera completa (5000 files)", light, -1);
+    }
+
+    private static void rawP(Connection con, int reps, String label, String sql, int offset) {
+        long best = Long.MAX_VALUE;
+        long rows = 0;
+        for (int r = 0; r < reps; r++) {
+            long t0 = System.nanoTime();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, 100);
+                ps.setInt(2, offset);
+                try (ResultSet rs = ps.executeQuery()) {
+                    rows = 0;
+                    while (rs.next()) rows++;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            long dt = System.nanoTime() - t0;
+            if (dt < best) best = dt;
+        }
+        report(label, best, 0, (int) rows);
+    }
+
+    /** Mateixa consulta que {@link #rawP} però llegint totes les columnes. */
+    private static void rawMap(Connection con, int reps, String label, String cols, int offset) {
+        String sql = "SELECT " + cols + " FROM llibre l ORDER BY l.ISBN"
+            + (offset >= 0 ? " LIMIT ? OFFSET ?" : "");
+        long best = Long.MAX_VALUE;
+        long rows = 0;
+        for (int r = 0; r < reps; r++) {
+            long t0 = System.nanoTime();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                if (offset >= 0) { ps.setInt(1, 100); ps.setInt(2, offset); }
+                try (ResultSet rs = ps.executeQuery()) {
+                    rows = 0;
+                    while (rs.next()) {
+                        rows++;
+                        rs.getLong("ISBN");
+                        rs.getString("nom");
+                        rs.getString("autor");
+                        rs.getObject("any", Integer.class);
+                        rs.getBoolean("has_blob");
+                        rs.getInt("pagines");
+                        rs.getInt("pagines_llegides");
+                        rs.getString("editorial");
+                        rs.getString("serie");
+                        rs.getInt("volum");
+                        rs.getString("data_compra");
+                        rs.getString("data_lectura");
+                        rs.getString("idioma");
+                        rs.getString("format");
+                        rs.getBoolean("desitjat");
+                        rs.getString("pais_origen");
+                        rs.getString("estat");
+                        rs.getInt("exemplars");
+                        rs.getString("llengua_original");
+                        rs.getString("nom_ca");
+                        rs.getString("nom_es");
+                        rs.getString("nom_en");
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            long dt = System.nanoTime() - t0;
+            if (dt < best) best = dt;
+        }
+        report(label, best, 0, (int) rows);
+    }
+
+    private static void raw(Connection con, int reps, String label, String sql) {
+        long best = Long.MAX_VALUE;
+        long rows = 0;
+        for (int r = 0; r < reps; r++) {
+            long t0 = System.nanoTime();
+            try (Statement s = con.createStatement(); ResultSet rs = s.executeQuery(sql)) {
+                rows = 0;
+                while (rs.next()) rows++;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            long dt = System.nanoTime() - t0;
+            if (dt < best) best = dt;
+        }
+        report(label, best, 0, (int) rows);
+    }
+
     /** Temps de cada pàgina individualment, per veure com creix amb l'OFFSET. */
-    private static void perPageBreakdown(ControladorPersistencia cp) {
-        StringBuilder sb = new StringBuilder("    per-pagina (ms): ");
+    private static void perPageBreakdown(ControladorPersistencia cp) {        StringBuilder sb = new StringBuilder("    per-pagina (ms): ");
         for (int off = 0; off < books; off += 100) {
             long t0 = System.nanoTime();
             cp.cercarLlibres(LlibreFilter.empty(), off, 100);
@@ -199,7 +353,7 @@ public final class PerfBench {
         String counts = "";
         for (int r = 0; r < reps; r++) {
             String dbName = "perfimport-" + Long.toHexString(System.nanoTime()) + "-" + r;
-            String u = "jdbc:h2:mem:" + dbName + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
+            String u = novaUrl(dbName);
             ControladorPersistencia cp = ControladorPersistencia.create(
                 new ConnectionConfig("h2", "localhost", "sa", "", dbName, u));
             try {
@@ -218,7 +372,7 @@ public final class PerfBench {
         // Passatge de comptatge: base nova, mateix contingut.
         {
             String dbName = "perfimport-count-" + Long.toHexString(System.nanoTime());
-            String u = "jdbc:h2:mem:" + dbName + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
+            String u = novaUrl(dbName);
             ControladorPersistencia cp = ControladorPersistencia.create(
                 new ConnectionConfig("h2", "localhost", "sa", "", dbName, u));
             try {
@@ -232,6 +386,43 @@ public final class PerfBench {
         }
         report("importa  importarCSV(" + csvRows + " files)", best, bestStmts, csvRows);
         System.out.printf(Locale.ROOT, "    %s%n", counts);
+    }
+
+    /**
+     * Mode de perfil: repeteix un flux durant {@code --profile-seconds}
+     * segons perquè el JFR pugui mostrejar-lo.
+     */
+    private static void profile(String url, String dbName) throws Exception {
+        ControladorPersistencia cp = ControladorPersistencia.create(
+            new ConnectionConfig("h2", "localhost", "sa", "", dbName, url));
+        Connection con = cp.obtenirConnexio();
+        try (Statement st = con.createStatement()) {
+            st.execute("SET QUERY_CACHE_SIZE 0");
+        } catch (Exception ignored) {}
+        seed(con);
+        long end = System.nanoTime() + profileSeconds * 1_000_000_000L;
+        long n = 0;
+        while (System.nanoTime() < end) {
+            switch (profileScenario) {
+                case "list" -> sink = cp.obtenirAllLlibresSummary().size();
+                case "page" -> sink = cp.cercarLlibres(LlibreFilter.empty(), (int) (n % 50) * 100, 100).size();
+                case "update" -> { bulkUpdate(cp); n += bulkEdits; }
+                default -> throw new IllegalArgumentException("Escenari de perfil desconegut: " + profileScenario);
+            }
+            n++;
+        }
+        System.out.println("PROFILE-DONE " + profileScenario + " iter=" + n + " sink=" + sink);
+    }
+
+    /** URL nova segons el mode (memòria o fitxer). */
+    private static String novaUrl(String dbName) throws Exception {
+        if (fileBased) {
+            java.io.File d = java.nio.file.Files.createTempDirectory("perfimport").toFile();
+            d.deleteOnExit();
+            return "jdbc:h2:" + d.getAbsolutePath() + "/" + dbName
+                + ";MODE=MySQL;NON_KEYWORDS=VALUE;CACHE_SIZE=8192";
+        }
+        return "jdbc:h2:mem:" + dbName + ";MODE=MySQL;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1";
     }
 
     private static void measureCovers(int reps, ControladorPersistencia cp, Connection con) throws Exception {
@@ -394,15 +585,23 @@ public final class PerfBench {
     private interface Body { long run(); }
 
     private static void measure(String label, int reps, Body timed, Body counted) {
-        long best = Long.MAX_VALUE;
+        // Escalfar: sense això, el primer flux mapat es mesura amb el JIT
+        // encara fred i el resultat depèn de l'ordre dels escenaris.
+        for (int i = 0; i < 3; i++) timed.run();
+        long[] times = new long[reps];
         for (int r = 0; r < reps; r++) {
             long t0 = System.nanoTime();
             timed.run();
-            long dt = System.nanoTime() - t0;
-            if (dt < best) best = dt;
+            times[r] = System.nanoTime() - t0;
         }
+        long[] sorted = times.clone();
+        java.util.Arrays.sort(sorted);
+        long med = sorted[sorted.length / 2];
         long stmts = counted.run();
-        report(label, best, stmts, 0);
+        double ms = sorted[0] / 1_000_000.0;
+        System.out.printf(Locale.ROOT, "%-42s millor=%9.3f ms  mediana=%9.3f ms%s%n",
+            label, ms, med / 1_000_000.0,
+            stmts > 0 ? String.format(Locale.ROOT, "  sentencies=%d", stmts) : "");
     }
 
     private static void report(String label, long bestNanos, long statements, int units) {

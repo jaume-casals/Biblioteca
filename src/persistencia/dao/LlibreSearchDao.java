@@ -28,8 +28,20 @@ public class LlibreSearchDao {
         if (pageSize < 0) throw new IllegalArgumentException("pageSize must be >= 0 (0 means no limit); got " + pageSize);
         if (offset < 0) throw new IllegalArgumentException("offset must be >= 0; got " + offset);
         ArrayList<Llibre> result = new ArrayList<>();
+        // Projecció lleugera: la taula no mostra descripcio ni notes, i el
+        // panell de detalls les carrega a màdul quan l'usuari obre un llibre
+        // (ControladorPanellDetallsLlibre). Projectar-les aquí obligava a
+        // transferring-les i materialitzar-les per cada pàgina.
+        //
+        // Sense DISTINCT: els dos únics JOIN possibles són sobre claus
+        // primàries compostes amb un valor fix (llibre_llista es connecta per
+        // (isbn, llista_id) i llibre_tag per (isbn, tag_id)), de manera que
+        // cap llibre pot aparèixer duplicat. El DISTINCT era, per tant, una
+        // deduplicació de files ja úniques — la part cara és que obliga el
+        // motor a materialitzar i comparar la fila sencera (descripcio i
+        // notes incloses) abans d'aplicar el LIMIT/OFFSET.
         StringBuilder sql = new StringBuilder(
-            "SELECT DISTINCT " + LlibreDaoCore.LLIBRE_COLUMNS_L + " FROM llibre l");
+            "SELECT " + LlibreDaoCore.LLIBRE_COLUMNS_L_LIGHT + " FROM llibre l");
         List<Object> params = new ArrayList<>();
         if (f.obtenirLlistaId() != null) {
             sql.append(" JOIN llibre_llista ll ON l.ISBN = ll.isbn AND ll.llista_id = ?");
@@ -83,7 +95,8 @@ public class LlibreSearchDao {
                 LlibreFieldBindings.bind(ps, i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) result.add(LlibreMapper.buildLlibre(rs));
+                LlibreMapper.Cols cols = new LlibreMapper.Cols(rs);
+                while (rs.next()) result.add(LlibreMapper.buildLlibreLight(rs, cols));
             }
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error en searchLlibres: " + e.getMessage(), e);

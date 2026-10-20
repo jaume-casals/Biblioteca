@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import persistencia.dao.LlibreDaoCore;
 import persistencia.internal.LlibreFieldBindings;
 import persistencia.internal.Schema;
 import persistencia.row.AutorRow;
@@ -179,15 +178,38 @@ public class ServeiCopiaSeguretat {
         // lleugera (sense descripcio ni notes). Abans de substituir la
         // instantània, es carreguen els camps pesats de cadascun: una còpia
         // de seguretat sense descripcions ni notes no serveix per restaurar.
-        for (Llibre l : bib) {
-            if (l != null && !l.teCampsPesatsCarregats()) {
-                cp.carregarHeavyFields(l.obtenirISBN(), l);
-            }
-        }
+        //
+        // La càrrega és EN LOTS (un sol SELECT ... WHERE isbn IN (...)),
+        // no un viatge per llibre: el camí automàtic de 24 h trigaria
+        // 5 000 viatges en una biblioteca de 5 000 llibres, i cadascun
+        // d'ells agafa el monitor de ControladorPersistencia (bloquejant
+        // la resta de la persistència).
+        preLoadHeavyFieldsBatched(bib);
         snap.bib = new java.util.ArrayList<>(bib);
         snap.llistes = new java.util.ArrayList<>(llistes);
         snap.tags = new java.util.ArrayList<>(tags);
         copiaSegToSQL(file, snap);
+    }
+
+    /** Precàrrega en un sol viatge els camps pesats ({@code descripcio},
+     *  {@code notes}) dels llibres que encara no els tenen. Els llibres
+     *  que ja els tenen es salten. */
+    private void preLoadHeavyFieldsBatched(List<Llibre> bib) {
+        java.util.Map<Long, Llibre> targets = new java.util.HashMap<>();
+        for (Llibre l : bib) {
+            if (l != null && !l.teCampsPesatsCarregats()) targets.put(l.obtenirISBN(), l);
+        }
+        if (targets.isEmpty()) return;
+        try {
+            cp.carregarHeavyFieldsBatched(new java.util.ArrayList<>(targets.keySet()), targets::get);
+        } catch (RuntimeException e) {
+            // Best-effort: si la càrrega agrupada falla, la còpia continua
+            // amb files lleugeres (descripcio/notes buides) en lloc de
+            // deixar la còpia de seguretat sense fer.
+            LOG.log(Level.WARNING,
+                "La precàrrega agrupada de camps pesats ha fallat; la còpia utilitzarà files lleugeres: "
+                    + e.getMessage());
+        }
     }
 
     public void copiaSegToSQL(File file, persistencia.internal.ControladorPersistencia.BackupSnapshot snap) throws java.io.IOException {

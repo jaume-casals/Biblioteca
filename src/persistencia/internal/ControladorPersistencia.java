@@ -271,11 +271,20 @@ public class ControladorPersistencia {
 	 *  durant la captura esperarà fins que la captura acabi, de
 	 *  manera que el fitxer resultant no pot contenir files
 	 *  {@code llibre_autor}/{@code llibre_llista}/{@code llibre_tag}
-	 *  amb ISBN absent del {@code Llibre} capturat. */
+	 *  amb ISBN absent del {@code Llibre} capturat.
+	 *
+	 *  <p><b>{@code bib} és un valor de reserva.</b> Els dos consumidors
+	 *  ({@code DelegatCopiaSeguretat} i {@code ServeiCopiaSeguretat})
+	 *  substitueixen el valor pel seu: la llista de llibres amb els camps
+	 *  pesats ja carregats. Abans la captura feia una consulta amb tota
+	 *  la projecció ({@code descripcio} i {@code notes} materialitzades) que
+	 *  es descartava sempre, bloquejant a més tota la persistència
+	 *  (el monitor d'aquesta classe) durant la durada de l'escaneig. Ara
+	 *  es fa la vista lleugera, que és molt més barata. */
 	public BackupSnapshot snapshotForBackup() {
 		synchronized (this) {
 			BackupSnapshot s = new BackupSnapshot();
-			s.bib = libreDaoCore.obtenirAllComplets();
+			s.bib = libreDaoCore.obtenirAll();
 			s.llistes = llistaDao.obtenirAll();
 			s.tags = tagDao.obtenirAll();
 			s.autors = autorDao.obtenirAll();

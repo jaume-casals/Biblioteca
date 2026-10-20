@@ -8,8 +8,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Map;
 
 import domini.Llibre;
 import persistencia.internal.LlibreFieldBindings;
@@ -223,11 +224,15 @@ public class LlibreDaoCore {
             try (Statement stmt = con.createStatement();
                  ResultSet rs = stmt.executeQuery(
                     "SELECT " + LLIBRE_COLUMNS_L_LIGHT + " FROM llibre l ORDER BY l.ISBN")) {
+                // Els indexs de columna es resolen una vegada per consulta,
+                // no per fila: resoldre'ls dins del bucle tornaria a pagar
+                // la cerca de nom de columna del driver per cada llibre.
+                LlibreMapper.Cols cols = new LlibreMapper.Cols(rs);
                 while (rs.next()) {
-                    Llibre l = LlibreMapper.buildLlibreLight(rs);
+                    Llibre l = LlibreMapper.buildLlibreLight(rs, cols);
                     String autor = l.obtenirAutor();
                     if (autor != null && !autor.isBlank()) {
-                        l.posarAutors(java.util.Arrays.asList(autor.split(", ", -1)));
+                        l.posarAutorsDeText(autor);
                     }
                     biblio.add(l);
                 }
@@ -249,11 +254,12 @@ public class LlibreDaoCore {
             try (Statement stmt = con.createStatement();
                  ResultSet rs = stmt.executeQuery(
                     "SELECT " + LLIBRE_COLUMNS_L + " FROM llibre l ORDER BY l.ISBN")) {
+                LlibreMapper.Cols cols = new LlibreMapper.Cols(rs);
                 while (rs.next()) {
-                    Llibre l = LlibreMapper.buildLlibre(rs);
+                    Llibre l = LlibreMapper.buildLlibre(rs, cols);
                     String autor = l.obtenirAutor();
                     if (autor != null && !autor.isBlank()) {
-                        l.posarAutors(java.util.Arrays.asList(autor.split(", ", -1)));
+                        l.posarAutorsDeText(autor);
                     }
                     biblio.add(l);
                 }
@@ -270,7 +276,8 @@ public class LlibreDaoCore {
                 "SELECT " + LLIBRE_COLUMNS_L + " FROM llibre l ORDER BY l.data_afegit DESC LIMIT ?")) {
             ps.setInt(1, n);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) result.add(LlibreMapper.buildLlibre(rs));
+                LlibreMapper.Cols cols = new LlibreMapper.Cols(rs);
+                while (rs.next()) result.add(LlibreMapper.buildLlibre(rs, cols));
             }
         } catch (SQLException e) {
             throw new domini.BibliotecaException("Error carregant els llibres recents: " + e.getMessage(), e);
@@ -288,7 +295,12 @@ public class LlibreDaoCore {
                 ps.execute();
             }
             List<String> autorsSync = resoldreAutorsSync(ll);
-            if (!autorsSync.isEmpty()) sincronitzarAutors(ll.obtenirISBN(), autorsSync);
+            // Es crea el llibre ara mateix: l'ISBN és clau primària, de manera
+            // que l'INSERT només pot tenir èxit si el llibre era nou. Per
+            // tant, no hi pot haver enllaços a llibre_autor que el referenciïn
+            // i el DELETE previ és una operació garantidament buida: s'estalvia
+            // una anada i tornada al servidor per cada llibre importat.
+            if (!autorsSync.isEmpty()) sincronitzarAutors(ll.obtenirISBN(), autorsSync, false);
         });
     }
 
@@ -558,13 +570,35 @@ public class LlibreDaoCore {
     }
 
     private void sincronitzarAutors(long isbn, List<String> autors) throws SQLException {
-        try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
-            del.setLong(1, isbn);
-            del.execute();
+        sincronitzarAutors(isbn, autors, true);
+    }
+
+    /**
+     * Sincronitza els enllaços d'autor d'un llibre.
+     *
+     * @param esborraEnllaços si és fals, no esborra els enllaços existents.
+     *        Només es pot fer quan el llibre acabat de crear-se (no hi pot
+     *        haver enllaços que el referenciïn).
+     */
+    private void sincronitzarAutors(long isbn, List<String> autors, boolean esborraEnllaços) throws SQLException {
+        if (esborraEnllaços) {
+            try (PreparedStatement del = con.prepareStatement("DELETE FROM llibre_autor WHERE isbn = ?")) {
+                del.setLong(1, isbn);
+                del.execute();
+            }
         }
         if (autors == null || autors.isEmpty()) return;
+        // Noms d'autor vàlids i sense duplicats, en ordre d'aparició. Els
+        // duplicats eren inofensius (INSERT IGNORE i PRIMARY KEY), però
+        // multiplicaven les consultes.
+        List<String> noms = new ArrayList<>(autors.size());
+        for (String nom : autors) {
+            if (nom == null || nom.isBlank()) continue;
+            if (!noms.contains(nom)) noms.add(nom);
+        }
+        if (noms.isEmpty()) return;
         executarBatchAutors(con, "INSERT IGNORE INTO autor (nom) VALUES (?)",
-            (ps, nom) -> ps.setString(1, nom), autors);
+            (ps, nom) -> ps.setString(1, nom), noms);
         // L'enllaç a llibre_autor es fa amb un INSERT ... VALUES, no amb un
         // INSERT ... SELECT: MariaDB no admet l'INSERT ... SELECT dins el
         // protocol de sentències preparades quan el lot té més d'una fila
@@ -572,21 +606,62 @@ public class LlibreDaoCore {
         // statement protocol yet"). Es resol l'id de l'autor amb un SELECT
         // i s'insereix amb un INSERT ... VALUES, que sí que funcionen a tots
         // dos els motors.
-        for (String nom : autors) {
-            if (nom == null || nom.isBlank()) continue;
-            Integer autorId = idAutorPerNom(nom);
-            if (autorId == null) continue;
-            MapejadorsFiles.exec(con, "INSERT IGNORE INTO llibre_autor (isbn, autor_id) VALUES (?, ?)",
-                ps -> { ps.setLong(1, isbn); ps.setInt(2, autorId); });
+        //
+        // La resolució dels ids es fa amb UNA consulta (UNION ALL de tantes
+        // igualdades com hi ha autors) en lloc d'un SELECT per autor, i els
+        // enllaços s'insereixen en un únic lot. La sincronització d'un llibre
+        // amb A autors costava 2 + 2A sentències (esborrat, inserció dels
+        // autors i, per cada autor, un SELECT i un INSERT); ara en costa 4,
+        // sigui quin sigui A. Amb un sol autor el nombre de sentències és
+        // el mateix, però hi ha un viatge menys al servidor per llibre
+        // importat (el DELETE no cal en un llibre nou).
+        //
+        // S'ha mantingut la igualtat nominal "nom = ?" de la versió anterior
+        // (i no un "nom IN (...)") perquè la col·lació de la columna pot ser
+        // insensitiva a majúscules (MariaDB) o sensible (H2): la igualtat
+        // exacta és la que el motor aplicava abans, i la correspondència
+        // fila↔nom es resol per la posició de la branca, no pel nom retornat.
+        Map<String, Integer> ids = idsAutorsPerNom(noms);
+        if (ids.isEmpty()) return;
+        try (PreparedStatement ps = con.prepareStatement(
+                "INSERT IGNORE INTO llibre_autor (isbn, autor_id) VALUES (?, ?)")) {
+            for (String nom : noms) {
+                Integer autorId = ids.get(nom);
+                if (autorId == null) continue;
+                ps.setLong(1, isbn);
+                ps.setInt(2, autorId);
+                ps.addBatch();
+            }
+            ps.executeBatch();
         }
     }
 
-    /** Id de l'autor amb aquest nom, o {@code null} si no existeix. */
-    private Integer idAutorPerNom(String nom) throws SQLException {
-        return MapejadorsFiles.queryOneWithParamsOrThrow(con,
-            "SELECT id FROM autor WHERE nom = ?",
-            ps -> ps.setString(1, nom),
-            "Error buscant l'autor '" + nom + "'",
-            rs -> rs.getInt(1));
+    /**
+     * Ids dels autors amb els noms donats, resolts en una sola consulta.
+     *
+     * <p>Cada autor es cerca amb la seva pròpia igualtat {@code nom = ?}
+     * (exactament la del {@code SELECT} individual anterior) i la branca
+     * corresponent porta la seva posició, de manera que el resultat es
+     * torna a associar al nom correcte sense Depends de la col·lació.
+     */
+    private Map<String, Integer> idsAutorsPerNom(List<String> noms) throws SQLException {
+        StringBuilder sql = new StringBuilder(noms.size() * 48);
+        for (int i = 0; i < noms.size(); i++) {
+            if (i > 0) sql.append(" UNION ALL ");
+            sql.append("SELECT ").append(i).append(" AS pos, id FROM autor WHERE nom = ?");
+        }
+        Map<Integer, Integer> perPosicio = new HashMap<>();
+        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            for (int i = 0; i < noms.size(); i++) ps.setString(i + 1, noms.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) perPosicio.put(rs.getInt(1), rs.getInt(2));
+            }
+        }
+        Map<String, Integer> out = new HashMap<>();
+        for (int i = 0; i < noms.size(); i++) {
+            Integer id = perPosicio.get(i);
+            if (id != null) out.put(noms.get(i), id);
+        }
+        return out;
     }
 }
