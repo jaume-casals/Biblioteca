@@ -68,7 +68,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Comprova que els fitxers generats estan al dia
-        run: python3 scripts/gen_strings.py --check --no-java
+        run: python3 scripts/gen_strings.py --check
+      - name: Invariants d'escapament del generador
+        run: python3 scripts/test_gen_strings.py
 
   h2-compat:
     name: Compatibilitat H2

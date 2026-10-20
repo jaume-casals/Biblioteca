@@ -625,10 +625,13 @@ installer-linux: fat-jar icon
 strings:
 	@python3 scripts/gen_strings.py
 
-# Comprova que els fitxers generats (.properties) coincideixen amb
-# strings/*.csv. És el mateix gate que executa la CI.
+# Comprova que els fitxers generats (I18n.java i els tres .properties)
+# coincideixen amb strings/*.csv. És el mateix gate que executa la CI.
+# Abans només es gatejaven els .properties: la taula Java — l'única que
+# l'aplicació llegeix en temps d'execució — podia quedar obsoleta sense
+# que la CI ho notés (veure docs/I18N-NEWLINES.md).
 strings-check:
-	@python3 scripts/gen_strings.py --check --no-java
+	@python3 scripts/gen_strings.py --check
 
 # Proves de les invariants d'escapament i de llegenda del generador.
 strings-test:

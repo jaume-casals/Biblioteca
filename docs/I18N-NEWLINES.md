@@ -4,39 +4,48 @@ Document de referència per a la decisió pendent sobre com s'escriu un salt
 de línia dins d'una cadena traduïda (`strings/*.csv` → `herramienta/i18n/I18n.java`
 i `herramienta/strings_*.properties`).
 
-## 1. Les claus manuals (migrades)
+## 1. Qui mana: el CSV
 
-`src/herramienta/i18n/I18n.java` **no és un artefacte regenerable tal com està**:
-conté codi editat a mà a més de la taula de cadenes. Hi havia cinc claus
-que no sortien de `strings/*.csv`:
+`strings/*.csv` és l'única font de veritat. El generador
+(`scripts/gen_strings.py`) en produeix quatre artefactes:
 
-| Clau | Línia a `I18n.java` | Observació |
+| Artefacte | Generat | Llegeix l'aplicació? |
 |---|---|---|
-| `dlg_restore_done_with_note` | 259 | valor amb salt de línia real |
-| `tip_filter_substring` | 375 | valor amb salt de línia real |
-| `dlg_fetch_portades_done_partial` | 416 | valor amb salt de línia real |
-| `dlg_perfil_nom_invalid` | 516 | valor amb salt de línia real |
-| `dlg_perfil_nom_invalid_title` | 517 | valor amb salt de línia real |
+| `src/herramienta/i18n/I18n.java` | sí | **sí** — és la taula viva |
+| `src/herramienta/strings_ca.properties` | sí | no (cap codi Java les llegeix) |
+| `src/herramienta/strings_es.properties` | sí | no |
+| `src/herramienta/strings_en.properties` | sí | no |
 
-**Aquestes cinc claus ja han migrat a `strings/ui.csv`** amb el valor en temps
-d'execució idèntic al que mostrava la taula viva (verificat fila a fila: el
-generador reprodueix exactament la fila de `I18n.java` per a les cinc claus).
-`dlg_restore_done_with_note` és el primer registre de diverses línies del CSV
-(camp citat amb dos salts de línia reals).
+Per tant, **un canvi de text s'ha de fer al CSV i regenrar**; editar
+`I18n.java` a mà es perd a la regenació següent.
 
-Amb la migració, els quatre `FAIL` de l'auditoria d'i18n
-(`clau I18n.t absent del CSV`) han desaparegut: l'informe passa de
-`FAIL: 4` a `FAIL: 0` sense cap canvi de text visible.
+### 1.1. La plantilla Java
 
-A més, el fitxer conté codi que el generador no produeix: la taula
-`PLACEHOLDER_PATTERNS`, la substitució de placeholders amb regex a `t()`,
-`aplicarSwingOptionPane()`, la consulta de `Configuracio.obtenirLang()` i el
-avís de llengua desconeguda.
+`I18n.java` ja no és un artefacte "no regenerable". El codi estructural de
+la classe (la taula `PLACEHOLDER_PATTERNS`, la substitució de placeholders
+amb regex, `aplicarSwingOptionPane()`, la consulta de
+`Configuracio.obtenirLang()` i l'avís de llengua desconeguda) viu a
+`scripts/i18n_java_template.java.tmpl`, i el generador hi injecta les files
+`T(...)` a la marca `//%%TABLE%%`.
 
-**Conseqüència pràctica:** `make strings` (és a dir, `python3 scripts/gen_strings.py`
-sense `--no-java`) **destrueix a mà la taula editada** i deixa el projecte sense
-compilar. Cal regenerar només els `.properties` amb `--no-java`, que és el que
-fa la CI.
+Abans la plantilla era una cadena literal dins del mateix generador i
+referenciava `Config.getLang()` i `applySwingOptionPane()` — dos noms que
+no existeixen (els reals són `Configuracio.obtenirLang()` i
+`aplicarSwingOptionPane()`). `make strings` produïa un fitxer que **no
+compilava**, i la CI ho amagava amb `--no-java`: el gate només comparava els
+`.properties` i deixava passar una taula Java obsoleta.
+
+### 1.2. El gate
+
+```
+python3 scripts/gen_strings.py --check     # gate complet: I18n.java + .properties
+python3 scripts/test_gen_strings.py        # invariants d'escapament
+```
+
+`make strings-check` i el job `i18n` de la CI executen tots dos. El gate
+compara el fitxer **byte a byte** amb el que generaria el CSV: qualsevol
+divergència (una taula editada a mà, un `.properties` desfasat) fa fallar
+la CI.
 
 ## 2. Les dues convencions que conviuen avui
 
@@ -53,7 +62,7 @@ Java), de manera que **en temps d'execució la pantalla mostra els dos
 caràcters `\n` literalment**, no un salt de línia. És el que veu l'usuari
 avui: `Backup guardat a:\n/home/...`.
 
-### Convenció B — salt de línia real (les cinc claus manuals)
+### Convenció B — salt de línia real
 
 Al CSV, el camp conté un salt de línia real dins de cometes:
 
@@ -62,109 +71,74 @@ dlg_restore_done_with_note,"{0}\n\n{1}",...
 ```
 
 A `I18n.java` és `\n` (una sola barra invertida dins el literal Java), és a
-dir un **salt de línia real en temps d'execució**. Aquesta és la convenció
-que la interfície hauria de fer servir.
-
-Hi ha una tercera situació, residual: sis claus tenen el doble d'escapament
-a `I18n.java` (`\\\\n`, `\\\\\"`), de manera que en temps d'execució mostren
-`\\n` i `\\"`. Són `dlg_confirm_galeria_delete_n`,
-`dlg_confirm_galeria_delete_one`, `dlg_no_llistes_msg`,
-`dlg_perfil_confirmar`, `dlg_rename_llista_prompt` i `dlg_undo_done`.
+dir un **salt de línia real en temps d'execució**.
 
 ## 3. On és la limitació real del pipeline
 
-No és el CSV. El pipeline Java (`Rfc4180Reader`, `UtilitatsCsv`) admet
-registres de diverses línies i camps citats amb salts reals: el format ja
-hi arriba. La limitació estava (i s'ha corregit) en el **generador**:
-
-* `scripts/gen_strings.py` llegia el CSV línia a línia i, per tant, un camp
-  citat amb salt de línia real es trencava en dos registres;
-* l'escapador confonia el salt de línia real amb la seqüència literal
-  `\n`: tots dos es convertien en `\n` (un salt real en temps d'execució),
-  de manera que el generador **pnia convertir en silenci** un text amb
-  `\n` literal en un text amb salt de línia.
-
-Corregit el generador (vegeu `scripts/test_gen_strings.py`), el CSV sí que
-pot portar un salt de línia real i les dues formes es mantenen separades fins
-al valor final.
-
-El que queda pendent no és el transport, sinó el **renderitzament**: molts
-dels textos afectats s Mostren amb `JOptionPane.showMessageDialog`, que **no
-interpreta els salts de línia**; el text apareix en una sola línia. Per
+No és el transport, sinó el **renderitzament**: molts dels textos afectats
+es mostren amb `JOptionPane.showMessageDialog` / `showConfirmDialog`, que
+**no interpreta els salts de línia**; el text apareix en una sola línia. Per
 mostrar un salt de línia cal un component que les interpreti (`JTextArea` no
 editable dins d'un `JOptionPane`, o un `JLabel` amb `<html>`).
+
+Per això la Convenció A (seqüència literal) i la Convenció B (salt real)
+no es poden barrejar en un mateix diàleg sense que una de les dues formes
+desaparesqui a la pantalla.
 
 ## 4. Convenció canònica proposada
 
 **Un salt de línia és un salt de línia real dins del camp citat del CSV.**
 
-```
-dlg_backup_done,"Backup guardat a:
-{0}","Copia guardada en:
-{0}","Backup saved to:
-{0}"
-```
+Conseqüència per als textos existents: les claus que avui mostren `\n`
+literal passen a mostrar un salt de línia. **És un canvi de text visible**
+i, per això, requereix acord de producte.
 
-Conseqüència per als textos existents: 590 de 590 les claus del CSV
-passen a portar el salt real, i les 17 claus que avui mostren `\n` literal
-passen a mostrar un salt de línia. **És un canvi de text visible** i, per
-això, requereix acord de producte.
+Alternativa de migració zero-visible: mantenir la Convenció A a tots els
+llocs i arreglar només els punts on el text s'ha de mostrar en varies línies,
+substituint el `JOptionPane` per un diàleg que interpreti els salts. Els
+textos amb `\n` literal seguirien mostrant-se literalment, cosa que sembla
+un error de redacció.
 
-Alternativa de migració zero-visible: mantenir la convenció A (seqüència
-literal) a tots els llocs i arreglar només els punts on el text s'ha de
-mostrar en varies línies, substituint el `JOptionPane` per un diàleg que
-interpreti els salts. Els textos amb `\n` literal seguirien mostrant-se
-literalment, cosa que sembla un error de redacció.
+## 5. Escapament: estat actual
 
-## 5. Què s'ha fet i què queda bloquejat
+El generador distingeix el salt de línia real de la seqüència literal `\n`
+i de les cometes, i el fitxer generat sempre torna el valor en temps
+d'execució exactament igual que el CSV (ho fixen les invariants de
+`scripts/test_gen_strings.py`).
 
-**Fet (no canvia cap text visible):**
+Aquesta separació ja no es trenca. El generador de la taula Java i el dels
+`.properties` comparteixen el mateix escapador, de manera que la taula viva
+i els `.properties` han de coincidir sempre.
 
-* `scripts/gen_strings.py` llegeix el CSV sencer, de manera que admet
-  registres de diverses línies i camps citats amb salts reals;
-* l'escapador distingeix el salt de línia real de la seqüència literal
-  `\n`; amb això la sortida del generador **coincideix amb la taula
-  editada a mà en 589 de les 595 claus del CSV** (abans de la correcció
-  eren 584 de 590; les sis claus que queden són les que tenen un
-  escapament doble a la taula editada, descrites al §2);
-* les cinc claus manuals han migrat a `strings/ui.csv` amb el valor en
-  temps d'execució idèntic → l'informe d'UIAudit passa de `FAIL: 4` a
-  `FAIL: 0`;
-* els tres `.properties` s'han regenerat: ara són coherents amb la taula
-  Java, que és l'artefacte viu. Cap codi Java les llegeix (cap referència
-  a `strings_*.properties` al codi), de manera que no hi ha cap efecte
-  visible;
-* l'auditoria d'i18n (`checkBiblio/I18nAudit.java`) llegeix els CSV per
-  registres lògics (admés registres de diverses línies) i detecta l'ús
-  indirecte de claus via `Camp.text(key, labelKey, tooltipKey, width)`;
-* `scripts/test_gen_strings.py` fixa les invariants (salt real, seqüència
-  literal, cometes, barres inverses, Unicode, placeholders als tres
-  idiomes i registre CSV multilínia). Target: `make strings-test`.
+Les claus que fins avui tenien **doble escapament** a la taula Java
+(`\\\\n`, `\\\\\"`, és a dir un `\\n` i un `\\"` a la pantalla) s'han
+corregit: el valor en temps d'execució ara és el del CSV, amb un sol nivell
+de barra invertida.
 
-**Bloquejat (requereix acord de producte):**
+| Clau | Abans (pantalla) | Ara (pantalla) |
+|---|---|---|
+| `dlg_confirm_galeria_delete_one` | `Eliminar \"{0}\"?\\nAquesta…` | `Eliminar "{0}"?\nAquesta…` |
+| `dlg_confirm_galeria_delete_n` | `Eliminar {0} llibres…\\nAquesta…` | `Eliminar {0} llibres…\nAquesta…` |
+| `dlg_undo_done` | `\"{0}\" restaurat.` | `"{0}" restaurat.` |
+| `dlg_rename_llista_prompt` | `Nou nom per a la llista \\\"{0}\\\":` | `Nou nom per a la llista "{0}":` |
+| `dlg_perfil_confirmar` | `Canviar al perfil \\\"{0}\\\"?…` | `Canviar al perfil "{0}"?…` |
+| `dlg_no_llistes_msg` | `… des de \\\"Gestionar llistes\\\".` | `… des de "Gestionar llistes".` |
+| `dlg_perfil_nom_invalid` | `… Es desarà com a \\\"{0}\\\".…` | `… Es desarà com a "{0}".…` |
 
-* migrar els 17 textos de la convenció A a la convenció B;
-* decidir quins diàlegs passen a interpretar els salts de línia;
-* les sis claus amb escapament doble a la taula editada
-  (`dlg_confirm_galeria_delete_n`, `dlg_confirm_galeria_delete_one`,
-  `dlg_no_llistes_msg`, `dlg_perfil_confirmar`, `dlg_rename_llista_prompt`
-  i `dlg_undo_done`): el CSV hi posa un sol nivell de barra invertida i la
-  taula editada en té dos, de manera que a la pantalla hi surt `\\n` i
-  `\\"` en lloc de `\n` i `\"`. Corregir-ho canvia text visible, per això
-  queda pendent de la mateixa decisió.
+`dlg_perfil_nom_invalid` era un cas diferent: la barra invertida sobrant
+era al **CSV** (`\""{0}\""`), de manera que ni el generador ni la taula
+Java la podien normalitzar. S'ha corregit al CSV.
 
-El generador tampoc s'ha fet segur encara: `python3 scripts/gen_strings.py`
-sense `--no-java` continua destrueint les cinc claus manuals i el codi
-estructural de `I18n.java`. Fins que es decideixi la convenció i es
-traslladin les claus al CSV, el procediment segur és
-`python3 scripts/gen_strings.py --no-java` (o `make strings-check` per
-validar).
-
-## 6. Estat dels avisos de generació
+## 6. Estat de les comprovacions
 
 | Comanda | Estat |
 |---|---|
-| `python3 scripts/gen_strings.py --check --no-java` (gate de la CI) | **PASS** |
-| `python3 scripts/gen_strings.py --check` (inclou `I18n.java`) | **FAIL preexistent**: `I18n.java` conté codi editat a mà (l'estructura del generador encara no el reprodueix) |
+| `python3 scripts/gen_strings.py --check` (gate de la CI) | **PASS** (I18n.java + `.properties`) |
 | `python3 scripts/test_gen_strings.py` | **PASS** (9 invariants) |
-| `./checkBiblio/run.sh --audit-only --auto` (auditoria d'i18n) | **PASS**, `FAIL: 0` (abans: `FAIL: 4`) |
+| `make strings` | regenera els quatre artefactes |
+| `make strings-check` | gate complet |
+
+## 7. Bloquejat (requereix acord de producte)
+
+* migrar les claus que avui mostren `\n` literal a la Convenció B;
+* decidir quins diàlegs passen a interpretar els salts de línia.

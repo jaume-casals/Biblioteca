@@ -2,13 +2,13 @@ key,ca,es,en
 # ── Navigation / Navbar ──────────────────────────────────────────────────────
 btn_settings,Configuració,Configuración,Settings
 btn_tags,🏷 Etiquetes,🏷 Etiquetas,🏷 Tags
-btn_theme,☾ Tema,☾ Tema,☾ Theme
+btn_theme,Tema,Tema,Theme
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 shelves_title,Prestatges,Estantes,Shelves
 btn_add_shelf,+ Nou prestatge,+ Nuevo estante,+ New shelf
 all_books,📚 Tots els llibres,📚 Todos los libros,📚 All Books
 # ── Toolbar ──────────────────────────────────────────────────────────────────
-search_placeholder,Cerca per títol…,Buscar por título…,Search title…
+search_placeholder,"Cerca per títol, autor o ISBN…","Buscar por título, autor o ISBN…","Search by title, author or ISBN…"
 btn_new_book,+ Nou llibre,+ Nuevo libro,+ New book
 btn_gallery,▦ Galeria,▦ Galería,▦ Gallery
 btn_table,☰ Taula,☰ Tabla,☰ Table
@@ -372,6 +372,39 @@ btn_group_series_lbl,Sèries,Series,Series
 tip_group_series,Agrupar llibres per sèrie i volum,Agrupar libros por serie y volumen,Group books by series and volume
 btn_nou_llibre_short,+ Afegir,+ Añadir,+ Add
 tip_nou_llibre_short,Afegir un nou llibre (Ctrl+N),Añadir un nuevo libro (Ctrl+N),Add a new book (Ctrl+N)
+# ── Capçalera, navegació i barra d'eines ──────────────────────────────────────
+nav_all_books,Tots els llibres,Todos los libros,All books
+nav_recently_added,Afegits recentment,Añadidos recientemente,Recently added
+nav_recently_added_short,Recents,Recientes,Recent
+nav_in_progress,En curs,En curso,In progress
+nav_read,Llegits,Leídos,Read
+nav_wishlist,Llista de desitjos,Lista de deseos,Wishlist
+lbl_books_count_range,{0} de {1} llibres,{0} de {1} libros,{0} of {1} books
+btn_sort,Ordena,Ordenar,Sort
+sort_descending,Ordre invers,Orden inverso,Reverse order
+btn_more_actions,Més accions,Más acciones,More actions
+btn_clear_filters,Neteja filtres,Limpiar filtros,Clear filters
+sidebar_empty_shelves,Encara no tens cap prestatgeria. Crea'n una per agrupar els llibres.,Todavía no tienes ninguna estantería. Crea una para agrupar los libros.,You have no shelves yet. Create one to group your books.
+sidebar_empty_shelves_action,Crea la primera,Crea la primera,Create the first one
+card_status_read,LLEGIT,LEÍDO,READ
+card_status_reading,EN CURS,EN CURSO,READING
+form_section_identity,Identificació,Identificación,Identification
+form_section_cover,Portada,Portada,Cover
+form_tab_details,Detalls,Detalles,Details
+form_tab_publication,Publicació,Publicación,Publication
+form_tab_notes,Notes,Notas,Notes
+form_tab_titles,Títols per idioma,Títulos por idioma,Titles by language
+settings_tab_appearance,Aparença,Apariencia,Appearance
+settings_tab_language,Idioma i formats,Idioma y formatos,Language and formats
+settings_tab_images,Imatges,Imágenes,Images
+settings_tab_database,Base de dades,Base de datos,Database
+settings_tab_data,Còpies i dades,Copias y datos,Backups and data
+stats_read,Llegits,Leídos,Read
+stats_in_progress,En curs,En curso,In progress
+stats_no_rating_data,Cap llibre valorar,Sin libros valorados,No rated books
+lbl_danger_zone,ZONA DESTRUCTIVA,ZONA DESTRUCTIVA,DESTRUCTIVE ZONE
+lbl_clear_library_help,"Buidar la biblioteca esborra tots els llibres, les prestatgeries i les etiquetes. Aquesta acció no es pot desfer.","Vaciar la biblioteca borra todos los libros, las estanterías y las etiquetas. Esta acción no se puede deshacer.","Clearing the library erases all books, shelves and tags. This action cannot be undone."
+lbl_db_h2_embedded,"H2 integrat: la biblioteca es desa al vostre equip, sense servidor.","H2 integrado: la biblioteca se guarda en su equipo, sin servidor.","Built-in H2: your library is stored on this computer, with no server."
 lbl_preset_colon,Preset:,Preset:,Preset:
 tip_combo_presets,Selecciona un preset guardat,Selecciona un preset guardado,Select a saved preset
 btn_load_preset,Carrega,Cargar,Load
@@ -450,6 +483,7 @@ stats_total,Total:,Total:,Total:
 stats_llegits_colon,Llegits:,Leídos:,Read:
 stats_no_llegits_colon,No llegits:,No leídos:,Unread:
 stats_avg_rating_colon,Valoració mitjana:,Valoración media:,Avg. rating:
+stats_avg_rating,Valoració mitjana,Valoración media,Avg. rating
 stats_avg_price_colon,Preu mitjà:,Precio medio:,Avg. price:
 stats_top_years,Anys top:,Años top:,Top years:
 stats_no_years,(cap any registrat),(ningún año registrado),(no years recorded)
@@ -538,7 +572,7 @@ dlg_rename_llista_title,"Renombrar llista","Renombrar lista","Rename list"
 dlg_rename_llista_prompt,"Nou nom per a la llista ""{0}"":","Nuevo nombre para la lista ""{0}"":","New name for list ""{0}"":"
 dlg_perfil_confirmar,"Canviar al perfil ""{0}""? Els canvis s'aplicaran al proper reinici.","¿Cambiar al perfil ""{0}""? Los cambios se aplicarán al próximo reinicio.","Switch to profile ""{0}""? Changes take effect on next restart."
 dlg_perfil_confirmar_title,"Confirmar canvi de perfil","Confirmar cambio de perfil","Confirm Profile Switch"
-dlg_perfil_nom_invalid,"El nom del perfil conté caràcters no permesos. Es desarà com a \""{0}\"". Vols continuar?","El nombre del perfil contiene caracteres no permitidos. Se guardará como \""{0}\"". ¿Quieres continuar?","The profile name contains characters that will be replaced. It will be saved as \""{0}\"". Continue?"
+dlg_perfil_nom_invalid,"El nom del perfil conté caràcters no permesos. Es desarà com a ""{0}"". Vols continuar?","El nombre del perfil contiene caracteres no permitidos. Se guardará como ""{0}"". ¿Quieres continuar?","The profile name contains characters that will be replaced. It will be saved as ""{0}"". Continue?"
 dlg_perfil_nom_invalid_title,"Nom de perfil no vàlid","Nombre de perfil no válido","Invalid profile name"
 splash_loading,"Carregant biblioteca...","Cargando biblioteca...","Loading library..."
 csv_row_too_short,"La fila CSV té menys de 4 columnes requerides.","La fila CSV tiene menos de 4 columnas requeridas.","CSV row has fewer than 4 required columns."
