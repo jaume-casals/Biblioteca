@@ -25,6 +25,7 @@ public class PanelMostrarBiblioteca extends JPanel {
 
 	private final JComboBox<Object> comboLlistes;
 	private final PanellBarraEsquerra leftSidebar;
+	private final PanelCapcalera capcalera;
 	private final PanelBarraSuperior topBar;
 	private final PanelCalaixFiltre filtrarDrawer;
 	private final PanelTaulaCentral centerTable;
@@ -41,8 +42,19 @@ public class PanelMostrarBiblioteca extends JPanel {
 		JPanel rightArea = new JPanel(new BorderLayout(0, 0));
 		rightArea.setBackground(UITheme.palette().bgMain());
 
+		// Capçalera i barra d'eines comparteixen una columna: la capçalera
+		// descriu què s'està mostrant, la barra d'eines hi actua.
+		JPanel capcaleraITools = new JPanel(new BorderLayout(0, 0));
+		capcaleraITools.setBackground(UITheme.palette().bgPanel());
+		capcaleraITools.setOpaque(false);
+
+		capcalera = new PanelCapcalera();
+		capcaleraITools.add(capcalera, BorderLayout.NORTH);
+
 		topBar = new PanelBarraSuperior();
-		rightArea.add(topBar, BorderLayout.NORTH);
+		capcaleraITools.add(topBar, BorderLayout.SOUTH);
+
+		rightArea.add(capcaleraITools, BorderLayout.NORTH);
 
 		JPanel contentArea = new JPanel(new BorderLayout(0, 0));
 		contentArea.setBackground(UITheme.palette().bgMain());
@@ -57,6 +69,21 @@ public class PanelMostrarBiblioteca extends JPanel {
 		rightArea.add(contentArea, BorderLayout.CENTER);
 
 		add(rightArea, BorderLayout.CENTER);
+
+		// Les accions addicionals (importació, exportació, còpies de seguretat,
+		// escaneig) viuen al calaix de filtres. El menú de la barra d'eines les
+		// exposa sense duplicar-ne la lògica: delega amb doClick().
+		topBar.afegirAccioMes("btn_import_csv", () -> filtrarDrawer.obtenirBtnImportarCSV().doClick());
+		topBar.afegirAccioMes("btn_import_json_lbl", () -> filtrarDrawer.obtenirBtnImportarJSON().doClick());
+		topBar.afegirAccioMes("btn_import_calibre", () -> filtrarDrawer.obtenirBtnImportarCalibre().doClick());
+		topBar.afegirAccioMes("btn_export_csv", () -> filtrarDrawer.obtenirBtnExportCSV().doClick());
+		topBar.afegirAccioMes("btn_export_json_lbl", () -> filtrarDrawer.obtenirBtnExportJSON().doClick());
+		topBar.afegirAccioMes("btn_export_html_lbl", () -> filtrarDrawer.obtenirBtnExportHTML().doClick());
+		topBar.afegirAccioMes("btn_export_pdf_lbl", () -> filtrarDrawer.obtenirBtnExportPDF().doClick());
+		topBar.afegirAccioMes("btn_fetch_covers_lbl", () -> filtrarDrawer.obtenirBtnFetchCovers().doClick());
+		topBar.afegirAccioMes("btn_scan_isbn_lbl", () -> filtrarDrawer.obtenirBtnEscanejarISBN().doClick());
+		topBar.afegirAccioMes("btn_backup_bd", () -> filtrarDrawer.obtenirBtnBackupBD().doClick());
+		topBar.afegirAccioMes("btn_restore_bd", () -> filtrarDrawer.obtenirBtnRestaurarBD().doClick());
 	}
 
 	public void rebuildSidebarShelves(List<domini.Llista> llistes, Map<Integer, Integer> counts,
@@ -80,42 +107,67 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public void mostrarTaula() { centerTable.mostrarTaula(); }
 
 	/**
-	 * L'ordre importa: (1) actualitza primer els camps derivats de la
-	 * paleta, (2) overrides pre-LaF dels sub-panells, (3) instal·la el
-	 * L&F (reestableix tots els valors per defecte), (4) re-aplica els
-	 * overrides del UIManager a sobre del L&F, (5) updateComponentTreeUI,
-	 * (6) overrides post-LaF dels sub-panells per a allò que el L&F ha
-	 * reestablert.
+	 * Aplica el tema actiu a tota la pantalla.
+	 *
+	 * <p>L'ordre importa: (1) les fonts es reconstruïen, (2) el tema es
+	 * projecta sobre el UIManager (FlatLaf ja ha estat instal·lat per
+	 * {@code UITheme.posarTheme}), (3) es reapliquen els tokens explícits
+	 * dels sub-panells <em>després</em> de {@code updateComponentTreeUI},
+	 * perquè l'actualització de l'arbre de components reinicialitza els
+	 * colors que hagi fixat el LAF.
 	 */
 	public void aplicarTheme() {
+		if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+			// El repintat del tema toca tots els components: fora de l'EDT
+			// competeix amb el layout i deixa controls a mitges pintar.
+			javax.swing.SwingUtilities.invokeLater(this::aplicarTheme);
+			return;
+		}
 		UITheme.rebuildFonts(herramienta.config.MidaLletra.fromKey(herramienta.config.Configuracio.obtenirFontSize()));
         ConfiguracioUi.posarTheme(UITheme.obtenirTheme());
+        UITheme.aplicarUIManager();
 
 		setBackground(UITheme.palette().bgMain());
 
-		leftSidebar.aplicarTheme();
-		centerTable.aplicarTheme();
-		topBar.aplicarTheme();
-		filtrarDrawer.aplicarTheme();
+		SwingUtilities.updateComponentTreeUI(this);
 
 		Window w = SwingUtilities.getWindowAncestor(this);
 		if (w instanceof JFrame) {
 			((JFrame) w).getContentPane().setBackground(UITheme.palette().bgMain());
+			((JFrame) w).setBackground(UITheme.palette().bgMain());
 		}
-
-		try {
-			UIManager.setLookAndFeel(new javax.swing.plaf.nimbus.NimbusLookAndFeel());
-			UITheme.aplicarUIManager();
-		} catch (Exception ignored) {}
-		SwingUtilities.updateComponentTreeUI(this);
-		SwingUtilities.invokeLater(this::nameScrollBarButtons);
 
 		filtrarDrawer.aplicarThemePostLaf();
 		leftSidebar.aplicarTheme();
+		capcalera.aplicarTheme();
 		topBar.aplicarTheme();
+		centerTable.aplicarTheme();
 		centerTable.aplicarThemePostLaf();
 
+		SwingUtilities.invokeLater(this::nameScrollBarButtons);
+
 		repaint();
+
+		// La barra d'estat viu al panellancè: s'actualitza des d'aquí perquè
+		// el canvi de tema pot arribar per qualsevol camí (drecera de
+		// teclat, diàleg de configuració o botó de la barra lateral).
+		for (java.awt.Component c = getParent(); c != null; c = c.getParent()) {
+			if (c instanceof PanelMarcPrincipal marc) {
+				marc.aplicarStatusBar();
+				break;
+			}
+		}
+
+		// El repintat del panell no arriba a les regions del tanc que no en
+		// formen part (títols, vores, el marc de la finestra). Sense aquest
+		// repintat de la finestra sencera, les zones que no s'havien tornat a
+		// pintar conservaven el dibuix del tema anterior i la pantalla
+		// mostrava clar i fosc alhora.
+		if (w != null) {
+			w.invalidate();
+			w.validate();
+			w.repaint();
+		}
 	}
 
 	private void nameScrollBarButtons() {
@@ -129,7 +181,8 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public JButton obtenirBtnPaginaSeguent()      { return centerTable.obtenirBtnPaginaSeguent(); }
 	public JLabel  obtenirLblPagina()             { return centerTable.obtenirLblPagina(); }
 	public JPanel  obtenirPaginationPanel()       { return centerTable.obtenirPaginationPanel(); }
-	public JButton obtenirBtnNouLlibre()          { return topBar.obtenirBtnNouLlibre(); }
+	public JButton obtenirBtnNouLlibre()          { return capcalera.obtenirBtnAfegirLlibre(); }
+	public PanelCapcalera obtenirCapcalera()      { return capcalera; }
 	public JButton obtenirBtnExportCSV()          { return filtrarDrawer.obtenirBtnExportCSV(); }
 	public JButton obtenirBtnImportarCSV()        { return filtrarDrawer.obtenirBtnImportarCSV(); }
 	public JButton obtenirBtnImportarCalibre()    { return filtrarDrawer.obtenirBtnImportarCalibre(); }
@@ -178,9 +231,14 @@ public class PanelMostrarBiblioteca extends JPanel {
 	public JButton obtenirBtnCarregaPreset()      { return filtrarDrawer.obtenirBtnCarregaPreset(); }
 	public JButton obtenirBtnDesaPreset()         { return filtrarDrawer.obtenirBtnDesaPreset(); }
 	public JButton obtenirBtnEsborraPreset()      { return filtrarDrawer.obtenirBtnEsborraPreset(); }
-	public JButton obtenirBtnToggleFiltres()      { return topBar.obtenirBtnToggleFiltres(); }
-	public JButton obtenirBtnToggleVista()        { return topBar.obtenirBtnToggleVista(); }
-	public JButton obtenirBtnGroupSeries()        { return topBar.obtenirBtnGroupSeries(); }
+	public javax.swing.JToggleButton obtenirBtnToggleFiltres() { return topBar.obtenirBtnToggleFiltres(); }
+	public JButton obtenirBtnOrdena()             { return topBar.obtenirBtnOrdena(); }
+	public javax.swing.JButton obtenirBtnVistaGaleria() { return topBar.obtenirBtnVistaGaleria(); }
+	public javax.swing.JButton obtenirBtnVistaTaula()   { return topBar.obtenirBtnVistaTaula(); }
+	public javax.swing.JToggleButton obtenirBtnAgruparSeries(){ return topBar.obtenirBtnAgruparSeries(); }
+	public JButton obtenirBtnMesAccions()         { return topBar.obtenirBtnMesAccions(); }
+	public PanelBarraSuperior obtenirBarraSuperior() { return topBar; }
+	public PanellBarraEsquerra obtenirBarraEsquerra() { return leftSidebar; }
 	public RegistreCampsFormulari obtenirFilterRegistry() { return filtrarDrawer.obtenirRegistry(); }
 	public PanelGaleriaCobertes obtenirGaleria()  { return centerTable.obtenirGaleria(); }
 }

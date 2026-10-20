@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.table.TableColumn;
 import persistencia.contract.EscritorBiblioteca;
@@ -32,18 +31,27 @@ public class ControladorTaula {
     private static final boolean[] COL_TOGGLEABLE =
         {true, false, false, true, true, true, true, true, true, false};
 
-    private static final int ROW_HEIGHT = 50;
+    /** Alçada de fila: compacta però prou alta per a la miniatura de portada. */
+    private static final int ROW_HEIGHT = 40;
+    /**
+     * Amplades preferides per columna: {preferida, mínima, màxima}.
+     *
+     * <p>El títol és la columna expansible (la prioritat principal), l'autor
+     * té amplada intermitja i l'any, l'estat, el preu i l'ISBN es queden
+     * compactes perquè no dominin la vista. La portada és una miniatura
+     * estreta i el progrés ocupa el que li cal per al text i la barra.
+     */
     private static final int[][] COL_WIDTHS = {
-        {48, 48, 56},
-        {130, 80, Integer.MAX_VALUE},
-        {220, 80, Integer.MAX_VALUE},
-        {180, 80, Integer.MAX_VALUE},
-        {55, 40, Integer.MAX_VALUE},
-        {75, 50, Integer.MAX_VALUE},
-        {60, 40, Integer.MAX_VALUE},
-        {80, 55, Integer.MAX_VALUE},
-        {90, 50, Integer.MAX_VALUE},
-        {85, 85, Integer.MAX_VALUE},
+        {40, 34, 56},                       // portada (miniatura)
+        {120, 90, Integer.MAX_VALUE},       // ISBN
+        {340, 140, Integer.MAX_VALUE},      // títol — expansible
+        {200, 90, Integer.MAX_VALUE},       // autor
+        {64, 46, Integer.MAX_VALUE},        // any
+        {84, 58, Integer.MAX_VALUE},        // valoració
+        {74, 52, Integer.MAX_VALUE},        // preu
+        {84, 58, Integer.MAX_VALUE},        // llegit
+        {124, 84, Integer.MAX_VALUE},       // progrés
+        {85, 85, Integer.MAX_VALUE},        // detalls (columna oculta)
     };
 
     private static String[] colNames() { return ColNamesHolder.NAMES; }

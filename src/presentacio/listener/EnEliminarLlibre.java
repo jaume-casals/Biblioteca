@@ -19,16 +19,13 @@ public interface EnEliminarLlibre {
      *  ({@code deleteEventCancellableVeto},
      *  {@code deleteEventNonCancellable}). */
     class EsborrarEvent {
-        private final Llibre book;
         private final boolean cancellable;
         private boolean vetoed;
 
-        public EsborrarEvent(Llibre book, boolean cancellable) {
-            this.book = book;
+        public EsborrarEvent(boolean cancellable) {
             this.cancellable = cancellable;
         }
 
-        public Llibre obtenirBook() { return book; }
         public boolean esCancellable() { return cancellable; }
         public boolean esVetoed() { return vetoed; }
         public void veto() { vetoed = true; }

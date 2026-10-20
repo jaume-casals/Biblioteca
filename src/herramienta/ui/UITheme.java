@@ -316,13 +316,6 @@ public class UITheme {
 
     private static final Font FONT_FALLBACK = new Font("SansSerif", Font.PLAIN, 12);
 
-    /**
-     * Lletra d'etiqueta. Es conserva com a metode de compatibilitat fins que
-     * la barra lateral, l'unic consumidor que quedava, s'adapti al tema
-     * FlatLaf i deixi d'estilar les etiquetes amb la seva propia jerarquia.
-     */
-    public static Font fontLabel() { return fontBase(); }
-
     public static Font fontTitle() { Font f = FONT_TITLE; return f != null ? f : FONT_FALLBACK; }
     public static Font fontSmall() { Font f = FONT_SMALL; return f != null ? f : FONT_FALLBACK; }
 

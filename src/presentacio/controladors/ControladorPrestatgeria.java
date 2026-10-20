@@ -78,6 +78,12 @@ public class ControladorPrestatgeria {
                 try {
                     state.biblio = get();
                     state.currentLlistaId = selectedId;
+                    state.posarTitolVista(selectedId == null
+                        ? I18n.t("nav_all_books")
+                        : (sel instanceof Llista ll ? ll.obtenirNom() : I18n.t("nav_all_books")));
+                    state.vista.obtenirBarraEsquerra().seleccionar(selectedId == null
+                        ? presentacio.panells.PanellBarraEsquerra.VISTA_TOTS
+                        : presentacio.panells.PanellBarraEsquerra.PREFIX_PRESTATGERIA + selectedId);
                     host.pageCtrl().posarUseDBPagination(selectedId == null && largeLib);
                     host.pageCtrl().posarCurrentPage(0);
                     host.mostrarPage(0);
@@ -147,6 +153,12 @@ public class ControladorPrestatgeria {
                     for (java.awt.event.ActionListener al : listeners) combo.addActionListener(al);
                     state.vista.rebuildSidebarShelves(llistes, counts, ControladorPrestatgeria.this::onDragToShelf, ControladorPrestatgeria.this::inlineRenameShelf);
                     state.biblio = biblio;
+                    state.posarTitolVista(state.currentLlistaId == null
+                        ? I18n.t("nav_all_books")
+                        : shelfName(llistes, state.currentLlistaId));
+                    state.vista.obtenirBarraEsquerra().seleccionar(state.currentLlistaId == null
+                        ? presentacio.panells.PanellBarraEsquerra.VISTA_TOTS
+                        : presentacio.panells.PanellBarraEsquerra.PREFIX_PRESTATGERIA + state.currentLlistaId);
                     host.pageCtrl().posarUseDBPagination(state.currentLlistaId == null && largeLib);
                     host.pageCtrl().posarCurrentPage(0);
                     host.mostrarPage(0);
@@ -156,6 +168,12 @@ public class ControladorPrestatgeria {
                 }
             }
         }.execute();
+    }
+
+    /** Nom de la prestatgeria amb l'identificador donat, o el títol per defecte. */
+    private static String shelfName(java.util.List<Llista> llistes, int id) {
+        for (Llista l : llistes) if (l.obtenirId() == id) return l.obtenirNom();
+        return I18n.t("nav_all_books");
     }
 
     private record DadesRefresc(Map<Integer, Integer> counts, int total,

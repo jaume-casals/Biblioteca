@@ -2,15 +2,11 @@ package presentacio.controladors;
 
 
 import domini.Llibre;
-import domini.Llista;
-import herramienta.config.Configuracio;
 import herramienta.i18n.I18n;
 import herramienta.ui.DialegError;
 import herramienta.ui.UITheme;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -21,6 +17,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import presentacio.config.ConfiguracioDialogListener;
 import presentacio.detalles.control.ControladorPanellDetallsLlibre;
+import presentacio.panells.PanellBarraEsquerra;
 import presentacio.dialegs.ConfiguracioDialog;
 import presentacio.listener.EnEliminarLlibre;
 import presentacio.models.ModelTaulaBiblioteca;
@@ -139,7 +136,7 @@ public class ControladorAccionsLlibre {
                 for (long isbn : toDelete) {
                     try {
                         state.cd.cercarLlibre(isbn).ifPresent(l -> {
-                            EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(l, true);
+                            EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(true);
                             state.enActualizarBBDD.enEliminantLlibre(ev);
                             if (!EnEliminarLlibre.hauriaProceed(ev)) return;
                             toPush.add(l);
@@ -259,8 +256,10 @@ public class ControladorAccionsLlibre {
         obrirPanellDetalls(aleatori);
     }
 
-    private void applyAsCurrentView(List<Llibre> result) {
+    private void applyAsCurrentView(List<Llibre> result, String titol, String clauVista) {
         state.biblio = result;
+        state.posarTitolVista(titol);
+        state.vista.obtenirBarraEsquerra().seleccionar(clauVista);
         host.pageCtrl().posarUseDBPagination(false);
         state.currentLlistaId = null;
         host.pageCtrl().posarCurrentPage(0);
@@ -275,13 +274,15 @@ public class ControladorAccionsLlibre {
         for (long isbn : isbns) eliminarFilaPerIsbn(isbn);
     }
 
-    private void mostrarVistaFiltrada(Predicate<Llibre> filter, String emptyMsg, String title) {
+    private void mostrarVistaFiltrada(Predicate<Llibre> filter, String emptyMsg, String title,
+                                      String titolVista, String clauVista) {
         mostrarVistaLlistat(() -> state.cd.obtenirAllLlibres().stream()
             .filter(filter)
-            .collect(Collectors.toList()), emptyMsg, title);
+            .collect(Collectors.toList()), emptyMsg, title, titolVista, clauVista);
     }
 
-    private void mostrarVistaLlistat(Supplier<List<Llibre>> loader, String emptyMsg, String title) {
+    private void mostrarVistaLlistat(Supplier<List<Llibre>> loader, String emptyMsg, String title,
+                                     String titolVista, String clauVista) {
         // Aquesta vista substitueix el resultat vigent, de manera que la
         // generació evita que una càrrega anterior la sobreposi.
         final presentacio.util.CoordinadorGeneracions.Fulla<Void> fulla =
@@ -302,7 +303,7 @@ public class ControladorAccionsLlibre {
                             JOptionPane.INFORMATION_MESSAGE);
                         return;
                     }
-                    applyAsCurrentView(result);
+                    applyAsCurrentView(result, titolVista, clauVista);
                 } catch (Exception e) {
                     if (!fulla.esVigent()) return;
                     new DialegError(e).mostrarErrorMessage();
@@ -313,21 +314,24 @@ public class ControladorAccionsLlibre {
 
     private void mostrarAfegitsRecentment() {
         mostrarVistaLlistat(() -> new ArrayList<>(state.cd.obtenirRecentlyAdded()),
-            I18n.t("dlg_no_books_recent"), I18n.t("dlg_recently_added_title"));
+            I18n.t("dlg_no_books_recent"), I18n.t("dlg_recently_added_title"),
+            I18n.t("nav_recently_added"), PanellBarraEsquerra.VISTA_RECENTS);
     }
 
     private void mostrarLlegitsRecentment() {
         mostrarVistaFiltrada(l -> Boolean.TRUE.equals(l.obtenirLlegit()),
-            I18n.t("dlg_no_read"), I18n.t("dlg_read_title"));
+            I18n.t("dlg_no_read"), I18n.t("dlg_read_title"), I18n.t("nav_read"),
+            PanellBarraEsquerra.VISTA_LLEGITS);
     }
 
     private void mostrarDesitjats() {
-        mostrarVistaFiltrada(l -> Boolean.TRUE.equals(l.esDesitjat()), null, null);
+        mostrarVistaFiltrada(l -> Boolean.TRUE.equals(l.esDesitjat()), null, null,
+            I18n.t("nav_wishlist"), PanellBarraEsquerra.VISTA_DESITJOS);
     }
 
     private void mostrarEnCurs() {
         mostrarVistaFiltrada(l -> l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit()),
-            null, null);
+            null, null, I18n.t("nav_in_progress"), PanellBarraEsquerra.VISTA_EN_CURS);
     }
 
     void obrirConfiguracio() {

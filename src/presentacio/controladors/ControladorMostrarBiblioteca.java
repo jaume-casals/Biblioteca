@@ -3,7 +3,6 @@ package presentacio.controladors;
 
 
 import domini.Llibre;
-import herramienta.ui.UITheme;
 import java.util.ArrayList;
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -120,19 +119,37 @@ public class ControladorMostrarBiblioteca implements AmfitrioPantallaBiblioteca 
      * @param llibres llibres a mostrar
      */
     public void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres) {
+        aplicarResultat(fulla, llibres, llibres == null ? 0 : llibres.size());
+    }
+
+    @Override
+    public void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres, int ambit) {
         if (fulla != null && !fulla.esVigent()) return;
-        state.modelLibres = llibres != null ? new ArrayList<>(llibres) : new ArrayList<>();
-        tableCtrl.posarBooks(llibres != null ? llibres : new ArrayList<>(), state.cd, botonDetalles,
+        java.util.List<Llibre> files = llibres != null ? llibres : new ArrayList<>();
+        state.modelLibres = new ArrayList<>(files);
+        tableCtrl.posarBooks(files, state.cd, botonDetalles,
             MemoriaImatgesCoberta.cache(), MemoriaImatgesCoberta.loading(), state.loanedISBNs, this::refreshRow);
         tableCtrl.aplicarColumnVisibility();
+        // El recompte el fixa el mateix camí que aplica el resultat: així el
+        // comptador visible i el contingut no es poden desincronitzar.
+        state.posarComptador(ambit, files.size());
+        // La cerca pot reduir les files visibles; en aquest cas el recompte
+        // s'ajusta al que l'usuari veu de debò.
         filtrarCtrl.aplicarSearchBar();
+        viewModeCtrl.actualitzarTitleBar();
         if (state.vista.esGaleriaMode()) {
             galeriaCtrl.actualizarSiVigent(fulla,
-                llibres instanceof ArrayList<Llibre> a ? a : new ArrayList<>(llibres));
+                files instanceof ArrayList<Llibre> a ? a : new ArrayList<>(files));
         }
     }
 
     @Override public void mostrarPage(int page) { pageCtrl.mostrarPage(page, state.biblio); }
+
+    @Override
+    public void posarRecompte(int enAmbit, int mostrats) {
+        state.posarComptador(enAmbit, mostrats);
+        viewModeCtrl.actualitzarTitleBar();
+    }
 
     @Override public void refrescarAll() { refresh(); }
 

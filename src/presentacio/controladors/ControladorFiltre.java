@@ -86,7 +86,7 @@ public class ControladorFiltre {
         vista.obtenirBtnToggleFiltres().addActionListener(e -> {
             boolean show = !vista.esFilterDrawerVisible();
             vista.posarFilterDrawerVisible(show);
-            vista.obtenirBtnToggleFiltres().setText(show ? I18n.t("btn_filters_label_open") : I18n.t("btn_filters_label"));
+            vista.obtenirBtnToggleFiltres().setSelected(show);
         });
 
         vista.obtenirBtnFiltrar().addActionListener(e -> filtrar());
@@ -170,10 +170,20 @@ public class ControladorFiltre {
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
+                    // El botó es torna a activar SEMPRE que aquest worker
+                    // sigui l'últim. Abans es reactivava només després
+                    // de comprovar que la generació era vigent: si un altre
+                    // flux (p. ex. la refresca de la combo de prestatges)
+                    // invalidava el resultat, el worker retornava primer i
+                    // el botó es quedava deshabilitat per sempre — l'usuari
+                    // no podia filtrar mai més. Si hi ha un worker més nou
+                    // en curs, és ell qui el tornarà a activar en acabar.
+                    if (pendingFilterWorker == this) {
+                        state.vista.obtenirBtnFiltrar().setEnabled(true);
+                    }
                     // Resultat obsolet: no toca la taula ni l'indicador de
                     // càrrega, que pertanyen a la generació vigent.
                     if (!fulla.esVigent()) return;
-                    state.vista.obtenirBtnFiltrar().setEnabled(true);
                     try {
                         host.aplicarResultat(fulla, get());
                     } catch (java.util.concurrent.CancellationException ignored) {
@@ -202,7 +212,7 @@ public class ControladorFiltre {
 
         if (!f.teAnyFilter()) {
             drs.setRowFilter(null);
-            host.actualitzarTitleBar();
+            actualizarRecompteFiltre(drs);
             return;
         }
 
@@ -232,14 +242,27 @@ public class ControladorFiltre {
                         new herramienta.ui.DialegError(ex).mostrarErrorMessage(); return;
                     }
                     aplicarRowFilterInMemory(drs, f, isbnMap, sets.get("tag"), sets.get("llista"));
-                    host.actualitzarTitleBar();
+                    actualizarRecompteFiltre(drs);
                 }
             }.execute();
             return;
         }
 
         aplicarRowFilterInMemory(drs, f, isbnMap, null, null);
-        host.actualitzarTitleBar();
+        actualizarRecompteFiltre(drs);
+    }
+
+    /**
+     * Actualitza el recompte després d'un filtre aplicat en memòria.
+     *
+     * <p>Les files que coincideixen amb el filtre són les que l'usuari veu:
+     * el recompte passa a dir aquestes, de manera que el títol de la vista
+     * i el contingut no poden contradir-se.
+     */
+    private void actualizarRecompteFiltre(
+            javax.swing.DefaultRowSorter<? extends javax.swing.table.TableModel, Integer> drs) {
+        int visibles = drs.getViewRowCount();
+        host.posarRecompte(visibles, visibles);
     }
 
     private void aplicarRowFilterInMemory(
@@ -324,7 +347,8 @@ public class ControladorFiltre {
                 }
             });
         }
-        host.actualitzarTitleBar();
+        int visibles = drs.getViewRowCount();
+        host.posarRecompte(visibles, visibles);
     }
 
     void eliminarAlldataFiltros() {

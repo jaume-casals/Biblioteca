@@ -185,7 +185,6 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 		return instance;
 	}
 
-	public JFrame obtenirFrame() { return frame; }
 
 	private void obrirNouLlibreDialeg() {
 		presentacio.detalles.control.ControladorDialegDesarLlibres ctrl =
@@ -286,6 +285,19 @@ public class ControladorMarcPrincipal implements presentacio.listener.EnActualit
 	public void enActualitzarLlibre(Llibre l, boolean esNew) {
 		if (esNew) assignToCurrentShelfIfNeeded(l);
 		mostrarControl.refrescarLlibre(l, esNew);
+	}
+
+	/**
+	 * Recarrega la biblioteca des de la base de dades i torna a aplicar el
+	 * resultat a la vista.
+	 *
+	 * <p>És el punt d'entrada únic per a "torna a carregar-ho tot": el
+	 * configurador, les proves visuals i la restauració de còpies de
+	 * seguretat l'utilitzen en lloc de replicar la seqüència de càrrega.
+	 */
+	public void refrescarBiblioteca() {
+		if (mostrarControl == null) return;
+		mostrarControl.refresh();
 	}
 
 	/**

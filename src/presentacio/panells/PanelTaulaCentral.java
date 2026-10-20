@@ -63,7 +63,7 @@ public class PanelTaulaCentral extends JPanel {
 
 	private void buildTable() {
 		scrollPaneJTable = new JScrollPane();
-		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		scrollPaneJTable.setBorder(null);
 		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
 		scrollPaneJTable.getVerticalScrollBar().setUnitIncrement(16);
 
@@ -104,7 +104,9 @@ public class PanelTaulaCentral extends JPanel {
 		taulaLlibres.setGridColor(UITheme.palette().tableGrid());
 		taulaLlibres.setRowHeight(32);
 		taulaLlibres.setFont(UITheme.fontBase());
-		taulaLlibres.setShowGrid(true);
+		// Només separadors horitzontals: la graella vertical pesa molt i
+		// divideix la taula en columnes estretes.
+		taulaLlibres.setShowGrid(false);
 		taulaLlibres.setIntercellSpacing(new Dimension(0, 1));
 		taulaLlibres.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
@@ -132,6 +134,9 @@ public class PanelTaulaCentral extends JPanel {
 					BorderFactory.createEmptyBorder(5, 10, 5, 10)
 				));
 				String text = v != null ? v.toString() : "";
+				// La columna de portada és una miniatura: el text de la
+				// capçalera no hi cap i es veuria tallat ("P…").
+				if (c == ModelTaulaBiblioteca.COL_COVER) text = "";
 				javax.swing.RowSorter<?> sorter = t.getRowSorter();
 				if (sorter != null) {
 					List<? extends javax.swing.RowSorter.SortKey> keys = sorter.getSortKeys();
@@ -191,7 +196,7 @@ public class PanelTaulaCentral extends JPanel {
 	}
 
 	public void aplicarTheme() {
-		scrollPaneJTable.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		scrollPaneJTable.setBorder(null);
 		scrollPaneJTable.getViewport().setBackground(UITheme.palette().bgPanel());
 		taulaLlibres.setBackground(UITheme.palette().bgPanel());
 		taulaLlibres.setForeground(UITheme.palette().textDark());

@@ -259,7 +259,7 @@ public class ControladorPanellDetallsLlibre {
 				javax.swing.JOptionPane.YES_NO_OPTION,
 				javax.swing.JOptionPane.WARNING_MESSAGE);
 			if (confirm != javax.swing.JOptionPane.YES_OPTION) return;
-			EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(llibre, true);
+			EnEliminarLlibre.EsborrarEvent ev = new EnEliminarLlibre.EsborrarEvent(true);
 			enActualizarBBDD.enEliminantLlibre(ev);
 			if (!EnEliminarLlibre.hauriaProceed(ev)) return;
 			new javax.swing.SwingWorker<Void, Void>() {

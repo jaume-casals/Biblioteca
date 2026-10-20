@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -1147,8 +1146,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DeleteEvent: cancellable=true, veto marks as vetoed")
     void eliminarEventCancellableVeto() {
-        domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(book, true);
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(true);
         assertThat(ev.esCancellable()).isTrue();
         assertThat(ev.esVetoed()).isFalse();
         ev.veto();
@@ -1158,8 +1156,7 @@ class BibliotecaJUnit5Test {
     @Test
     @DisplayName("DeleteEvent: cancellable=false, veto has no practical effect")
     void eliminarEventNonCancellable() {
-        domini.Llibre book = book(9780306406157L, "Dune");
-        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(book, false);
+        presentacio.listener.EnEliminarLlibre.EsborrarEvent ev = new presentacio.listener.EnEliminarLlibre.EsborrarEvent(false);
         assertThat(ev.esCancellable()).isFalse();
     }
 
@@ -1174,7 +1171,7 @@ class BibliotecaJUnit5Test {
             @Override public void enEliminantLlibre(presentacio.listener.EnEliminarLlibre.EsborrarEvent e) { e.veto(); }
         };
         presentacio.listener.EnEliminarLlibre.EsborrarEvent ev =
-            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(cd.obtenirLlibre(9780306406157L), true);
+            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(true);
         vetoer.enEliminantLlibre(ev);
         assertThat(presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)).isFalse();
         if (presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)) cd.eliminarLlibre(cd.obtenirLlibre(9780306406157L));
@@ -1194,7 +1191,7 @@ class BibliotecaJUnit5Test {
             @Override public void enEliminantLlibre(presentacio.listener.EnEliminarLlibre.EsborrarEvent e) { e.veto(); }
         };
         presentacio.listener.EnEliminarLlibre.EsborrarEvent ev =
-            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(cd.obtenirLlibre(9780306406157L), false);
+            new presentacio.listener.EnEliminarLlibre.EsborrarEvent(false);
         vetoer.enEliminantLlibre(ev);
         assertThat(ev.esVetoed()).isTrue();
         assertThat(presentacio.listener.EnEliminarLlibre.hauriaProceed(ev)).isTrue();

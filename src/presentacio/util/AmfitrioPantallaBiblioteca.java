@@ -32,6 +32,25 @@ public interface AmfitrioPantallaBiblioteca {
      * consulta, de manera que comparteixen la generació.
      */
     void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres);
+    /**
+     * Igual que {@link #aplicarResultat}, però indica quantos llibres
+     * coincideixen amb l'àmbit i el filtre vigents.
+     *
+     * <p>El recompte visible surt d'aquest valor: és l'única font del
+     * "quantos llibres hi ha" i evita que el comptador i el contingut
+     * mostrin xifres contradictòries.
+     *
+     * @param ambit llibres que coincideixen amb l'àmbit i el filtre
+     */
+    void aplicarResultat(CoordinadorGeneracions.Fulla<?> fulla, java.util.List<Llibre> llibres, int ambit);
+    /**
+     * Actualitza el recompte de llibres visible sense reaplicar el resultat.
+     *
+     * <p>S'usa quan un filtre o una cerca redueixen les files que es mostren
+     * sense canviar la consulta: el recompte ha de reflectir el que l'usuari
+     * veu, no el que hi ha abans del filtre.
+     */
+    void posarRecompte(int enAmbit, int mostrats);
     void mostrarPage(int page);
     void refrescarAll();
     void actualitzarTitleBar();

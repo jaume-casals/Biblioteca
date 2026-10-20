@@ -39,4 +39,29 @@ public class PanelMarcPrincipal extends JPanel {
 	}
 
 	public JLabel obtenirStatusBar() { return statusBar; }
+
+	/**
+	 * Repinta la barra d'estat amb els colors del tema actiu.
+	 *
+	 * <p>Sense això la barra conserva el fons, el text i la vora del tema
+	 * amb què es va construir: en mode fosc quedava una banda blanca a la
+	 * part inferior de la finestra.
+	 */
+	public void aplicarStatusBar() {
+		setBackground(UITheme.palette().bgMain());
+		statusBar.setForeground(UITheme.palette().textMid());
+		statusBar.setBackground(UITheme.palette().bgPanel());
+		statusBar.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createMatteBorder(1, 0, 0, 0, UITheme.palette().borderClr()),
+			BorderFactory.createEmptyBorder(3, 6, 3, 6)));
+		repaint();
+	}
+
+	/**
+	 * Aplica el tema a tota la finestra: barra d'estat i contingut.
+	 */
+	public void aplicarTheme() {
+		aplicarStatusBar();
+		mostrarBibliotecaPanel.aplicarTheme();
+	}
 }

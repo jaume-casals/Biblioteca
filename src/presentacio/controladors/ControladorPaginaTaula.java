@@ -1,7 +1,6 @@
 package presentacio.controladors;
 
 import domini.Llibre;
-import herramienta.i18n.I18n;
 import java.util.ArrayList;
 import persistencia.contract.LectorLlibre;
 import presentacio.models.ModelPaginacio;
@@ -43,11 +42,11 @@ public class ControladorPaginaTaula {
 
     private final PanelMostrarBiblioteca vista;
     private final LectorLlibre cd;
-    private final java.util.function.BiConsumer<presentacio.util.CoordinadorGeneracions.Fulla<?>, java.util.List<Llibre>> posarTable;
+    private final presentacio.util.AplicadorResultat posarTable;
     private final presentacio.util.CoordinadorGeneracions generacions;
 
     ControladorPaginaTaula(PanelMostrarBiblioteca vista, LectorLlibre cd,
-                        java.util.function.BiConsumer<presentacio.util.CoordinadorGeneracions.Fulla<?>, java.util.List<Llibre>> posarTable,
+                        presentacio.util.AplicadorResultat posarTable,
                         presentacio.util.CoordinadorGeneracions generacions) {
         this.vista = vista;
         this.cd = cd;
@@ -61,7 +60,7 @@ public class ControladorPaginaTaula {
             model.posarPaginatedMode(false);
             model.invalidateCache();
             paginationView.hide();
-            posarTable.accept(null, new ArrayList<>());
+            posarTable.accept(null, new ArrayList<>(), 0);
             return;
         }
         if (model.esUseDBPagination()) {
@@ -79,12 +78,12 @@ public class ControladorPaginaTaula {
                     int totalCount = model.obtenirCachedTotalCount();
                     if (totalCount <= PAGE_SIZE) {
                         ArrayList<Llibre> rows = new ArrayList<>(cd.obtenirLlibresPage(0, PAGE_SIZE));
-                        return new PageLoad(false, 0, 1, rows);
+                        return new PageLoad(false, 0, 1, rows, totalCount);
                     }
                     int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
                     int p = Math.max(0, Math.min(requestedPage, totalPages - 1));
                     ArrayList<Llibre> rows = new ArrayList<>(cd.obtenirLlibresPage(p * PAGE_SIZE, PAGE_SIZE));
-                    return new PageLoad(true, p, totalPages, rows);
+                    return new PageLoad(true, p, totalPages, rows, totalCount);
                 }
                 @Override protected void done() {
                     if (isCancelled()) return;
@@ -95,11 +94,11 @@ public class ControladorPaginaTaula {
                         if (!r.paginated) {
                             model.posarPaginatedMode(false);
                             paginationView.hide();
-                            posarTable.accept(fulla, r.rows);
+                            posarTable.accept(fulla, r.rows, r.rows.size());
                         } else {
                             model.posarCurrentPage(r.page);
                             model.posarPaginatedMode(true);
-                            posarTable.accept(fulla, r.rows);
+                            posarTable.accept(fulla, r.rows, r.totalCount);
                             paginationView.apply(r.page, r.totalPages);
                         }
                     } catch (Exception ex) {
@@ -114,7 +113,7 @@ public class ControladorPaginaTaula {
             model.posarPaginatedMode(false);
             model.invalidateCache();
             paginationView.hide();
-            posarTable.accept(null, biblio instanceof ArrayList<Llibre> a ? a : new ArrayList<>(biblio));
+            posarTable.accept(null, biblio instanceof ArrayList<Llibre> a ? a : new ArrayList<>(biblio), biblio.size());
             return;
         }
         int totalPages = (int) Math.ceil((double) biblio.size() / PAGE_SIZE);
@@ -123,11 +122,18 @@ public class ControladorPaginaTaula {
         model.posarPaginatedMode(true);
         int from = page * PAGE_SIZE;
         int to = Math.min(from + PAGE_SIZE, biblio.size());
-        posarTable.accept(null, new ArrayList<>(biblio.subList(from, to)));
+        posarTable.accept(null, new ArrayList<>(biblio.subList(from, to)), biblio.size());
         paginationView.apply(page, totalPages);
     }
 
-    private record PageLoad(boolean paginated, int page, int totalPages, ArrayList<Llibre> rows) {}
+    /**
+     * Resultat d'una pàgina carregada.
+     *
+     * @param totalCount nombre exacte de llibres que coincideixen amb la consulta,
+     *                 no el nombre de files de la pàgina
+     */
+    private record PageLoad(boolean paginated, int page, int totalPages,
+                            ArrayList<Llibre> rows, int totalCount) {}
 }
 
 

@@ -1,8 +1,10 @@
 package presentacio.util;
 
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
@@ -21,26 +23,29 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.Border;
-import javax.swing.plaf.basic.BasicButtonUI;
 
 import herramienta.i18n.Escapers;
 import herramienta.i18n.I18n;
+import herramienta.ui.Tokens;
 import herramienta.ui.UITheme;
 
 /**
- * Fàbrica de la capa de presentacio per a components Swing sensibles al tema.
+ * Fàbrica de la capa de presentació per a components Swing sensibles al tema.
  *
- * <p>Tot el codi de presentacio hauria de cridar aquesta classe en lloc de
+ * <p>Tot el codi de presentació hauria de cridar aquesta classe en lloc de
  * tocar directament els camps d'estil de {@link UITheme}, de manera que
- * canviar a un altre look-and-feel no obligui a tocar cada panell/control.
+ * canviar el tema (o el Look &amp; Feel) no obligui a tocar cada
+ * panell/control.
  *
- * <p>Els cossos d'estil (button / label / panel / field / cardBorder) es
- * van moure aquí des de {@code herramienta.ui.UITheme} durant la
- * correcció de build de la sessió 11 perquè {@code UITheme} només
- * posseeixi l'estat del tema (colors, fonts, claus UIManager) i
- * {@code UIComponents} posseeixi l'aplicació d'estils a la capa de
- * panell. Els camps i colors que defineixen l'aspecte continuen venint
- * de {@link UITheme}; els mètodes d'aquí simplement els apliquen.
+ * <p>Els components es deixen pintar al Look &amp; Feel (FlatLaf): així
+ * hereten focus, hover, deshabilitat i ordenació de tabulació correctes.
+ * Aquesta classe nomésOverrideix el que el LAF no pot saber: el color
+ * concret d'un botó primari, d'un botó destructiu o d'una etiqueta de
+ * secció.
+ *
+ * <p>Els cossos d'estil (button / label / panel / field / cardBorder) viuen
+ * aquí; els tokens (colors, espaiat, radis, mides) viuen a
+ * {@link UITheme} i {@link Tokens}.
  */
 public final class UIComponents {
 
@@ -60,8 +65,8 @@ public final class UIComponents {
 
     public static JLabel sectionHeader(String key) {
         JLabel lbl = new JLabel(I18n.t(key));
-        lbl.setFont(UITheme.fontBold());
-        lbl.setForeground(UITheme.palette().accent());
+        lbl.setFont(UITheme.fontBold().deriveFont((float) Tokens.FONT_SIZE_SECTION));
+        lbl.setForeground(UITheme.palette().textMuted());
         return lbl;
     }
 
@@ -108,41 +113,111 @@ public final class UIComponents {
         return btn;
     }
 
-    private static void styleButtonChrome(JButton btn, Color bg, Color fg, Font font) {
-        btn.setUI(new BasicButtonUI());
+    // ── Botons ───────────────────────────────────────────────────────────────
+
+    /**
+     * Aplica el paper d'un botó: accent, secundari o destructiu.
+     *
+     * <p>No es substitueix el {@code UI} del botó: FlatLaf ja dibuixa el
+     * contorn de focus, els estats hover/pressed i el text deshabilitat.
+     * Només se li indica el color de fons i de text.
+     *
+     * <p>FlatLaf manté el fons personalitzat també quan el botó es
+     * deshabilita, cosa que fa que un botó destructiu deshabilitat continuï
+     * vermell. Per això l'estat deshabilitat es torna a pintar amb els
+     * tokens deshabilitats: el component ho indica amb el text, el color i
+     * la vora, no només amb el color.
+     */
+    private static void styleButtonChrome(javax.swing.AbstractButton btn, Color bg, Color fg, Font font) {
         btn.setBackground(bg);
         btn.setForeground(fg);
         btn.setFont(font);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
+        btn.setFocusPainted(true);
+        btn.setBorderPainted(true);
+        btn.setContentAreaFilled(true);
+        btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        installEnabledState(btn, bg, fg);
     }
 
-    public static void styleAccentButton(JButton btn) {
-        styleButtonChrome(btn, UITheme.palette().accent(), Color.WHITE, UITheme.fontBold());
+    /**
+     * Manté el paper del botó coherent quan es deshabilita.
+     *
+     * <p>FlatLaf no aplicava el to de deshabilitat sobre un fons
+     * personalitzat: el botó quedava saturat i l'usuari no podia saber que
+     * era inactionable. Aquí el fons passa al rol de superfície apagada i
+     * el text al rol de text deshabilitat.
+     */
+    private static void installEnabledState(javax.swing.AbstractButton btn, Color bg, Color fg) {
+        if (Boolean.TRUE.equals(btn.getClientProperty("enabledStateInstalled"))) return;
+        btn.putClientProperty("enabledStateInstalled", Boolean.TRUE);
+        btn.addPropertyChangeListener("enabled", e -> {
+            boolean enabled = btn.isEnabled();
+            btn.setBackground(enabled ? bg : UITheme.palette().bgSunken());
+            btn.setForeground(enabled ? fg : UITheme.palette().textDisabled());
+        });
     }
 
-    public static void styleSecondaryButton(JButton btn) {
-        styleButtonChrome(btn, UITheme.palette().secondaryBtnBg(), Color.WHITE, UITheme.fontBold());
+    /** Botó principal: un únic accent blau/indi a la vista. */
+    public static void styleAccentButton(javax.swing.AbstractButton btn) {
+        styleButtonChrome(btn, UITheme.palette().accent(), UITheme.palette().textOnAccent(), UITheme.fontBold());
     }
 
-    public static void styleDangerButton(JButton btn) {
-        styleButtonChrome(btn, UITheme.palette().danger(), Color.WHITE, UITheme.fontBold());
+    /** Botó secundari: superfície neutra amb vora. */
+    public static void styleSecondaryButton(javax.swing.AbstractButton btn) {
+        styleButtonChrome(btn, UITheme.palette().secondaryBtnBg(), UITheme.palette().textDark(), UITheme.fontBold());
     }
 
-    public static void styleSidebarButton(JButton btn) {
-        styleButtonChrome(btn, UITheme.palette().sidebarBg(), UITheme.palette().sidebarText(), UITheme.fontBase());
-        btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+    /** Botó destructiu: vermell, reservat a accions que esborren. */
+    public static void styleDangerButton(javax.swing.AbstractButton btn) {
+        styleButtonChrome(btn, UITheme.palette().danger(), UITheme.palette().textOnAccent(), UITheme.fontBold());
+    }
+
+    /**
+     * Botó de commutació (filtres actius, mode de vista).
+     *
+     * <p>El fons es commuta entre el rol secundari i el rol accent: el
+     * component continua distingint-se pel text i pel contorn de focus, no
+     * només pel color.
+     *
+     * <p>El fons i el text s'apliquen aquí, i no només quan canvia l'estat
+     * d'activació: un botó de commutació que no repinta el seu fons conserva
+     * el color del tema amb què es va construir, i en mode fosc queda una
+     * caixa blanca al mig de la barra d'eines.
+     */
+    public static void styleToggleButton(javax.swing.JToggleButton btn) {
+        btn.setFont(UITheme.fontBase());
+        btn.setFocusPainted(true);
+        btn.setBorderPainted(true);
+        btn.setContentAreaFilled(true);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        btn.setBackground(UITheme.palette().secondaryBtnBg());
+        btn.setForeground(UITheme.palette().textDark());
+        btn.addPropertyChangeListener("enabled", e -> {
+            boolean enabled = btn.isEnabled();
+            btn.setBackground(enabled ? UITheme.palette().secondaryBtnBg() : UITheme.palette().bgSunken());
+            btn.setForeground(enabled ? UITheme.palette().textDark() : UITheme.palette().textDisabled());
+        });
+    }
+
+    /**
+     * Garanteix una alçada mínima de control.
+     *
+     * <p>No es fixa la mida preferida: el Look &amp; Feel calcula l'amplada
+     * del botó a partir del text i de la font, i això evita que un text
+     * quedi tallat. Fixar una amplada preferred congelada pot deixar el
+     * botó més estret del que cal, i el text es retalla.
+     */
+    public static void setAlçadaControl(javax.swing.AbstractButton b, int alçada) {
+        b.setMinimumSize(new Dimension(1, alçada));
     }
 
     public static void styleLabel(JLabel lbl) {
-        lbl.setFont(UITheme.fontLabel());
-        lbl.setForeground(UITheme.palette().textMid());
-    }
-
-    public static void stylePanel(JPanel panel) {
-        panel.setBackground(UITheme.palette().bgPanel());
+        lbl.setFont(UITheme.fontBase());
+        lbl.setForeground(UITheme.palette().textDark());
     }
 
     public static Border paddedLineBorder(Color c) {
@@ -156,32 +231,22 @@ public final class UIComponents {
         );
     }
 
+    /**
+     * Estil d'un camp de text.
+     *
+     * <p>No es toca la vora: FlatLaf dibuixa la vora, el focus i l'estat
+     * deshabilitat, i una vora personalitzada els amagaria.
+     */
     public static void styleField(JTextField field) {
         field.setFont(UITheme.fontBase());
         field.setForeground(UITheme.palette().textDark());
         field.setBackground(UITheme.palette().fieldBg());
-        field.setBorder(paddedLineBorder(UITheme.palette().borderClr()));
-        if (field.getClientProperty("hoverInstalled") == null) {
-            field.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override public void mouseEntered(java.awt.event.MouseEvent e) {
-                    if (field.isEnabled())
-                        field.setBorder(paddedLineBorder(UITheme.palette().accent()));
-                }
-                @Override public void mouseExited(java.awt.event.MouseEvent e) {
-                    field.setBorder(paddedLineBorder(UITheme.palette().borderClr()));
-                }
-            });
-            field.putClientProperty("hoverInstalled", Boolean.TRUE);
-        }
-    }
-
-    public static Border cardBorder() {
-        return paddedLineBorder(UITheme.palette().borderClr(), 6, 6, 6, 6);
+        field.setCaretColor(UITheme.palette().accent());
     }
 
     public static void applySelectedColors(JComponent c, boolean selected) {
-        c.setBackground(selected ? UITheme.palette().accent() : UITheme.palette().bgPanel());
-        c.setForeground(selected ? Color.WHITE : UITheme.palette().textDark());
+        c.setBackground(selected ? UITheme.palette().selectionBg() : UITheme.palette().bgPanel());
+        c.setForeground(selected ? UITheme.palette().selectionText() : UITheme.palette().textDark());
     }
 
     public static void nameScrollBar(JScrollBar sb) {
@@ -193,7 +258,6 @@ public final class UIComponents {
     }
 
     public static void styleCombo(JComboBox<?> combo) {
-        combo.setBackground(UITheme.palette().bgMain());
         combo.setForeground(UITheme.palette().textDark());
         combo.setFont(UITheme.fontBase());
     }
