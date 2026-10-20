@@ -312,3 +312,113 @@ Built build/artifacts/biblioteca.jar
    els restauri.
 5. `pom.xml` de `build/maven-legacy/`: es pot arxivar o esborrar quan es
    decideixi que no hi haurà més intents de Maven.
+---
+
+## 6. Redisseny de la interfície (2026-10)
+
+### 6.1 Decisió tecnològica
+
+Es manté **Java + Swing** i es substitueix **Nimbus per FlatLaf 3.7.2**. No hi ha
+servidor HTTP ni procés auxiliar, ni migració a JavaFX/Electron/Tauri. La interfície
+nova és una capa nova sobre el backend existent: domini i persistència no s'han tocat
+(apartat d'ampliació del contracte d'aplicació de resultats, explicat a sota).
+
+### 6.2 Dependències addides
+
+| Dependència | Versió | SHA-256 | Per què |
+|---|---|---|---|
+| `com.formdev:flatlaf` | 3.7.2 | `917aff39…6c0fabf4` | Look & Feel pla, control·lable per `UIManager`. |
+| `com.formdev:flatlaf-extras` | 3.7.2 | `7d03612d…8b5166` | `FlatSVGIcon`: renderitzat d'icones SVG locals. |
+| `com.github.weisj:jsvg` | 2.1.0 | `a538142d…ffc1b6` | Renderitzador SVG que utilitza `FlatSVGIcon`. |
+
+Les tres són versions reals publicades a Maven Central, verificant-les amb
+`maven-metadata.xml` i calculant el SHA-256 del jar. S'han fixat a `build/deps.lock`
+i `make deps-verify` en verifica la integritat. `jsvg` no arrossega dependències
+d'execució (les del seu POM són opcionals i de prova).
+
+### 6.3 Sistema de tokens
+
+* `herramienta/ui/UITheme.Paleta`: paletes semàntiques (superfícies, text, vores,
+  accent, estat, interacció, barra lateral) per a quatre temes.
+* `herramienta/ui/Tokens`: escala d'espaiat, radis, alçades de control, mides de
+  tipografia i escala de lletra.
+* `presentacio/util/UIComponents`: aplica els tokens; ja no fixa mides preferides
+  dels botons (el LAF les calcula a partir del text, de manera que cap etiqueta
+  queda tallada).
+* `presentacio/util/Icones` + `src/presentacio/icones/*.svg`: família local de 33
+  icones SVG, rasteritzada una vegada per (nom, mida, color).
+
+Guia completa per a pantalles noves: [`docs/SISTEMA-VISUAL.md`](SISTEMA-VISUAL.md).
+
+### 6.4 Correccions de fons
+
+* **Comptador incoherent.** El recompte visible es derivava de dues quantitats
+  independents (files del model de la taula i mida de la llista en memòria) i
+  podia mostrar "1000 / 0 llibres". Ara l'estat de vista és l'única font
+  (`llibresEnAmbit` / `llibresMostrats`) i el resultat s'aplica amb la mida de
+  l'àmbit (`AplicadorResultat`).
+* **Formulari de llibre nou.** `GridLayout(0,2)` feia que tots els camps creixess
+  a la vegada. Ara el formulari usa `GridBagLayout`: els camps d'una línia
+  conserven la seva alçada i només la descripció i les notes absorbeixen
+  l'alçada extra. El diàleg té capçalera, cos desplaçable, pestanyes de
+  metadades i peu fix.
+* **Camps truncats a la barra lateral.** Les entrades de navegació es retallen
+  ells mateixos (etiqueta curta "Recents") i el text de la capçalera mostra el nom
+  complet de la vista.
+* **Valoració.** El valor per defecte de la columna `valoracio` és 0, és a dir
+  "sense valorar". Es mostra la xifra (i no estrelles buides) només quan hi ha
+  valoració real.
+* **Progrés.** `JProgressBar` amb text pintat omplia tota la cel·la. El renderer
+  nou dibuixa una barra de 3 px amb el text de pàgines, i distingeix "—" (sense
+  dades) de "0 / 320" (0% real).
+* **Tema fosc incomplet.** La galeria no es re-tematitzava: les targetes
+  quedaven amb els colors del tema clar. Ara `PanelMostrarBiblioteca.aplicarTheme()`
+  aplica la galeria i les targetes es tornen a construir.
+
+### 6.5 Resultats
+
+Build i suite: `make compile` i `make test` en verd — 733 tests correctes, 0 fallits
+(base: 712 correctes, 0 fallits; +21 tests nous). Les proves no s'han modificat per
+acceptar cap regressió; un test nou (el contrast WCAG) va detectar que dues paletes
+tenien el text secundari per sota del mínim i les paletes es van corregir.
+
+Proves visuals: `checkBiblio/ProvaVisual` arrenca l'aplicació real contra una H2 en
+memòria, hi posa llibres ficticis i en captura la finestra en clar i fosc, galeria i
+taula, el diàleg de llibre nou i el de configuració. Les captures són a
+`build/captures/`.
+
+Mesures de rendiment (mediana de 3 execucions, mateixa màquina, mateixa mida de
+biblioteca de prova):
+
+| Mesura | Abans | Després | Variació |
+|---|---|---|---|
+| Arrencada fins a la finestra principal | 1728 ms | 1453 ms | −16 % |
+| Canvi a galeria | 70,4 ms | 70,5 ms | = |
+| Canvi a taula | 75,2 ms | 75,2 ms | = |
+| Redimensionament ×10 | 208 ms | 317 ms | **+52 %** |
+| Cerca | 15,5 ms | 17,9 ms | +15 % (dins del soroll entre execucions) |
+| Heap usat | 26,6 MB | 19,6 MB | −26 % |
+| CPU del fil principal | ~150 ms | ~151 ms | = |
+
+El redimensionament és més car perquè les targetes de galeria són més grans
+(190 px d'amplada en lloc de 140, d'acord amb la mida indicativa demanada) i, per
+tant, pinten més píxels. El canvi de vista, la cerca i l'arrencada no han
+regressat; la memòria i l'ocupació de CPU han millorat.
+
+### 6.6 Pendent
+
+* La fitxa de llibre (`PanellDetallsLlibre`) encara no separa netament el mode
+  lectura del mode edició: el mode lectura segueix sent una pila de camps. La
+  correcció està dissenyada (reutilitzant `ConstructorGraellaFormulari`) però no
+  s'ha aplicat.
+* Les opcions avançades de la galeria (agrupació per sèrie com a opció secundària,
+  filtres actius eliminables, "Neteja filtres") no s'han acabat: la barra
+  d'eines té el botó de filtres i el de sèries, però no la fila de xips.
+  L'escaffold mort d'aquesta fila (el mètode `posarFiltresActius`, el record
+  `FiltreActiu` i el contenidor buit que reservava l'alçada) s'ha eliminat;
+  la implementació s'ha de fer de nou quan la funcionalitat es connecti al
+  model de filtres.
+* No s'ha fet la passa de mides de lletra 100 % / 150 % / 200 % amb captura
+  (l'entorn gràficDisposeix de Xvfb però el que hi ha no aplica escalat de sistema).
+* `Construcció de gràfics`: no s'ha introduït cap llibreria nova de gràfics; les
+  pestanyes de gràfics i de núvol d'etiquetes es mantenen tal com eren.

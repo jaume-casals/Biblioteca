@@ -1,0 +1,444 @@
+tree -I 'node_modules|.git|venv|__pycache__|dist|bin|lib|target|jre|artifacts|audit|baseline|baseline-clean|captures|h2compat|lib-lock|maven-legacy|probes|reports|stamp|*.log' -L 4 --charset=utf8
+
+.
+├── Biblioteca.html
+├── build
+│   └── deps.lock
+├── checkBiblio
+│   ├── AcceptacioUi.java
+│   ├── audit_report.json
+│   ├── audit_report.txt
+│   ├── biblioteca-ui-stress.user.js
+│   ├── CapturaPantalla.java
+│   ├── I18nAudit.java
+│   ├── perf-baseline.py
+│   ├── PerfBench.java
+│   ├── perf-compare.sh
+│   ├── PerfUI.java
+│   ├── ProvaVisual.java
+│   ├── run2.ps1
+│   ├── run2.sh
+│   ├── run.ps1
+│   ├── run.sh
+│   ├── stress_report.txt
+│   ├── SuportTestUi.java
+│   ├── TestEstres.java
+│   └── UIAudit.java
+├── components.jsx
+├── crash-35686a656ffdd2bdc8a49832f3045212a9262cc9
+├── crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+├── docs
+│   ├── agent
+│   │   ├── AGENTS.md
+│   │   ├── CLAUDE.md
+│   │   └── MISTAKES.md
+│   ├── ARCHITECTURE-MAP.md
+│   ├── code-review
+│   │   ├── compact1.txt
+│   │   ├── compact.txt
+│   │   └── tot.txt
+│   ├── fuzzing.md
+│   ├── I18N-NEWLINES.md
+│   ├── MARIADB-TEST.md
+│   ├── MODERNITZACIO.md
+│   ├── NAMING_POLICY.md
+│   ├── SISTEMA-VISUAL.md
+│   ├── Summarize
+│   └── tree
+├── fuzz-shim
+│   ├── com
+│   │   └── code_intelligence
+│   │       └── jazzer
+│   └── jazzer-native-shim.jar
+├── LICENSE
+├── Makefile
+├── opencode.json
+├── packaging
+│   ├── data
+│   │   └── biblioteca.mv.db
+│   ├── icon.svg
+│   ├── installer.nsi
+│   └── launch4j.xml
+├── portades
+│   ├── default_cover.png
+│   ├── q.png
+│   └── r.jpg
+├── README.md
+├── scripts
+│   ├── audit_redo.py
+│   ├── _build_test_classes.py
+│   ├── compile.bat
+│   ├── _deps.bat
+│   ├── fetch_deps.py
+│   ├── fuzz.bat
+│   ├── fuzz-jazzer.bat
+│   ├── fuzz-nightly.sh
+│   ├── fuzz-property.bat
+│   ├── gen_strings.py
+│   ├── i18n_java_template.java.tmpl
+│   ├── install.sh
+│   ├── loop-compact-prompt.txt
+│   ├── loop-prompt-tune.sh
+│   ├── loop-review-prompt.txt
+│   ├── loop-review.sh
+│   ├── mariadb_test.sh
+│   ├── merge_translate.py
+│   ├── split_agent_briefs.py
+│   ├── test.bat
+│   ├── test_gen_strings.py
+│   ├── trace_run.bat
+│   └── verify_jar_manifest.py
+├── src
+│   ├── domini
+│   │   ├── AnalitzadorPrestatgeria.java
+│   │   ├── BibliotecaException.java
+│   │   ├── ConstructorFiltreLlibre.java
+│   │   ├── ControladorDomini.java
+│   │   ├── EntitatNomenada.java
+│   │   ├── EspecificacioOrdenacio.java
+│   │   ├── facade
+│   │   │   ├── DelegatCopiaSeguretat.java
+│   │   │   ├── DelegatEstadistiques.java
+│   │   │   ├── DelegatLlibre.java
+│   │   │   ├── DelegatPrestatgeria.java
+│   │   │   ├── DelegatPrestec.java
+│   │   │   ├── NamedEntityDelegate.java
+│   │   │   ├── StateContext.java
+│   │   │   └── TagDelegate.java
+│   │   ├── LlibreCore.java
+│   │   ├── LlibreFilter.java
+│   │   ├── Llibre.java
+│   │   ├── LlibreLlistaContext.java
+│   │   ├── Llista.java
+│   │   ├── package-info.java
+│   │   ├── SqlOp.java
+│   │   └── Tag.java
+│   ├── fichers
+│   │   ├── 234.csv
+│   │   ├── credit.html
+│   │   └── license.html
+│   ├── herramienta
+│   │   ├── api
+│   │   │   ├── AnalitzadorOpenLibrary.java
+│   │   │   └── ClientOpenLibrary.java
+│   │   ├── config
+│   │   │   ├── ConfiguracioDb.java
+│   │   │   ├── ConfiguracioFiltre.java
+│   │   │   ├── ConfiguracioFinestra.java
+│   │   │   ├── Configuracio.java
+│   │   │   ├── ConfiguracioUi.java
+│   │   │   └── MidaLletra.java
+│   │   ├── ExportadorLlibres.java
+│   │   ├── i18n
+│   │   │   ├── Escapers.java
+│   │   │   ├── I18n.java
+│   │   │   └── Idioma.java
+│   │   ├── ImportadorLlibres.java
+│   │   ├── io
+│   │   │   ├── csv
+│   │   │   ├── export
+│   │   │   ├── JsonHelpers.java
+│   │   │   ├── JsonImporter.java
+│   │   │   ├── RelationRemapper.java
+│   │   │   ├── SeedorBaseDades.java
+│   │   │   ├── ServeiCoberta.java
+│   │   │   └── ServeiCopiaSeguretat.java
+│   │   ├── package-info.java
+│   │   ├── strings_ca.properties
+│   │   ├── strings_en.properties
+│   │   ├── strings_es.properties
+│   │   ├── text
+│   │   │   ├── EstatOptions.java
+│   │   │   ├── FieldAutoComplete.java
+│   │   │   ├── FiltreUtils.java
+│   │   │   ├── FormatOptions.java
+│   │   │   ├── Isbn13Normalizer.java
+│   │   │   ├── ParseHelpers.java
+│   │   │   ├── UtilitatsData.java
+│   │   │   └── ValidadorLlibre.java
+│   │   └── ui
+│   │       ├── DialegError.java
+│   │       ├── Documents.java
+│   │       ├── SelectorMostraColor.java
+│   │       ├── Tokens.java
+│   │       ├── UITheme.java
+│   │       ├── UtilitatsColor.java
+│   │       └── UtilitatsSwing.java
+│   ├── LICENSE
+│   ├── main
+│   │   ├── Executable.java
+│   │   └── ShutdownHooks.java
+│   ├── persistencia
+│   │   ├── contract
+│   │   │   ├── AdministradorBiblioteca.java
+│   │   │   ├── EscritorBiblioteca.java
+│   │   │   ├── EscritorEtiqueta.java
+│   │   │   ├── EscritorLlibre.java
+│   │   │   ├── EscritorPrestatgeria.java
+│   │   │   ├── EscritorPrestec.java
+│   │   │   ├── LectorBiblioteca.java
+│   │   │   ├── LectorEtiqueta.java
+│   │   │   ├── LectorLlibre.java
+│   │   │   ├── LectorPrestatgeria.java
+│   │   │   └── LectorPrestec.java
+│   │   ├── dao
+│   │   │   ├── AutorDao.java
+│   │   │   ├── LlibreBlobDao.java
+│   │   │   ├── LlibreDaoCore.java
+│   │   │   ├── LlibreLecturaDao.java
+│   │   │   ├── LlibreSearchDao.java
+│   │   │   ├── LlistaDao.java
+│   │   │   ├── PrestecDao.java
+│   │   │   └── TagDao.java
+│   │   ├── internal
+│   │   │   ├── ConnectionConfig.java
+│   │   │   ├── ConnexioServidor.java
+│   │   │   ├── ControladorPersistencia.java
+│   │   │   ├── JarLocator.java
+│   │   │   ├── LlibreFieldBindings.java
+│   │   │   ├── LlibreMapper.java
+│   │   │   ├── MapejadorsFiles.java
+│   │   │   └── Schema.java
+│   │   ├── package-info.java
+│   │   └── row
+│   │       ├── AutorRow.java
+│   │       ├── LecturaRow.java
+│   │       ├── LlibreAutorRow.java
+│   │       ├── LlibreLlistaRow.java
+│   │       ├── LlibreTagRow.java
+│   │       ├── PrestecEndarrerit.java
+│   │       ├── PrestecRow.java
+│   │       ├── RelationRow.java
+│   │       └── RowDates.java
+│   ├── presentacio
+│   │   ├── config
+│   │   │   ├── BarraBotonsConfiguracio.java
+│   │   │   ├── ConfiguracioConstants.java
+│   │   │   ├── ConfiguracioDataSection.java
+│   │   │   ├── ConfiguracioDialogListener.java
+│   │   │   ├── ConfiguracioSeccio.java
+│   │   │   ├── SeccioAparençaConfiguracio.java
+│   │   │   ├── SeccioDbConfiguracio.java
+│   │   │   ├── SeccioIdiomaConfiguracio.java
+│   │   │   ├── SeccioImatgesConfiguracio.java
+│   │   │   └── SeccionsConfiguracio.java
+│   │   ├── controladors
+│   │   │   ├── ControladorAccionsLlibre.java
+│   │   │   ├── ControladorCopiaSeguretat.java
+│   │   │   ├── ControladorEstacioEscaneig.java
+│   │   │   ├── ControladorExportacio.java
+│   │   │   ├── ControladorFiltre.java
+│   │   │   ├── ControladorGaleria.java
+│   │   │   ├── ControladorImportacio.java
+│   │   │   ├── ControladorIOLlibre.java
+│   │   │   ├── ControladorMarcPrincipal.java
+│   │   │   ├── ControladorMenuContextual.java
+│   │   │   ├── ControladorModeVista.java
+│   │   │   ├── ControladorMostrarBiblioteca.java
+│   │   │   ├── ControladorPaginaTaula.java
+│   │   │   ├── ControladorPrestatgeria.java
+│   │   │   └── ControladorTaula.java
+│   │   ├── detalles
+│   │   │   ├── control
+│   │   │   └── vista
+│   │   ├── dialegs
+│   │   │   ├── ConfiguracioDialog.java
+│   │   │   ├── DialegCarrega.java
+│   │   │   ├── DialegGestioLlistes.java
+│   │   │   ├── EstacioEscaneigDialog.java
+│   │   │   └── QuantADialeg.java
+│   │   ├── formularis
+│   │   │   ├── ConstructorGraellaFormulari.java
+│   │   │   ├── RegistreCampsFormulari.java
+│   │   │   └── ValidadorFormulari.java
+│   │   ├── galeria
+│   │   │   ├── FabricantTargetesCoberta.java
+│   │   │   ├── PopupZoomCoberta.java
+│   │   │   └── ServeiImatgesCoberta.java
+│   │   ├── icones
+│   │   │   ├── afegir.svg
+│   │   │   ├── ajuda.svg
+│   │   │   ├── aleatori.svg
+│   │   │   ├── avis.svg
+│   │   │   ├── biblioteca.svg
+│   │   │   ├── carpeta-mes.svg
+│   │   │   ├── cerca.svg
+│   │   │   ├── configuracio.svg
+│   │   │   ├── desitjos.svg
+│   │   │   ├── editar.svg
+│   │   │   ├── en-curs.svg
+│   │   │   ├── enllaç.svg
+│   │   │   ├── esborrar.svg
+│   │   │   ├── estadistiques.svg
+│   │   │   ├── estrella.svg
+│   │   │   ├── etiquetes.svg
+│   │   │   ├── exportar.svg
+│   │   │   ├── filtre.svg
+│   │   │   ├── fletxa-abaix.svg
+│   │   │   ├── galeria.svg
+│   │   │   ├── importar.svg
+│   │   │   ├── imprimir.svg
+│   │   │   ├── info.svg
+│   │   │   ├── llegits.svg
+│   │   │   ├── llibres.svg
+│   │   │   ├── luna.svg
+│   │   │   ├── mes.svg
+│   │   │   ├── ordenacio.svg
+│   │   │   ├── prestatgeries.svg
+│   │   │   ├── prestecs.svg
+│   │   │   ├── recent.svg
+│   │   │   ├── reintentar.svg
+│   │   │   ├── sol.svg
+│   │   │   ├── tancar.svg
+│   │   │   └── taula.svg
+│   │   ├── layouts
+│   │   │   └── WrapLayout.java
+│   │   ├── listener
+│   │   │   ├── EnActualitzarBBDD.java
+│   │   │   ├── EnActualitzarLlibre.java
+│   │   │   ├── EnAfegirLlibre.java
+│   │   │   ├── EnCanviarBlobLlibre.java
+│   │   │   ├── EnCanviarMembreLlista.java
+│   │   │   └── EnEliminarLlibre.java
+│   │   ├── models
+│   │   │   ├── ModelPaginacio.java
+│   │   │   ├── ModelTaulaBiblioteca.java
+│   │   │   └── VistaPaginacio.java
+│   │   ├── package-info.java
+│   │   ├── panells
+│   │   │   ├── navegacio
+│   │   │   ├── PanelBarraSuperior.java
+│   │   │   ├── PanelCalaixFiltre.java
+│   │   │   ├── PanelCapcalera.java
+│   │   │   ├── PanelGaleriaCobertes.java
+│   │   │   ├── PanellBarraEsquerra.java
+│   │   │   ├── PanelMarcPrincipal.java
+│   │   │   ├── PanelMostrarBiblioteca.java
+│   │   │   ├── PanelTaulaCentral.java
+│   │   │   ├── PantallaInici.java
+│   │   │   └── SelectorSegmentat.java
+│   │   ├── renderers
+│   │   │   ├── EditorCasellaLlegit.java
+│   │   │   ├── RenderitzadorBarraProgres.java
+│   │   │   ├── RenderitzadorCasellaLlegit.java
+│   │   │   ├── RenderitzadorCellaCoberta.java
+│   │   │   └── RenderitzadorDestacatCerca.java
+│   │   └── util
+│   │       ├── AjudaEstadistiques.java
+│   │       ├── AmfitrioPantallaBiblioteca.java
+│   │       ├── AplicadorResultat.java
+│   │       ├── CoordinadorGeneracions.java
+│   │       ├── DreceresTeclat.java
+│   │       ├── EstatVistaBiblioteca.java
+│   │       ├── GestorArrossegarSoltarPrestatgeria.java
+│   │       ├── Icones.java
+│   │       ├── MemoriaImatgesCoberta.java
+│   │       ├── UIComponents.java
+│   │       └── UtilitatsLlibre.java
+│   └── version.properties
+├── strings
+│   ├── csv.csv
+│   ├── errors.csv
+│   ├── strings.csv
+│   └── ui.csv
+└── test
+    ├── BibliotecaJUnit5Test.java
+    ├── BibliotecaTest.java
+    ├── domini
+    │   ├── BibliotecaExceptionTest.java
+    │   ├── SqlOpTest.java
+    │   ├── TestAnalitzadorPrestatgeria.java
+    │   ├── TestConstructorFiltreLlibre.java
+    │   ├── TestContextLlibreLlista.java
+    │   ├── TestEspecificacioOrdenacio.java
+    │   ├── TestEstresDomini.java
+    │   ├── TestEtiqueta.java
+    │   ├── TestFiltreLlibre.java
+    │   ├── TestLlibreAutorsDeText.java
+    │   ├── TestLlibreCore.java
+    │   ├── TestLlibre.java
+    │   └── TestLlista.java
+    ├── DominiPersistenciaJUnit5Test.java
+    ├── fixtures
+    │   └── expected.json
+    ├── fuzz
+    │   ├── domini
+    │   │   ├── TestFuzzAnalitzadorPrestatgeria.java
+    │   │   ├── TestFuzzConstructorFiltreLlibre.java
+    │   │   ├── TestFuzzEspecificacioOrdenacio.java
+    │   │   └── TestPropietatsInvariantsLlibre.java
+    │   └── herramienta
+    │       └── io
+    ├── herramienta
+    │   ├── config
+    │   │   └── MidaLletraTest.java
+    │   ├── i18n
+    │   │   ├── EscapersTest.java
+    │   │   └── IdiomaTest.java
+    │   ├── io
+    │   │   ├── csv
+    │   │   ├── export
+    │   │   ├── RelationRemapperTest.java
+    │   │   └── TestCopiaSeguretatRoundTrip.java
+    │   ├── text
+    │   │   ├── FiltreUtilsTest.java
+    │   │   ├── FormatOptionsTest.java
+    │   │   ├── Isbn13NormalizerTest.java
+    │   │   ├── TestUtilitatsData.java
+    │   │   └── TestValidadorLlibre.java
+    │   └── ui
+    │       ├── TestUITheme.java
+    │       ├── TestUtilitatsColor.java
+    │       └── TestUtilitatsSwing.java
+    ├── persistencia
+    │   ├── AutorRowTest.java
+    │   ├── ConnectionConfigTest.java
+    │   ├── ConnectionFactoryTest.java
+    │   ├── ContractPersistenciaBase.java
+    │   ├── ContractPersistenciaH2Test.java
+    │   ├── ContractPersistenciaMariaDBTest.java
+    │   ├── JarLocatorTest.java
+    │   ├── LecturaRowTest.java
+    │   ├── RelationRowTest.java
+    │   ├── SchemaClearOrderTest.java
+    │   ├── TestCampsPesatsNoSborren.java
+    │   ├── TestEstresPersistencia.java
+    │   ├── TestLlibreAutorRow.java
+    │   ├── TestLlibreFieldBindings.java
+    │   ├── TestLlibreLlistaRow.java
+    │   ├── TestLlibreTagRow.java
+    │   ├── TestMapejadorsFiles.java
+    │   ├── TestPrestecRow.java
+    │   ├── TestProjeccioLleugera.java
+    │   └── TestSincronitzacioAutors.java
+    ├── PopulateDB.java
+    ├── presentacio
+    │   ├── config
+    │   │   └── TestSeccioDadesConfiguracio.java
+    │   ├── controladors
+    │   │   ├── TestGeneracionsResultatsTest.java
+    │   │   └── TestSwingWorkerExportCsvTest.java
+    │   ├── dialegs
+    │   │   ├── DialegCarregaSwingWorkerTestTest.java
+    │   │   └── EstacioEscaneigTest.java
+    │   ├── formularis
+    │   │   └── TestConstructorGraellaFormulari.java
+    │   ├── galeria
+    │   │   ├── TestRodaGaleriaTest.java
+    │   │   ├── TestServeiImatgesCobertaTest.java
+    │   │   └── TestTargetesCobertaTest.java
+    │   ├── renderers
+    │   │   └── TestRenderitzadorProgres.java
+    │   ├── TestPanelCalaixFiltre.java
+    │   └── util
+    │       ├── TestComptadorVista.java
+    │       └── TestIcones.java
+    ├── SeedClassics.java
+    ├── TestExportImportCopiaSeguretatJunit5Test.java
+    └── TestRestaurarSqlJunit5.java
+
+# build/ conté deps.lock + artefactes de build (logs, reports, jars) que no es versionen.
+# packaging/jre: JRE Temurin 25 empaquetat (182 MB, 323 fitxers versionats al repositori).
+# bin/ i lib/: artefactes de compilació i dependències baixades; cap fitxer d'aquestes carpetes és versionat.
+# build/maven-legacy/pom.xml: intent de Maven abandonat, encara al disc.
+# crash-* a l'arrel: fitxers de crash de JVM, residus de execucions locals.

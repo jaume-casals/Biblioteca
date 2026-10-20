@@ -3,8 +3,8 @@
 Complete map of the codebase: every layer, every package, every class, the data model, the
 runtime flows, and the build/test surface.
 
-Every number in this document was **measured**, not estimated. The measurement commands are
-given in §7 so the figures can be reproduced or falsified.
+Every number in this document was **measured** against the working tree, not estimated.
+The measurement commands are given in §7 so the figures can be reproduced or falsified.
 
 > Language note: the code, comments, UI strings and commit messages are Catalan.
 > This document is English. Identifiers are quoted verbatim.
@@ -31,7 +31,7 @@ switch it), with a Swing GUI on the EDT.
 | Covers | Auto-import from OpenLibrary by ISBN; images stored as **BLOB in the DB**, not as loose files |
 | Shelves | Unlimited shelves; each book carries its **own rating and read-state per shelf** |
 | Tags | Free-form classification (genre, author, project, …) |
-| Translations | Per-title translations (`nomCa` / `nomEs` / `nomEn`) alongside the canonical title |
+| Translations | Per-title translations (`nom_ca` / `nom_es` / `nom_en`) alongside the canonical title |
 | Search | Real-time across title, author, ISBN, description **and notes** |
 | Filters | Composable: rating, year, language, format, shelf, tag, read-state |
 | Loans | Track who you lent a book to, and returns; overdue detection |
@@ -40,7 +40,7 @@ switch it), with a Swing GUI on the EDT.
 | Import | CSV (native / Goodreads / LibraryThing dialects), Calibre `metadata.db`, JSON |
 | Export | CSV, JSON, HTML, PDF |
 | Backup | SQL dump + restore, with an automatic pre-restore safety backup |
-| UI | Dark/light theme, 3 font sizes, 3 UI languages, gallery **and** table view modes |
+| UI | 4 themes, 3 font sizes, 3 UI languages, gallery **and** table view modes, 35 local SVG icons |
 | Scanning | Barcode-scanner "scan station" with an ISBN lookup pipeline |
 
 ---
@@ -49,15 +49,15 @@ switch it), with a Swing GUI on the EDT.
 
 | | |
 |---|---|
-| Language / runtime | Java 25 (`--release 25`), Swing, Nimbus Look & Feel |
+| Language / runtime | Java 25 (`--release 25`), Swing, **FlatLaf 3.7.2** Look & Feel |
 | Build | Plain `Makefile` + `javac` — **no Maven/Gradle for the app itself** |
 | Dependency manifest | `build/deps.lock` — versions + SHA-256, single source of truth; `make deps` |
 | Main class | `main.Executable` |
-| Source | **197** Java files, **22 504** lines under `src/` |
-| Tests | **69** files, **13 329** lines under `test/` — 715 tests executed by `make test` (JUnit Jupiter + jqwik) |
-| Aux tools | `checkBiblio/` — 4-file, 3 465-line standalone CLI analyser + stress driver |
-| Runtime deps | 8 jars (see §6 *Dependencies*), versions pinned in `build/deps.lock` |
-| i18n | `strings/{ui,errors,csv}.csv` → `scripts/gen_strings.py` → generated `I18n.java` — **595 keys**, 3 locales |
+| Source | **191** Java files, **24 786** lines under `src/` (+ 35 SVG icons) |
+| Tests | **79** files, **14 670** lines under `test/` — 765 tests executed by `make test` |
+| Aux tools | `checkBiblio/` — 9-file, 5 019-line standalone CLI analyser + stress driver |
+| Runtime deps | 11 jars (see §6 *Dependencies*), versions pinned in `build/deps.lock` |
+| i18n | `strings/{ui,errors,csv}.csv` → `scripts/gen_strings.py` → generated `I18n.java` — **628 keys**, 3 locales |
 | Persistence | H2 (file or in-memory) **or** MariaDB, chosen at runtime |
 | HTTP | `java.net.http.HttpClient` (JDK built-in) — no HTTP library dependency |
 | CI | `.github/workflows/ci.yml` — 6 jobs (build+test, i18n, h2-compat, package, fuzz, deps) |
@@ -66,12 +66,12 @@ switch it), with a Swing GUI on the EDT.
 
 | Layer | Package root | Files | Lines | Role |
 |---|---|---:|---:|---|
-| Bootstrap | `src/main` | 2 | 200 | Entry point, splash screen, fatal-error handling |
-| Domain | `src/domini` | 22 | 2 117 | Entities, filters, sorting, facades — no UI, no SQL |
-| Persistence | `src/persistencia` | 38 | 3 143 | Contracts, DAOs, connection, schema, row mappers |
-| Shared utils | `src/herramienta` | 52 | 5 610 | Config, i18n, IO, CSV, text, theming, OpenLibrary client |
-| Presentation | `src/presentacio` | 83 | 11 434 | Swing panels, controllers, dialogs, renderers, gallery |
-| **Total** | `src/` | **197** | **22 504** | |
+| Bootstrap | `src/main` | 2 | 195 | Entry point, splash screen, fatal-error handling |
+| Domain | `src/domini` | 22 | 2 163 | Entities, filters, sorting, facades — no UI, no SQL |
+| Persistence | `src/persistencia` | 37 | 3 253 | Contracts, DAOs, connection, schema, row mappers |
+| Shared utils | `src/herramienta` | 44 | 5 675 | Config, i18n, IO, CSV, text, theming, OpenLibrary client |
+| Presentation | `src/presentacio` | 86 | 13 500 | Swing panels, controllers, dialogs, renderers, gallery, icons |
+| **Total** | `src/` | **191** | **24 786** | |
 
 Line counts are a snapshot of one working-tree state; the class inventory and package
 structure are stable, the line counts move as the code changes.
@@ -82,34 +82,72 @@ with `herramienta` usable from every layer. The domain layer never imports Swing
 Four packages carry a `package-info.java` documenting the package contract: `domini`,
 `herramienta`, `persistencia`, `presentacio`.
 
+### Package breakdown
+
+| Package | Files | Lines |
+|---|---:|---:|
+| `domini` (root) | 14 | 1 136 |
+| `domini/facade` | 8 | 1 027 |
+| `persistencia` (root, `package-info`) | 1 | 5 |
+| `persistencia/contract` | 11 | 195 |
+| `persistencia/dao` | 8 | 1 420 |
+| `persistencia/internal` | 8 | 1 513 |
+| `persistencia/row` | 9 | 120 |
+| `herramienta` (root) | 3 | 555 |
+| `herramienta/api` | 2 | 355 |
+| `herramienta/config` | 6 | 692 |
+| `herramienta/i18n` | 3 | 807 |
+| `herramienta/io` (root) | 6 | 898 |
+| `herramienta/io/csv` | 8 | 558 |
+| `herramienta/io/export` | 1 | 121 |
+| `herramienta/text` | 8 | 630 |
+| `herramienta/ui` | 7 | 1 059 |
+| `presentacio` (root, `package-info`) | 1 | 4 |
+| `presentacio/config` | 10 | 731 |
+| `presentacio/controladors` | 15 | 3 417 |
+| `presentacio/detalles/vista` | 6 | 1 156 |
+| `presentacio/detalles/control` | 6 | 1 179 |
+| `presentacio/dialegs` | 5 | 737 |
+| `presentacio/formularis` | 3 | 340 |
+| `presentacio/galeria` | 3 | 1 235 |
+| `presentacio/panells` | 10 | 2 456 |
+| `presentacio/panells/navegacio` | 1 | 147 |
+| `presentacio/renderers` | 5 | 491 |
+| `presentacio/util` | 11 | 1 308 |
+| `presentacio/listener` | 6 | 86 |
+| `presentacio/models` | 3 | 140 |
+| `presentacio/layouts` | 1 | 73 |
+| `presentacio/icones` (SVG) | 35 | — |
+
 ### Test execution
 
 `make test` runs a legacy plain-Java suite followed by one JUnit Platform session.
 
 | | |
 |---|---|
-| Discovery | Class names derived from **source file paths**, so both `FooTest.java` and `TestFoo.java` are picked up — 64 mandatory classes |
+| Discovery | Class names derived from **source file paths**, so both `FooTest.java` and `TestFoo.java` are picked up |
 | Engines | JUnit Jupiter + jqwik (property tests) |
 | Excluded | 5 Jazzer coverage-guided harnesses (need the agent) — `make fuzz-jazzer` |
 | Exit code | propagates failures; `--fail-if-no-tests` fails an empty suite |
 | Reports | JUnit XML in `build/reports/tests/` |
 | Legacy suite | `test/BibliotecaTest.java` runs first as a plain `java` invocation |
 
-**Measured result** (Temurin 25.0.4.1+1, H2 in-memory, `EXIT=0`):
+**Measured result** (Temurin 25, H2 in-memory, `EXIT=0`, 24.2 s):
 
 | | |
 |---|---:|
-| Tests found | 715 |
-| Tests started | 714 |
-| Tests successful | **694** |
+| Tests found | 765 |
+| Tests started | 764 |
+| Tests successful | **744** |
 | Tests failed | **0** |
 | Tests skipped | 1 |
 | Tests aborted | 20 |
-| Containers (incl. nested) | 86 |
+| Containers (incl. nested) | 96 |
 
-Source annotations: **634** `@Test`, **17** `@ParameterizedTest`, **6** `@Property`.
-Test files by area: `test/persistencia` 18, `test/herramienta` 19, `test/domini` 12,
-`test/presentacio` 7, `test/fuzz` 6, `test/` root 7.
+Source annotations: **684** `@Test`, **17** `@ParameterizedTest`, **6** `@Property`.
+
+Test files by area: `test/persistencia` 20, `test/herramienta` 20, `test/domini` 13,
+`test/presentacio` 13, `test/fuzz` 6, `test/` root 7.
 
 ---
 
@@ -122,9 +160,10 @@ Test files by area: `test/persistencia` 18, `test/herramienta` 19, `test/domini`
                       └───────────────────┬──────────────────────────┘
                                           │
         ┌─────────────────────────────────▼─────────────────────────────────┐
-        │                      src/presentacio  (83 files)                   │
+        │                      src/presentacio  (86 files)                   │
         │  panells · controladors · dialegs · detalles · formularis          │
         │  galeria · layouts · listener · models · renderers · config · util│
+        │  icones (35 SVG)                                                 │
         └───────────────────┬─────────────────────────────────┬─────────────┘
                             │ delegates to                   │ reads/writes
         ┌───────────────────▼──────────────┐   ┌──────────────▼──────────────┐
@@ -138,7 +177,7 @@ Test files by area: `test/persistencia` 18, `test/herramienta` 19, `test/domini`
                             └──────────────┬───────────────────┘
                                            │
                             ┌──────────────▼──────────────┐
-                            │   src/herramienta (52 files)  │
+                            │   src/herramienta (44 files)  │
                             │  config · i18n · io · text    │
                             │  api · ui                     │
                             └──────────────────────────────┘
@@ -147,12 +186,13 @@ Test files by area: `test/persistencia` 18, `test/herramienta` 19, `test/domini`
 ### The facade seam
 
 `domini.ControladorDomini` is a singleton facade that hides which persistence backend is
-live. It exposes the domain through **narrow role interfaces** so the UI never talks to
-SQL and never needs to know if it is H2 or MariaDB:
+live. It implements `persistencia.contract.EscritorBiblioteca` directly and exposes the
+domain through **narrow role interfaces** so the UI never talks to SQL and never needs to
+know if it is H2 or MariaDB:
 
 | Interface | Role | Declared methods |
 |---|---|---:|
-| `persistencia.contract.LectorLlibre` | Read books, filters, pagination, blobs | 15 |
+| `persistencia.contract.LectorLlibre` | Read books, filters, pagination, blobs | 15 abstract + 2 default |
 | `persistencia.contract.EscritorLlibre` | Write books | 5 |
 | `persistencia.contract.EscritorBiblioteca` | Aggregate super-interface over all readers + writers | — |
 | `persistencia.contract.LectorBiblioteca` | Read the whole aggregate in one shot | 4 |
@@ -160,21 +200,21 @@ SQL and never needs to know if it is H2 or MariaDB:
 | `persistencia.contract.LectorPrestatgeria` / `EscritorPrestatgeria` | Shelves (lists) | 7 / 9 |
 | `persistencia.contract.LectorEtiqueta` / `EscritorEtiqueta` | Tags | 4 / 5 |
 | `persistencia.contract.LectorPrestec` / `EscritorPrestec` | Loans | 5 / 2 |
-| `persistencia.contract.LectorBibliotecaEnMemoria` | In-memory backend (used by tests) | 42 |
 
 `EscritorBiblioteca` is the aggregate: it extends `LectorBiblioteca`,
 `AdministradorBiblioteca`, `EscritorLlibre`, `EscritorPrestatgeria`, `EscritorEtiqueta` and
-`EscritorPrestec`. `ControladorDomini` implements it directly.
+`EscritorPrestec`. Write methods are declared **only** in their sub-interface, so a new
+write method has exactly one home.
 
 `LectorLlibre.obtenirAllLlibresSummary()` is a *lean* variant that skips heavy text/blob
 columns; its default implementation delegates to the full read.
 
-`ControladorDomini` exposes roughly **70 public methods**, all one-line delegations, split
-into seven role delegates in `domini/facade/`:
+`ControladorDomini` exposes **67 public methods**, all one-line delegations, split into
+seven role delegates in `domini/facade/`:
 
 | Delegate | Owns |
 |---|---|
-| `DelegatLlibre` | Book read/write + filtering + pagination + blob access. Owns `SQL_FILTER_THRESHOLD` (= 2000). |
+| `DelegatLlibre` | Book read/write + filtering + pagination + blob access. Owns `SQL_FILTER_THRESHOLD` (= 2 000). |
 | `DelegatPrestatgeria` | Shelf CRUD, book↔shelf membership, per-shelf rating/read-state. |
 | `TagDelegate` | Tag CRUD and book↔tag membership. |
 | `DelegatPrestec` | Loans: lend, return, active loans, overdue loans, loaned-ISBN set. |
@@ -187,9 +227,9 @@ into seven role delegates in `domini/facade/`:
 | | `domini.facade.StateContext` | `presentacio.util.EstatVistaBiblioteca` |
 |---|---|---|
 | Scope | **Domain-side** | **UI-side** |
-| Holds | the in-memory book / shelf / tag lists + id indexes + the persistence reference | current book list, current shelf id, group-by-series flag, loaned-ISBN set, undo buffer |
+| Holds | the in-memory book / shelf / tag lists + id indexes + the persistence reference | current book list, current shelf id, group-by-series flag, loaned-ISBN set, undo buffer (`UNDO_MAX = 20`) |
 | Concurrency | one `lock` monitor; all reads/writes go through `withLock` / `withLockReturning`; `snapshotAll()` takes a defensive copy; `replaceAll()` swaps atomically | not thread-safe; EDT-confined |
-| Consumers | `domini.facade.*` only | the six sub-controllers of the main library screen |
+| Consumers | `domini.facade.*` only | the sub-controllers of the main library screen |
 
 `StateContext` is package-private to `domini.facade`; `lock()` has no public getter on
 purpose, so the only sanctioned way to touch the lists is `withLock(...)`.
@@ -218,10 +258,8 @@ opening the DB and installing the Look & Feel do not depend on each other:
 ```
 EDT                                        loader thread ("biblioteca-loader", daemon)
 ────                                        ───────────────────────────────────────────────
-UIManager.setLookAndFeel(NimbusLookAndFeel) SeedorBaseDades.seedSiCal()
-UITheme.posarTheme(...)                     ControladorDomini.getInstance()
-UITheme.rebuildFonts(...)
-UIManager.put(nimbusBase / control / …)
+FlatLaf LaF install (via UITheme.posarTheme) SeedorBaseDades.seedSiCal()
+UITheme.rebuildFonts(...)                     ControladorDomini.getInstance()
 new PantallaInici(); splash.show()
 new PanelMarcPrincipal()
                                             EventQueue.invokeLater(→ EDT):
@@ -230,26 +268,22 @@ new PanelMarcPrincipal()
                                                                       .setVisible(true)
 ```
 
-Two ordering details are load-bearing and commented as such in the source:
-
-- **Nimbus is installed explicitly, before any `UIManager.put`.** `UIManager.put`
-  initialises the default (Metal) Look & Feel when none is installed; installing Nimbus
-  afterwards would re-initialise a second Look & Feel from scratch.
-- **`PanelMarcPrincipal` is built while the database is still opening.** It is pure Swing
-  and does not depend on the connection, so waiting would buy nothing.
-
-The `UIManager` keys overridden with the palette are `nimbusBase`, `nimbusBlueGrey`,
-`control`, `text`, `nimbusFocus`, `nimbusSelectionBackground`, `nimbusSelectedText`,
-`defaultFont` and `Table.alternateRowColor`.
+**Nimbus was removed**: the Look & Feel is now **FlatLaf 3.7.2**, installed by
+`herramienta.ui.UITheme.posarTheme(...)`, which also projects the semantic palette onto the
+`UIManager` keys FlatLaf reads (`Panel.background`, `Button.background`,
+`Button.foreground`, `Label.foreground`, `ScrollPane.background`, `OptionPane.background`,
+`defaultFont`, …). FlatLaf is flat by default, so focus, hover, disabled and sort states
+come for free instead of being hand-painted per component.
 
 `hideSplashSafely()` and `fatalExit(...)` exist specifically so that a background-thread
 failure never touches a Swing component off the EDT (which would throw
 `IllegalComponentStateException` and mask the real error). `fatalExit` shows a supplied
 dialog on the EDT and then exits 1. The normal path uses `hideSplash()`, which respects
-the splash's minimum display time.
+the splash's minimum display time (`MIN_DISPLAY_MS = 500`).
 
 #### `main.ShutdownHooks`
-Registers JVM shutdown hooks for DB teardown.
+Registers JVM shutdown hooks for DB teardown. `herramienta.io.ServeiCoberta` registers
+its own hook through the same mechanism.
 
 ---
 
@@ -266,31 +300,31 @@ Package root (14 files):
 | `domini.EntitatNomenada` | Base for name-based entities (shelf/tag share create-rename-delete semantics). |
 | `domini.LlibreLlistaContext` | Per-shelf context for a book: the shelf plus that shelf's per-book rating and read flag. |
 | `domini.LlibreFilter` | Filter value object. Fluent `with*(...)` setters mutate in place and return `this`; `obtenir*(...)` getters read back: name, author, ISBN, year min/max, rating min/max, price min/max, editorial, series, language, format, read-state, tag id, list id, sort spec. |
-| `domini.ConstructorFiltreLlibre` | Separate fluent builder for `LlibreFilter` — 18 chained methods (`isbn`, `autor`, `nom`, `anyMin`, …, `sort`) ending in `build()`. Used by the tests; production code uses `LlibreFilter.with*(...)` directly. |
-| `domini.EspecificacioOrdenacio` | Sort specification — column + ascending/descending, applied in-memory. |
+| `domini.ConstructorFiltreLlibre` | Separate fluent builder for `LlibreFilter` — chained methods (`isbn`, `autor`, `nom`, `anyMin`, …, `sort`) ending in `build()`. Used by the tests; production code uses `LlibreFilter.with*(...)` directly. |
+| `domini.EspecificacioOrdenacio` | Sort specification — column + ascending/descending, applied in memory and in SQL. **The column is whitelisted**: the constructor keeps it only if it is in the `COLUMNS` map, otherwise it falls back to `COL_ISBN`. `toSql()` returns a fixed fragment per column, so the dynamic `ORDER BY` has no injection path. |
 | `domini.AnalitzadorPrestatgeria` | Shelf-matching rules (which books belong to which shelf given a filter). |
 | `domini.SqlOp` | SQL fragment builder — composable predicates and ordering for DB-side filtering. |
 | `domini.BibliotecaException` | Domain exception hierarchy; `BibliotecaException.NoTrobat` is the "book not found" signal. |
 | `domini.package-info` | Package contract documentation. |
 
-`domini/facade/` (8 files): `ControladorDomini` (in `domini/`), `StateContext`,
-`DelegatLlibre`, `DelegatPrestatgeria`, `DelegatPrestec`, `TagDelegate`,
-`DelegatEstadistiques`, `DelegatCopiaSeguretat`, `NamedEntityDelegate`.
+`domini/facade/` (8 files): `StateContext`, `DelegatLlibre`, `DelegatPrestatgeria`,
+`DelegatPrestec`, `TagDelegate`, `DelegatEstadistiques`, `DelegatCopiaSeguretat`,
+`NamedEntityDelegate`. `ControladorDomini` itself lives in `domini/`.
 
 ---
 
-### 4.3 `src/persistencia` — persistence (38 files)
+### 4.3 `src/persistencia` — persistence (37 files)
 
-#### `persistencia/contract/` (12 interfaces)
+#### `persistencia/contract/` (11 interfaces)
 The seam. Reader/writer pairs per aggregate, plus `AdministradorBiblioteca` for
-backup/restore and `LectorBibliotecaEnMemoria` for the in-memory test backend.
+backup/restore and admin operations.
 
 #### `persistencia/dao/` (8 classes)
 | DAO | Responsibility |
 |---|---|
 | `LlibreDaoCore` | Core book CRUD: `obtenirAll`, `insert`, `update`, `delete`, `obtenirRecentlyAdded`, `count`, `obtenirDbSizeBytes`, `netejarAllData`, `executarSQLFile`, `validarCopiaSeguretat` |
 | `LlibreBlobDao` | Cover BLOB read/write separate from the row data |
-| `LlibreSearchDao` | DB-side search, used by the large-library filter path |
+| `LlibreSearchDao` | DB-side search, used by the large-library filter path. The sort column arrives as a validated `EspecificacioOrdenacio`, so the `ORDER BY` is built from fixed fragments only. |
 | `LlibreLecturaDao` | Reading-log (`lectura`) table access |
 | `LlistaDao` | Shelf CRUD, counts, books-in-shelf, ISBN set for a shelf, per-shelf rating/read writes, order and colour updates |
 | `TagDao` | Tag CRUD, book↔tag links, distinct-value queries (e.g. distinct author names) |
@@ -307,13 +341,13 @@ backup/restore and `LectorBibliotecaEnMemoria` for the in-memory test backend.
 #### `persistencia/internal/` (8 classes)
 | Class | Purpose |
 |---|---|
-| `ControladorPersistencia` | **Singleton** — the real implementation behind the contract interfaces. Every method is `synchronized`. Exposes `getInstance()`, `reinicialitzarForTest()`, `reinicialitzarForProfileSwitch()`, `obtenirConnexio()`, `netejarAllData()`, `snapshotForBackup()` / `BackupSnapshot`. |
+| `ControladorPersistencia` | **Singleton** — the real implementation behind the contract interfaces. 57 of its public methods are `public synchronized`, so DB access is serialised across threads. Exposes `getInstance()`, `reinicialitzarForTest()`, `reinicialitzarForProfileSwitch()`, `obtenirConnexio()`, `netejarAllData()`, `snapshotForBackup()` / `BackupSnapshot`. |
 | `ConnexioServidor` | Connection lifecycle, DDL, and the migration runner. |
 | `ConnectionConfig` | `record ConnectionConfig(String dbType, String host, String user, String password, String profile, String testUrl)`. `dbType`/`host`/`user`/`password` are non-null (enforced in the compact constructor); `toString()` redacts the password as `password=***`. |
-| `LlibreFieldBindings` | The single source of truth for the book **INSERT** column list and the `ResultSet`↔`Llibre` binding. `COLUMNS_INSERT` (27 columns — no `autor`, which now lives in the N:M tables) plus `forLlibre(...)` / `forInsert(Llibre)` / `forUpdate(Llibre)` / `bind(PreparedStatement, int, Object)`. Used by `LlibreDaoCore` **and** `ServeiCopiaSeguretat` — the backup writer and the DAO therefore cannot drift. The SELECT projections are derived separately by `LlibreDaoCore`'s own `Columna` enum. |
+| `LlibreFieldBindings` | The single source of truth for the book **INSERT** column list and the `ResultSet`↔`Llibre` binding. `COLUMNS_INSERT` (no `autor`, which now lives in the N:M tables) plus `forLlibre(...)` / `forInsert(Llibre)` / `forUpdate(Llibre)` / `bind(PreparedStatement, int, Object)`. Used by `LlibreDaoCore` **and** `ServeiCopiaSeguretat` — the backup writer and the DAO therefore cannot drift. The SELECT projections are derived separately by `LlibreDaoCore`'s own `Columna` enum. |
 | `LlibreMapper` | Static `ResultSet` → `Llibre` mappers: `buildLlibreLight(rs)` and `buildLlibre(rs)`, shared between `LlibreDaoCore` (its own SELECTs) and `LlistaDao` (SELECTs that join book rows). Column names must match `LlibreDaoCore`'s canonical SELECT lists. |
 | `MapejadorsFiles` | Shared read-only query helpers for DAOs. |
-| `Schema` | The shared `CLEAR_ORDER` array — the correct child→parent DELETE sequence for FK constraints, shared by the DAO, the backup service, and every mass-reset path. |
+| `Schema` | The shared `CLEAR_ORDER` array — `lectura`, `prestec`, `llibre_llista`, `llista`, `llibre_autor`, `llibre_tag`, `tag`, `autor`, `llibre` — the correct child→parent DELETE sequence for FK constraints, shared by the DAO, the backup service, and every mass-reset path. |
 | `JarLocator` | Finds the JDBC driver jars on the classpath at runtime. |
 
 `ConnectionFactory` no longer exists. It was inlined into `ConnexioServidor.createDatabase`
@@ -418,7 +452,9 @@ every migration with a version greater than the current one, and records the new
 | 19 | `llibre.format VARCHAR(50)` | 39 | index `idx_llibre_editorial_serie` on `llibre(editorial, serie)` |
 | 20 | `llibre.desitjat BOOLEAN` | | |
 
-The `IF NOT EXISTS` guards make each migration idempotent.
+The `IF NOT EXISTS` guards make each migration idempotent. The last three verified
+entries in the source are exactly v34 `ALTER TABLE llibre DROP COLUMN autor`,
+v35–v37 the locale title columns, and v38–v39 the two indexes.
 
 #### Connection and transaction strategy
 
@@ -457,66 +493,70 @@ The `IF NOT EXISTS` guards make each migration idempotent.
   requires the backup marker (`-- BIBLIOTECA BACKUP`) or at least one
   `INSERT INTO llibre`. An empty, truncated or foreign file is rejected *before*
   anything is deleted, so the database is never left empty by a bad file.
-- `ImpressorTaulaCopiaSeguretat` renders the backup as a human-readable table.
 
 ---
 
-### 4.4 `src/herramienta` — shared utilities (52 files)
+### 4.4 `src/herramienta` — shared utilities (44 files)
 
 Package root (3 files): `ImportadorLlibres` (the import entry point — CSV, Calibre, JSON;
 `cercarSqlite3()` locates the `sqlite3` binary for Calibre imports), `ExportadorLlibres`
 (the export entry point — CSV, JSON, HTML, PDF), `package-info`.
 
-#### `herramienta/config/` (8 files)
+#### `herramienta/config/` (6 files)
 | Class | Purpose |
 |---|---|
 | `Configuracio` | **Singleton** configuration façade. Loads/saves `~/.biblioteca/config.properties` (plain text) and exposes grouped accessors plus a `withBatch(Runnable)` transactional setter used by the settings dialog so all settings commit in one write. The class Javadoc explicitly warns that anyone with read access to `config.properties` can see the database password — it is stored in cleartext. |
-| `ConfiguracioDTO` | Base record for the config sections. |
 | `ConfiguracioDb` | DB type, host, port, database, user, password. |
 | `ConfiguracioUi` | Theme, font size, currency symbol, UI language, sort column/order, view mode, default rating, column visibility. |
 | `ConfiguracioFinestra` | Window geometry, column widths, last-used file paths. |
 | `ConfiguracioFiltre` | Default cover folder and other filter defaults. |
-| `MidaLletra` | Font-size enum (`small` / `medium` / `large`) with `fromKey(...)`. |
-| `PresetStore` | Persists named filter presets (the save/load/delete buttons in the filter drawer). |
+| `MidaLletra` | Font-size value object with exactly three values — `SMALL` (11 pt), `MEDIUM` (13 pt), `LARGE` (16 pt) — and `fromKey(...)`. `Configuracio` rejects any other value. |
 
 #### `herramienta/i18n/` (3 files)
 | Class | Purpose |
 |---|---|
-| `I18n` | The runtime translator. **Not** `ResourceBundle`-based — it holds a hard-coded `Map<String, String[]> TABLE` of `key → [ca, es, en]` triples, filled by a static block of `T("key", "català", "español", "english")` calls. `I18n.t(key, args…)` looks up the key, picks the column for the active language, and substitutes `{0}`-style placeholders using **pre-compiled regex patterns** indexed by `args.length` (a 4-entry `PLACEHOLDER_PATTERNS` array; cases 1–3 cover ~99 % of calls). Also `aplicarSwingOptionPane()` to localise the standard Swing dialogs. |
+| `I18n` | The runtime translator. **Not** `ResourceBundle`-based — it holds a hard-coded `Map<String, String[]> TABLE` of `key → [ca, es, en]` triples, filled by a static block of `T("key", "català", "español", "english")` calls (628 entries). `I18n.t(key, args…)` looks up the key, picks the column for the active language, and substitutes `{0}`-style placeholders using **pre-compiled regex patterns** indexed by `args.length`. Also `aplicarSwingOptionPane()` to localise the standard Swing dialogs. |
 | `Idioma` | Enum `ca` / `es` / `en`, each carrying its display name. |
 | `Escapers` | HTML and property-file escaping helpers used when building Swing HTML labels and writing property files. |
 
 **The translation pipeline is code generation, not resource loading:**
 
 ```
-strings/ui.csv      (575) ┐
-strings/errors.csv  (15) ├─► scripts/gen_strings.py ─► src/herramienta/i18n/I18n.java   ← what runs
-strings/csv.csv      (5) ┘                   └─────────► src/herramienta/strings_{ca,es,en}.properties
-                                                          595 keys each
+strings/ui.csv      (662) ┐
+strings/errors.csv  (54) ├─► scripts/gen_strings.py ─► src/herramienta/i18n/I18n.java   ← what runs
+strings/csv.csv      (44) ┘                   └─────────► src/herramienta/strings_{ca,es,en}.properties
+                                                          627 keys each
 ```
 
 `strings/strings.csv` is the legacy monolith (521 lines), used **only** if none of the
-three split files exist. `I18n.java` carries the header
-`// AUTO-GENERAT per scripts/gen_strings.py — edita strings/strings.csv en lloc d'això`
-— edit the CSV, never the Java file.
+three split files exist. The Java output is now rendered from
+`scripts/i18n_java_template.java.tmpl`, so the generated file keeps the hand-tuned
+placeholder substitution that the template encodes.
 
 The three `.properties` files are **written by the generator but never read at runtime**;
-no Java source and no Makefile rule references them. They are current (595 keys each),
-but they are exports, not the runtime source of truth.
+no Java source and no Makefile rule references them. They are current, but they are
+exports, not the runtime source of truth.
 
-#### `herramienta/io/` (7 files + 3 subpackages)
+**Five keys are still hand-written** and exist only in `I18n.java`:
+`dlg_restore_done_with_note`, `tip_filter_substring`, `dlg_fetch_portades_done_partial`,
+`dlg_perfil_nom_invalid`, `dlg_perfil_nom_invalid_title`. They are missing from the CSVs
+because `dlg_restore_done_with_note` contains a real newline that the CSV format cannot
+express, and because the CSV keys use the literal two-character `\n` convention. Unifying
+the two conventions is a product decision, not a point fix — see `docs/I18N-NEWLINES.md`.
+
+#### `herramienta/io/` (6 files + 2 subpackages)
 | Class | Purpose |
 |---|---|
 | `SeedorBaseDades` | Seeds the database on first run (`seedSiCal()`) — creates the schema and inserts starter data. |
 | `ServeiCopiaSeguretat` | SQL backup export / restore, with the pre-restore safety copy. |
-| `ServeiCoberta` | Fetches cover images (from the DB blob, the configured image folder, or OpenLibrary). |
-| `ImpressorTaulaCopiaSeguretat` | Renders a backup as a readable table. |
+| `ServeiCoberta` | Fetches cover images (from the DB blob, the configured image folder, or OpenLibrary). `MAX_PARALLEL = 6`; the in-memory L1 cache is guarded by a lock that is **released before** any file I/O. |
 | `JsonImporter` | The JSON import path. |
 | `JsonHelpers` | JSON read/write helpers (Gson-based). |
 | `RelationRemapper` | Rewrites relation rows (book↔shelf, book↔tag, book↔author) when IDs change during an import or restore. |
 
-`herramienta/io/imports/` holds `ImportadorCsv`; `herramienta/io/export/` holds
-`ExportadorCsv`, `JsonExporter`, `HtmlExporter` and `GoodreadsExportService`.
+`herramienta/io/export/` holds `GoodreadsExportService`. The CSV / JSON / HTML / PDF
+export entry points are the static methods of `ExportadorLlibres`; the CSV and JSON import
+entry points are the static methods of `ImportadorLlibres`.
 
 #### `herramienta/io/csv/` — the CSV strategy pattern (8 files)
 | Class | Purpose |
@@ -532,12 +572,12 @@ but they are exports, not the runtime source of truth.
 
 Format detection inspects the header row and picks the matching strategy.
 
-#### `herramienta/text/` (10 files)
+#### `herramienta/text/` (8 files)
 | Class | Purpose |
 |---|---|
 | `Isbn13Normalizer` | ISBN-10 ↔ ISBN-13 conversion with check-digit validation and normalisation. |
 | `UtilitatsData` | Date parsing across the formats the app accepts, and formatting. |
-| `AutoCompletion` / `Completer` / `FieldAutoComplete` | Autocomplete engine. `FieldAutoComplete.attachDistinct(cd, field…)` wires distinct-value suggestions into author / editorial / series / language fields. |
+| `FieldAutoComplete` | Autocomplete engine. `FieldAutoCompletion.attachDistinct(cd, field…)` wires distinct-value suggestions into author / editorial / series / language fields. |
 | `ValidadorLlibre` | Book validation (ISBN, required title, numeric ranges). |
 | `FiltreUtils` | The single source of truth for "does this book match this filter" — used by the in-memory row filter. |
 | `FormatOptions` | Format/label helpers. |
@@ -547,13 +587,14 @@ Format detection inspects the header row and picks the matching strategy.
 #### `herramienta/api/` (2 files)
 | Class | Purpose |
 |---|---|
-| `ClientOpenLibrary` | HTTP client for **OpenLibrary and Google Books**, built on `java.net.http.HttpClient`. Endpoints: `https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data` (ISBN lookup), `https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1` (title/author search), `https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg` (cover image). `base()` honours a `testBaseUrl` override so tests can point at a local stub. `fetchWithRetry` does `MAX_RETRIES = 3` attempts with **exponential backoff** (`RETRY_BASE_MS = 500`, delay `baseMs * (1L << i)`), and a `rateLimit()` gate throttles outbound calls. |
+| `ClientOpenLibrary` | HTTP client for **OpenLibrary and Google Books**, built on `java.net.http.HttpClient`. Endpoints: `https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data` (ISBN lookup), `https://openlibrary.org/search.json?…` (author/title search), `https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1` (title/author search), `https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg` (cover image). `base()` honours a `testBaseUrl` override so tests can point at a local stub. `fetchWithRetry` retries with **exponential backoff** (`baseMs * (1L << i)`), a `rateLimit()` gate throttles outbound calls to one request per `MIN_REQUEST_INTERVAL_MS = 300`, and connect/read timeouts (6 s / 10 s) keep the EDT responsive when the remote hangs. |
 | `AnalitzadorOpenLibrary` | Parses the OpenLibrary / Google Books JSON response into metadata fields plus cover bytes. |
 
-#### `herramienta/ui/` (6 files)
+#### `herramienta/ui/` (7 files)
 | Class | Purpose |
 |---|---|
-| `UITheme` | Theme enum + palette. `posarTheme(...)`, `rebuildFonts(MidaLletra)`, `palette()`, `esDark()`, `fontBase()`. |
+| `UITheme` | Theme enum + palette. `Tema` = `LIGHT`, `DARK`, `SEPIA`, `OCEAN`. One immutable palette record per theme (surfaces, text, borders, accent, status, interaction, sidebar roles), projected onto the `UIManager` keys FlatLaf reads. `posarTheme(...)` also installs the FlatLaf Look & Feel; `rebuildFonts(MidaLletra)`, `palette()`, `esDark()`, `fontBase()`. |
+| `Tokens` | Theme-independent metrics: the 4/8/12/16/24/32 spacing scale (`SPACE_1…SPACE_6`), 4/6/8 radii (`RADIUS_SM/MD/LG`), `CONTROL_HEIGHT` 34 / `CONTROL_HEIGHT_LG` 38, `TABLE_ROW_HEIGHT` 30, `SIDEBAR_WIDTH` 244, `HEADER_MIN_WIDTH` 520, `FORM_READ_WIDTH` 560, `CARD_MIN_WIDTH` 180 / `CARD_MAX_WIDTH` 210, `ICON_SIZE` 16 / `ICON_SIZE_LG` 20, and the type scale (`FONT_SIZE_BASE` 14, `FONT_SIZE_TITLE` 20, `FONT_SIZE_SECTION` 13, `FONT_SIZE_SMALL` 12, `FONT_SIZE_COUNT` 13). |
 | `UtilitatsSwing` | Swing helpers — component lookup, colour utilities, layout tweaks. |
 | `UtilitatsColor` | Colour maths and conversions. |
 | `SelectorMostraColor` | The colour-picker widget used for shelf colours. |
@@ -562,47 +603,55 @@ Format detection inspects the header row and picks the matching strategy.
 
 ---
 
-### 4.5 `src/presentacio` — Swing UI (83 files)
+### 4.5 `src/presentacio` — Swing UI (86 files + 35 SVG icons)
 
 **Naming convention**: a `Panel*` / `Dialeg*` class is the **view** (pure Swing, exposes
 components); the matching `Controlador*` class is the **behaviour** (listeners, business
 calls, SwingWorker offloading). Views expose their widgets; controllers wire them.
 
-#### `presentacio/util/` (10 files) — shared UI state and helpers
+#### `presentacio/util/` (11 files) — shared UI state and helpers
 | Class | Purpose |
 |---|---|
-| `EstatVistaBiblioteca` | **The shared mutable UI state.** Holds the current book list, the model list, the current shelf id, the loaned-ISBN set, the group-by-series flag and the undo buffer (`UNDO_MAX = 20`). Also owns the `CoordinadorGeneracions`. |
+| `EstatVistaBiblioteca` | **The shared mutable UI state.** Holds the current book list, the model list, the current shelf id, the loaned-ISBN set, the group-by-series flag and the undo buffer (`UNDO_MAX = 20`). Also owns the `CoordinadorGeneracions`, the current view title and **the single source of the visible book counter** (`llibresEnAmbit` / `llibresMostrats`, set together by `posarComptador`). |
 | `CoordinadorGeneracions` | **Async staleness guard.** Each result flow (`FLUX_CONSULTA`, `FLUX_FILTRE`, `FLUX_PAGINA`) has its own counter; opening a generation bumps the counter and invalidates the flows that query supersedes. A generation is live only if its counter is still the flow's latest, so no stale result can be applied to the EDT. The table and the gallery share `FLUX_CONSULTA` because they represent the same query. `SwingWorker.cancel()` is only an optimisation — a JDBC query is not always interruptible, so the guarantee comes from the generation comparison made just before applying the result, not from `isCancelled()`. |
+| `AplicadorResultat` | Callback that applies a query result **together with the scope size** (how many books match the current scope and filter). Carrying the scope size is what keeps the visible counter and the rendered rows consistent. |
 | `AmfitrioPantallaBiblioteca` | Interface for the host screen. |
-| `GestioLlistesListener` | Explicit callback interface for shelf-management actions (replaces bare `Runnable`). |
 | `GestorArrossegarSoltarPrestatgeria` | Attaches the shelf drag-and-drop targets; keeps DnD logic out of `PanellBarraEsquerra`. |
 | `MemoriaImatgesCoberta` | LRU cover-icon cache shared by table and gallery on the main screen. |
-| `AjudaEstadistiques` | Statistics helpers. |
+| `Icones` | Local SVG icon catalogue (35 files in `src/presentacio/icones/`). Renders each `(name, size, colour)` once through FlatLaf's `FlatSVGIcon` and caches it; `invalidar()` clears the cache on a theme change. The SVG files are copied to the classpath by `make compile`. |
+| `AjudaEstadistiques` | Statistics helpers: `computeStats(...)` plus the dialog tab and chart builders. |
 | `DreceresTeclat` | Keyboard shortcuts. |
-| `UIComponents` | Shared Swing component factories. |
+| `UIComponents` | Shared Swing component factories: button roles (accent / secondary / danger / toggle), field styling, section headers, card borders. It **never** sets a button's preferred width — the Look & Feel computes it from the text so labels are never clipped. |
 | `UtilitatsLlibre` | Book display helpers. |
 
-#### `presentacio/panells/` (8 files)
+#### `presentacio/panells/` (10 files)
 | Class | Purpose |
 |---|---|
 | `PanelMarcPrincipal` | The main window body. `BorderLayout`; owns `PanelMostrarBiblioteca` and the status bar (`JLabel`). |
-| `PanelMostrarBiblioteca` | The central library view — top toolbar, filter drawer, table, gallery, pagination bar. |
-| `PanelBarraSuperior` | Top toolbar: search, view toggle, filter toggle, book actions. |
+| `PanelMostrarBiblioteca` | The central library view — content header, toolbar, filter drawer, table, gallery, pagination bar. Composes the parts and exposes their widgets. |
+| `PanelCapcalera` | Content header: view title, book counter and the primary action ("Afegir llibre"). The counter shown here is the same value the status bar shows. |
+| `PanelBarraSuperior` | Toolbar: search (with leading icon and placeholder), filters, sorting, gallery/table selector, group-by-series, and an overflow menu for import/export/backup/scan. |
+| `SelectorSegmentat` | Two-button exclusive selector used for the gallery/table switch. It shows **which** view is active, and keeps a constant preferred width so switching views never triggers a relayout of the content. |
 | `PanelCalaixFiltre` | The filter drawer (slide-out panel) with all filter fields. |
-| `PanellBarraEsquerra` | Left drawer: shelves combo + tags combo. |
+| `PanellBarraEsquerra` | Left navigation: view entries (all books, recent, in progress, read, wishlist), shelves with counts, an explicit empty state, and secondary actions. The active entry is marked with a tinted background, a left accent bar **and** bold text. |
 | `PanelTaulaCentral` | The `JTable` host. |
 | `PanelGaleriaCobertes` | The cover-card gallery. |
 | `PantallaInici` | Splash screen. |
+
+#### `presentacio/panells/navegacio/` (1 file)
+| Class | Purpose |
+|---|---|
+| `ItemNavegacio` | A navigation entry that paints its own background, so hover, selection and focus can be told apart by shape and text weight and not by colour alone. |
 
 #### `presentacio/controladors/` (15 files)
 | Controller | Owns |
 |---|---|
 | `ControladorMarcPrincipal` | The `JFrame`: title bar, menu, accelerators, the "new book" and "scan station" entry points, and the global uncaught-exception alert path. |
 | `ControladorMostrarBiblioteca` | Coordinator — creates the sub-controllers below and routes between them. |
-| `ControladorTaula` | `ModelTaulaBiblioteca`, renderers, column visibility, sort persistence, double-click-to-open, Ctrl+click-to-filter-by-author, debounced width persistence (800 ms). |
+| `ControladorTaula` | `ModelTaulaBiblioteca`, renderers, column visibility, sort persistence, double-click-to-open, Ctrl+click-to-filter-by-author, debounced width persistence. |
 | `ControladorPaginaTaula` | Pagination. `PAGE_SIZE = 100`. Two modes: DB-side (`obtenirLlibresPage`) and in-memory slicing. |
-| `ControladorFiltre` | The filter drawer, the search bar (250 ms debounce), and filter presets (load/save/delete). |
-| `ControladorAccionsLlibre` | Open/edit details, delete + undo (buffer of 20), statistics dialog, random unread book, quick views (recently added, recently read, wanted, in-progress), settings. |
+| `ControladorFiltre` | The filter drawer, the search bar (`DEBOUNCE_MS = 250`), and filter presets (load/save/delete). |
+| `ControladorAccionsLlibre` | Open/edit details, delete + undo (buffer of 20), statistics dialog, random unread book, quick views (recently added, recently read, wanted, in-progress), settings. The batch delete collects the deleted books in the `SwingWorker` and pushes them onto the undo buffer in `done()` — i.e. on the EDT, so the buffer has a single writer thread. |
 | `ControladorMenuContextual` | Right-click menus for table and gallery: open, delete one/many, add to shelf, duplicate, batch edit, loan/return, copy ISBN. |
 | `ControladorModeVista` | Gallery/table toggle, group-by-series, title-bar text. |
 | `ControladorPrestatgeria` | Shelf combo, shelf drag-and-drop, shelf management dialog, shelf colour swatches. |
@@ -624,6 +673,11 @@ calls, SwingWorker offloading). Views expose their widgets; controllers wire the
   `hide()`).
 
 #### `presentacio/renderers/` (5 files)
+`RenderitzadorBarraProgres` is a custom painter (not a `JProgressBar`): a `JProgressBar`
+with a painted string fills the whole cell with the bar background, which leaves the
+text unreadable. The custom renderer draws a 3 px track plus the page counts, shows "—"
+when the total page count is unknown and "0 / 320" for a real 0 % (known total, nothing
+read yet) — missing data and a zero reading are different states.
 `RenderitzadorCellaCoberta` (cover thumbnail), `RenderitzadorCasellaLlegit` +
 `EditorCasellaLlegit` (read checkbox), `RenderitzadorBarraProgres` (reading progress),
 `RenderitzadorDestacatCerca` (search-term highlighting, and marks loaned rows).
@@ -656,18 +710,17 @@ operation), `DialegGestioLlistes` (shelf manager), `EstacioEscaneigDialog` (scan
 - `FabricantTargetesCoberta` — builds and paints the gallery cards. The painter is a
   **static** method (`paintCard(Graphics2D, …)`) so it is unit-testable without Swing.
   Card hue is derived from the book title.
-- `ServeiImatgesCoberta` — async cover loader with an LRU cache
-  (capacity 150, load factor 0.75, 4 daemon threads). The cache is a `LinkedHashMap`
-  guarded by a `ReentrantReadWriteLock` with `accessOrder=false`, so concurrent EDT reads
-  never structurally mutate the map.
-- `PopupZoomCoberta` — 500 ms debounced hover zoom, its own 32-entry LRU.
+- `ServeiImatgesCoberta` — async cover loader with a cache of `CACHE_CAPACITY = 150` and
+  `EXECUTOR_THREADS = 4` daemon loader threads. The cache is a `LinkedHashMap` with
+  `accessOrder=false`, so it evicts in **insertion order (FIFO), not LRU** — deliberate,
+  because `accessOrder=true` would structurally mutate the map on every EDT read.
+- `PopupZoomCoberta` — hover zoom with `DELAY_MS = 500` and its own small LRU.
 
-#### `presentacio/formularis/` (4 files)
+#### `presentacio/formularis/` (3 files)
 - `RegistreCampsFormulari` — declarative field registry (`Camp.text/check/combo/button`),
   with typed accessors `textField(key)`, `comboBox(key)`, `comprovarBox(key)`, `button(key)`.
 - `ConstructorGraellaFormulari` — fluent `GridLayout` form builder. `columnsOf(host)` opens
   a builder; `afegirField` / `afegirCombo` / `afegirCheck` / `afegirRaw` add rows.
-- `LligadorFormulariLlibre` — small field-binding helper.
 - `ValidadorFormulari` — field validation styling.
 
 #### `presentacio/layouts/` (1 file)
@@ -685,6 +738,14 @@ delete — `EsborrarEvent` with `veto()`), `EnActualitzarBBDD` (the aggregate of
 (saves every setting in one `Configuracio.withBatch(...)` transaction), `ConfiguracioDataSection`,
 and the four section builders: `SeccioDbConfiguracio`, `SeccioImatgesConfiguracio`,
 `SeccioAparençaConfiguracio`, `SeccioIdiomaConfiguracio`.
+
+#### `presentacio/icones/` (35 SVG files)
+The local icon family: `afegir`, `ajuda`, `aleatori`, `avis`, `biblioteca`, `carpeta-mes`,
+`cerca`, `configuracio`, `desitjos`, `editar`, `en-curs`, `enllaç`, `esborrar`,
+`estadistiques`, `estrella`, `etiquetes`, `exportar`, `filtre`, `fletxa-abaix`, `galeria`,
+`importar`, `imprimir`, `info`, `llegits`, `llibres`, `luna`, `mes`, `ordenacio`,
+`prestatgeries`, `prestecs`, `recent`, `reintentar`, `sol`, `tancar`, `taula`. They are
+rendered at runtime through FlatLaf's `FlatSVGIcon` (dependency `jsvg`).
 
 ---
 
@@ -781,6 +842,34 @@ Barcode scanner → EstacioEscaneigDialog text field
     → SwingUtilities.invokeLater → dialog colour + counters
 ```
 
+### 5.8 Design system
+
+The visual system has a single source of truth. `herramienta/ui/UITheme` holds the
+**semantic palette** (one immutable record per theme: surfaces, text, borders, accent,
+status, interaction and sidebar roles) and projects it onto the `UIManager` keys that
+FlatLaf reads. `herramienta/ui/Tokens` holds the theme-independent metrics: the
+4/8/12/16/24/32 spacing scale, 4/6/8 radii, control heights, type sizes and the
+letter-size scale. `presentacio/util/UIComponents` applies those tokens to components;
+it never defines a literal colour or size. `presentacio/util/Icones` serves the local
+SVG family.
+
+The Look & Feel is **FlatLaf 3.7.2** (Nimbus was removed): FlatLaf is flat by default and
+lets the palette drive every stock Swing component, so focus, hover, disabled and sort
+states come for free.
+
+The full guide for building new screens coherently is in
+[`docs/SISTEMA-VISUAL.md`](SISTEMA-VISUAL.md).
+
+### 5.9 Counters
+
+The visible book counter has a **single source**: `EstatVistaBiblioteca` holds
+`llibresEnAmbit` (books matching the current scope and filter) and `llibresMostrats`
+(books actually rendered). Both are set together by the same code path that applies the
+result — `AplicadorResultat` carries the scope size alongside the rows. Deriving the
+counter from the table row count and from the in-memory list independently is what
+previously produced contradictory values such as "1000 / 0 llibres" when a stale async
+result touched one of the two but not the other.
+
 ---
 
 ## 6. Build, run, test
@@ -799,20 +888,18 @@ exits 0 without compiling and would otherwise produce a silent empty build. The 
 result is cached in the `JAVAC` / `JAVA` variables, with the `compile` and `run` targets
 re-checking the probe output and failing loudly with an explicit error.
 
-`make compile` compiles **only `src/`** into `bin/` (338 class files measured). It also
-copies `src/herramienta/*.properties`, `src/version.properties` and `src/LICENSE` into the
-build dir.
+`make compile` compiles **only `src/`** into `bin/`. It also copies
+`src/herramienta/*.properties`, `src/version.properties`, `src/LICENSE` and the
+`src/presentacio/icones/*.svg` family into the build dir.
 
 Non-Java resources under `src/`:
 - `src/version.properties` → `version=2.10` — read from the classpath by `QuantADialeg`
   (the About dialog) at runtime.
 - `src/herramienta/strings_{ca,es,en}.properties` — **generated export artifacts** of the
   translation pipeline, copied into the build but never read at runtime.
+- `src/presentacio/icones/*.svg` — the icon family, rendered at runtime via FlatLaf.
 - `src/fichers/` — `234.csv` (sample import data), `credit.html`, `license.html`.
 - `src/LICENSE` — copied into the build dir.
-
-The Makefile also has a `cp -r src/web` rule guarded by `if [ -d src/web ]` — that
-directory **does not exist**, so the rule is a no-op.
 
 ### Test
 
@@ -834,8 +921,8 @@ The `test` target:
    rather than by a hard-coded list.
 4. Writes JUnit XML to `build/reports/tests/`.
 
-**Measured result** — see §2 for the full table. 715 tests found, 694 successful,
-0 failed, exit code 0.
+**Measured result** — see §2 for the full table. 765 tests found, 744 successful,
+0 failed, exit code 0, 24.2 s.
 
 The five excluded Jazzer harnesses are:
 `fuzz.domini.TestFuzzAnalitzadorPrestatgeria`,
@@ -851,14 +938,14 @@ The five excluded Jazzer harnesses are:
 
 | Tag | Count | Members |
 |---|---:|---|
-| `runtime` | 8 | h2 2.5.252, mariadb-java-client 3.5.10, gson 2.14.0, slf4j-api 2.0.20, error_prone_annotations 2.48.0, waffle-jna 3.7.0, jna 5.19.1, jna-platform 5.19.1 |
+| `runtime` | 11 | h2 2.5.252, **flatlaf 3.7.2**, **flatlaf-extras 3.7.2**, **jsvg 2.1.0**, mariadb-java-client 3.5.10, gson 2.14.0, slf4j-api 2.0.20, error_prone_annotations 2.48.0, waffle-jna 3.7.0, jna 5.19.1, jna-platform 5.19.1 |
 | `test` | 8 | junit-platform-console-standalone 1.14.4, assertj-core 3.27.7, mockito-core 5.24.0, byte-buddy 1.18.15, byte-buddy-agent 1.18.15, objenesis 3.6, jqwik-api 1.10.2, jqwik-engine 1.10.2 |
 | `fuzz` | 3 | jazzer 0.30.0, jazzer-api 0.30.0, jazzer-junit 0.30.0 |
 | `legacy` | 1 | h2 2.3.232 — reference driver for the H2-compatibility check; in no classpath |
 
-`make deps` fetches, `make deps-verify` re-checks every SHA-256, `make deps-update`
-refreshes versions. `lib/` also holds older jar versions left over from earlier
-resolutions; only the lock-pinned ones enter any classpath.
+23 pinned dependencies in total. `make deps` fetches, `make deps-verify` re-checks every
+SHA-256, `make deps-update` refreshes versions. `lib/` also holds older jar versions left
+over from earlier resolutions; only the lock-pinned ones enter any classpath.
 
 ### CI
 
@@ -868,29 +955,41 @@ schedule (Mondays 03:17 UTC). Six jobs:
 | Job | What it does |
 |---|---|
 | `build-and-test` | toolchain check → `make deps` → `make deps-verify` → `make compile` → `make test` → upload JUnit XML |
-| `i18n` | `python3 scripts/gen_strings.py --check --no-java` |
+| `i18n` | `python3 scripts/gen_strings.py --check` + `python3 scripts/test_gen_strings.py` |
 | `h2-compat` | `make h2-compat` — opens a legacy-driver database with the current driver |
-| `package` | `make jar` and asserts the JAR contains `main/Executable.class`, `version.properties`, `strings_ca.properties` |
+| `package` | `make jar` + manifest-classpath check (`scripts/verify_jar_manifest.py`) + `make fat-jar` and content assertions |
 | `fuzz` (scheduled) | `make fuzz-property` + `make fuzz-jazzer` |
-| `dependencies` (scheduled) | checks for newer dependency versions |
+| `dependencies` (scheduled) | `python3 scripts/fetch_deps.py update --check --lock build/deps.lock` |
+
+### Makefile targets
+
+`deps`, `deps-verify`, `deps-update`, `compile`, `h2-compat`, `run`, `run-only`, `test`,
+`test-mariadb`, `mariadb-up`, `mariadb-down`, `audit`, `populate`, `jar`, `fat-jar`,
+`icon`, `installer-windows`, `installer-windows-bundle`, `jpackage-win`,
+`installer-win-standalone`, `installer-linux`, `strings`, `strings-check`, `strings-test`,
+`fuzz-deps`, `fuzz-property`, `fuzz-jazzer`, `fuzz-test-compile`, `fuzz`, `clean`,
+`checkbiblio-tools`, `checkbiblio-accept`.
 
 ### Also present
 
-- `checkBiblio/` — a flat folder of standalone audit tools (4 Java files, 3 465 lines):
-  `UIAudit` (770 lines, drives the running UI), `TestEstres` (1 900 lines, stress/soak
-  driver), `I18nAudit` (251 lines, translation-key auditor), `SuportTestUi` (547 lines,
-  shared UI support). Plus `biblioteca-ui-stress.user.js` (a Tampermonkey userscript) and
-  the `run.sh` / `run.ps1` launchers. **Not part of `make compile`** — `checkBiblio/run.sh`
+- `checkBiblio/` — a flat folder of standalone audit tools (9 Java files, 5 019 lines):
+  `UIAudit` (drives the running UI), `TestEstres` (stress/soak driver), `I18nAudit`
+  (translation-key auditor), `SuportTestUi` (shared UI support), `PerfBench`, `PerfUI`,
+  `AcceptacioUi`, `CapturaPantalla`, `ProvaVisual`. Plus `biblioteca-ui-stress.user.js`
+  (a Tampermonkey userscript), `perf-baseline.py`, `perf-compare.sh` and the
+  `run.sh` / `run.ps1` launchers. **Not part of `make compile`** — `checkBiblio/run.sh`
   compiles them into `bin/` with its own `javac` call, and `make audit` assumes they are
   already there.
 - `scripts/` — dependency fetching (`fetch_deps.py`), packaging helpers, the i18n
-  generator, fuzzing helpers, `mariadb_test.sh`, `h2compat/`, and agent-loop tooling.
+  generator + its Java template, `verify_jar_manifest.py`, `test_gen_strings.py`,
+  `mariadb_test.sh`, `h2compat/`, and agent-loop tooling.
 - `portades/` — 3 seed cover images (`default_cover.png`, `q.png`, `r.jpg`).
 - `packaging/` — `installer.nsi` (NSIS), `launch4j.xml`, a bundled `jre/`, `icon.svg`.
 - `docs/agent/` — `AGENTS.md`, `CLAUDE.md`, `MISTAKES.md` (project conventions and a
   running log of past mistakes).
 - `docs/` — `fuzzing.md`, `MARIADB-TEST.md`, `I18N-NEWLINES.md`, `MODERNITZACIO.md`,
-  `NAMING_POLICY.md`, and `code-review/` (review artefacts).
+  `NAMING_POLICY.md`, `SISTEMA-VISUAL.md`, `Summarize`, `tree`, and `code-review/`
+  (review artefacts).
 
 ---
 
@@ -905,16 +1004,22 @@ for d in main domini persistencia herramienta presentacio; do
 done
 
 # Test surface
-find test -name '*.java' | wc -l                              # 69 files
-grep -rho '@Test' test/ --include=*.java | wc -l              # 634
-grep -rho '@ParameterizedTest' test/ --include=*.java | wc -l # 17
-grep -rho '@Property' test/ --include=*.java | wc -l           # 6
+find test -name '*.java' | wc -l                                # 79 files
+grep -rho '@Test' test/ --include=*.java | wc -l                # 684
+grep -rho '@ParameterizedTest' test/ --include=*.java | wc -l   # 17
+grep -rho '@Property' test/ --include=*.java | wc -l             # 6
 
 # i18n keys
-python3 scripts/gen_strings.py --check --no-java   # 595 keys, properties in sync
+grep -c 'T("' src/herramienta/i18n/I18n.java                      # 628 keys
 
 # Dependency inventory
-grep -c ' runtime$' build/deps.lock               # 8 runtime deps
+grep -c ' runtime$' build/deps.lock                              # 11 runtime deps
+
+# Migrations
+grep -c 'new Migracio(' src/persistencia/internal/ConnexioServidor.java   # 39
+
+# Suite
+make test    # 765 found, 744 successful, 0 failed
 ```
 
 `make compile` and `make test` must be run with a working JDK on `PATH`. The Makefile
@@ -925,53 +1030,64 @@ prints a version — so a broken JDK cannot silently produce an empty build.
 
 ## 8. Findings and risks
 
-1. **`gen_strings.py` cannot regenerate `I18n.java` faithfully — and CI cannot see it.**
-   The generator's Java template (`gen_java`, `scripts/gen_strings.py:136-142`) emits a
-   naive `raw.replace("{0}", …)` loop, while the committed `I18n.java` substitutes
-   placeholders through a pre-compiled `PLACEHOLDER_PATTERNS` regex array indexed by
-   `args.length`. Consequences:
-   - `python3 scripts/gen_strings.py --check` **fails permanently** on `I18n.java`.
-   - Running the generator **silently downgrades** the runtime substitution path and
-     replaces the Catalan header with an English one.
-   - CI's `i18n` job runs `--check --no-java`, which validates only the `.properties`
-     exports — so the drift is invisible to CI and the build stays green.
-   **Fix:** make `gen_java` emit the placeholder-pattern block, then drop `--no-java`
-   from the CI job so the real file is checked.
-2. **Two implementations of the same filter.** Below 2 000 books filtering runs in memory
+1. **Eager full-table load.** The `ControladorDomini` constructor loads the entire
+   `llibre` table (`cp.obtenirAllLlibres()`) plus all shelves and tags, unconditionally —
+   contradicting the large-library pagination path the same class also builds.
+2. **No connection pool.** Every DB call opens and closes a connection. Fine for a
+   single-user desktop app, but it is the main scaling limit if this ever grew. All 57
+   public `ControladorPersistencia` methods are `synchronized`, so one global lock
+   serialises every DB operation, including long bulk imports.
+3. **Two implementations of the same filter.** Below 2 000 books filtering runs in memory
    via `FiltreUtils`; above it, filtering is pushed into SQL via `SqlOp`. Two code paths
    for one behaviour means they can drift.
-3. **No connection pool.** Every DB call opens and closes a connection. Fine for a
-   single-user desktop app, but it is the main scaling limit if this ever grew.
-4. **All `ControladorPersistencia` methods are `synchronized`** — a single global lock
-   serialises every DB operation including long bulk imports.
-5. **Three parallel ways to build a `LlibreFilter`.** `LlibreFilter` exposes mutable
+4. **Three parallel ways to build a `LlibreFilter`.** `LlibreFilter` exposes mutable
    `with*(...)` setters that mutate in place and return `this`;
-   `domini.ConstructorFiltreLlibre` is a separate 18-method builder ending in `build()`;
+   `domini.ConstructorFiltreLlibre` is a separate builder ending in `build()`;
    and `new LlibreFilter()` is used directly by the builder itself. Production code uses
    the `with*` path (`ControladorFiltre.filtrar()`), tests use the builder. This is safe
    today only because every call constructs a fresh instance — but the `with*` shape
    invites aliasing, since a filter handed to a background worker can still be mutated by
    whoever owns it.
-6. **A misnamed test class.** `test/persistencia/ConnectionFactoryTest.java` tests
+5. **A misnamed test class.** `test/persistencia/ConnectionFactoryTest.java` tests
    `ConnectionConfig`, not a `ConnectionFactory` — that class was inlined into
    `ConnexioServidor.createDatabase` by a refactor. The test's own Javadoc says so, but
    the filename still points at a class that no longer exists, which misleads grep-based
    navigation.
-7. **Heavy-field failure is silent-ish.** If `carregarHeavyFields` fails, the detail
+6. **Heavy-field failure is silent-ish.** If `carregarHeavyFields` fails, the detail
    panel logs a warning that description and notes "will render empty and any save will
    overwrite the originals" — a save after a failed load destroys data.
-8. **Cover fetch is a network dependency in a batch path.** `fetchMissingCovers` hits
+7. **Cover fetch is a network dependency in a batch path.** `fetchMissingCovers` hits
    OpenLibrary per book. It is protected by a re-entrancy guard, and the client applies
-   `rateLimit()` plus 3 retries with exponential backoff — but a large library still
-   means hundreds of sequential network round-trips, and the user waits behind a
-   modal progress dialog.
-9. **`lib/` carries duplicate jar versions.** Older resolutions (assertj 3.26.3 alongside
+   `rateLimit()` (300 ms minimum spacing) plus retries with exponential backoff — but a
+   large library still means hundreds of sequential network round-trips, and the user
+   waits behind a modal progress dialog.
+8. **`lib/` carries duplicate jar versions.** Older resolutions (assertj 3.26.3 alongside
    3.27.7, h2 2.3.232 alongside 2.5.252, and so on) sit next to the lock-pinned ones.
    Nothing on the classpath picks them up, but the directory is misleading and bloats
-   the checkout.
-10. **`checkBiblio` is not covered by `make compile`.** `make audit` runs
-    `checkBiblio.UIAudit` from `bin/`, but only `checkBiblio/run.sh` ever compiles those
-    classes there. A clean `make compile` leaves `make audit` failing on a missing class.
+   the checkout (56 MB).
+9. **`checkBiblio` is not covered by `make compile`.** `make audit` runs
+   `checkBiblio.UIAudit` from `bin/`, but only `checkBiblio/run.sh` ever compiles those
+   classes there. A clean `make compile` leaves `make audit` failing on a missing class.
+10. **Statistics dialog builds its UI on the EDT.** The aggregation itself was moved into
+    a `SwingWorker`, but the tabs, tables and charts are still assembled on the EDT.
+11. **Five translation keys live only in the generated file.** `I18n.java` is produced
+    from `scripts/i18n_java_template.java.tmpl`, but `dlg_restore_done_with_note`,
+    `tip_filter_substring`, `dlg_fetch_portades_done_partial`, `dlg_perfil_nom_invalid`
+    and `dlg_perfil_nom_invalid_title` are hand-written and are not in the CSVs. The
+    newline convention is split as well: CSV keys carry a literal `\n` (two characters)
+    and the manual keys carry a real newline. See `docs/I18N-NEWLINES.md`.
+
+### Risks that were closed since the previous pass
+
+- **Undo-buffer data race** (previously CRITICAL): `EstatVistaBiblioteca.undoBuffer` is
+  still a plain `ArrayDeque`, but the only writer is now
+  `ControladorAccionsLlibre.finalizeDeleteWithUndo`, called from `SwingWorker.done()` —
+  i.e. on the EDT, the same thread that pops it. The race is gone.
+- **Lock held across file I/O** in `ServeiCoberta`: the lock is released before
+  `Files.readAllBytes`.
+- **SQL injection through the sort key**: `domini.EspecificacioOrdenacio` whitelists the
+  column against its `COLUMNS` map and falls back to `ISBN`; `toSql()` returns a fixed
+  fragment per column.
 
 ---
 
@@ -986,9 +1102,13 @@ prints a version — so a broken JDK cannot silently produce an empty build.
 | How is a book stored? | `src/persistencia/internal/ConnexioServidor.java` (DDL + 39 migrations) |
 | How does a write reach the DB? | `src/persistencia/dao/` + `ControladorPersistencia` |
 | Where does the UI live? | `src/presentacio/panells/` (views) + `src/presentacio/controladors/` (behaviour) |
+| Where are colours and spacing defined? | `src/herramienta/ui/UITheme.java` + `src/herramienta/ui/Tokens.java` |
+| Where are the icons? | `src/presentacio/icones/*.svg` → `src/presentacio/util/Icones.java` |
 | How are strings translated? | `src/herramienta/i18n/I18n.java` (generated) — edit `strings/*.csv` and re-run `scripts/gen_strings.py` |
 | How is the config stored? | `src/herramienta/config/Configuracio.java` |
 | How do CSV imports detect format? | `src/herramienta/io/csv/` |
 | How does the gallery draw cards? | `src/presentacio/galeria/FabricantTargetesCoberta.java` |
 | How does backup work? | `src/herramienta/io/ServeiCopiaSeguretat.java` |
 | How is the test suite selected? | `Makefile` — `TEST_CLASSES` / `JAZZER_TEST_CLASSES` |
+| What is the project layout? | `docs/tree` |
+| What is the short version of all this? | `docs/Summarize` |

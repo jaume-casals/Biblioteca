@@ -1,0 +1,136 @@
+Architecture
+
+    Java Swing desktop app. One local JVM. Three-layer MVC, dependency direction strictly
+    downward — presentacio → domini → persistencia.contract. Domain layer imports no Swing,
+    no JDBC. Look & Feel is FlatLaf 3.7.2 (Nimbus was dropped in the 2026-10 UI redesign).
+
+    - src/presentacio (86 files, 13 500 lines) — Swing panels, controllers, dialogs, renderers,
+      gallery, plus 35 local SVG icons. Split *Panel design vs *Control logic.
+    - src/domini (22 files, 2 163 lines) — ControladorDomini singleton facade, 67 public
+      methods, all one-line delegations to 7 role delegates (DelegatLlibre, DelegatPrestatgeria,
+      TagDelegate, DelegatPrestec, DelegatEstadistiques, DelegatCopiaSeguretat,
+      NamedEntityDelegate) over StateContext.
+    - src/persistencia (37 files, 3 253 lines) — contract/ 11 interfaces, dao/ 8, row/ 9 records,
+      internal/ 8. One ControladorPersistencia singleton, every method synchronized.
+    - src/herramienta (44 files, 5 675 lines) — config, i18n, IO, CSV, text, theming
+      (UITheme palette + Tokens metrics), OpenLibrary client.
+    - src/main (2 files, 195 lines) — bootstrap. DB open runs parallel to theme install on a
+      daemon thread.
+
+    Two shared states, must not conflate:
+    - domini.facade.StateContext — domain-side, one lock monitor, withLock / withLockReturning,
+      defensive snapshotAll(), atomic replaceAll().
+    - presentacio.util.EstatVistaBiblioteca — UI-side, EDT-confined, not thread-safe.
+
+    Write-through persistence: in-memory state plus DB write on every mutation. Schema
+    versioned via schema_version table, 39 migrations in ConnexioServidor.
+
+    Build is plain Makefile + javac. No Maven/Gradle. build/maven-legacy/pom.xml is an
+    abandoned attempt, still on disk.
+
+    Two web prototypes exist (Biblioteca.html + components.jsx React/Babel CDN;
+    .config/ide/vscode-java-bin/web/ vanilla JS). Neither is wired to the Java build.
+
+    Features
+
+    Catalogue with title, authors, ISBN-10/13 with check digit, year, rating 0-10, price,
+    cover blob, notes, per-locale titles. Covers auto-imported from OpenLibrary by ISBN,
+    stored as BLOB in DB.
+
+    Unlimited shelves, each book carrying own rating and read-state per shelf. Free-form tags.
+    Real-time search across title, author, ISBN, description, notes. Composable filters
+    (rating, year, language, format, shelf, tag, read-state).
+
+    Loans with returns and overdue detection. Reading progress with progress-bar cell.
+    Statistics: per-shelf averages, read percentages, top authors, reading pace.
+
+    Import CSV (native, Goodreads, LibraryThing), JSON, Calibre metadata.db. Export CSV, JSON,
+    HTML, PDF. SQL backup with validated restore plus automatic pre-restore safety copy.
+
+    UI: 4 themes (clar/fosc/sepia/ocean), 3 font sizes (small 11 / medium 13 / large 16),
+    3 locales (ca/es/en), table and gallery modes, keyboard shortcuts, barcode scan station.
+
+    Tech stack
+
+    Java 25 (--release 25), Swing, FlatLaf 3.7.2 (+ flatlaf-extras, jsvg 2.1.0 for the SVG
+    icon family), records, lambdas, java.net.http.HttpClient — no HTTP library.
+
+    build/deps.lock holds 23 pinned deps with SHA-256, single source of truth: 11 runtime
+    (h2 2.5.252, flatlaf 3.7.2, flatlaf-extras 3.7.2, jsvg 2.1.0, mariadb-java-client 3.5.10,
+    gson 2.14.0, slf4j-api 2.0.20, error_prone_annotations 2.48.0, waffle-jna 3.7.0,
+    jna 5.19.1, jna-platform 5.19.1), 8 test (junit-platform-console-standalone 1.14.4,
+    assertj 3.27.7, mockito 5.24.0, byte-buddy + agent 1.18.15, objenesis 3.6, jqwik 1.10.2),
+    3 fuzz (jazzer 0.30.0), 1 legacy (h2 2.3.232, reference driver, in no classpath).
+
+    Python 3 for scripts/fetch_deps.py, gen_strings.py, verify_jar_manifest.py,
+    test_gen_strings.py. Windows parallel chain: scripts/*.bat + checkBiblio/*.ps1.
+
+    CI: .github/workflows/ci.yml, 6 jobs — build-and-test, i18n, h2-compat, package, plus
+    scheduled fuzz and dependency jobs. permissions: contents: read, Temurin 25.
+
+    Packaging: NSIS installer, launch4j, bundled Temurin 25 JRE.
+
+    Unfinished work
+
+    Working tree dirty: 147 changed paths (118 tracked files, +4885/-2788) plus 70 untracked
+    files. In flight: FlatLaf UI redesign (herramienta/ui/Tokens, presentacio/util/Icones,
+    PanelCapcalera, SelectorSegmentat, panells/navegacio/ItemNavegacio, util/AplicadorResultat,
+    35 SVG icons), persistence projection rework (LlibreDaoCore, LlibreMapper), backup snapshot
+    (DelegatCopiaSeguretat), i18n generator now template-driven
+    (scripts/i18n_java_template.java.tmpl), plus CI and scripts.
+
+    Suite green right now — I ran make test: 765 found, 744 successful, 0 failed, 1 skipped,
+    20 aborted, 96 containers, 24 s.
+
+    Backlog docs/MODERNITZACIO.md §5 — 4 pending items: MariaDB integration suite against a
+    real isolated service; stale jar cleanup in lib/; verify JSON export/import preserves heavy
+    fields; archive or delete build/maven-legacy/pom.xml. (Item 1 of that list — the generation
+    model for stale async results — is done: presentacio/util/CoordinadorGeneracions.)
+
+    Audit docs/code-review/tot.txt — 39 findings (2 CRITICAL, 4 HIGH, 20 MEDIUM, 10 LOW),
+    confidence 72. Stale: its CRITICAL undo-buffer race has since been fixed, and it names
+    files that no longer exist.
+
+    Never audited: i18n key coverage (hardcoded user-facing strings, missing I18n.t).
+
+    MariaDB path never exercised against a live server. Only H2 compatibility proven.
+
+    Risks
+
+    1. Eager full-table load — MEDIUM. ControladorDomini constructor loads the entire llibre
+       table unconditionally, contradicting the large-library pagination path it also builds.
+    2. No connection pool — MEDIUM. Every DB call opens and closes a connection, and one global
+       synchronized lock serialises all of them, bulk imports included.
+    3. Statistics tab build on the EDT — MEDIUM. The aggregation itself moved into a
+       SwingWorker, but the dialog still assembles tables and charts on the EDT.
+    4. Cover BLOBs excluded from SQL backup. Restore loses covers; re-download required. Format
+       decision, documented, not a bug.
+    5. i18n newline convention split. CSV keys use literal \n (2 chars) and render as literal
+       text; 5 manual I18n.java keys use a real newline. Inconsistent inside one table. Needs
+       product decision, not a point fix.
+    6. I18n.java is generated but carries 5 hand-written keys; the generator now emits the Java
+       from scripts/i18n_java_template.java.tmpl. Regenerating drops the manual keys. Guarded by
+       docs/agent/MISTAKES.md; git checkout -- after any exploratory regen.
+    7. Backlog file missing. docs/agent/AGENTS.md and .opencode/agent/loop.md both name tot.txt
+       at repo root as source of truth for open work. No such file — it lives in
+       docs/code-review/tot.txt.
+    8. Agent instructions stale. .opencode/agent/loop.md names root /home/j/Documents/DeV/Biblioteca
+       (actual /home/j/projects/Biblioteca), classes MainFrameControl / ServerConect /
+       MostrarBibliotecaControl (actual PanelMarcPrincipal / ConnexioServidor /
+       ControladorMostrarBiblioteca), and treats src/listener/ as a top-level package.
+    9. Repo bloat. .git 405M, packaging/ 182M (323 tracked files — bundled Temurin JRE committed),
+       lib/ 56M with old-version duplicate jars (untracked), target/ keeps 7 committed
+       Maven/surefire leftovers.
+    10. Schema rule. Never alter CREATE_TABLE; append to the migrations array. Breaking it
+        corrupts existing databases.
+    11. H2 bump irreversible. After opening with 2.5.252, no return to 2.3.232.
+    12. CI blind spot. No MariaDB service container — only h2-compat runs.
+
+    Fixed since the previous pass, and verified in code: the undo-buffer data race (was
+    CRITICAL) — the push now happens in SwingWorker.done() on the EDT; ServeiCoberta no longer
+    holds a lock across file I/O; the sort column is whitelisted in domini.EspecificacioOrdenacio,
+    so there is no SQL-injection path through the dynamic ORDER BY; the statistics aggregation
+    now runs in a SwingWorker.
+
+    No source files changed by me — only README.md, docs/ARCHITECTURE-MAP.md, docs/Summarize
+    and docs/tree.
