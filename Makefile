@@ -154,6 +154,9 @@ compile: deps
 		printf '%s\n%s\n' "$$src_count" "`cksum $(DEPS_LOCK) | tr -d ' '`-`date +%s%N`" > $(SRC_STAMP); \
 	fi
 	@if [ -d src/herramienta ]; then mkdir -p bin/herramienta && cp src/herramienta/*.properties bin/herramienta/ 2>/dev/null || true; fi
+	@# Icones SVG locals: es copien al binari perquè Icones els carregui des
+	@# del classpath. Sónen resources, no codi: no afecten el test de canvis.
+	@if [ -d src/presentacio/icones ]; then mkdir -p bin/presentacio/icones && cp src/presentacio/icones/*.svg bin/presentacio/icones/ 2>/dev/null || true; fi
 	@if [ -d src/web ]; then rm -rf bin/web && cp -r src/web bin/web; fi
 	@if [ -f src/LICENSE ]; then cp src/LICENSE bin/; fi
 	@# El ABOUT (QuantADialeg) llegeix /version.properties del classpath: si no

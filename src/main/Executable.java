@@ -11,7 +11,6 @@ import presentacio.controladors.ControladorMarcPrincipal;
 import presentacio.panells.PanelMarcPrincipal;
 import presentacio.panells.PantallaInici;
 
-import java.awt.Color;
 import java.awt.EventQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -117,22 +116,12 @@ public class Executable {
 
                 // El Look & Feel s'instal·la ABANS d'aplicar el tema:
                 // UIManager.put inicialitza el LAF per defecte (Metal) quan
-                // encara no n'hi ha cap d'instal·lat, i instal·lar Nimbus
+                // encara no n'hi ha cap d'instal·lat, i instal·lar FlatLaf
                 // després tornaria a inicialitzar-ne un altre de zero.
-                try {
-                    UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-                } catch (Exception e) {
-                    LOG.log(Level.WARNING, "No s'ha pogut instal·lar Nimbus; es continua amb el LAF per defecte", e);
-                }
+                // UITheme.posarTheme() fa la instal·lació (FlatLaf) i projecta
+                // els tokens de disseny sobre el UIManager.
                 UITheme.posarTheme(Configuracio.obtenirTheme());
                 UITheme.rebuildFonts(MidaLletra.fromKey(Configuracio.obtenirFontSize()));
-                UIManager.put("nimbusBase",                UITheme.palette().accent());
-                UIManager.put("nimbusBlueGrey",            UITheme.esDark() ? new Color(0x3D4451) : new Color(0x5D8AA8));
-                UIManager.put("control",                   UITheme.palette().bgMain());
-                UIManager.put("text",                      UITheme.palette().textDark());
-                UIManager.put("nimbusFocus",               UITheme.palette().accent());
-                UIManager.put("nimbusSelectionBackground", UITheme.palette().accent());
-                UIManager.put("nimbusSelectedText",        Color.WHITE);
                 UIManager.put("defaultFont",              UITheme.fontBase());
                 UIManager.put("Table.alternateRowColor",   UITheme.palette().tableAlt());
 

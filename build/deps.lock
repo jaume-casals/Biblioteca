@@ -4,6 +4,9 @@
 
 # --- runtime ---
 com.h2database:h2:2.5.252 90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20 runtime
+com.formdev:flatlaf:3.7.2 917aff3963c88d797d0fd9b9ccbd70f7681c101df9d11c59e2bc7a3a6c0fabf4 runtime
+com.formdev:flatlaf-extras:3.7.2 7d03612d5c11d27a4ac714e79b11c73405d07f84a3214fe4ae091daadc8b5166 runtime
+com.github.weisj:jsvg:2.1.0 a538142d27c57c55066da02a535cc8eee3afd0d37b3daff8eba6344bd0ffc1b6 runtime
 org.mariadb.jdbc:mariadb-java-client:3.5.10 919b8c1c771d9ee3465811462f242c9543ab401e140c64988ddbf1d8abcb18b2 runtime
 com.google.code.gson:gson:2.14.0 2cbd119bf1961c28788310963dc80ba65f58cdeec1dd139c8bdb1240faa2c36f runtime
 org.slf4j:slf4j-api:2.0.20 7e1446499b359675d8aabe6af2de86b85e72ae8a2a932c0b40d0e5ba57097439 runtime
