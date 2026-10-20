@@ -1,343 +1,328 @@
-[21:21:25.896] === Biblioteca UIAudit ===
-[21:21:25.899] Mode: AUTOMATITZAT
-[21:21:25.899] Iniciat: 2026-10-19T21:21:25.899433978
-[21:21:25.899] Llançant Biblioteca en mode Swing...
-[21:21:25.900] Esperant el JFrame principal (fins a 12s)...
-[21:21:26.557] OK: Finestra principal visible — "Biblioteca"
-[21:21:26.575] 
+[17:12:51.472] === Biblioteca UIAudit ===
+[17:12:51.478] Mode: AUTOMATITZAT
+[17:12:51.479] Iniciat: 2026-10-20T17:12:51.479171143
+[17:12:51.479] Llançant Biblioteca en mode Swing...
+[17:12:51.481] Esperant el JFrame principal (fins a 12s)...
+[17:12:53.401] OK: Finestra principal visible — "Biblioteca"
+[17:12:53.427] 
 === INICI DE L'AUDITORIA AUTOMATITZADA ===
-[21:21:26.575] 
+[17:12:53.428] 
 --- FINESTRA PRINCIPAL ---
-[21:21:26.576]                 [LBL] "biblioteca"
-[21:21:26.576]                 [LBL] "NAVEGAR"
-[21:21:26.576]               [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
-[21:21:26.577]               [BTN] "Afegits recentment"  tip:"Mostra els 20 darrers llibres afegits"
-[21:21:26.577]               [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
-[21:21:26.577]               [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
-[21:21:26.577]               [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
-[21:21:26.577]                 [LBL] "LES MEVES LLISTES"
-[21:21:26.577]                 [BTN] ""
-[21:21:26.577]                 [BTN] ""
-[21:21:26.577]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
-[21:21:26.577]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
-[21:21:26.577]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
-[21:21:26.577]               [BTN] "☾ Tema"  tip:"Canviar entre mode clar i fosc"
-[21:21:26.577]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
-[21:21:26.577]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
-[21:21:26.577]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
-[21:21:26.577]                 [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
-[21:21:26.577]                 [BTN] "Filtres"  tip:"Mostrar/amagar filtres avançats"
-[21:21:26.577]                 [BTN] "Galeria"  tip:"Alternar entre vista taula i galeria de portades"
-[21:21:26.577]                 [BTN] "Sèries"  tip:"Agrupar llibres per sèrie i volum"
-[21:21:26.577]                 [BTN] "+ Afegir"  tip:"Afegir un nou llibre (Ctrl+N)"
-[21:21:26.577]                       [TBL] rows=0 cols=7
-[21:21:26.577]         [LBL] "Totes les llistes  —  0 llibres"
-[21:21:26.578] 
+[17:12:53.429]                       [LBL] "Biblioteca"
+[17:12:53.429]                       [LBL] "NAVEGAR"
+[17:12:53.429]                     [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
+[17:12:53.430]                     [BTN] "Recents"  tip:"Mostra els 20 darrers llibres afegits"
+[17:12:53.430]                     [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
+[17:12:53.430]                     [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
+[17:12:53.430]                     [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
+[17:12:53.430]                       [LBL] "LES MEVES LLISTES"
+[17:12:53.430]                       [LBL] "<html><body style='width:150px'>Encara no tens cap prestatgeria. Crea'n una per agrupar els llibres.</body></html>"
+[17:12:53.430]                       [BTN] "Crea la primera"
+[17:12:53.430]                 [BTN] ""
+[17:12:53.430]                 [BTN] ""
+[17:12:53.430]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
+[17:12:53.430]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
+[17:12:53.431]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
+[17:12:53.431]               [BTN] "Tema"  tip:"Canviar entre mode clar i fosc"
+[17:12:53.431]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
+[17:12:53.431]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
+[17:12:53.431]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
+[17:12:53.432]                   [LBL] "Tots els llibres"
+[17:12:53.432]                   [LBL] "0 llibres"
+[17:12:53.432]                   [BTN] "+ Nou llibre"
+[17:12:53.432]                     [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
+[17:12:53.432]                     [BTN] "Filtres"
+[17:12:53.432]                     [BTN] "Ordena"
+[17:12:53.432]                       [BTN] "Galeria"
+[17:12:53.432]                       [BTN] "Taula"
+[17:12:53.432]                     [BTN] "Sèries"
+[17:12:53.433]                     [BTN] "Més accions"
+[17:12:53.433]         [LBL] "Tots els llibres  —  0 llibres"
+[17:12:53.433] 
 --- BOTONS DE LA BARRA LATERAL ---
-[21:21:26.581] CLICK: barra lateral "Tots els llibres"
-[21:21:26.711]   -> Sense diàleg (actualització del panell)
-[21:21:26.712] CLICK: barra lateral "Afegits recentment"
-[21:21:26.843]   -> Diàleg: "Afegits recentment" — escanejant...
-[21:21:26.843]                 [LBL] "No hi ha llibres."
-[21:21:26.843]             [BTN] "D'acord"
-[21:21:26.847] CLICK: barra lateral "Llegits"
-[21:21:26.991]   -> Diàleg: "Llegits" — escanejant...
-[21:21:26.991]                 [LBL] "Cap llibre marcat com a llegit."
-[21:21:26.991]             [BTN] "D'acord"
-[21:21:26.993] CLICK: barra lateral "Llista de desitjos"
-[21:21:27.132]   -> Sense diàleg (actualització del panell)
-[21:21:27.133] CLICK: barra lateral "En curs"
-[21:21:27.264]   -> Sense diàleg (actualització del panell)
-[21:21:27.265] CLICK: barra lateral "Estadístiques"
-[21:21:27.395]   -> Diàleg: "Estadístiques" — escanejant...
-[21:21:27.395]                 [LBL] "La biblioteca és buida."
-[21:21:27.395]             [BTN] "D'acord"
-[21:21:27.397] CLICK: barra lateral "Llibre aleatori"
-[21:21:27.538]   -> Diàleg: "Llibre Aleatori" — escanejant...
-[21:21:27.539]                 [LBL] "No hi ha llibres a la vista actual."
-[21:21:27.539]             [BTN] "D'acord"
-[21:21:27.541] CLICK: barra lateral "Gestionar llistes"
-[21:21:27.687]   -> Diàleg: "Gestionar Llistes" — escanejant...
-[21:21:27.687]               [BTN] "▲"  tip:"Pujar llista"
-[21:21:27.687]               [BTN] "▼"  tip:"Baixar llista"
-[21:21:27.687]               [BTN] "Renombrar"  tip:"Canviar el nom de la llista seleccionada"
-[21:21:27.688]               [BTN] "Color"  tip:"Canviar color de la llista seleccionada"
-[21:21:27.688]               [TF ] value=""  tip:"Nom de la nova llista"
-[21:21:27.688]               [BTN] "Nova Llista"
-[21:21:27.688]             [BTN] "Eliminar Seleccionada"
-[21:21:27.690] CLICK: barra lateral "☾ Tema"
-[21:21:27.908]   -> Sense diàleg (actualització del panell)
-[21:21:27.910] CLICK: barra lateral "Configuració"
-[21:21:28.157]   -> Diàleg: "Configuració" — escanejant...
-[21:21:28.162]           [LBL] "Base de dades"
-[21:21:28.162]           [LBL] "Tipus"
-[21:21:28.162]           [LBL] "Servidor (host)"
-[21:21:28.163]           [LBL] "Usuari"
-[21:21:28.163]           [LBL] "Contrasenya"
-[21:21:28.163]           [CMB] selected="Integrada — H2 (sense servidor)" items=2
-[21:21:28.163]             [BTN] ""
-[21:21:28.163]           [TF ] value="db.example.com"
-[21:21:28.163]           [TF ] value="admin"
-[21:21:28.163]           [TF ] value=""
-[21:21:28.164]           [LBL] "Els canvis de BD requereixen reiniciar l'aplicació."
-[21:21:28.164]           [BTN] "Prova connexió"
-[21:21:28.164]           [LBL] "Imatges"
-[21:21:28.164]           [LBL] "Carpeta per defecte"
-[21:21:28.164]           [TF ] value="/home/j"
-[21:21:28.164]           [BTN] "..."
-[21:21:28.164]           [LBL] "Aparença"
-[21:21:28.164]           [LBL] "Tema"
-[21:21:28.165]           [LBL] "Mida de lletra"
-[21:21:28.165]           [LBL] "Símbol de moneda"
-[21:21:28.165]           [LBL] "Valoració per defecte"
-[21:21:28.165]           [CMB] selected="Clar" items=4
-[21:21:28.165]             [BTN] ""
-[21:21:28.165]           [CMB] selected="Gran" items=3
-[21:21:28.165]             [BTN] ""
-[21:21:28.165]           [CMB] selected="€" items=5
-[21:21:28.165]             [BTN] ""
-[21:21:28.166]           [TF ] value="0.0"
-[21:21:28.166]           [LBL] "(0.0 – 10.0)"
-[21:21:28.166]           [LBL] "Idioma"
-[21:21:28.166]           [CMB] selected="Català" items=3
-[21:21:28.166]             [BTN] ""
-[21:21:28.166]           [LBL] "Dades"
-[21:21:28.166]           [LBL] "Mida de la BD"
-[21:21:28.167]           [LBL] "N/D"
-[21:21:28.167]           [BTN] "Buidar tota la biblioteca"
-[21:21:28.167]           [BTN] "Gestió de perfils BD"  tip:"Canviar entre bases de dades H2 (~/.biblioteca/*.mv.db)"
-[21:21:28.167]           [BTN] "Desar"
-[21:21:28.167]           [BTN] "Cancel·lar"
-[21:21:28.172] CLICK: barra lateral "Sobre..."
-[21:21:28.470]   -> Diàleg: "Sobre Biblioteca" — escanejant...
-[21:21:28.471]           [LBL] "Biblioteca 2.10"
-[21:21:28.471]           [LBL] "Gestió personal de llibres"
-[21:21:28.471]             [LBL] "Autor:"
-[21:21:28.471]             [LBL] "Jordi Casals"
-[21:21:28.471]             [LBL] "Llicència:"
-[21:21:28.472]             [LBL] "GNU General Public License v3"
-[21:21:28.472]             [LBL] "Font:"
-[21:21:28.472]             [LBL] "H2 Database Engine (EPL-1.0)"
-[21:21:28.472]             [LBL] "Font:"
-[21:21:28.472]             [LBL] "MariaDB Connector/J (LGPL-2.1)"
-[21:21:28.472]           [LBL] "Llicència (GPL v3 — extracte)"
-[21:21:28.472]               [BTN] ""
-[21:21:28.472]               [BTN] ""
-[21:21:28.473]           [BTN] "Codi font (GitHub)"
-[21:21:28.473]           [BTN] "Tancar"
-[21:21:28.482] 
+[17:12:53.441] CLICK: barra lateral "Tots els llibres"
+[17:12:53.572]   -> Sense diàleg (actualització del panell)
+[17:12:53.577] WARN: botó de barra lateral no trobat per al hint "Afegits r"
+[17:12:53.577] CLICK: barra lateral "Llegits"
+[17:12:53.709]   -> Diàleg: "Llegits" — escanejant...
+[17:12:53.709]                 [LBL] "Cap llibre marcat com a llegit."
+[17:12:53.709]             [BTN] "D'acord"
+[17:12:53.716] CLICK: barra lateral "Llista de desitjos"
+[17:12:53.885]   -> Sense diàleg (actualització del panell)
+[17:12:53.886] CLICK: barra lateral "En curs"
+[17:12:54.017]   -> Sense diàleg (actualització del panell)
+[17:12:54.018] CLICK: barra lateral "Estadístiques"
+[17:12:54.148]   -> Diàleg: "Estadístiques" — escanejant...
+[17:12:54.149]                 [LBL] "La biblioteca és buida."
+[17:12:54.149]             [BTN] "D'acord"
+[17:12:54.151] CLICK: barra lateral "Llibre aleatori"
+[17:12:54.318]   -> Diàleg: "Llibre Aleatori" — escanejant...
+[17:12:54.318]                 [LBL] "No hi ha llibres a la vista actual."
+[17:12:54.319]             [BTN] "D'acord"
+[17:12:54.323] CLICK: barra lateral "Gestionar llistes"
+[17:12:54.492]   -> Diàleg: "Gestionar Llistes" — escanejant...
+[17:12:54.492]               [BTN] "▲"  tip:"Pujar llista"
+[17:12:54.492]               [BTN] "▼"  tip:"Baixar llista"
+[17:12:54.493]               [BTN] "Renombrar"  tip:"Canviar el nom de la llista seleccionada"
+[17:12:54.493]               [BTN] "Color"  tip:"Canviar color de la llista seleccionada"
+[17:12:54.493]               [TF ] value=""  tip:"Nom de la nova llista"
+[17:12:54.493]               [BTN] "Nova Llista"
+[17:12:54.493]             [BTN] "Eliminar Seleccionada"
+[17:12:54.496] CLICK: barra lateral "Tema"
+[17:12:54.795]   -> Sense diàleg (actualització del panell)
+[17:12:54.796] CLICK: barra lateral "Configuració"
+[17:12:55.012]   -> Diàleg: "Configuració" — escanejant...
+[17:12:55.015]               [LBL] "Aparença"
+[17:12:55.015]               [LBL] "Tema"
+[17:12:55.015]               [LBL] "Mida de lletra"
+[17:12:55.015]               [LBL] "Símbol de moneda"
+[17:12:55.015]               [LBL] "Valoració per defecte"
+[17:12:55.015]               [CMB] selected="Clar" items=4
+[17:12:55.015]                 [BTN] ""
+[17:12:55.015]               [CMB] selected="Gran" items=3
+[17:12:55.016]                 [BTN] ""
+[17:12:55.016]               [CMB] selected="€" items=5
+[17:12:55.016]                 [BTN] ""
+[17:12:55.016]               [TF ] value="0.0"
+[17:12:55.016]               [LBL] "(0.0 – 10.0)"
+[17:12:55.016]           [BTN] "Cancel·lar"
+[17:12:55.016]           [BTN] "Desar"
+[17:12:55.019] CLICK: barra lateral "Sobre..."
+[17:12:55.216]   -> Diàleg: "Sobre Biblioteca" — escanejant...
+[17:12:55.217]           [LBL] "Biblioteca 2.10"
+[17:12:55.217]           [LBL] "Gestió personal de llibres"
+[17:12:55.217]             [LBL] "Autor:"
+[17:12:55.217]             [LBL] "Jordi Casals"
+[17:12:55.217]             [LBL] "Llicència:"
+[17:12:55.217]             [LBL] "GNU General Public License v3"
+[17:12:55.217]             [LBL] "Font:"
+[17:12:55.217]             [LBL] "H2 Database Engine (EPL-1.0)"
+[17:12:55.217]             [LBL] "Font:"
+[17:12:55.217]             [LBL] "MariaDB Connector/J (LGPL-2.1)"
+[17:12:55.217]           [LBL] "Llicència (GPL v3 — extracte)"
+[17:12:55.217]               [BTN] ""
+[17:12:55.218]               [BTN] ""
+[17:12:55.218]           [BTN] "Codi font (GitHub)"
+[17:12:55.218]           [BTN] "Tancar"
+[17:12:55.220] 
 --- BARRA SUPERIOR ---
-[21:21:28.486] Barra de cerca posada a "test"
-[21:21:28.623] Mode galeria activat
-[21:21:28.753] Mode galeria desactivat
-[21:21:29.022] Agrupació per sèries commutada x2
-[21:21:29.022] 
+[17:12:55.223] Barra de cerca posada a "test"
+[17:12:55.357] Mode galeria activat
+[17:12:55.488] Mode galeria desactivat
+[17:12:55.751] Agrupació per sèries commutada x2
+[17:12:55.751] 
 --- CALAIX DE FILTRES ---
-[21:21:29.154] Calaix de filtres obert
-[21:21:29.157]                 [LBL] "biblioteca"
-[21:21:29.157]                 [LBL] "NAVEGAR"
-[21:21:29.157]               [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
-[21:21:29.158]               [BTN] "Afegits recentment"  tip:"Mostra els 20 darrers llibres afegits"
-[21:21:29.158]               [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
-[21:21:29.158]               [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
-[21:21:29.158]               [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
-[21:21:29.158]                 [LBL] "LES MEVES LLISTES"
-[21:21:29.158]                 [BTN] ""
-[21:21:29.158]                 [BTN] ""
-[21:21:29.158]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
-[21:21:29.158]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
-[21:21:29.158]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
-[21:21:29.159]               [BTN] "☾ Tema"  tip:"Canviar entre mode clar i fosc"
-[21:21:29.159]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
-[21:21:29.159]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
-[21:21:29.159]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
-[21:21:29.159]                 [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
-[21:21:29.159]                 [BTN] "Filtres ▲"  tip:"Mostrar/amagar filtres avançats"
-[21:21:29.159]                 [BTN] "Galeria"  tip:"Alternar entre vista taula i galeria de portades"
-[21:21:29.159]                 [BTN] "Sèries"  tip:"Agrupar llibres per sèrie i volum"
-[21:21:29.159]                 [BTN] "+ Afegir"  tip:"Afegir un nou llibre (Ctrl+N)"
-[21:21:29.159]                   [LBL] "Preset:"
-[21:21:29.160]                   [CMB] selected="(sense presets)" items=1
-[21:21:29.160]                     [BTN] ""
-[21:21:29.160]                   [BTN] "Carrega"  tip:"Aplica el preset als filtres"
-[21:21:29.160]                   [BTN] "Desa"  tip:"Guarda el filtre actual com a preset"
-[21:21:29.160]                   [BTN] "Esborra"  tip:"Elimina el preset seleccionat"
-[21:21:29.160]                         [CHK] "Llegit" selected=false
-[21:21:29.160]                         [CHK] "No llegit" selected=false
-[21:21:29.160]                           [LBL] "ISBN:"
-[21:21:29.160]                           [TF ] value=""
-[21:21:29.160]                           [LBL] "Nom:"
-[21:21:29.160]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
-[21:21:29.161]                           [LBL] "Autor:"
-[21:21:29.161]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
-[21:21:29.161]                         [LBL] "Etiqueta:"
-[21:21:29.161]                         [CMB] selected="Totes les etiquetes" items=1
-[21:21:29.161]                           [BTN] ""
-[21:21:29.161]                           [LBL] "Editorial:"
-[21:21:29.161]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
-[21:21:29.161]                           [LBL] "Sèrie:"
-[21:21:29.161]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
-[21:21:29.161]                           [LBL] "Idioma:"
-[21:21:29.162]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
-[21:21:29.162]                         [LBL] "Format:"
-[21:21:29.162]                         [CMB] selected="" items=5
-[21:21:29.162]                           [BTN] ""
-[21:21:29.162]                           [LBL] "Any:"
-[21:21:29.162]                           [TF ] value=""
-[21:21:29.162]                           [LBL] "–"
-[21:21:29.162]                           [TF ] value=""
-[21:21:29.162]                           [LBL] "Valoració:"
-[21:21:29.162]                           [TF ] value=""
-[21:21:29.162]                           [LBL] "–"
-[21:21:29.163]                           [TF ] value=""
-[21:21:29.163]                           [LBL] "Preu:"
-[21:21:29.163]                           [TF ] value=""
-[21:21:29.163]                           [LBL] "–"
-[21:21:29.163]                           [TF ] value=""
-[21:21:29.163]                         [BTN] "Filtrar"  tip:"Aplicar filtres seleccionats"
-[21:21:29.163]                         [BTN] "Treure filtres"  tip:"Treure tots els filtres aplicats"
-[21:21:29.163]                         [BTN] "Exportar ▾"
-[21:21:29.163]                         [BTN] "Importar ▾"
-[21:21:29.163]                         [BTN] "Fetch portades"  tip:"Descarregar portades que falten de tots els llibres"
-[21:21:29.164]                         [BTN] "Escanejar ISBN"  tip:"Introduir ISBN i auto-omplir dades d'OpenLibrary"
-[21:21:29.164]                         [BTN] "Backup BD"  tip:"Exportar tota la base de dades a un fitxer SQL"
-[21:21:29.164]                         [BTN] "Restaurar BD"  tip:"Restaurar la base de dades des d'un fitxer SQL de backup"
-[21:21:29.164]                     [BTN] ""
-[21:21:29.164]                     [BTN] ""
-[21:21:29.164]                       [TBL] rows=0 cols=7
-[21:21:29.164]         [LBL] "Totes les llistes  —  0 llibres"
-[21:21:29.564] Filtre aplicat (nom=audit)
-[21:21:29.706] Filtres esborrats
-[21:21:29.840] Paginació: pàgina següent
-[21:21:29.969] Paginació: pàgina anterior
-[21:21:29.970] CLICK I/O: "Exportar ▾"
-[21:21:30.613] CLICK I/O: "Importar ▾"
-[21:21:31.202] CLICK I/O: "Fetch portades"
-[21:21:31.497] CLICK I/O: "Escanejar ISBN"
-[21:21:31.869] CLICK I/O: "Backup BD"
-[21:21:32.244] CLICK I/O: "Restaurar BD"
-[21:21:32.542] 
+[17:12:55.882] Calaix de filtres obert
+[17:12:55.883]                       [LBL] "Biblioteca"
+[17:12:55.884]                       [LBL] "NAVEGAR"
+[17:12:55.884]                     [BTN] "Tots els llibres"  tip:"Mostra tots els llibres de la biblioteca"
+[17:12:55.884]                     [BTN] "Recents"  tip:"Mostra els 20 darrers llibres afegits"
+[17:12:55.884]                     [BTN] "En curs"  tip:"Mostra els llibres amb pàgines llegides però no acabats"
+[17:12:55.884]                     [BTN] "Llegits"  tip:"Mostra tots els llibres marcats com a llegits"
+[17:12:55.884]                     [BTN] "Llista de desitjos"  tip:"Mostra tots els llibres marcats com a desitjats"
+[17:12:55.884]                       [LBL] "LES MEVES LLISTES"
+[17:12:55.884]                       [LBL] "<html><body style='width:150px'>Encara no tens cap prestatgeria. Crea'n una per agrupar els llibres.</body></html>"
+[17:12:55.884]                       [BTN] "Crea la primera"
+[17:12:55.884]                 [BTN] ""
+[17:12:55.884]                 [BTN] ""
+[17:12:55.884]               [BTN] "Estadístiques"  tip:"Mostrar estadístiques de la biblioteca"
+[17:12:55.884]               [BTN] "Llibre aleatori"  tip:"Tria un llibre no llegit a l'atzar de la vista actual"
+[17:12:55.884]               [BTN] "Gestionar llistes"  tip:"Crear reordenar i eliminar llistes"
+[17:12:55.884]               [BTN] "Tema"  tip:"Canviar entre mode clar i fosc"
+[17:12:55.884]               [BTN] "Configuració"  tip:"Configuració: BD carpeta d'imatges font..."
+[17:12:55.884]               [BTN] "Sobre..."  tip:"Informació sobre l'aplicació autor i llicència"
+[17:12:55.885]               [BTN] "Sortir"  tip:"Tancar l'aplicació"
+[17:12:55.885]                   [LBL] "En curs"
+[17:12:55.885]                   [LBL] "0 llibres"
+[17:12:55.885]                   [BTN] "+ Nou llibre"
+[17:12:55.885]                     [TF ] value=""  tip:"Cerca ràpida (ISBN nom autor any descripció notes)"
+[17:12:55.885]                     [BTN] "Filtres"
+[17:12:55.885]                     [BTN] "Ordena"
+[17:12:55.885]                       [BTN] "Galeria"
+[17:12:55.886]                       [BTN] "Taula"
+[17:12:55.886]                     [BTN] "Sèries"
+[17:12:55.886]                     [BTN] "Més accions"
+[17:12:55.886]                   [LBL] "Preset:"
+[17:12:55.886]                   [CMB] selected="(sense presets)" items=1
+[17:12:55.886]                     [BTN] ""
+[17:12:55.886]                   [BTN] "Carrega"  tip:"Aplica el preset als filtres"
+[17:12:55.886]                   [BTN] "Desa"  tip:"Guarda el filtre actual com a preset"
+[17:12:55.886]                   [BTN] "Esborra"  tip:"Elimina el preset seleccionat"
+[17:12:55.886]                         [CHK] "Llegit" selected=false
+[17:12:55.886]                         [CHK] "No llegit" selected=false
+[17:12:55.886]                           [LBL] "ISBN:"
+[17:12:55.887]                           [TF ] value=""
+[17:12:55.887]                           [LBL] "Nom:"
+[17:12:55.887]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
+[17:12:55.887]                           [LBL] "Autor:"
+[17:12:55.887]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
+[17:12:55.887]                         [LBL] "Etiqueta:"
+[17:12:55.887]                         [CMB] selected="Totes les etiquetes" items=1
+[17:12:55.887]                           [BTN] ""
+[17:12:55.887]                           [LBL] "Editorial:"
+[17:12:55.887]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
+[17:12:55.887]                           [LBL] "Sèrie:"
+[17:12:55.887]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
+[17:12:55.887]                           [LBL] "Idioma:"
+[17:12:55.888]                           [TF ] value=""  tip:"Coincidència parcial: cerca qualsevol llibre que contengui el text introduït"
+[17:12:55.888]                         [LBL] "Format:"
+[17:12:55.888]                         [CMB] selected="" items=5
+[17:12:55.888]                           [BTN] ""
+[17:12:55.888]                           [LBL] "Any:"
+[17:12:55.888]                           [TF ] value=""
+[17:12:55.888]                           [LBL] "–"
+[17:12:55.888]                           [TF ] value=""
+[17:12:55.888]                           [LBL] "Valoració:"
+[17:12:55.888]                           [TF ] value=""
+[17:12:55.888]                           [LBL] "–"
+[17:12:55.888]                           [TF ] value=""
+[17:12:55.888]                           [LBL] "Preu:"
+[17:12:55.889]                           [TF ] value=""
+[17:12:55.889]                           [LBL] "–"
+[17:12:55.889]                           [TF ] value=""
+[17:12:55.889]                         [BTN] "Filtrar"  tip:"Aplicar filtres seleccionats"
+[17:12:55.889]                         [BTN] "Treure filtres"  tip:"Treure tots els filtres aplicats"
+[17:12:55.889]                         [BTN] "Exportar ▾"
+[17:12:55.889]                         [BTN] "Importar ▾"
+[17:12:55.889]                         [BTN] "Fetch portades"  tip:"Descarregar portades que falten de tots els llibres"
+[17:12:55.889]                         [BTN] "Escanejar ISBN"  tip:"Introduir ISBN i auto-omplir dades d'OpenLibrary"
+[17:12:55.889]                         [BTN] "Backup BD"  tip:"Exportar tota la base de dades a un fitxer SQL"
+[17:12:55.889]                         [BTN] "Restaurar BD"  tip:"Restaurar la base de dades des d'un fitxer SQL de backup"
+[17:12:55.889]                     [BTN] ""
+[17:12:55.889]                     [BTN] ""
+[17:12:55.889]         [LBL] "En curs  —  0 llibres"
+[17:12:56.310] Filtre aplicat (nom=audit)
+[17:12:56.447] Filtres esborrats
+[17:12:56.579] Paginació: pàgina següent
+[17:12:56.708] Paginació: pàgina anterior
+[17:12:56.839] CLICK I/O: "Exportar ▾"
+[17:12:57.147] CLICK I/O: "Importar ▾"
+[17:12:57.439] CLICK I/O: "Fetch portades"
+[17:12:57.732] CLICK I/O: "Escanejar ISBN"
+[17:12:58.121] CLICK I/O: "Backup BD"
+[17:12:58.605] CLICK I/O: "Restaurar BD"
+[17:12:58.912] 
 --- CREAR LLIBRE (dades aleatòries) ---
-[21:21:32.654] Diàleg: "Nou llibre"
-[21:21:32.669] Camps omplerts. Clicant Desa...
-[21:21:32.791] OK: Llibre desat (ISBN=9780000692654)
-[21:21:32.792] Test CREAR LLIBRE acabat. ISBN=9780000692654
-[21:21:32.921] 
+[17:12:59.046] Diàleg: "Nou llibre"
+[17:12:59.089] Camps omplerts. Clicant Desa...
+[17:12:59.213] OK: Llibre desat (ISBN=9780000179046)
+[17:12:59.213] Test CREAR LLIBRE acabat. ISBN=9780000179046
+[17:12:59.343] 
 --- TAULA ---
-[21:21:32.921] Files: 1  Columnes: 10
-[21:21:32.922] Columnes: [Portada] [ISBN] [Títol] [Autor] [Any] [Valoració] [Preu] [Llegit] [Progrés] [Detalls] 
-[21:21:32.922] 
+[17:12:59.343] Files: 1  Columnes: 10
+[17:12:59.344] Columnes: [Portada] [ISBN] [Títol] [Autor] [Any] [Valoració] [Preu] [Llegit] [Progrés] [Detalls] 
+[17:12:59.344] 
 --- DETALLS DEL LLIBRE (fila 0) ---
-Diàleg obert: "Expedient del llibre Títol_f29b"
-[21:21:32.965] OPEN-ROW 0 -> diàleg "Expedient del llibre Títol_f29b"
-[21:21:32.966]           [BTN] "Seleccionar imatge"
-[21:21:32.966]           [BTN] "Editar"
-[21:21:32.966]           [BTN] "Eliminar"
-[21:21:32.966]           [BTN] "Tancar"
-[21:21:32.966]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
-[21:21:32.966]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
-[21:21:32.966]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
-[21:21:32.966]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
-[21:21:32.967]                     [LBL] "ISBN"
-[21:21:32.967]                     [TF ] value="9780000692654"
-[21:21:32.967]                     [LBL] "Títol"
-[21:21:32.967]                     [TF ] value="Títol_f29b"
-[21:21:32.967]                     [LBL] "Autor"
-[21:21:32.967]                     [TF ] value="Autor_ca4e"
-[21:21:32.967]                     [LBL] "Any"
-[21:21:32.967]                     [TF ] value="1931"
-[21:21:32.967]                     [LBL] "Descripció"
-[21:21:32.967]                     [TF ] value="Desc_dcbc"
-[21:21:32.967]                     [LBL] "Valoració"
-[21:21:32.967]                     [TF ] value="5.1"
-[21:21:32.967]                     [LBL] "Preu"
-[21:21:32.967]                     [TF ] value="29.1"
-[21:21:32.967]                     [LBL] "Editorial"
-[21:21:32.967]                     [TF ] value="Edit_3bc"
-[21:21:32.967]                     [LBL] "Sèrie"
-[21:21:32.967]                     [TF ] value="Serie_9e66"
-[21:21:32.967]                     [LBL] "Volum"
-[21:21:32.967]                     [TF ] value="4"
-[21:21:32.967]                     [LBL] "Idioma"
-[21:21:32.967]                     [TF ] value="Català"
-[21:21:32.968]                     [LBL] "País d'origen"
-[21:21:32.968]                     [TF ] value=""
-[21:21:32.968]                     [LBL] "Format"
-[21:21:32.968]                     [CMB] selected="" items=5
-[21:21:32.968]                       [BTN] ""
-[21:21:32.968]                     [LBL] "Estat"
-[21:21:32.968]                     [CMB] selected="" items=5
-[21:21:32.968]                       [BTN] ""
-[21:21:32.968]                     [LBL] "Desitjat"
-[21:21:32.968]                     [CHK] "" selected=false
-[21:21:32.968]                     [LBL] "Llegit"
-[21:21:32.968]                     [CHK] "" selected=false
-[21:21:32.968]                     [LBL] "Portada"
-[21:21:32.968]                     [TF ] value=""
-[21:21:32.968] Clicant Editar...
-[21:21:33.101] Mode d'edició actiu. Prement Escape per cancel·lar.
-[21:21:33.263] Clicant "Llistes..."...
-[21:21:33.405]   -> Subdiàleg: "Llistes de: Títol_f29b"
-[21:21:33.408] Clicant "Etiquetes..."...
-[21:21:33.546]   -> Subdiàleg: "Etiquetes de: Títol_f29b"
-[21:21:33.548] Clicant "Historial préstecs"...
-[21:21:33.678]   -> Subdiàleg: "Historial de préstecs"
-[21:21:33.680] Clicant "Imprimir fitxa"...
-[21:21:36.050]   -> Subdiàleg: "Print"
-[21:21:36.129] 
+Diàleg obert: "Expedient del llibre Títol_5aeb"
+[17:12:59.409] OPEN-ROW 0 -> diàleg "Expedient del llibre Títol_5aeb"
+[17:12:59.410]           [BTN] "Seleccionar imatge"
+[17:12:59.410]           [BTN] "Editar"
+[17:12:59.410]           [BTN] "Eliminar"
+[17:12:59.410]           [BTN] "Tancar"
+[17:12:59.410]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
+[17:12:59.410]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
+[17:12:59.410]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
+[17:12:59.410]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
+[17:12:59.410]                     [LBL] "ISBN"
+[17:12:59.410]                     [TF ] value="9780000179046"
+[17:12:59.410]                     [LBL] "Títol"
+[17:12:59.410]                     [TF ] value="Títol_5aeb"
+[17:12:59.410]                     [LBL] "Autor"
+[17:12:59.411]                     [TF ] value="Autor_8734"
+[17:12:59.411]                     [LBL] "Any"
+[17:12:59.411]                     [TF ] value="1901"
+[17:12:59.411]                     [LBL] "Descripció"
+[17:12:59.411]                     [TF ] value=""
+[17:12:59.411]                     [LBL] "Valoració"
+[17:12:59.411]                     [TF ] value="5.4"
+[17:12:59.411]                     [LBL] "Preu"
+[17:12:59.411]                     [TF ] value="3.79"
+[17:12:59.411]                     [LBL] "Editorial"
+[17:12:59.411]                     [TF ] value=""
+[17:12:59.411]                     [LBL] "Sèrie"
+[17:12:59.411]                     [TF ] value=""
+[17:12:59.411]                     [LBL] "Volum"
+[17:12:59.411]                     [TF ] value=""
+[17:12:59.412]                     [LBL] "Idioma"
+[17:12:59.412]                     [TF ] value=""
+[17:12:59.412]                     [LBL] "País d'origen"
+[17:12:59.412]                     [TF ] value=""
+[17:12:59.412]                     [LBL] "Format"
+[17:12:59.412]                     [CMB] selected="" items=5
+[17:12:59.412]                       [BTN] ""
+[17:12:59.412]                     [LBL] "Estat"
+[17:12:59.412]                     [CMB] selected="" items=5
+[17:12:59.412]                       [BTN] ""
+[17:12:59.412]                     [LBL] "Desitjat"
+[17:12:59.412]                     [CHK] "" selected=false
+[17:12:59.412]                     [LBL] "Llegit"
+[17:12:59.412]                     [CHK] "" selected=false
+[17:12:59.412]                     [LBL] "Portada"
+[17:12:59.412]                     [TF ] value=""
+[17:12:59.413] Clicant Editar...
+[17:12:59.561] Mode d'edició actiu. Prement Escape per cancel·lar.
+[17:12:59.722] Clicant "Llistes..."...
+[17:12:59.875]   -> Subdiàleg: "Llistes de: Títol_5aeb"
+[17:12:59.878] Clicant "Etiquetes..."...
+[17:13:00.023]   -> Subdiàleg: "Etiquetes de: Títol_5aeb"
+[17:13:00.024] Clicant "Historial préstecs"...
+[17:13:00.155]   -> Subdiàleg: "Historial de préstecs"
+[17:13:00.157] Clicant "Imprimir fitxa"...
+[17:13:01.531]   -> Subdiàleg: "Print"
+[17:13:01.608] 
 --- EDITAR LLIBRE (dades aleatòries, fila 0) ---
-Diàleg obert: "Expedient del llibre Títol_f29b"
-[21:21:36.300] OPEN-ROW 0 -> diàleg "Expedient del llibre Títol_f29b"
-[21:21:36.301] Diàleg de detalls: "Expedient del llibre Títol_f29b"
-[21:21:36.447] Mode d'edició actiu — omplint camps amb dades aleatòries...
-[21:21:36.484] Clicant Desa...
-[21:21:36.560] Diàleg RESULTAT després de desar l'edició: "Expedient del llibre Títol_f29b"
-[21:21:36.561]           [BTN] "Seleccionar imatge"
-[21:21:36.562]           [BTN] "Guardar"
-[21:21:36.562]           [BTN] "Eliminar"
-[21:21:36.562]           [BTN] "Tancar"
-[21:21:36.562]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
-[21:21:36.562]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
-[21:21:36.562]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
-[21:21:36.562]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
-[21:21:36.562]                     [LBL] "ISBN"
-[21:21:36.562]                     [TF ] value="9780000692654"
-[21:21:36.562]                     [LBL] "Títol"
-[21:21:36.562]                     [TF ] value="Títol_e951"
-[21:21:36.563]                     [LBL] "Autor"
-[21:21:36.563]                     [TF ] value="Autor_5f60"
-[21:21:36.563]                     [LBL] "Any"
-[21:21:36.563]                     [TF ] value="1914"
-[21:21:36.563]                     [LBL] "Descripció"
-[21:21:36.563]                     [TF ] value="Desc_78de"
-[21:21:36.563]                     [LBL] "Valoració"
-[21:21:36.563]                     [TF ] value="7.6"
-[21:21:36.563]                     [LBL] "Preu"
-[21:21:36.563]                     [TF ] value="21.72"
-[21:21:36.563]                     [LBL] "Editorial"
-[21:21:36.564]                     [TF ] value="Edit_3267"
-[21:21:36.564]                     [LBL] "Sèrie"
-[21:21:36.564]                     [TF ] value="Serie_81a2"
-[21:21:36.564]                     [LBL] "Volum"
-[21:21:36.564]                     [TF ] value="9"
-[21:21:36.564]                     [LBL] "Idioma"
-[21:21:36.564]                     [TF ] value="Català"
-[21:21:36.564]                     [LBL] "País d'origen"
-[21:21:36.564]                     [TF ] value=""
-[21:21:36.564]                     [LBL] "Format"
-[21:21:36.564]                     [CMB] selected="" items=5
-[21:21:36.565]                       [BTN] ""
-[21:21:36.565]                     [LBL] "Estat"
-[21:21:36.565]                     [CMB] selected="" items=5
-[21:21:36.565]                       [BTN] ""
-[21:21:36.565]                     [LBL] "Desitjat"
-[21:21:36.565]                     [CHK] "" selected=false
-[21:21:36.565]                     [LBL] "Llegit"
-[21:21:36.565]                     [CHK] "" selected=false
-[21:21:36.565]                     [LBL] "Portada"
-[21:21:36.565]                     [TF ] value=""
-[21:21:36.571] Test EDITAR LLIBRE acabat.
-[21:21:36.571] 
+Diàleg obert: "Expedient del llibre Títol_5aeb"
+[17:13:01.780] OPEN-ROW 0 -> diàleg "Expedient del llibre Títol_5aeb"
+[17:13:01.781] Diàleg de detalls: "Expedient del llibre Títol_5aeb"
+[17:13:01.933] Mode d'edició actiu — omplint camps amb dades aleatòries...
+[17:13:01.976] Clicant Desa...
+[17:13:02.050] Diàleg RESULTAT després de desar l'edició: "Expedient del llibre Títol_5aeb"
+[17:13:02.051]           [BTN] "Seleccionar imatge"
+[17:13:02.051]           [BTN] "Guardar"
+[17:13:02.051]           [BTN] "Eliminar"
+[17:13:02.051]           [BTN] "Tancar"
+[17:13:02.051]           [BTN] "Llistes..."  tip:"Gestionar l'assignació d'aquest llibre a llistes"
+[17:13:02.051]           [BTN] "Etiquetes..."  tip:"Gestionar les etiquetes/gèneres d'aquest llibre"
+[17:13:02.051]           [BTN] "Historial préstecs"  tip:"Veure l'historial de préstecs d'aquest llibre"
+[17:13:02.051]           [BTN] "Imprimir fitxa"  tip:"Imprimir la fitxa d'aquest llibre"
+[17:13:02.051]                     [LBL] "ISBN"
+[17:13:02.051]                     [TF ] value="9780000179046"
+[17:13:02.052]                     [LBL] "Títol"
+[17:13:02.052]                     [TF ] value="Títol_9087"
+[17:13:02.052]                     [LBL] "Autor"
+[17:13:02.052]                     [TF ] value="Autor_498e"
+[17:13:02.052]                     [LBL] "Any"
+[17:13:02.052]                     [TF ] value="1945"
+[17:13:02.052]                     [LBL] "Descripció"
+[17:13:02.052]                     [TF ] value="Desc_86fd"
+[17:13:02.052]                     [LBL] "Valoració"
+[17:13:02.052]                     [TF ] value="8.6"
+[17:13:02.052]                     [LBL] "Preu"
+[17:13:02.052]                     [TF ] value="34.24"
+[17:13:02.052]                     [LBL] "Editorial"
+[17:13:02.052]                     [TF ] value="Edit_aefc"
+[17:13:02.052]                     [LBL] "Sèrie"
+[17:13:02.052]                     [TF ] value="Serie_c916"
+[17:13:02.052]                     [LBL] "Volum"
+[17:13:02.052]                     [TF ] value="9"
+[17:13:02.052]                     [LBL] "Idioma"
+[17:13:02.053]                     [TF ] value="Català"
+[17:13:02.053]                     [LBL] "País d'origen"
+[17:13:02.053]                     [TF ] value=""
+[17:13:02.053]                     [LBL] "Format"
+[17:13:02.053]                     [CMB] selected="" items=5
+[17:13:02.053]                       [BTN] ""
+[17:13:02.053]                     [LBL] "Estat"
+[17:13:02.053]                     [CMB] selected="" items=5
+[17:13:02.053]                       [BTN] ""
+[17:13:02.053]                     [LBL] "Desitjat"
+[17:13:02.053]                     [CHK] "" selected=false
+[17:13:02.053]                     [LBL] "Llegit"
+[17:13:02.053]                     [CHK] "" selected=false
+[17:13:02.053]                     [LBL] "Portada"
+[17:13:02.053]                     [TF ] value=""
+[17:13:02.062] Test EDITAR LLIBRE acabat.
+[17:13:02.062] 
 --- Auditoria estàtica d'i18n ---
 WARN: possible català hardcoded a src/domini/ControladorDomini.java (biblioteca a "biblioteca.test" @ 3785)
 WARN: possible català hardcoded a src/domini/facade/DelegatEstadistiques.java (Llibre a ",        Llibre::obtenirEditorial,
@@ -369,11 +354,11 @@ WARN: possible català hardcoded a src/herramienta/io/JsonImporter.java (Llibre 
 WARN: possible català hardcoded a src/herramienta/io/JsonImporter.java (llibre a "No s'ha pogut importar l'entrada del llibre: " @ 5178)
 WARN: possible català hardcoded a src/herramienta/io/SeedorBaseDades.java (biblioteca a "biblioteca.mv.db" @ 1789)
 WARN: possible català hardcoded a src/herramienta/io/SeedorBaseDades.java (biblioteca a "biblioteca.test" @ 2306)
-WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (Biblioteca a "-- Biblioteca backup " @ 9907)
+WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (Biblioteca a "-- Biblioteca backup " @ 11163)
 WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (Llista a ", COLS_LLIBRE_AUTOR, row.isbn(), row.autorId());
-         … @ 10525)
-WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (llista a "llista" @ 10589)
-WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (llibre a "INSERT INTO llibre (" @ 14603)
+         … @ 11781)
+WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (llista a "llista" @ 11845)
+WARN: possible català hardcoded a src/herramienta/io/ServeiCopiaSeguretat.java (llibre a "INSERT INTO llibre (" @ 15859)
 WARN: possible català hardcoded a src/herramienta/io/csv/GoodreadsCsvStrategy.java (llibre a ")) return false;
         // Protecció contra falsos positi… @ 1307)
 WARN: possible català hardcoded a src/herramienta/io/csv/GoodreadsCsvStrategy.java (Llibre a ");
@@ -404,20 +389,6 @@ WARN: possible català hardcoded a src/persistencia/dao/LlibreBlobDao.java (Llib
 … @ 1345)
 WARN: possible català hardcoded a src/persistencia/dao/LlibreBlobDao.java (llibre a "SELECT descripcio, notes FROM llibre WHERE ISBN = ?" @ 1451)
 WARN: possible català hardcoded a src/persistencia/dao/LlibreBlobDao.java (llibre a "SELECT ISBN, descripcio, notes FROM llibre WHERE ISBN IN (" @ 3108)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.ISBN" @ 11585)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.ISBN" @ 12717)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.data_afegit DESC LIMIT ?" @ 13542)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "INSERT INTO llibre (" @ 14165)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "UPDATE llibre SET " @ 14854)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "DELETE FROM llibre WHERE ISBN = ?" @ 15347)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "SELECT COUNT(*) FROM llibre" @ 15667)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (BIBLIOTECA a "-- BIBLIOTECA BACKUP" @ 23896)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (LLIBRE a "INSERT INTO LLIBRE" @ 23990)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (LLIBRE a "INSERT INTO `LLIBRE`" @ 24029)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "El fitxer no conté cap INSERT INTO llibre ni la marca de c… @ 24282)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreSearchDao.java (Llibre a " + offset);
-        ArrayList<Llibre> result = new ArrayLi… @ 1000)
-WARN: possible català hardcoded a src/persistencia/dao/LlibreSearchDao.java (llibre a " FROM llibre l" @ 1156)
 WARN: possible català hardcoded a src/persistencia/dao/LlistaDao.java (llista a "SELECT id, nom, ordre, color FROM llista ORDER BY ordre, n… @ 805)
 WARN: possible català hardcoded a src/persistencia/dao/LlistaDao.java (llista a "INSERT INTO llista (nom, ordre) VALUES (?, (SELECT COALESC… @ 1554)
 WARN: possible català hardcoded a src/persistencia/dao/LlistaDao.java (llista a "INSERT INTO llista (nom, ordre) VALUES (?, (SELECT COALESC… @ 1623)
@@ -443,6 +414,22 @@ WARN: possible català hardcoded a src/persistencia/dao/TagDao.java (llista a " 
 WARN: possible català hardcoded a src/persistencia/dao/TagDao.java (llibre a "Error carregant les etiquetes del llibre" @ 4262)
 WARN: possible català hardcoded a src/persistencia/dao/TagDao.java (etiqueta a "Error carregant els llibres de l'etiqueta" @ 5152)
 WARN: possible català hardcoded a src/persistencia/dao/TagDao.java (llibre a "` FROM llibre WHERE `" @ 6358)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.ISBN" @ 11633)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.ISBN" @ 13031)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a " FROM llibre l ORDER BY l.data_afegit DESC LIMIT ?" @ 13895)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "INSERT INTO llibre (" @ 14592)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "UPDATE llibre SET " @ 15677)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "DELETE FROM llibre WHERE ISBN = ?" @ 16170)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "SELECT COUNT(*) FROM llibre" @ 16490)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (LLIBRE a "INSERT INTO LLIBRE" @ 24381)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (BIBLIOTECA a "-- BIBLIOTECA BACKUP" @ 25757)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (Biblioteca a "El fitxer no és una còpia de seguretat de Biblioteca (falt… @ 26017)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (Biblioteca a "'-- Biblioteca backup'): no s'ha restaurat res i la base d… @ 26069)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (llibre a "El fitxer no conté cap INSERT INTO llibre: probablement es… @ 26284)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (Biblioteca a "còpia de seguretat de Biblioteca. No s'ha restaurat res i … @ 26373)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (biblioteca a "modificat. Si la còpia era d'una biblioteca buida, fes ser… @ 26488)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreDaoCore.java (biblioteca a "modificat. Si la còpia era d'una biblioteca buida, fes ser… @ 26528)
+WARN: possible català hardcoded a src/persistencia/dao/LlibreSearchDao.java (llibre a " FROM llibre l" @ 1973)
 WARN: possible català hardcoded a src/persistencia/internal/ConnectionConfig.java (BIBLIOTECA a "BIBLIOTECA" @ 530)
 WARN: possible català hardcoded a src/persistencia/internal/ControladorPersistencia.java (biblioteca a "biblioteca.h2.url" @ 4466)
 WARN: possible català hardcoded a src/persistencia/internal/ControladorPersistencia.java (tancar a "Error en tancar la BD en sortir" @ 5498)
@@ -455,8 +442,10 @@ WARN: possible català hardcoded a src/persistencia/internal/MapejadorsFiles.jav
     … @ 4610)
 WARN: possible català hardcoded a src/persistencia/internal/Schema.java (llista a "llista" @ 755)
 WARN: possible català hardcoded a src/persistencia/internal/Schema.java (llibre a "llibre" @ 819)
+WARN: possible català hardcoded a src/presentacio/config/ConfiguracioDataSection.java (biblioteca a "Buidar biblioteca" @ 5463)
+WARN: possible català hardcoded a src/presentacio/formularis/ConstructorGraellaFormulari.java (llibre a "llibre nou" @ 1076)
 WARN: possible català hardcoded a src/presentacio/panells/PanelGaleriaCobertes.java (Llibre a ", e -> {
-            List<Llibre> sel = obtenirSelectedLli… @ 5483)
+            List<Llibre> sel = obtenirSelectedLli… @ 6595)
 WARN: clau i18n mai utilitzada a src: lbl_csv_files
 WARN: clau i18n mai utilitzada a src: btn_export_csv
 WARN: clau i18n mai utilitzada a src: tip_export_csv
@@ -472,8 +461,6 @@ WARN: clau i18n mai utilitzada a src: btn_theme
 WARN: clau i18n mai utilitzada a src: shelves_title
 WARN: clau i18n mai utilitzada a src: btn_add_shelf
 WARN: clau i18n mai utilitzada a src: all_books
-WARN: clau i18n mai utilitzada a src: search_placeholder
-WARN: clau i18n mai utilitzada a src: btn_new_book
 WARN: clau i18n mai utilitzada a src: btn_gallery
 WARN: clau i18n mai utilitzada a src: btn_table
 WARN: clau i18n mai utilitzada a src: btn_filters_open
@@ -576,8 +563,9 @@ WARN: clau i18n mai utilitzada a src: lbl_data
 WARN: clau i18n mai utilitzada a src: lbl_db_size
 WARN: clau i18n mai utilitzada a src: lbl_language_setting
 WARN: clau i18n mai utilitzada a src: dlg_lang_restart
+WARN: clau i18n mai utilitzada a src: btn_filters_label_open
 WARN: clau i18n mai utilitzada a src: btn_visible_cols
-WARN: clau i18n mai utilitzada a src: lbl_books_count
+WARN: clau i18n mai utilitzada a src: lbl_all_library
 WARN: clau i18n mai utilitzada a src: menu_open_details
 WARN: clau i18n mai utilitzada a src: menu_duplicate
 WARN: clau i18n mai utilitzada a src: dlg_export_title
@@ -622,7 +610,6 @@ WARN: clau i18n mai utilitzada a src: btn_toggle_filtres_lbl
 WARN: clau i18n mai utilitzada a src: tip_toggle_filtres
 WARN: clau i18n mai utilitzada a src: btn_toggle_vista_lbl
 WARN: clau i18n mai utilitzada a src: tip_toggle_vista
-WARN: clau i18n mai utilitzada a src: btn_group_series_lbl
 WARN: clau i18n mai utilitzada a src: tip_group_series
 WARN: clau i18n mai utilitzada a src: btn_nou_llibre_short
 WARN: clau i18n mai utilitzada a src: tip_nou_llibre_short
@@ -667,6 +654,7 @@ WARN: clau i18n mai utilitzada a src: estat_usat
 WARN: clau i18n mai utilitzada a src: estat_deteriorat
 WARN: clau i18n mai utilitzada a src: stats_chart_books_year
 WARN: clau i18n mai utilitzada a src: stats_chart_publishers
+WARN: clau i18n mai utilitzada a src: nav_recently_added_short
 WARN: clau i18n mai utilitzada a src: dlg_no_llistes_msg
 WARN: clau i18n mai utilitzada a src: dlg_no_llistes_title
 WARN: clau i18n mai utilitzada a src: lbl_theme
@@ -1165,10 +1153,10 @@ WARN: clau i18n duplicada yes_lbl a strings.csv i ui.csv
 WARN: clau i18n duplicada lbl_filter_colon a strings.csv i ui.csv
 WARN: clau i18n duplicada tip_filter_tags a strings.csv i ui.csv
 WARN: clau i18n duplicada filter_dash a strings.csv i ui.csv
-[21:21:37.026] 
+[17:13:02.411] 
 === AUDITORIA AUTOMATITZADA COMPLETADA ===
-[21:21:37.026] FAIL: 0  WARN: 800
-[21:21:37.026] Informe: checkBiblio/audit_report.txt
+[17:13:02.411] FAIL: 0  WARN: 805
+[17:13:02.411] Informe: checkBiblio/audit_report.txt
 
-[AUTO] Audit complete. FAIL=0 WARN=800 — mira checkBiblio/audit_report.txt
-[21:21:37.028] === UIAudit finalitzat ===
+[AUTO] Audit complete. FAIL=0 WARN=805 — mira checkBiblio/audit_report.txt
+[17:13:02.412] === UIAudit finalitzat ===

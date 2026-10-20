@@ -766,3 +766,22 @@ fuzz: fuzz-property fuzz-jazzer
 
 clean:
 	@rm -Rf bin/*
+
+# ---------- PROVES VISUALS I DE RENDIMENT ----------
+#
+# Compila les eines de captura i de mesura (checkBiblio/*). Sónen eines de
+# verificació, no formen part de l'aplicació.
+#
+#   make checkbiblio-tools
+#   java -cp bin:$(FUZZ_CP) checkBiblio.ProvaVisual build/captures
+#   java -cp bin:$(FUZZ_CP) checkBiblio.PerfUI
+checkbiblio-tools: compile
+	@$(JAVAC) -g -cp bin:$(FUZZ_CP) checkBiblio/SuportTestUi.java checkBiblio/CapturaPantalla.java checkBiblio/ProvaVisual.java checkBiblio/PerfUI.java checkBiblio/AcceptacioUi.java -d bin
+
+# Comprovació d'acceptació de la interfície: obre l'aplicació, prem el botó
+# de tema i mesura el que queda a la pantalla (columna de la barra lateral,
+# colors del mode fosc, contrast del text). Surt amb codi 1 si falla.
+#
+# Necessita un display: en un servidor sense X, envaeix-lo amb xvfb-run.
+checkbiblio-accept: checkbiblio-tools
+	@java -cp bin:$(FUZZ_CP) checkBiblio.AcceptacioUi
