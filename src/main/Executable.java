@@ -131,9 +131,27 @@ public class Executable {
 
                 // El panell es construeix mentre la base de dades s'obre:
                 // és Swing pur i no depèn de la connexió.
-                vistaRef.set(new PanelMarcPrincipal());
+                // La construcció pot fallar (excepció en un constructor
+                // del panell). Sense el camí fatal, el catch extern només
+                // feia un log: la continuació de l'EDT amagava la pantalla
+                // d'inici, no hi havia finestra i el procés quedava viu
+                // (l'EDT d'AWT és un fil no-daemon) — l'aplicació
+                // semblava haver sortit, però el procés quedava penjat.
+                try {
+                    vistaRef.set(new PanelMarcPrincipal());
+                } catch (Exception e) {
+                    fatalExit("No s'ha pogut construir el marc principal", e,
+                        () -> new DialegError(e).mostrarErrorMessage());
+                    return;
+                }
             } catch (Exception e) {
-                    LOG.log(Level.SEVERE, "No s'ha pogut iniciar la interfície Swing", e);
+                    // Qualsevol fallo en l'arrencada de la interfície ha de
+                    // deixar l'usuari amb un diàleg d'error i el procés ha
+                    // de morir: un simple LOG deixava l'EDT d'AWT viu, la
+                    // pantalla d'inici amagada i cap finestra — l'aplicació
+                    // semblava haver sortit però el procés quedava penjat.
+                    fatalExit("No s'ha pogut iniciar la interfície Swing", e,
+                        () -> new DialegError(e).mostrarErrorMessage());
             }
         });
     }
