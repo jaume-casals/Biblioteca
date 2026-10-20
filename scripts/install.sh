@@ -42,10 +42,16 @@ fi
 # Copy icon if available
 [ -f "${DIR}/packaging/icon-256.png" ] && cp "${DIR}/packaging/icon-256.png" "${INST_APP}/Biblioteca.png"
 
-# Launcher script
+# Launcher script.
+# El classpath inclou els jars de lib/ a més del JAR gras: el JAR gras
+# ja les porta embegudes, però tenir-les al classpath evita que un JAR
+# construit sense dependències (o amb una versió antiga) arrenqui i mori
+# en el primer accés a la base de dades. Els jars de lib/ provenen del
+# lock (etiqueta runtime), de manera que les versions coincideixen amb
+# les del JAR gras.
 cat > "${INST_BIN}/biblioteca" << LAUNCHER
 #!/usr/bin/env bash
-exec java -Xmx512m -cp "\${HOME}/.local/share/Biblioteca/biblioteca.jar" main.Executable "\$@"
+exec java -Xmx512m -cp "\${HOME}/.local/share/Biblioteca/biblioteca.jar:\${HOME}/.local/share/Biblioteca/lib/*" main.Executable "\$@"
 LAUNCHER
 chmod +x "${INST_BIN}/biblioteca"
 

@@ -396,26 +396,59 @@ LAUNCH4J_JAVA_HOME := $(shell \
     [ -n "$$JC" ] && dirname "$$(dirname "$$(readlink -f "$$JC")")")
 
 # ── slim JAR (manifest points to external lib/ JARs) ─────────────────────────
+#
+# El manifest Class-Path és una llista separada per ESPAIS, no per ':' (a
+# ':' la JVM hi veia un sol URL "lib/a.jar:lib/b.jar" que no resolia). A més
+# els camins del manifest es resolen relatius al JAR, no al directori de
+# treball: el JAR viu a build/artifacts/ i els jars a lib/, de manera que
+# cal el prefix ../../lib/.
+JAR_ARTIFACT_DIR := build/artifacts
+DEPS_REL_DIR := $(shell $(PYTHON) -c "import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))" $(DEPS_DIR) $(JAR_ARTIFACT_DIR))
+DEPS_MANIFEST_CP := $(foreach j,$(notdir $(CP_RUNTIME_WORDS)),$(DEPS_REL_DIR)/$(j))
+
 jar: compile
-	@mkdir -p build/artifacts
-	@jar cfm build/artifacts/biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: $(subst $(CURDIR)/,,$(DEPS_CP_RUNTIME))\n\n') -C bin .
-	@echo "Built build/artifacts/biblioteca.jar"
+	@mkdir -p $(JAR_ARTIFACT_DIR)
+	@jar cfm $(JAR_ARTIFACT_DIR)/biblioteca.jar <(printf 'Manifest-Version: 1.0\nMain-Class: main.Executable\nClass-Path: $(DEPS_MANIFEST_CP)\n\n') -C bin .
+	@# Comprova que cada entrada del Class-Path existeix relativament al JAR:
+	@# un manifest amb un camí equivocat no falla en la construcció, sinó
+	@# en temps d'execució (NoClassDefFoundError en el primer ús).
+	@for e in $(DEPS_MANIFEST_CP); do \
+		if [ ! -f "$(JAR_ARTIFACT_DIR)/$$e" ]; then \
+			echo "ERROR: el manifest Class-Path apunta a '$(JAR_ARTIFACT_DIR)/$$e' i el fitxer no hi és."; \
+			echo "  Dependència absent o camí relatiu incorrecte (DEPS_DIR=$(DEPS_DIR))."; \
+			exit 1; \
+		fi; \
+	done
+	@echo "Built $(JAR_ARTIFACT_DIR)/biblioteca.jar"
 
 # ── fat JAR (all deps bundled, standalone) ────────────────────────────────────
 fat-jar: compile
 	@echo "Building fat JAR (bundling all dependencies)..."
 	@rm -rf /tmp/_bib_fat && mkdir -p /tmp/_bib_fat
-	@cd /tmp/_bib_fat && for J in $(DEPS_CP_RUNTIME); do \
-	    [ -f "$(CURDIR)/$$J" ] && unzip -oq "$(CURDIR)/$$J" 2>/dev/null || true; \
+	@# El classpath del lock és separat per ':' (separador de Unix). Iterar-lo
+	@# amb `for J in $(DEPS_CP_RUNTIME)` tractava tot el classpath com un sol
+	@# nom de fitxer i no s'extractava cap dependència: el JAR resultant
+	@# només contenia les classes de l'aplicació i llançava
+	@# NoClassDefFoundError en el primer ús de H2/gson/MariaDB.
+	@cd /tmp/_bib_fat && for J in $(CP_RUNTIME_WORDS); do \
+	    if [ ! -f "$$J" ] && [ -f "$(CURDIR)/$$J" ]; then J="$(CURDIR)/$$J"; fi; \
+	    if [ ! -f "$$J" ]; then \
+	        echo "ERROR: no s'ha trobat el jar de dependència '$$J'"; exit 1; \
+	    fi; \
+	    unzip -oq "$$J" || { echo "ERROR: no s'ha pogut descomprimir '$$J'"; exit 1; }; \
 	done
 	@cp -r $(CURDIR)/bin/. /tmp/_bib_fat/
 	@# Remove JAR signature files — they break fat JARs
 	@rm -f /tmp/_bib_fat/META-INF/*.SF /tmp/_bib_fat/META-INF/*.DSA \
 	       /tmp/_bib_fat/META-INF/*.RSA /tmp/_bib_fat/META-INF/*.EC
-	@mkdir -p $(CURDIR)/build/artifacts
-	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/build/artifacts/biblioteca-fat.jar main.Executable .
+	@mkdir -p $(CURDIR)/$(JAR_ARTIFACT_DIR)
+	@cd /tmp/_bib_fat && jar cfe $(CURDIR)/$(JAR_ARTIFACT_DIR)/biblioteca-fat.jar main.Executable .
 	@rm -rf /tmp/_bib_fat
-	@echo "Built build/artifacts/biblioteca-fat.jar ($$(du -sh $(CURDIR)/build/artifacts/biblioteca-fat.jar | cut -f1))"
+	@# Comprova que el JAR gras conté les classes de les dependències: un
+	@# JAR sense elles arrenca i mor en el primer accés a la BBDD.
+	@unzip -l $(CURDIR)/$(JAR_ARTIFACT_DIR)/biblioteca-fat.jar | grep -q 'org/h2/Driver.class' || { \
+		echo "ERROR: biblioteca-fat.jar no conté les dependències (falta org/h2/Driver.class)."; exit 1; }
+	@echo "Built $(JAR_ARTIFACT_DIR)/biblioteca-fat.jar ($$(du -sh $(CURDIR)/$(JAR_ARTIFACT_DIR)/biblioteca-fat.jar | cut -f1))"
 
 # ── icon: SVG → multi-size ICO via ImageMagick ───────────────────────────────
 icon: packaging/icon.svg

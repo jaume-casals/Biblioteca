@@ -101,6 +101,12 @@ jobs:
         run: |
           unzip -l build/artifacts/biblioteca.jar | grep -E 'main/Executable.class|version.properties|strings_ca.properties'
           unzip -p build/artifacts/biblioteca.jar META-INF/MANIFEST.MF
+      - name: Comprova que el Class-Path del manifest resol
+        run: python3 scripts/verify_jar_manifest.py build/artifacts/biblioteca.jar
+      - run: make fat-jar
+      - name: Comprova que el JAR gras conté les dependències
+        run: |
+          unzip -l build/artifacts/biblioteca-fat.jar | grep -E 'org/h2/Driver.class|com/google/gson/Gson.class|main/Executable.class'
       - uses: actions/upload-artifact@v4
         with:
           name: biblioteca-jar
