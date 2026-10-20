@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
  *
  * Coexisteixen dos contractes:
  * <ul>
- *   <li><b>Best-effort</b> ({@code analitzarIntOrNull} / {@code analitzarLongOrNull} /
+ *   <li><b>Best-effort</b> ({@code analitzarIntOrNull} /
  *       {@code analitzarDoubleOrNull}): silenciós amb entrada incorrecta. Retorna
  *       un tipus encaixat perquè el consumidor pugui distingir "buit" de "zero".
  *       Usa en ordre, visualització o camins conscients del valor per defecte
@@ -36,8 +36,6 @@ public final class ParseHelpers {
         try { return p.apply(t); }
         catch (NumberFormatException e) { return null; }
     }
-
-    public static Long analitzarLongOrNull(String s) { return orNull(s, Long::parseLong); }
 
     public static Integer analitzarIntOrNull(String s) { return orNull(s, Integer::parseInt); }
 

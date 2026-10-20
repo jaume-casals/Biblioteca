@@ -2,8 +2,8 @@ package herramienta.config;
 
 /**
  * Vista tipada de lectura/escriptura del petit sub-emmagatzematge "filtre / valors
- * per defecte" de {@link Config} (actualment només {@code defaultImgDir}; les
- * API de desar/eliminar preset es queden a {@link Config} directament perquè
+ * per defecte" de {@link Configuracio} (actualment només {@code defaultImgDir}; les
+ * API de desar/eliminar preset es queden a {@link Configuracio} directament perquè
  * abasten 17 claus d'una sola vegada).
  */
 public final class ConfiguracioFiltre {

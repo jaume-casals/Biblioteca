@@ -3,7 +3,6 @@ package herramienta.text;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.JTextComponent;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -22,14 +21,6 @@ public class FieldAutoComplete {
     /** Límit per defecte de sugerències mostrades al popup. Modificable per
      *  {@link #attach(JTextField, java.util.List, int)}. */
     public static final int MAX_SUGGESTIONS = 8;
-
-    public sealed interface Adjunts permits AdjuntsAutoCompletatCamp {}
-    private static final class AdjuntsAutoCompletatCamp implements Adjunts { }
-
-    public static Adjunts adjuntarReturning(JTextField field, List<String> suggestions) {
-        attach(field, suggestions);
-        return new AdjuntsAutoCompletatCamp();
-    }
 
     public static void attach(JTextField field, List<String> suggestions) {
         attach(field, suggestions, MAX_SUGGESTIONS);

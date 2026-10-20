@@ -3,10 +3,10 @@ package herramienta.config;
 import herramienta.ui.UITheme.Tema;
 
 /**
- * Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades
+ * Vista tipada de lectura/escriptura de les claus de {@link Configuracio} relacionades
  * amb la IU. Internament recolzada pel sub-emmagatzematge UI introduït amb la
  * divisió de la classe-déu B1. Els consumidors haurien de preferir aquests
- * setters tipats sobre els genèrics de {@link Config} — agrupen la configuració
+ * setters tipats sobre els genèrics de {@link Configuracio} — agrupen la configuració
  * relacionada i fan explícita la dependència dels consumidors envers un
  * sub-domini concret.
  */
@@ -22,8 +22,6 @@ public final class ConfiguracioUi {
     public static String lang()        { return Configuracio.obtenirLang(); }
     public static String currency()    { return Configuracio.getCurrencySymbol(); }
     public static int readingGoal()    { return Configuracio.obtenirReadingGoal(); }
-    public static int ordenarColumn()     { return Configuracio.obtenirSortColumn(); }
-    public static String ordenarOrder()   { return Configuracio.getSortOrder(); }
     public static double defaultValoracio() { return Configuracio.obtenirDefaultValoracio(); }
 
     // API d'escriptura — els consumidors haurien de preferir aquestes

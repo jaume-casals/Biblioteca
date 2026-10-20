@@ -29,15 +29,4 @@ public final class ShutdownHooks {
     public static void register(Runnable... hooks) {
         for (Runnable h : hooks) register(h);
     }
-
-    /** Elimina un hook registrat. Útil per a tests que reinstancien
-     *  objectes i volen evitar l'acumulació de ganxos entre iteracions. */
-    public static void unregister(Thread hook) {
-        if (hook == null) return;
-        try {
-            Runtime.getRuntime().removeShutdownHook(hook);
-        } catch (IllegalStateException lateShutdown) {
-            // Ja estem tancant — no passa res.
-        }
-    }
 }

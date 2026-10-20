@@ -1,8 +1,6 @@
 package herramienta;
 
 import domini.Llibre;
-import domini.Llista;
-import domini.Tag;
 import herramienta.io.JsonImporter;
 import herramienta.io.csv.UtilitatsCsv;
 import herramienta.text.UtilitatsData;

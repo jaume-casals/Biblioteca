@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Test;
 import persistencia.internal.ControladorPersistencia;
 
 import javax.swing.JFileChooser;
-import javax.swing.SwingUtilities;
-import java.awt.Component;
 import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

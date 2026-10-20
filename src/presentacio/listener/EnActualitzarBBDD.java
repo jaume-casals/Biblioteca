@@ -1,6 +1,5 @@
 package presentacio.listener;
 
-import domini.Llibre;
 
 /**
  * Listener compost per a esdeveniments d'inserció, actualització i

@@ -3,7 +3,7 @@ package herramienta.config;
 import java.util.List;
 
 /**
- * Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades
+ * Vista tipada de lectura/escriptura de les claus de {@link Configuracio} relacionades
  * amb la geometria de finestra i les columnes de la taula. Les claus
  * d'amplada/visibilitat de columna viuen al sub-emmagatzematge WINDOW
  * (veure {@code Config.WINDOW_KEYS} més la regla dinàmica de prefix
@@ -16,7 +16,6 @@ public final class ConfiguracioFinestra {
     public static int y()              { return Configuracio.obtenirWindowY(); }
     public static int width()          { return Configuracio.obtenirWindowWidth(); }
     public static int height()         { return Configuracio.obtenirWindowHeight(); }
-    public static boolean maximized()  { return Configuracio.esWindowMaximized(); }
     public static void setBounds(int x, int y, int w, int h) { Configuracio.posarWindowBounds(x, y, w, h); }
     public static void posarMaximized(boolean m) { Configuracio.posarWindowMaximized(m); }
 

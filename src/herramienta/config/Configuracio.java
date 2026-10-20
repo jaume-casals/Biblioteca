@@ -125,32 +125,6 @@ public class Configuracio {
         }
     };
 
-    /**
-     * Captura la vista composta de clau/valor com a {@link Properties}
-     * real. Útil per a consumidors que necessiten el contracte
-     * {@code Properties} del JDK (I/O XML, iteració estil
-     * {@code System.getProperties()}, etc.) però no volen interactuar
-     * directament amb els 4 sub-stores. Retorna una còpia independent
-     * nova — les mutacions de l'objecte retornat NO afecten la
-     * configuració viva ni a l'inrevés.
-     */
-    public static java.util.Properties toProperties() {
-        java.util.Properties p = new java.util.Properties();
-        p.putAll(props);
-        return p;
-    }
-
-    /** Aplica en lot les entrades de {@code src} a la configuració viva,
-     *  encaminant cada clau al seu sub-store via {@link #domainOf(String)}.
-     *  Això és un write-through: aquí NO es desencadena el desat a
-     *  fitxer — crida {@link #save()} o {@link #withBatch} si també
-     *  vols un flush. */
-    public static void fromProperties(java.util.Properties src) {
-        for (String name : src.stringPropertyNames()) {
-            props.put(name, src.getProperty(name));
-        }
-    }
-
     public static void reload() {
         props.clear();
         carregarFromDisk();
@@ -255,7 +229,6 @@ public class Configuracio {
     }
 
     /** Distingeix "no configurat" (retorna false) de "password buit" (true). */
-    public static boolean teDbPassword() { return dbPasswordChars != null; }
     public static void posarDbPassword(String pw) {
         if (pw == null || pw.isEmpty()) {
             dbPasswordChars = null;

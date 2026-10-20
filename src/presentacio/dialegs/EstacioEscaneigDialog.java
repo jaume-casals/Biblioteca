@@ -3,7 +3,6 @@ package presentacio.dialegs;
 import herramienta.i18n.I18n;
 import herramienta.ui.UITheme;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;

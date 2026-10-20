@@ -6,8 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import domini.BibliotecaException;
 import domini.Llibre;
@@ -45,9 +43,6 @@ public final class DelegatLlibre {
 
     /** Comparador d'ISBN ascendent; públic perquè la façana el pugui fer servir per a l'ordenació inicial. */
     public static final Comparator<Llibre> ISBN_COMPARATOR = EspecificacioOrdenacio.ISBN_COMPARATOR;
-
-    /** Comparadors d'ordenació en memòria indexats pel nom de columna de l'EspecificacioOrdenacio; provenen de {@link EspecificacioOrdenacio}. */
-    private static final Map<String, Comparator<Llibre>> SORT_BY = EspecificacioOrdenacio.comparators();
 
     private final StateContext state;
 

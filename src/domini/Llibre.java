@@ -124,10 +124,6 @@ public class Llibre {
 		return isbn;
 	}
 
-	public void posarISBN(Long isbn) {
-		this.isbn = isbn;
-	}
-
 	public String obtenirNom() {
 		return nom;
 	}

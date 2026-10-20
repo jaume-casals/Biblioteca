@@ -12,7 +12,6 @@ import domini.Llibre;
 import domini.LlibreFilter;
 import domini.LlibreLlistaContext;
 import domini.EspecificacioOrdenacio;
-import persistencia.internal.ConnectionConfig;
 import persistencia.internal.ControladorPersistencia;
 import persistencia.internal.ConnexioServidor;
 

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
-import javax.swing.SwingWorker;
 
 import domini.Llibre;
 import domini.Llista;

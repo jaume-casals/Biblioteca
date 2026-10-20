@@ -1,6 +1,5 @@
 package domini;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,13 +38,5 @@ public record LlibreCore(
             l.obtenirPagines(), l.obtenirEditorial(), l.obtenirSerie(), l.obtenirVolum(),
             l.obtenirIdioma(), l.obtenirFormat(), l.obtenirPaisOrigen()
         );
-    }
-
-/** Projecció massiva — equivalent a {@code source.stream().map(LlibreCore::from).toList()}
- *  però evita l'assignació de la lambda del stream. */
-    public static List<LlibreCore> extractCores(List<Llibre> source) {
-        List<LlibreCore> out = new ArrayList<>(source.size());
-        for (Llibre l : source) out.add(from(l));
-        return out;
     }
 }

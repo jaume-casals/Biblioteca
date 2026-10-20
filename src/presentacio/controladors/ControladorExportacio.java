@@ -2,7 +2,6 @@ package presentacio.controladors;
 
 import domini.Llibre;
 import herramienta.ExportadorLlibres;
-import herramienta.api.ClientOpenLibrary;
 import herramienta.i18n.I18n;
 import herramienta.ui.DialegError;
 import java.awt.Component;

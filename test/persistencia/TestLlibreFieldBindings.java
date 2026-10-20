@@ -2,7 +2,6 @@ package persistencia;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;

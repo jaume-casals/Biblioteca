@@ -38,8 +38,4 @@ public class ControladorGaleria {
         if (generacions != null && generacions.esTancat()) return;
         panel.actualitzarLlibres(books instanceof ArrayList<Llibre> a ? a : new ArrayList<>(books));
     }
-
-    public void onBooksUpdated(List<Llibre> books) {
-        actualizarSiVigent(null, books);
-    }
 }

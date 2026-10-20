@@ -1,6 +1,6 @@
 package herramienta.config;
 
-/** Vista tipada de lectura/escriptura de les claus de {@link Config} relacionades amb la base de dades. */
+/** Vista tipada de lectura/escriptura de les claus de {@link Configuracio} relacionades amb la base de dades. */
 public final class ConfiguracioDb {
     private ConfiguracioDb() {}
 
@@ -10,7 +10,6 @@ public final class ConfiguracioDb {
     public static String user()     { return Configuracio.obtenirDbUser(); }
     public static String password() { return Configuracio.obtenirDbPassword(); }
     public static String profile()  { return Configuracio.obtenirDbProfile(); }
-    public static boolean tePassword() { return Configuracio.teDbPassword(); }
 
     // Write API
     public static void setType(String type)       { Configuracio.posarDbType(type); }

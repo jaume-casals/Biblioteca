@@ -1,7 +1,6 @@
 package persistencia.contract;
 
 import domini.Llibre;
-import persistencia.row.PrestecRow;
 import java.util.List;
 
 public interface LectorBiblioteca extends LectorLlibre, LectorPrestatgeria, LectorEtiqueta, LectorPrestec {

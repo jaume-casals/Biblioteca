@@ -249,10 +249,6 @@ FUZZ_SHIM_JAR := fuzz-shim/jazzer-native-shim.jar
 BOOTCP := -Xbootclasspath/a:$(FUZZ_SHIM_JAR)
 
 test: compile
-	@if [ -f scripts/patch_tests_after_web_removal.py ]; then \
-		$(PYTHON) scripts/patch_tests_after_web_removal.py 2>/dev/null \
-		|| python scripts/patch_tests_after_web_removal.py; \
-	fi
 	@mkdir -p $(STAMP_DIR)
 	@test_count=`find $(TEST_SRC_DIR)/ -name "*.java" | wc -l | tr -d ' '`; \
 	 prev_count=`sed -n '1p' $(TEST_STAMP) 2>/dev/null | tr -d ' '`; \

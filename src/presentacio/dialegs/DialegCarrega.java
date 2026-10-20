@@ -10,7 +10,6 @@ import javax.swing.JProgressBar;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
-import javax.swing.Timer;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -56,15 +55,6 @@ public class DialegCarrega {
         this(owner, "");
     }
 
-    public void setMessage(String message) {
-        label.setText(message);
-    }
-
-    public void posarResult(int value) {
-        bar.setIndeterminate(false);
-        bar.setValue(value);
-    }
-
     public void setMaximum(int max) {
         bar.setMaximum(max);
     }
@@ -77,19 +67,6 @@ public class DialegCarrega {
 
     public void hide() {
         dialog.dispose();
-    }
-
-    public void amagarAfterMinimum(long minMs) {
-        if (!dialog.isVisible()) return;
-        long elapsed = System.currentTimeMillis() - mostrarTime;
-        long remaining = minMs - elapsed;
-        if (remaining > 0) {
-            Timer t = new Timer((int) remaining, e -> dialog.dispose());
-            t.setRepeats(false);
-            t.start();
-        } else {
-            dialog.dispose();
-        }
     }
 
     public static Frame windowFrame(Component parent) {

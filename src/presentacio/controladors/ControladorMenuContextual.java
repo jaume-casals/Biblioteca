@@ -20,7 +20,6 @@ import javax.swing.SwingWorker;
 import presentacio.detalles.control.ControladorDialegDesarLlibres;
 import presentacio.detalles.control.ControladorPanellDetallsLlibre;
 import presentacio.detalles.vista.DialegDesarLlibres;
-import presentacio.listener.EnEliminarLlibre;
 import presentacio.models.ModelTaulaBiblioteca;
 import presentacio.util.AmfitrioPantallaBiblioteca;
 import presentacio.util.EstatVistaBiblioteca;

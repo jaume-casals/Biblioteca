@@ -31,7 +31,7 @@ Three-layer MVC with singletons at each boundary. Language is Catalan/Spanish mi
 presentacio/   ← Swing GUI (panels + controllers, MVC split per screen)
 domini/        ← Business logic, in-memory sorted list of Llibre
 persistencia/  ← JDBC layer (ControladorPersistencia → ServerConect)
-herramienta/   ← Utilities: Config, UITheme, LlibreValidator, FiltreUtils, AutoCompletion
+herramienta/   ← Utilities: Config, UITheme, LlibreValidator, FiltreUtils, FieldAutoComplete
 interficie/    ← EnActualizarBBDD callback interface
 main/          ← Ejecutable entry point
 ```

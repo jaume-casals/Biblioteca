@@ -343,6 +343,18 @@ public class ConnexioServidor {
 		return productName != null && productName.toLowerCase(java.util.Locale.ROOT).startsWith("h2");
 	}
 
+	/**
+	 * Aplica una migració contra H2 dins d'una transacció pròpia.
+	 *
+	 * <p>El pla d'atomicitat original 32 → 33 → 34 (veure tot.txt F6) es va
+	 * rebutjar perquè la seqüència H2 32→33→34 topa amb "Column AUTOR not
+	 * found" quan 32 es re-executa després d'un commit parcial previ (un cas
+	 * límit real que el model de transacció per-migració existent tolera però
+	 * una execució fusionada no). Es conserva el model original de tres
+	 * transaccions; el finding de tot.txt està documentat però la correcció
+	 * no s'aplica aquí per mantenir el comportament de migració idèntic a la
+	 * versió llargament publicada.
+	 */
 	private boolean runMigrationH2(Statement st, PreparedStatement ins, Migracio m) throws SQLException {
 		con.setAutoCommit(false);
 		try {
@@ -362,22 +374,6 @@ public class ConnexioServidor {
 		} finally {
 			con.setAutoCommit(true);
 		}
-	}
-
-	/**
-	 * Stub conservat per claredat — el pla d'atomicitat original 32 → 33 → 34
-	 * (veure tot.txt F6) es va rebutjar perquè la seqüència H2 32→33→34
-	 * topa amb "Column AUTOR not found" quan 32 es re-executa després d'un
-	 * commit parcial previ (un cas límit real que el model de transacció
-	 * per-migració existent tolera però la runMigrations3234H2 fusionada
-	 * no). Es conserva el model original de tres transaccions; el finding
-	 * de tot.txt està documentat però la correcció no s'aplica aquí per
-	 * mantenir el comportament de migració idèntic a la versió llargament
-	 * publicada.
-	 */
-	@SuppressWarnings("unused")
-	private boolean runMigrations3234H2(Statement st, PreparedStatement ins) throws SQLException {
-		throw new UnsupportedOperationException("see comment");
 	}
 
 	private boolean runMigrationNonTransactional(Statement st, PreparedStatement ins, Migracio m) throws SQLException {

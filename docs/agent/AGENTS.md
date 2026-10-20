@@ -107,7 +107,7 @@ scripts; they assume a real Windows display (UIAudit/StressTest use
 **Always run `make test` (Linux) or `scripts\test.bat` (Windows) before
 reporting a task complete. All tests must pass.**
 
-After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types. `make test` / `scripts\test.bat` runs `scripts/patch_tests_after_web_removal.py` first (idempotent); or run it manually once per machine.
+After removing web/API (`src/api/`, mode picker), local `test/*.java` may still reference deleted types — fix the test sources directly; the build does not rewrite them.
 
 Manual classpath: `lib/h2-2.5.252.jar:lib/mariadb-java-client-3.5.10.jar:lib/gson-2.14.0.jar:.`
 

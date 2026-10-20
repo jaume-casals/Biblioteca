@@ -324,8 +324,4 @@ public class ControladorPersistencia {
 	public synchronized ArrayList<Llibre> cercarLlibres(domini.LlibreFilter f, int offset, int pageSize) {
 		return libreSearchDao.search(f, offset, pageSize);
 	}
-
-	public synchronized ArrayList<Llibre> cercarAll(int offset, int pageSize) {
-		return libreSearchDao.search(domini.LlibreFilter.empty(), offset, pageSize);
-	}
 }

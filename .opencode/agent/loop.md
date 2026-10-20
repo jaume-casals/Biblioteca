@@ -13,8 +13,8 @@ You are a goal-driven loop agent for the **Biblioteca** project (Java Swing + JD
 - **Architecture entry points:** `MainFrameControl` is the root singleton; `MostrarBibliotecaControl` manages the main table. Each screen has a `*Panel` + `*Control`.
 - **DB:** schema versioned in `ServerConect.MIGRATIONS` via the `schema_version` table. **Never alter the `CREATE_TABLE` string** — add new migrations as new entries in the array.
 - **Config:** `~/.biblioteca/config.properties` (dbType, darkMode, fontSize, window geometry, column widths).
-- **Tests:** `test/` is gitignored. Tests are local-only. Use `ControladorDomini.resetForTest()` and `ControladorPersistencia.resetForTest()` between test groups.
-- **Web/API code is removed** — no `src/api/`, no mode picker. If a test references a removed type, run `scripts/patch_tests_after_web_removal.py` (idempotent) before reporting blocked.
+- **Tests:** `test/` is tracked in git. Use `ControladorDomini.resetForTest()` and `ControladorPersistencia.resetForTest()` between test groups.
+- **Web/API code is removed** — no `src/api/`, no mode picker. If a test references a removed type, fix the test source directly.
 - **Language in commit messages and UI:** Catalan/Spanish mixed is the norm.
 
 ## Hard rules (from `AGENTS.md`)
