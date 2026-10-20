@@ -200,22 +200,119 @@ public final class ServeiImatgesCoberta {
      *  nul·les o no es poden descodificar. */
     public static javax.swing.ImageIcon scaledCover(byte[] data) {
         if (data == null) return null;
+        java.awt.image.BufferedImage img = decodificarBytes(data, 0, ALCADA_MINIATURA);
+        if (img == null) return null;
+        int h = ALCADA_MINIATURA;
+        int w = Math.max(1, (int) (img.getWidth() * (h / (double) img.getHeight())));
+        if (img.getWidth() == w && img.getHeight() == h) return new javax.swing.ImageIcon(img);
+        java.awt.image.BufferedImage out =
+            new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = out.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.drawImage(img, 0, 0, w, h, null);
+        } finally {
+            g.dispose();
+        }
+        return new javax.swing.ImageIcon(out);
+    }
+
+    /** Alçada de la miniatura de portada a la taula, en píxels. */
+    public static final int ALCADA_MINIATURA = 36;
+
+    /**
+     * Descodifica els bytes d'una coberta. La descodificació es fa amb
+     * subsampling: només es descodifica la part de la imatge que cal per a
+     * la mida final, en lloc de la resolució plena.
+     */
+    private static java.awt.image.BufferedImage decodificarBytes(byte[] data, int targetW, int targetH) {
         try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(data)) {
-            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(bais);
-            if (img == null) return null;
-            int h = 46;
-            int w = Math.max(1, (int)(img.getWidth() * (h / (double) img.getHeight())));
-            return new javax.swing.ImageIcon(img.getScaledInstance(w, h, java.awt.Image.SCALE_SMOOTH));
+            javax.imageio.stream.ImageInputStream iis = ImageIO.createImageInputStream(bais);
+            if (iis != null) {
+                try {
+                    java.awt.image.BufferedImage img = decodificar(iis, targetW, targetH);
+                    if (img != null) return img;
+                } finally {
+                    iis.close();
+                }
+            }
+        } catch (Exception ignored) { }
+        // El format no admet subsampling o la lectura ha fallat: lectura completa.
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(data)) {
+            return ImageIO.read(bais);
         } catch (Exception ignored) { return null; }
     }
 
+    /**
+     * Llegeix la imatge de {@code iis} sense escalar-la. La imatge
+     * descodificada té com a mínim la mida demanada, de manera que el
+     * retall-escalat posterior conservi la qualitat.
+     */
+    private static java.awt.image.BufferedImage decodificar(
+            javax.imageio.stream.ImageInputStream iis, int targetW, int targetH) {
+        java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(iis);
+        if (!readers.hasNext()) return null;
+        javax.imageio.ImageReader reader = readers.next();
+        try {
+            reader.setInput(iis, true, true);
+            int srcW = reader.getWidth(0);
+            int srcH = reader.getHeight(0);
+            if (targetW <= 0 && targetH > 0)
+                targetW = Math.max(1, (int) (srcW * (targetH / (double) srcH)));
+            java.awt.image.BufferedImage img = llegirSubsampling(reader, srcW, srcH, targetW, targetH);
+            if (img != null) return img;
+            return reader.read(0);
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            reader.dispose();
+        }
+    }
+
+    /**
+     * Descodifica només la part de la imatge necessària per a la mida
+     * final. Retorna null si el format no admet subsampling o si la
+     * lectura falla; el caller torna a la lectura completa.
+     *
+     * <p>El factor és una potència de dos (1, 2, 4 o 8) perquè és el que
+     * admeten els decoders JPEG i PNG.
+     */
+    private static java.awt.image.BufferedImage llegirSubsampling(
+            javax.imageio.ImageReader reader, int srcW, int srcH, int targetW, int targetH) {
+        int factor = factorSubsampling(srcW, srcH, targetW, targetH);
+        if (factor <= 1) return null;
+        try {
+            javax.imageio.ImageReadParam param = reader.getDefaultReadParam();
+            param.setSourceSubsampling(factor, factor, 0, 0);
+            return reader.read(0, param);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Factor de subsampling: es vol decodificar al voltant del doble de la
+     * mida final, per mantenir la qualitat sense decodificar la resolució
+     * plena.
+     */
+    private static int factorSubsampling(int srcW, int srcH, int targetW, int targetH) {
+        if (targetW <= 0 || targetH <= 0) return 1;
+        int fx = srcW / (targetW * 2);
+        int fy = srcH / (targetH * 2);
+        int f = Math.max(fx, fy);
+        if (f <= 1) return 1;
+        if (f >= 8) return 8;
+        if (f >= 4) return 4;
+        return 2;
+    }
+
     private BufferedImage carregarAndScale(Llibre l, int w, int h) {
-        BufferedImage raw = carregarRaw(l);
+        BufferedImage raw = carregarRaw(l, w, h);
         if (raw == null) return null;
         return cropScale(raw, w, h);
     }
 
-    private BufferedImage carregarRaw(Llibre l) {
+    private BufferedImage carregarRaw(Llibre l, int w, int h) {
         byte[] blob = l.obtenirImatgeBlob();
         if (blob == null && l.teBlob()) {
             LectorLlibre writer = this.cd;
@@ -226,7 +323,19 @@ public final class ServeiImatgesCoberta {
             // try-with-resources garanteix el tancament del flux encara
             // que ImageIO.read() llenci (no ho fa en el camí feliç).
             try (ByteArrayInputStream bais = new ByteArrayInputStream(blob)) {
-                BufferedImage img = ImageIO.read(bais);
+                javax.imageio.stream.ImageInputStream iis = ImageIO.createImageInputStream(bais);
+                if (iis != null) {
+                    try {
+                        java.awt.image.BufferedImage img = decodificar(iis, w, h);
+                        if (img != null) return img;
+                    } finally {
+                        iis.close();
+                    }
+                }
+            } catch (Exception ignored) { }
+            // Lectura completa: el format no admet subsampling.
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(blob)) {
+                java.awt.image.BufferedImage img = ImageIO.read(bais);
                 if (img != null) return img;
             } catch (Exception ignored) { }
         }
@@ -242,7 +351,7 @@ public final class ServeiImatgesCoberta {
                 javax.imageio.stream.ImageInputStream iis = null;
                 try {
                     iis = ImageIO.createImageInputStream(f);
-                    BufferedImage img = ImageIO.read(iis);
+                    java.awt.image.BufferedImage img = decodificar(iis, w, h);
                     if (img != null) return img;
                 } catch (Exception ignored) {
                 } finally {
@@ -250,6 +359,10 @@ public final class ServeiImatgesCoberta {
                         try { iis.close(); } catch (Exception ignored) { }
                     }
                 }
+                try {
+                    java.awt.image.BufferedImage img = ImageIO.read(f);
+                    if (img != null) return img;
+                } catch (Exception ignored) { }
             }
         }
         return null;

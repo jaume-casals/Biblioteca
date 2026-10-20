@@ -11,8 +11,10 @@ import presentacio.config.SeccioImatgesConfiguracio;
 import presentacio.config.SeccionsConfiguracio;
 
 import java.awt.Frame;
+
+import herramienta.i18n.I18n;
+import herramienta.ui.Tokens;
 import java.util.List;
-import javax.swing.GroupLayout;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
@@ -66,28 +68,35 @@ public class ConfiguracioDialog extends JDialog {
             SeccionsConfiguracio.cercar(appearanceSection, "txtDefVal", JTextField.class),
             this.listener);
 
-        JPanel content = new JPanel();
+        JPanel content = new JPanel(new java.awt.BorderLayout(0, 0));
         content.setBackground(herramienta.ui.UITheme.palette().bgPanel());
-        GroupLayout layout = new GroupLayout(content);
-        content.setLayout(layout);
-        layout.setAutoCreateGaps(true);
-        layout.setAutoCreateContainerGaps(true);
 
-        GroupLayout.SequentialGroup vGroup = layout.createSequentialGroup();
-        GroupLayout.ParallelGroup hGroup = layout.createParallelGroup(GroupLayout.Alignment.LEADING);
-        for (JPanel section : List.of(dbSection, imgSection, appearanceSection, languageSection, dataSection)) {
-            hGroup.addComponent(section, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE);
-            vGroup.addComponent(section);
-        }
-        hGroup.addComponent(buttonBar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE);
-        vGroup.addComponent(buttonBar);
-        layout.setHorizontalGroup(hGroup);
-        layout.setVerticalGroup(vGroup);
+        // Les opcions es mostren per categories, en pestanyes. L'ordre
+        // posa el que l'usuari canvia sovint a dalt (aparença, idioma) i
+        // deixa la configuració avançada de servidor al final, on no fa
+        // nosa a qui vol ajustar la interfície.
+        javax.swing.JTabbedPane tabs = new javax.swing.JTabbedPane();
+        tabs.setFont(herramienta.ui.UITheme.fontBase());
+        tabs.setBackground(herramienta.ui.UITheme.palette().bgPanel());
+        tabs.addTab(I18n.t("settings_tab_appearance"), appearanceSection);
+        tabs.addTab(I18n.t("settings_tab_language"), languageSection);
+        tabs.addTab(I18n.t("settings_tab_images"), imgSection);
+        tabs.addTab(I18n.t("settings_tab_database"), dbSection);
+        tabs.addTab(I18n.t("settings_tab_data"), dataSection);
+
+        JPanel contingutTabs = new JPanel(new java.awt.BorderLayout());
+        contingutTabs.setBackground(herramienta.ui.UITheme.palette().bgPanel());
+        contingutTabs.setBorder(javax.swing.BorderFactory.createEmptyBorder(
+            Tokens.SPACE_3, Tokens.SPACE_4, Tokens.SPACE_3, Tokens.SPACE_4));
+        contingutTabs.add(tabs, java.awt.BorderLayout.CENTER);
+
+        content.add(contingutTabs, java.awt.BorderLayout.CENTER);
+        content.add(buttonBar, java.awt.BorderLayout.SOUTH);
 
         setContentPane(content);
         setResizable(true);
         pack();
-        setMinimumSize(getSize());
+        setMinimumSize(new java.awt.Dimension(Math.max(getWidth(), 620), Math.max(getHeight(), 480)));
         setLocationRelativeTo(parent);
 
         getRootPane().registerKeyboardAction(

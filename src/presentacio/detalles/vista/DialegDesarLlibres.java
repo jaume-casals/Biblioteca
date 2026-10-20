@@ -2,13 +2,17 @@ package presentacio.detalles.vista;
 
 import presentacio.util.UIComponents;
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridLayout;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import javax.swing.JComponent;
+import javax.swing.JTabbedPane;
+import herramienta.ui.Tokens;
+import presentacio.util.Icones;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -32,8 +36,6 @@ import presentacio.formularis.RegistreCampsFormulari.Camp;
 import presentacio.formularis.ConstructorGraellaFormulari;
 
 public class DialegDesarLlibres extends JDialog {
-
-	private static final int ENTRY_MIN_W = 240;
 
 	private JLabel     labelPreview;
 	private JButton    btnGuardar;
@@ -70,52 +72,33 @@ public class DialegDesarLlibres extends JDialog {
 		setResizable(true);
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		setTitle(I18n.t("modal_new_book"));
-		setMinimumSize(new Dimension(400, 500));
-		setPreferredSize(new Dimension(600, 720));
+		setMinimumSize(new Dimension(560, 520));
+		setPreferredSize(new Dimension(680, 740));
 		setLayout(new BorderLayout(0, 0));
 		getContentPane().setBackground(UITheme.palette().bgPanel());
 
-		JPanel west = new JPanel();
-		west.setBackground(UITheme.palette().bgPanel());
-		west.setPreferredSize(new Dimension(155, 0));
-		west.setMinimumSize(new Dimension(155, 0));
-		west.setMaximumSize(new Dimension(155, Integer.MAX_VALUE));
-		west.setLayout(new BoxLayout(west, BoxLayout.Y_AXIS));
-		west.setBorder(new EmptyBorder(8, 8, 8, 6));
+		creaCamps();
 
-		labelPreview = new JLabel();
-		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
-		labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
-		labelPreview.setPreferredSize(new Dimension(135, 135));
-		labelPreview.setMinimumSize(new Dimension(135, 135));
-		labelPreview.setMaximumSize(new Dimension(139, 135));
-		labelPreview.setAlignmentX(Component.LEFT_ALIGNMENT);
-		west.add(labelPreview);
-		west.add(Box.createVerticalStrut(6));
+		add(buildCapcalera(), BorderLayout.NORTH);
+		add(buildCos(), BorderLayout.CENTER);
+		add(buildPeu(), BorderLayout.SOUTH);
 
-		btnGuardar = new JButton(I18n.t("btn_save_java"));
-		UIComponents.styleAccentButton(btnGuardar);
+		// pack(): el diàlegPren la mida del contingut real. Amb
+		// setPreferredSize solament, Swing pot deixar-lo a la mida mínima.
+		pack();
+		setMinimumSize(new Dimension(560, 520));
+		setSize(Math.max(getWidth(), 680), Math.max(getHeight(), 700));
+		setLocationRelativeTo(getOwner());
+	}
 
-		JButton btnCancel = new JButton(I18n.t("btn_cancel"));
-		UIComponents.styleSecondaryButton(btnCancel);
-		btnCancel.addActionListener(e -> dispose());
-
-		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge"));
-		UIComponents.styleSecondaryButton(btnSeleccionarImatge);
-
-		for (JButton btn : new JButton[]{btnGuardar, btnCancel, btnSeleccionarImatge}) {
-			btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-			btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-			west.add(btn);
-			west.add(Box.createVerticalStrut(4));
-		}
-
-		add(west, BorderLayout.WEST);
-
-		JPanel grid = new JPanel(new GridLayout(0, 2, 4, 4));
-		grid.setBackground(UITheme.palette().bgPanel());
-		grid.setBorder(new EmptyBorder(8, 4, 4, 8));
-
+	/**
+	 * Crea i registra tots els camps del formulari.
+	 *
+	 * <p>Els camps es comparteixen entre el diàleg de llibre nou i el
+	 * d'edició: el registre {@link RegistreCampsFormulari} en manté les
+	 * referències per validar-les i emplenar-les.
+	 */
+	private void creaCamps() {
 		RegistreCampsFormulari reg = new RegistreCampsFormulari()
 			.add(Camp.text("textISBN",       "field_isbn",        10))
 			.add(Camp.text("textNom",        "field_title",       10))
@@ -181,64 +164,216 @@ public class DialegDesarLlibres extends JDialog {
 		chckLlegit.setBackground(UITheme.palette().bgPanel());
 		chckLlegit.setHorizontalAlignment(SwingConstants.LEFT);
 
-		textNotes      = new JTextArea(4, 20); textNotes.setLineWrap(true); textNotes.setWrapStyleWord(true);
-		textNotes.setBackground(UITheme.palette().bgMain());
+		textNotes      = new JTextArea(6, 20);
+		textNotes.setLineWrap(true);
+		textNotes.setWrapStyleWord(true);
+		textNotes.setBackground(UITheme.palette().fieldBg());
 		textNotes.setForeground(UITheme.palette().textDark());
 		textNotes.setFont(UITheme.fontBase());
-		textNotes.setBorder(javax.swing.BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		textNotes.setCaretColor(UITheme.palette().accent());
+		textNotes.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+	}
 
-		ConstructorGraellaFormulari builder = ConstructorGraellaFormulari.columnsOf(grid);
+	/**
+	 * Capçalera del diàleg.
+	 *
+	 * <p>Una sola línia amb el títol i, a la dreta, la cerca de metadades.
+	 * La cerca és una acció de primer nivell: la majoria de llibres nous
+	 * s'identifiquen per ISBN.
+	 */
+	private JPanel buildCapcalera() {
+		JPanel cap = new JPanel(new BorderLayout(Tokens.SPACE_4, 0));
+		cap.setBackground(UITheme.palette().bgPanel());
+		cap.setBorder(new EmptyBorder(Tokens.SPACE_4, Tokens.SPACE_5, Tokens.SPACE_3, Tokens.SPACE_5));
+
+		JLabel titol = new JLabel(I18n.t("modal_new_book"));
+		titol.setFont(UITheme.fontTitle().deriveFont((float) (Tokens.FONT_SIZE_TITLE - 4)));
+		titol.setForeground(UITheme.palette().textDark());
+		cap.add(titol, BorderLayout.WEST);
+
+		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
+		btnCercaInternet.setIcon(Icones.icon("cerca", Tokens.ICON_SIZE, UITheme.palette().textOnAccent()));
+		btnCercaInternet.setHorizontalTextPosition(javax.swing.SwingConstants.RIGHT);
+		UIComponents.styleSecondaryButton(btnCercaInternet);
+		UIComponents.setAlçadaControl(btnCercaInternet, Tokens.CONTROL_HEIGHT);
+		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
+		JPanel dret = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		dret.setBackground(UITheme.palette().bgPanel());
+		dret.add(btnCercaInternet);
+		cap.add(dret, BorderLayout.EAST);
+		return cap;
+	}
+
+	/**
+	 * Cos del diàleg: camps principals i pestanyes de metadades.
+	 *
+	 * <p>El contingut llarg està dins d'un desplaçable, però les accions
+	 * principals no: el peu queda fora del desplaçament.
+	 */
+	private JPanel buildCos() {
+		JPanel panell = new JPanel(new BorderLayout(0, 0));
+		panell.setBackground(UITheme.palette().bgPanel());
+
+		JPanel form = new JPanel();
+		form.setBackground(UITheme.palette().bgPanel());
+		form.setBorder(new EmptyBorder(Tokens.SPACE_2, Tokens.SPACE_5, 0, Tokens.SPACE_5));
+
+		ConstructorGraellaFormulari builder = ConstructorGraellaFormulari.columnsOf(form);
+		builder.separador(I18n.t("form_section_identity"));
 		builder.afegirField(I18n.t("field_isbn"), textISBN);
 		builder.afegirField(I18n.t("field_title"), textNom);
 		builder.afegirField(I18n.t("field_author"), textAutor);
-		builder.afegirField(I18n.t("field_year"), textAny);
-		builder.afegirField(I18n.t("field_description"), textDescripcio);
-		builder.afegirField(I18n.t("field_rating"), textValoracio);
-		builder.afegirField(I18n.t("field_price"), textPreu);
-		builder.afegirField(I18n.t("field_publisher"), textEditorial);
-		builder.afegirField(I18n.t("field_series"), textSerie);
-		builder.afegirField(I18n.t("field_volume"), textVolum);
-		builder.afegirField(I18n.t("field_purchased"), textDataCompra);
-		builder.afegirField(I18n.t("field_read_on"), textDataLectura);
-		builder.afegirField(I18n.t("field_language"), textIdioma);
-		builder.afegirCombo(I18n.t("field_format"), comboFormat);
-		builder.afegirCheck(I18n.t("field_wishlist"), chckDesitjat);
-		builder.afegirCheck(I18n.t("field_read"), chckLlegit);
-		builder.afegirRaw(I18n.t("field_notes"), new javax.swing.JScrollPane(textNotes));
-		builder.afegirField(I18n.t("col_cover"), textPortada);
-		builder.afegirField(I18n.t("field_country"), textPaisOrigen);
-		builder.afegirCombo(I18n.t("field_estat"), comboEstat);
-		builder.afegirField(I18n.t("field_exemplars"), textExemplars);
-		builder.afegirField(I18n.t("field_title_ca"), textNomCa);
-		builder.afegirField(I18n.t("field_title_es"), textNomEs);
-		builder.afegirField(I18n.t("field_title_en"), textNomEn);
+		builder.separador(I18n.t("form_section_cover"));
+		builder.componentPle(buildPortada());
+		builder.componentPle(buildPestanyes());
 
-		JScrollPane scroll = new JScrollPane(grid,
+		JScrollPane scroll = new JScrollPane(form,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
 		scroll.getViewport().setBackground(UITheme.palette().bgPanel());
-		add(scroll, BorderLayout.CENTER);
-		UIComponents.attachResponsiveColumns(scroll, grid, ENTRY_MIN_W);
+		panell.add(scroll, BorderLayout.CENTER);
+		return panell;
+	}
 
-		JPanel south = new JPanel(new BorderLayout(0, 2));
-		south.setBackground(UITheme.palette().bgPanel());
-		south.setBorder(new EmptyBorder(0, 8, 8, 8));
+	/** Previsualització de la portada i accions per triar-ne una. */
+	private JPanel buildPortada() {
+		JPanel fila = new JPanel(new BorderLayout(Tokens.SPACE_3, 0));
+		fila.setBackground(UITheme.palette().bgPanel());
+		fila.setOpaque(false);
 
-		btnCercaInternet = new JButton(I18n.t("btn_cerca_internet"));
-		UIComponents.styleAccentButton(btnCercaInternet);
-		btnCercaInternet.setBackground(herramienta.ui.UITheme.palette().green());
-		btnCercaInternet.setForeground(java.awt.Color.WHITE);
-		btnCercaInternet.setToolTipText(I18n.t("tip_cerca_internet"));
-		south.add(btnCercaInternet, BorderLayout.CENTER);
+		labelPreview = new JLabel();
+		labelPreview.setBorder(BorderFactory.createLineBorder(UITheme.palette().borderClr()));
+		labelPreview.setHorizontalAlignment(SwingConstants.CENTER);
+		labelPreview.setVerticalAlignment(SwingConstants.CENTER);
+		labelPreview.setPreferredSize(new Dimension(110, 150));
+		labelPreview.setMinimumSize(new Dimension(110, 150));
+		labelPreview.setMaximumSize(new Dimension(110, 150));
+		labelPreview.setOpaque(true);
+		labelPreview.setBackground(UITheme.palette().bgSunken());
+		fila.add(labelPreview, BorderLayout.WEST);
+
+		JPanel dreta = new JPanel(new GridBagLayout());
+		dreta.setBackground(UITheme.palette().bgPanel());
+		dreta.setOpaque(false);
+
+		btnSeleccionarImatge = new JButton(I18n.t("btn_sel_imatge"));
+		btnSeleccionarImatge.setIcon(Icones.icon("importar", Tokens.ICON_SIZE, UITheme.palette().textDark()));
+		btnSeleccionarImatge.setHorizontalTextPosition(javax.swing.SwingConstants.RIGHT);
+		UIComponents.styleSecondaryButton(btnSeleccionarImatge);
+
+		JPanel filaBotons = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		filaBotons.setBackground(UITheme.palette().bgPanel());
+		filaBotons.setOpaque(false);
+		filaBotons.add(btnSeleccionarImatge);
+
+		GridBagConstraints gc = new GridBagConstraints();
+		gc.gridx = 0; gc.gridy = 0;
+		gc.weightx = 1; gc.weighty = 0;
+		gc.fill = GridBagConstraints.HORIZONTAL;
+		gc.anchor = GridBagConstraints.NORTHWEST;
+		gc.insets = new Insets(0, 0, Tokens.SPACE_2, 0);
+		dreta.add(filaBotons, gc);
+
+		// El camp del camí és d'una línia: no ha d'absorbir l'alçada
+		// sobrant de la columna, només s'hi estén.
+		gc.gridy = 1;
+		gc.weighty = 0;
+		gc.fill = GridBagConstraints.HORIZONTAL;
+		gc.insets = new Insets(0, 0, 0, 0);
+		dreta.add(textPortada, gc);
+
+		fila.add(dreta, BorderLayout.CENTER);
+		return fila;
+	}
+
+	/** Pestanyes amb les metadades secundàries. */
+	private JComponent buildPestanyes() {
+		JTabbedPane tabs = new JTabbedPane();
+		tabs.setFont(UITheme.fontBase());
+
+		JPanel detalls = new JPanel();
+		detalls.setBackground(UITheme.palette().bgPanel());
+		ConstructorGraellaFormulari b1 = ConstructorGraellaFormulari.columnsOf(detalls);
+		b1.afegirField(I18n.t("field_year"), textAny);
+		b1.afegirField(I18n.t("field_rating"), textValoracio);
+		b1.afegirField(I18n.t("field_price"), textPreu);
+		b1.afegirCombo(I18n.t("field_format"), comboFormat);
+		b1.afegirCombo(I18n.t("field_estat"), comboEstat);
+		b1.afegirField(I18n.t("field_exemplars"), textExemplars);
+		b1.afegirField(I18n.t("field_country"), textPaisOrigen);
+		b1.afegirCheck(I18n.t("field_wishlist"), chckDesitjat);
+		b1.afegirCheck(I18n.t("field_read"), chckLlegit);
+		tabs.addTab(I18n.t("form_tab_details"), detalls);
+
+		JPanel publicacio = new JPanel();
+		publicacio.setBackground(UITheme.palette().bgPanel());
+		ConstructorGraellaFormulari b2 = ConstructorGraellaFormulari.columnsOf(publicacio);
+		b2.afegirField(I18n.t("field_publisher"), textEditorial);
+		b2.afegirField(I18n.t("field_series"), textSerie);
+		b2.afegirField(I18n.t("field_volume"), textVolum);
+		b2.afegirField(I18n.t("field_language"), textIdioma);
+		b2.afegirField(I18n.t("field_purchased"), textDataCompra);
+		b2.afegirField(I18n.t("field_read_on"), textDataLectura);
+		tabs.addTab(I18n.t("form_tab_publication"), publicacio);
+
+		JPanel notes = new JPanel(new BorderLayout(0, 0));
+		notes.setBackground(UITheme.palette().bgPanel());
+		JPanel notesForm = new JPanel();
+		notesForm.setBackground(UITheme.palette().bgPanel());
+		ConstructorGraellaFormulari b3 = ConstructorGraellaFormulari.columnsOf(notesForm);
+		b3.afegirField(I18n.t("field_description"), textDescripcio);
+		notes.add(notesForm, BorderLayout.NORTH);
+		notes.add(new JScrollPane(textNotes), BorderLayout.CENTER);
+		tabs.addTab(I18n.t("form_tab_notes"), notes);
+
+		JPanel titols = new JPanel();
+		titols.setBackground(UITheme.palette().bgPanel());
+		ConstructorGraellaFormulari b4 = ConstructorGraellaFormulari.columnsOf(titols);
+		b4.afegirField(I18n.t("field_title_ca"), textNomCa);
+		b4.afegirField(I18n.t("field_title_es"), textNomEs);
+		b4.afegirField(I18n.t("field_title_en"), textNomEn);
+		tabs.addTab(I18n.t("form_tab_titles"), titols);
+
+		return tabs;
+	}
+
+	/**
+	 * Peu fix del diàleg.
+	 *
+	 * <p>Les accions principals queden fora de la zona desplaçable: sempre
+	 * són visibles, encara que el contingut sigui llarg. El formulari
+	 * permet entrada manual: la cerca a Internet és una opció, no un pas
+	 * obligatori.
+	 */
+	private JPanel buildPeu() {
+		JPanel peu = new JPanel(new BorderLayout(0, Tokens.SPACE_2));
+		peu.setBackground(UITheme.palette().bgPanel());
+		peu.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createMatteBorder(1, 0, 0, 0, UITheme.palette().borderClr()),
+				new EmptyBorder(Tokens.SPACE_3, Tokens.SPACE_5, Tokens.SPACE_3, Tokens.SPACE_5)));
 
 		progressBar = new JProgressBar();
 		progressBar.setIndeterminate(true);
-		progressBar.setPreferredSize(new Dimension(0, 8));
+		progressBar.setPreferredSize(new Dimension(0, 6));
 		progressBar.setVisible(false);
-		south.add(progressBar, BorderLayout.SOUTH);
+		peu.add(progressBar, BorderLayout.NORTH);
 
-		add(south, BorderLayout.SOUTH);
+		JButton btnCancel = new JButton(I18n.t("btn_cancel"));
+		UIComponents.styleSecondaryButton(btnCancel);
+		btnCancel.addActionListener(e -> dispose());
+
+		btnGuardar = new JButton(I18n.t("btn_save_java"));
+		UIComponents.styleAccentButton(btnGuardar);
+
+		JPanel accions = new JPanel(new FlowLayout(FlowLayout.RIGHT, Tokens.SPACE_2, 0));
+		accions.setBackground(UITheme.palette().bgPanel());
+		UIComponents.setAlçadaControl(btnCancel, Tokens.CONTROL_HEIGHT);
+		UIComponents.setAlçadaControl(btnGuardar, Tokens.CONTROL_HEIGHT);
+		accions.add(btnCancel);
+		accions.add(btnGuardar);
+		peu.add(accions, BorderLayout.CENTER);
+		return peu;
 	}
 
 	// ── getters ───────────────────────────────────────────────────────────────

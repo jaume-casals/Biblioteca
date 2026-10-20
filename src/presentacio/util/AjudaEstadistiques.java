@@ -256,21 +256,16 @@ public class AjudaEstadistiques {
      * vista viu aquí perquè el controlador es mantingui prim.
      */
     public static javax.swing.JPanel buildGeneralTab(List<Llibre> global, EstadistiquesLlibre globalStats, EscritorBiblioteca cd) {
-        String summary = buildStatsSummary(globalStats, I18n.t("lbl_all_library"));
-
-        javax.swing.JTextArea txtSummary = new javax.swing.JTextArea(summary);
-        txtSummary.setEditable(false);
-        txtSummary.setFont(herramienta.ui.UITheme.fontBase());
-        txtSummary.setBackground(herramienta.ui.UITheme.palette().bgPanel());
-        txtSummary.setForeground(herramienta.ui.UITheme.palette().textDark());
-        txtSummary.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        // Resum amb jerarquia: quatre indicadors amb xifra gran i etiqueta,
+        // en lloc d'un bloc de text on tot té el mateix pes.
+        javax.swing.JPanel resum = buildSummaryTiles(global, globalStats);
 
         javax.swing.JScrollPane shelfScroll = buildShelfTable(global, cd);
 
         javax.swing.JPanel goalPanel = buildReadingGoalPanel(global, globalStats);
         javax.swing.JPanel statsPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
         statsPanel.setBackground(herramienta.ui.UITheme.palette().bgPanel());
-        statsPanel.add(txtSummary, java.awt.BorderLayout.NORTH);
+        statsPanel.add(resum, java.awt.BorderLayout.NORTH);
         if (shelfScroll != null) statsPanel.add(shelfScroll, java.awt.BorderLayout.CENTER);
 
         javax.swing.JPanel tab = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
@@ -278,6 +273,74 @@ public class AjudaEstadistiques {
         tab.add(goalPanel, java.awt.BorderLayout.NORTH);
         tab.add(statsPanel, java.awt.BorderLayout.CENTER);
         return tab;
+    }
+
+    /**
+     * Resum de l'estadística en forma d'indicadors.
+     *
+     * <p>Cada indicador té una xifra gran i una etiqueta petita: així la
+     * jerarquia és evident de cop. La valoració mitjana només es calcula
+     * sobre els llibres que en tenen; si no n'hi ha cap, es mostra "—" en
+     * lloc de 0, perquè un zero semblaria una valoració real.
+     */
+    private static javax.swing.JPanel buildSummaryTiles(List<Llibre> global, EstadistiquesLlibre stats) {
+        int total = global == null ? 0 : global.size();
+        long llegits = countLlegits(global == null ? java.util.List.of() : global);
+        int enCurs = 0;
+        int ambValoracio = 0;
+        double sumaVal = 0;
+        if (global != null) {
+            for (Llibre l : global) {
+                if (l.obtenirPaginesLlegides() > 0 && !Boolean.TRUE.equals(l.obtenirLlegit())) enCurs++;
+                Double v = l.obtenirValoracio();
+                if (v != null && v > 0) { ambValoracio++; sumaVal += v; }
+            }
+        }
+        String mitjana = ambValoracio == 0
+            ? "\u2014"
+            : String.format("%.1f", sumaVal / ambValoracio);
+
+        javax.swing.JPanel fila = new javax.swing.JPanel(new java.awt.GridLayout(1, 4, 8, 0));
+        fila.setBackground(herramienta.ui.UITheme.palette().bgPanel());
+        fila.add(buildTile(I18n.t("stats_total"), String.valueOf(total), null));
+        fila.add(buildTile(I18n.t("stats_read"), String.valueOf(llegits),
+            total > 0 ? String.format("%.0f%%", 100.0 * llegits / total) : null));
+        fila.add(buildTile(I18n.t("stats_in_progress"), String.valueOf(enCurs), null));
+        fila.add(buildTile(I18n.t("stats_avg_rating"), mitjana,
+            ambValoracio == 0 ? I18n.t("stats_no_rating_data") : "/ 10"));
+        return fila;
+    }
+
+    /** Indicador d'estadística: xifra gran, etiqueta petita i nota opcional. */
+    private static javax.swing.JPanel buildTile(String etiqueta, String valor, String nota) {
+        javax.swing.JPanel tile = new javax.swing.JPanel(new java.awt.BorderLayout(0, 2));
+        tile.setBackground(herramienta.ui.UITheme.palette().bgSunken());
+        tile.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(herramienta.ui.UITheme.palette().borderClr()),
+            javax.swing.BorderFactory.createEmptyBorder(8, 12, 8, 12)));
+
+        javax.swing.JLabel lblValor = new javax.swing.JLabel(valor);
+        lblValor.setFont(herramienta.ui.UITheme.fontTitle().deriveFont(22f));
+        lblValor.setForeground(herramienta.ui.UITheme.palette().textDark());
+        tile.add(lblValor, java.awt.BorderLayout.CENTER);
+
+        javax.swing.JLabel lblEtiqueta = new javax.swing.JLabel(etiqueta);
+        lblEtiqueta.setFont(herramienta.ui.UITheme.fontSmall());
+        lblEtiqueta.setForeground(herramienta.ui.UITheme.palette().textMid());
+        if (nota != null && !nota.isBlank()) {
+            javax.swing.JPanel texts = new javax.swing.JPanel(new java.awt.GridLayout(2, 1, 0, 0));
+            texts.setBackground(herramienta.ui.UITheme.palette().bgSunken());
+            texts.setOpaque(false);
+            javax.swing.JLabel lblNota = new javax.swing.JLabel(nota);
+            lblNota.setFont(herramienta.ui.UITheme.fontSmall());
+            lblNota.setForeground(herramienta.ui.UITheme.palette().textMuted());
+            texts.add(lblEtiqueta);
+            texts.add(lblNota);
+            tile.add(texts, java.awt.BorderLayout.SOUTH);
+        } else {
+            tile.add(lblEtiqueta, java.awt.BorderLayout.SOUTH);
+        }
+        return tile;
     }
 
     private static javax.swing.JScrollPane buildShelfTable(List<Llibre> global, EscritorBiblioteca cd) {

@@ -4,11 +4,11 @@ import herramienta.config.Configuracio;
 import herramienta.config.ConfiguracioDb;
 import herramienta.config.ConfiguracioFiltre;
 import herramienta.i18n.I18n;
+import herramienta.ui.Tokens;
 import herramienta.ui.UITheme;
 import herramienta.config.ConfiguracioUi;
 import presentacio.util.UIComponents;
 
-import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -40,9 +40,12 @@ public final class BarraBotonsConfiguracio {
                                JTextField txtDefVal,
                                ConfiguracioDialogListener listener) {
 
-        UIComponents.SectionPanel section = UIComponents.sectionPanel();
-        JPanel panel = section.panel();
-        GroupLayout gl = section.layout();
+        // Barra d'accions amb FlowLayout: els botons ocupen la mida del seu
+        // text i queden a la dreta. Amb GroupLayout, el botó que absorbeix l'espai
+        // sobrant pot desbordar la barra i treure el botó principal de la
+        // finestra.
+        JPanel panel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, Tokens.SPACE_2, 0));
+        panel.setBackground(UITheme.palette().bgPanel());
 
         UITheme.Tema[] themeValues = UITheme.Tema.values();
 
@@ -104,15 +107,15 @@ public final class BarraBotonsConfiguracio {
         UIComponents.styleSecondaryButton(btnCancel);
         btnCancel.addActionListener(e -> owner.dispose());
 
-        gl.setHorizontalGroup(gl.createSequentialGroup()
-            .addComponent(btnGuardar, GroupLayout.DEFAULT_SIZE, 215, Short.MAX_VALUE)
-            .addComponent(btnCancel, GroupLayout.DEFAULT_SIZE, 215, Short.MAX_VALUE)
-        );
+        // Els botons ocupen la mida del seu text i queden a la dreta: una
+        // barra de botons que estira l'acció principal a tota l'amplada fa
+        // que "Desar" sembli l'única acció possible.
+        panel.add(btnCancel);
+        panel.add(btnGuardar);
 
-        gl.setVerticalGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
-            .addComponent(btnGuardar, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE)
-            .addComponent(btnCancel, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE)
-        );
+        panel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createMatteBorder(1, 0, 0, 0, UITheme.palette().borderClr()),
+            javax.swing.BorderFactory.createEmptyBorder(Tokens.SPACE_3, Tokens.SPACE_4, Tokens.SPACE_3, Tokens.SPACE_4)));
 
         return panel;
     }

@@ -5,7 +5,14 @@ import herramienta.config.ConfiguracioDb;
 import persistencia.contract.EscritorBiblioteca;
 import presentacio.util.UIComponents;
 
+import herramienta.ui.Tokens;
+import herramienta.ui.UITheme;
+
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+
 import javax.swing.GroupLayout;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -108,21 +115,46 @@ public final class ConfiguracioDataSection {
                 t("dlg_perfil_bd_info_title"), JOptionPane.INFORMATION_MESSAGE);
         });
 
+        // Zona destructiva separada: "Buidar biblioteca" no comparteix fila
+        // ni pes visual amb les accions habituals. Un botó vermell
+        // dominant al costat d'unes opcions normals fa que l'accí destructiva
+        // sigui la que crida l'atenció.
+        JPanel zonaDestructiva = new JPanel(new BorderLayout(0, Tokens.SPACE_2));
+        zonaDestructiva.setBackground(UITheme.palette().bgPanel());
+        zonaDestructiva.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, UITheme.palette().borderClr()),
+            BorderFactory.createEmptyBorder(Tokens.SPACE_3, 0, 0, 0)));
+
+        JLabel lblDestructiu = new JLabel(t("lbl_danger_zone"));
+        lblDestructiu.setFont(UITheme.fontBold().deriveFont((float) (Tokens.FONT_SIZE_SECTION - 1)));
+        lblDestructiu.setForeground(UITheme.palette().danger());
+        zonaDestructiva.add(lblDestructiu, BorderLayout.NORTH);
+
+        JLabel lblDestructiuAjuda = new JLabel(t("lbl_clear_library_help"));
+        lblDestructiuAjuda.setFont(UITheme.fontSmall());
+        lblDestructiuAjuda.setForeground(UITheme.palette().textMid());
+        zonaDestructiva.add(lblDestructiuAjuda, BorderLayout.CENTER);
+
+        JPanel filaBuidar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        filaBuidar.setBackground(UITheme.palette().bgPanel());
+        filaBuidar.add(btnBuidar);
+        zonaDestructiva.add(filaBuidar, BorderLayout.SOUTH);
+
         gl.setHorizontalGroup(gl.createParallelGroup(GroupLayout.Alignment.LEADING)
             .addComponent(lblSeccio)
             .addGroup(gl.createSequentialGroup()
                 .addComponent(lblDbSize)
                 .addComponent(lblDbSizeVal))
-            .addComponent(btnBuidar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addComponent(btnPerfils, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(zonaDestructiva)
         );
 
         gl.setVerticalGroup(gl.createSequentialGroup()
             .addComponent(lblSeccio)
             .addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addComponent(lblDbSize).addComponent(lblDbSizeVal))
-            .addComponent(btnBuidar)
             .addComponent(btnPerfils)
+            .addComponent(zonaDestructiva)
         );
 
         return panel;

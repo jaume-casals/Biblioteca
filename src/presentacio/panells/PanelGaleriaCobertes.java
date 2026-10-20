@@ -1,9 +1,9 @@
 package presentacio.panells;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
@@ -13,23 +13,18 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.BorderFactory;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 
 import domini.Llibre;
 import herramienta.config.Configuracio;
@@ -63,15 +58,24 @@ import presentacio.layouts.WrapLayout;
 public class PanelGaleriaCobertes extends JPanel {
 
     private record NivellZoom(int cardW, int coverH) {}
+    /**
+     * Nivells de densitat de la galeria.
+     *
+     * <p>El nivell per defecte és el 190 px de targeta: prou ample per a un
+     * títol de dues línies i prou compacte per veure molts llibres. Els
+     * nivells són orientatius i l'usuari els pot canviar amb Ctrl+±.
+     */
     private static final NivellZoom[] ZOOM_LEVELS = {
-        new NivellZoom(100, 150),
-        new NivellZoom(120, 180),
-        new NivellZoom(140, 210),
+        new NivellZoom(150, 225),
         new NivellZoom(170, 255),
+        new NivellZoom(190, 285),
         new NivellZoom(210, 315),
+        new NivellZoom(230, 345),
     };
-    private static final int   FOOT_H    = 84;
+    private static final int   FOOT_H    = 92;
     private static final int   GAP       = 14;
+    /** Finestra d agrupació dels repintats de cobertes que acaben d'arribar. */
+    private static final int   REPINT_MS = 40;
 
     private final ServeiImatgesCoberta imageService = new ServeiImatgesCoberta();
     private final PopupZoomCoberta    zoomPopup    = new PopupZoomCoberta();
@@ -83,11 +87,21 @@ public class PanelGaleriaCobertes extends JPanel {
     private FabricantTargetesCoberta cardFactory;
 
     private final JPanel wrap;
+    private JScrollPane scroll;
 
     private final Set<Long> selectedISBNs = new LinkedHashSet<>();
     private final java.util.HashMap<Long, JPanel> cardMap = new java.util.HashMap<>();
     private List<Llibre> currentLlibres;
     private final int[] focusedRef = { -1 };
+
+    /**
+     * Targetes que ja tenen coberta i esperen repint. Les cobertes arriben
+     * de una en una, i un repint per coberta provocaria una passada completa
+     * de pintat de la galeria per cada imatge. S'agrupen en finestres de
+     * {@link #REPINT_MS} ms.
+     */
+    private final Set<JPanel> targetesPendents = new LinkedHashSet<>();
+    private final javax.swing.Timer timerRepint = new javax.swing.Timer(REPINT_MS, e -> flushRepints());
 
     private Consumer<Llibre> onCardClick;
     private BiConsumer<MouseEvent, List<Llibre>> onRightClick;
@@ -101,17 +115,24 @@ public class PanelGaleriaCobertes extends JPanel {
 
         aplicarZoom(zoomLevel);
 
+        // Contenidor de la graella. Swing ja només pinta els fills que
+        // toquen el clip, de manera que no cal cap paintChildren propi:
+        // una implementació pròpia es saltava els estats internes de
+        // Swing (memòria cau, banderes de repint) i les targetes quedaven
+        // sense pintar a la pantalla fins que el ratolí passava per damunt.
         wrap = new JPanel(new WrapLayout(FlowLayout.LEADING, GAP, GAP));
         wrap.setBackground(UITheme.palette().bgMain());
 
         JScrollPane scroll = new JScrollPane(wrap);
+        this.scroll = scroll;
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(60);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.getViewport().setBackground(UITheme.palette().bgMain());
-        // SIMPLE_SCROLL_MODE força un repaint complet en fer scroll — evita
-        // artefactes de blit amb targetes no opaques
-        scroll.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
+        // BACKINGSTORE blita el contingut en lloc de repintar-lo sencer a
+        // cada pas de desplaçament. Les targetes pinten tota la seva
+        // superfície (són opaques), de manera que el blit no deixa artefactes.
+        scroll.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
         add(scroll, BorderLayout.CENTER);
 
         scroll.getViewport().addComponentListener(new ComponentAdapter() {
@@ -122,11 +143,17 @@ public class PanelGaleriaCobertes extends JPanel {
 
         scroll.addMouseWheelListener(e -> {
             if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) != 0) {
+                // Segons el contracte d'AWT, la roda ennegada (cap avall,
+                // cap al usuari) dona una rotació positiva i la cap amunt una
+                // negativa. La cap amunt amplia, igual que Ctrl+=/Ctrl+-.
                 adjustZoom(e.getWheelRotation() < 0 ? 1 : -1);
-            } else {
-                JScrollBar vsb = scroll.getVerticalScrollBar();
-                vsb.setValue(vsb.getValue() + e.getUnitsToScroll() * vsb.getUnitIncrement());
+                // Consumit: amb Ctrl no es desplaça el contingut.
+                e.consume();
             }
+            // Sense Ctrl no hi ha res a fer: el JScrollPane ja desplaça el
+            // contingut en la direcció correcta. Adjustar aquí el valor de
+            // la barra sumava un segon desplaçament al del comportament per
+            // defecte, i la roda feia saltar el contingut el doble de llarg.
         });
 
         setFocusable(true);
@@ -157,7 +184,49 @@ public class PanelGaleriaCobertes extends JPanel {
             () -> currentLlibres,
             l -> { if (onCardClick != null) onCardClick.accept(l); },
             (e, sel) -> { if (onRightClick != null) onRightClick.accept(e, sel); },
-            changedIsbns -> repaintCards(changedIsbns));
+            changedIsbns -> repaintCards(changedIsbns),
+            this::marcarRepint);
+    }
+
+    /**
+     * Marca la targeta com a pendent de repint. El repint real es fa en
+     * finestres de temps, de manera que les cobertes que arriben juntes
+     * comparteixen una sola passada de pintat.
+     *
+     * <p>Les targetes fora de pantalla no es repinten: quan l'usuari hi
+     * arribi, es pintaran amb la coberta que ja ha arribat. Sense això,
+     * cada coberta carregada provocaria una passada de repint de la
+     * galeria sencera.
+     */
+    private void marcarRepint(JPanel targeta) {
+        if (targeta == null) return;
+        if (!esVisible(targeta)) return;
+        targetesPendents.add(targeta);
+        if (!timerRepint.isRunning()) timerRepint.start();
+    }
+
+    /** Indica si la targeta toca la regió visible del viewport. */
+    private boolean esVisible(JPanel targeta) {
+        if (scroll == null) return true;
+        JViewport viewport = scroll.getViewport();
+        if (viewport == null) return true;
+        Point vista = viewport.getViewPosition();
+        Dimension extent = viewport.getExtentSize();
+        Rectangle b = targeta.getBounds();
+        return b.x < vista.x + extent.width
+            && b.x + b.width > vista.x
+            && b.y < vista.y + extent.height
+            && b.y + b.height > vista.y;
+    }
+
+    private void flushRepints() {
+        if (targetesPendents.isEmpty()) {
+            timerRepint.stop();
+            return;
+        }
+        Set<JPanel> pendents = new LinkedHashSet<>(targetesPendents);
+        targetesPendents.clear();
+        for (JPanel c : pendents) c.repaint();
     }
 
     private void bindAction(String key, java.util.function.Consumer<ActionEvent> body) {
@@ -225,7 +294,7 @@ public class PanelGaleriaCobertes extends JPanel {
         CARD_W  = ZOOM_LEVELS[level].cardW();
         COVER_H = ZOOM_LEVELS[level].coverH();
         CARD_H  = COVER_H + FOOT_H;
-        cardFactory = new FabricantTargetesCoberta(imageService, CARD_W, CARD_H, COVER_H, FOOT_H);
+        cardFactory = new FabricantTargetesCoberta(imageService, CARD_W, CARD_H, COVER_H);
     }
 
     private int computeCols() {
@@ -255,6 +324,7 @@ public class PanelGaleriaCobertes extends JPanel {
         selectedISBNs.clear();
         focusedRef[0] = -1;
         cardMap.clear();
+        targetesPendents.clear();
         zoomPopup.hide();
         wrap.setBackground(UITheme.palette().bgMain());
         wrap.removeAll();
@@ -271,11 +341,24 @@ public class PanelGaleriaCobertes extends JPanel {
         wrap.repaint();
     }
 
+    /**
+     * Aplica el tema nou a la galeria.
+     *
+     * <p>No es tornen a construir les targetes: el canvi de tema només
+     * afecta al fons pre-renderitzat i al marcador de portada, i tots dos es
+     * tornen a pintar. Reconstruir-les bloquejava el fil d'interfície amb
+     * centenars de llibres i la finestra quedava a mitges pintar, amb zones
+     * del tema antic i zones del tema nou alhora.
+     *
+     * <p>Tampoc es buida la memòria cau de cobertes: les cobertes són fotos
+     * i no depenen del tema. Buidar-la tornaria a baixar totes les imatges.
+     */
     public void aplicarTheme() {
         setBackground(UITheme.palette().bgMain());
         wrap.setBackground(UITheme.palette().bgMain());
-        imageService.clear();
-        rebuildPreservingSelection();
+        if (cardFactory != null) cardFactory.invalidarFons();
+        wrap.revalidate();
+        wrap.repaint();
     }
 
     // ── Targeted repaint helpers ──────────────────────────────────────────────

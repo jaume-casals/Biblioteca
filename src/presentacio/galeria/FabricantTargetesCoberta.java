@@ -1,16 +1,16 @@
 package presentacio.galeria;
 
 import domini.Llibre;
+import herramienta.i18n.I18n;
+import herramienta.ui.Tokens;
 import herramienta.ui.UITheme;
 
 import java.awt.BasicStroke;
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -25,10 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -43,27 +39,41 @@ import javax.swing.SwingUtilities;
  * <p>La targeta rep el {@link ServeiImatgesCoberta} perquè les càrregues
  * d'imatge asíncrones actualitzin la referència de pintat de la targeta
  * a l'EDT.
+ *
+ * <p><b>Cap component HTML.</b> El peu es pintat directament sobre la
+ * targeta: un {@code JLabel} amb HTML costa entre 3 i 10 ms de construir
+ * (parse + layout del document HTML) i centenars de targetes convertien
+ * l'obertura de la galeria en una espera de segons. El text del títol es
+ * trenca en línies un sol cop, en construir la targeta, i les estrelles
+ * es dibuixen amb {@code drawString} en lloc de fer-se amb HTML.
  */
 public final class FabricantTargetesCoberta {
 
-    private static Color withAlpha(Color c, int alpha) {
-        return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
-    }
-
     // Constants Color en caché — mai no assignar dins del paint path.
-    // A = ombra externa, B = ombra interna; prefix H = hover (alfa més fort).
-    private static final Color SHADOW_A   = new Color(0, 0, 0, 14);  // externa, normal
-    private static final Color SHADOW_B   = new Color(0, 0, 0, 6);   // interna, normal
-    private static final Color SHADOW_HA  = new Color(0, 0, 0, 30);  // externa, hover
-    private static final Color SHADOW_HB  = new Color(0, 0, 0, 14);  // interna, hover
-    private static final Color DOT_READ   = new Color(0x2D9E6B);
-    private static final Color DOT_UNREAD = new Color(0xBBBBBB);
-    private static final Color DOT_RIM    = new Color(255, 255, 255, 200);
     private static final Color SEL_FILL   = new Color(0, 120, 215, 40);
+    private static final Color STAR_ON    = new Color(0xc8920a);
+    private static final Color STAR_OFF_D = new Color(0x555555);
+    private static final Color STAR_OFF_L = new Color(0xdddddd);
+    private static final Color BAR_DARK   = new Color(0x555555);
+    private static final Color BAR_LIGHT  = new Color(0xEEEEEE);
 
     private static final int ARC = 10;
     private static final int SDX = 3;
     private static final int SDY = 5;
+    /** TargetaAmplada de la targeta: cardW + ombra. */
+    private static final int EXTRA_W = SDX + 3;
+    /** TargetaAlçada de la targeta: cardH + ombra. */
+    private static final int EXTRA_H = SDY + 4;
+
+    private static final int FOOT_PAD_X = 10;
+    private static final int FOOT_PAD_TOP = 8;
+    private static final int MAX_TITLE_LINES = 2;
+    /** Alçada de la barra de progrés del peu, en píxels. */
+    private static final int ALCADA_BARRA_PROGRESS = 3;
+
+    /** Graphics2D auxiliar per obtenir FontMetrics sense construir una finestra. */
+    private static final Graphics2D METRICS_G =
+        new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics();
 
     /**
      * Estat + callbacks de la banda de l'amfitrió compartits per cada
@@ -84,6 +94,11 @@ public final class FabricantTargetesCoberta {
      * portador d'enter mutable més senzill que sobreviu tant a la captura
      * lambda com a la mutació de l'adaptador de ratolí per targeta sense
      * recórrer a {@code AtomicInteger}.
+     *
+     * <p>{@link #onImageLoaded} rep la targeta quan la seva coberta ja és
+     * a la memòria cau. L'amfitrió agrupa els repintats en finestres de
+     * temps: sense agrupació, cada coberta que arriba provoca la seva pròpia
+     * passada de pintat de tota la galeria.
      */
     public record AmfitrioTargeta(
             Set<Long> selectedISBNs,
@@ -91,7 +106,8 @@ public final class FabricantTargetesCoberta {
             java.util.function.Supplier<List<Llibre>> currentLlibres,
             Consumer<Llibre> onCardClicked,
             BiConsumer<MouseEvent, List<Llibre>> onCardRightClicked,
-            Consumer<Iterable<Long>> onSelectionMutated) {
+            Consumer<Iterable<Long>> onSelectionMutated,
+            Consumer<JPanel> onImageLoaded) {
 
         public int focusedIdx()           { return focusedRef[0]; }
         public void posarFocusedIdx(int v)  { focusedRef[0] = v; }
@@ -101,15 +117,60 @@ public final class FabricantTargetesCoberta {
     private final int cardW;
     private final int cardH;
     private final int coverH;
-    private final int footH;
+
+    /**
+     * Fons de la targeta pre-renderitzat (ombra + cos + contorn). Dues
+     * ombres arrodonides antialiasades de 140x300 píxels costen més d'1 ms
+     * cada targeta i repintada: renderitzades una sola vegada per nivell de
+     * zoom, el pintat es redueix a un blit.
+     */
+    private BufferedImage fonsNormal;
+    private BufferedImage fonsHover;
 
     public FabricantTargetesCoberta(ServeiImatgesCoberta imageService,
-                            int cardW, int cardH, int coverH, int footH) {
+                            int cardW, int cardH, int coverH) {
         this.imageService = imageService;
         this.cardW = cardW;
         this.cardH = cardH;
         this.coverH = coverH;
-        this.footH = footH;
+    }
+
+    /** Fons de la targeta per a l'estat de hover. */
+    BufferedImage fons(boolean hover) {
+        if (hover) {
+            if (fonsHover == null) fonsHover = buildFons(true);
+            return fonsHover;
+        }
+        if (fonsNormal == null) fonsNormal = buildFons(false);
+        return fonsNormal;
+    }
+
+    /** Invalida el fons pre-renderitzat (canvi de tema o de zoom). */
+    public void invalidarFons() {
+        fonsNormal = null;
+        fonsHover = null;
+    }
+
+    private BufferedImage buildFons(boolean hover) {
+        int w = cardW + EXTRA_W, h = cardH + EXTRA_H;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        try {
+            g.setColor(UITheme.palette().bgMain());
+            g.fillRect(0, 0, w, h);
+
+            // Superfície plana amb vora: cap ombra "3D" ni relleu. El hover
+            // es comunica amb una vora més marcada, no amb una ombra.
+            g.setColor(UITheme.palette().bgElevated());
+            g.fillRoundRect(0, 0, cardW, cardH, ARC, ARC);
+            g.setStroke(new BasicStroke(hover ? 1.6f : 1f));
+            g.setColor(hover ? UITheme.palette().accentBorder() : UITheme.palette().borderClr());
+            g.drawRoundRect(0, 0, cardW - 1, cardH - 1, ARC, ARC);
+        } finally {
+            g.dispose();
+        }
+        return img;
     }
 
     public JPanel build(Llibre l, int cardIdx, AmfitrioTargeta host, String lang) {
@@ -123,32 +184,36 @@ public final class FabricantTargetesCoberta {
         // Pintat a paintCard().
         final BufferedImage[] imgRef = { imageService.obtenirCached(isbn) };
         final boolean[] hov = { false };
+        final BufferedImage[] placeholder = { null };
+        // Tema amb què s'ha renderitzat el marcador de portada. El marcador
+        // es desa a memòria cau: sense aquest camp, en canviar de tema es
+        // quedava dibuixat amb els colors del tema anterior.
+        final UITheme.Tema[] placeholderTema = { null };
+
+        // Dades del peu: text ja trencat en línies i mesures de font, perquè
+        // el camí de pintat no hagi de mesurar text en cada repint.
+        final DadesPeu peu = buildPeu(l, capW, lang);
 
         // Captura els camps de Llibre que paintCard necessita en un record
         // perquè el mètode estàtic de paint no depengui de JPanel (segons
         // el finding MEDIUM de tot.txt — extreure el paintComponent inline
         // fa que la lògica de pintat de la imatge sigui provable per separat).
         final EstatTargeta state = new EstatTargeta(
-            l, isbn, hue, llegit, imgRef, hov, capW, capH, capCardH, lang);
+            l, isbn, hue, llegit, imgRef, hov, placeholder, placeholderTema, peu, this, capW, capH, capCardH, lang);
 
         JPanel card = new JPanel(null) {
             @Override
             protected void paintComponent(Graphics g) {
                 paintCard((Graphics2D) g, state, host);
             }
-            @Override public boolean isOpaque() { return false; }
+            // Opaque: el blit del viewport (BACKINGSTORE) només és correcte
+            // si la targeta omple tota la seva superfície, sinó queden
+            // restes del contingut anterior.
+            @Override public boolean isOpaque() { return true; }
         };
-        card.setPreferredSize(new Dimension(capW + SDX + 3, capCardH + SDY + 4));
+        card.setBackground(UITheme.palette().bgMain());
+        card.setPreferredSize(new Dimension(capW + EXTRA_W, capCardH + EXTRA_H));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        double val = l.obtenirValoracio() != null ? l.obtenirValoracio() : 0.0;
-        int pagines = l.obtenirPagines();
-        int pagLleg = l.obtenirPaginesLlegides();
-        double pct = pagines > 0 ? (double) pagLleg / pagines : 0.0;
-        boolean mostrarProg = pagines > 0 && !llegit && pct > 0;
-        JPanel footer = buildFooter(l, val, mostrarProg, pct, capW, lang);
-        footer.setBounds(0, capH, capW, footH);
-        card.add(footer);
 
         card.setFocusable(true);
         card.addMouseListener(new AdaptadorRatxiTargeta(card, l, isbn, cardIdx, hov, host));
@@ -156,7 +221,7 @@ public final class FabricantTargetesCoberta {
         // Càrrega d'imatge asíncrona — preescala a les dimensions actuals de la targeta
         imageService.submit(l, capW, capH, () -> {
             BufferedImage now = imageService.obtenirCached(isbn);
-            if (now != null) { imgRef[0] = now; card.repaint(); }
+            if (now != null) { imgRef[0] = now; host.onImageLoaded().accept(card); }
         });
 
         return card;
@@ -165,9 +230,9 @@ public final class FabricantTargetesCoberta {
     /**
      * Instantaniània de només lectura de tot el que necessita
      * {@link #paintCard} per dibuixar una targeta. Porta les referències
-     * vives a {@code imgRef} i {@code hov} perquè les mutacions del
-     * carregador d'imatges / mouse-Entered siguin visibles al següent
-     * pintat.
+     * vives a {@code imgRef}, {@code hov} i {@code placeholder} perquè les
+     * mutacions del carregador d'imatges / mouse-Entered siguin visibles al
+     * següent pintat.
      */
     private record EstatTargeta(
             Llibre l,
@@ -176,8 +241,144 @@ public final class FabricantTargetesCoberta {
             boolean llegit,
             BufferedImage[] imgRef,
             boolean[] hov,
+            BufferedImage[] placeholder,
+            UITheme.Tema[] placeholderTema,
+            DadesPeu peu,
+            FabricantTargetesCoberta fabrica,
             int capW, int capH, int capCardH,
             String lang) {}
+
+    /**
+     * Dades del peu ja calculades: línies del títol, autor truncat,
+     * valoració, any i progrés. Es construeix una vegada per targeta, de
+     * manera que el pintat només faci {@code drawString}.
+     */
+    private static final class DadesPeu {
+        final String[] liniesTitol;
+        final Font fontTitol;
+        final FontMetrics fmTitol;
+        final String autor;
+        final Font fontAutor;
+        final FontMetrics fmAutor;
+        final double valoracio;
+        final String textValoracio;
+        final Integer any;
+        final boolean mostraProg;
+        final float pct;
+        final int pagines;
+        final int paginesLlegides;
+        final Font fontEstrelles;
+        final FontMetrics fmEstrelles;
+
+        DadesPeu(String[] liniesTitol, Font fontTitol, FontMetrics fmTitol,
+                 String autor, Font fontAutor, FontMetrics fmAutor,
+                 double valoracio, String textValoracio, Integer any, boolean mostraProg, float pct,
+                 int pagines, int paginesLlegides,
+                 Font fontEstrelles, FontMetrics fmEstrelles) {
+            this.liniesTitol = liniesTitol;
+            this.fontTitol = fontTitol;
+            this.fmTitol = fmTitol;
+            this.autor = autor;
+            this.fontAutor = fontAutor;
+            this.fmAutor = fmAutor;
+            this.valoracio = valoracio;
+            this.textValoracio = textValoracio;
+            this.any = any;
+            this.mostraProg = mostraProg;
+            this.pct = pct;
+            this.pagines = pagines;
+            this.paginesLlegides = paginesLlegides;
+            this.fontEstrelles = fontEstrelles;
+            this.fmEstrelles = fmEstrelles;
+        }
+
+        // Accessors: el codi de pintat consumeix aquestes dades com a mètodes
+        // (peu.fontTitol(), peu.liniesTitol(), …). Els camps es mantenen per
+        // al codi que els llegeix com a camps (peu.liniesTitol.length).
+        String[] liniesTitol() { return liniesTitol; }
+        Font fontTitol() { return fontTitol; }
+        FontMetrics fmTitol() { return fmTitol; }
+        /**
+         * Els colors del peu es resolen en pintar, no es guarden a la
+         * targeta: el text es mesura una sola vegada (que és el que costa),
+         * però el color depèn del tema i ha de seguir el tema actiu.
+         */
+        Color colorTitol() { return UITheme.palette().textDark(); }
+        String autor() { return autor; }
+        Font fontAutor() { return fontAutor; }
+        FontMetrics fmAutor() { return fmAutor; }
+        Color colorAutor() { return UITheme.palette().textMid(); }
+        double valoracio() { return valoracio; }
+        String textValoracio() { return textValoracio; }
+        Integer any() { return any; }
+        int pagines() { return pagines; }
+        int paginesLlegides() { return paginesLlegides; }
+        boolean mostraProg() { return mostraProg; }
+        float pct() { return pct; }
+        Font fontEstrelles() { return fontEstrelles; }
+        FontMetrics fmEstrelles() { return fmEstrelles; }
+        Color colorEstrellaOn() { return STAR_ON; }
+        Color colorEstrellaOff() { return UITheme.esDark() ? STAR_OFF_D : STAR_OFF_L; }
+    }
+
+    private static DadesPeu buildPeu(Llibre l, int cardW, String lang) {
+        Font fontTitol = UITheme.fontSmall().deriveFont(Font.BOLD);
+        Font fontAutor = UITheme.fontSmall();
+        Font fontEstrelles = new Font("Dialog", Font.PLAIN, 11);
+        FontMetrics fmTitol = metrics(fontTitol);
+        FontMetrics fmAutor = metrics(fontAutor);
+        FontMetrics fmEstrelles = metrics(fontEstrelles);
+
+        String titol = l.obtenirDisplayNom(lang);
+        List<String> linies = wrapText(titol, fmTitol, cardW - FOOT_PAD_X * 2 - 2, MAX_TITLE_LINES);
+
+        // La valoració té escala 0–10 i el valor per defecte de la base de
+        // dades és 0: un 0 vol dir "sense valorar", no "valoració zero". Per
+        // això no es mostren estrelles buides a tots els llibres: es mostra
+        // la xifra, i només quan hi ha valoració real.
+        Double valoracioLliure = l.obtenirValoracio();
+        double val = valoracioLliure != null ? valoracioLliure : 0.0;
+        boolean teValoracio = valoracioLliure != null && valoracioLliure > 0;
+        String textValoracio = teValoracio ? formatValoracio(valoracioLliure) : null;
+
+        int pagines = l.obtenirPagines();
+        int pagLleg = l.obtenirPaginesLlegides();
+        double pct = pagines > 0 ? (double) pagLleg / pagines : 0.0;
+        boolean llegit = Boolean.TRUE.equals(l.obtenirLlegit());
+        // Progrés vàlid: pàgines conegudes i encara no acabat. El 0% real
+        // (pàgines conegudes, cap llegida) també es mostra.
+        boolean mostrarProg = pagines > 0 && !llegit;
+
+        return new DadesPeu(
+            linies.toArray(new String[0]), fontTitol, fmTitol,
+            truncate(l.obtenirAutor(), 24), fontAutor, fmAutor,
+            val, textValoracio, l.obtenirAny(), mostrarProg, (float) Math.min(1.0, Math.max(0.0, pct)),
+            pagines, pagLleg,
+            fontEstrelles, fmEstrelles);
+    }
+
+    /**
+     * Formata la valoració amb un decimal i sense decimals innecessaris.
+     *
+     * <p>Es fa a mà, sense instanciar un {@code DecimalFormat} per targeta:
+     * la galeria construeix centenars de targetes i crear un formatador per
+     * cadascuna és un cost que es nota en biblioteques grans.
+     */
+    private static String formatValoracio(Double v) {
+        if (v == null) return null;
+        double valor = Math.round(v * 10.0) / 10.0;
+        long enters = (long) valor;
+        int decimals = (int) Math.round((valor - enters) * 10);
+        java.text.DecimalFormatSymbols simbols =
+            java.text.DecimalFormatSymbols.getInstance(java.util.Locale.getDefault());
+        String sep = String.valueOf(simbols.getDecimalSeparator());
+        if (decimals == 0) return String.valueOf(enters);
+        return String.valueOf(enters) + sep + decimals;
+    }
+
+    private static FontMetrics metrics(Font f) {
+        return METRICS_G.getFontMetrics(f);
+    }
 
     /**
      * Pintat estàtic de targeta — extret del paintComponent del JPanel
@@ -193,49 +394,84 @@ public final class FabricantTargetesCoberta {
 
         int capW = state.capW(), capH = state.capH(), capCardH = state.capCardH();
 
-        g2.setColor(UITheme.palette().bgMain());
-        g2.fillRect(0, 0, capW, capCardH);
-
         boolean h = state.hov()[0];
 
-        int sdY = h ? SDY + 6 : SDY;
-        g2.setColor(h ? SHADOW_HA : SHADOW_A);
-        g2.fillRoundRect(SDX, sdY, capW, capCardH, ARC + 2, ARC + 2);
-        g2.setColor(h ? SHADOW_HB : SHADOW_B);
-        g2.fillRoundRect(SDX + 2, sdY + 3, capW + 1, capCardH + 1, ARC + 4, ARC + 4);
-
-        g2.setColor(UITheme.palette().bgPanel());
-        g2.fillRoundRect(0, 0, capW, capCardH, ARC, ARC);
+        // Fons pre-renderitzat (ombra + cos + contorn): un blit en lloc de
+        // dues ombres arrodonides antialiasades per targeta i repint.
+        g2.drawImage(state.fabrica().fons(h), 0, 0, null);
 
         Shape oldClip = g2.getClip();
         g2.clip(new RoundRectangle2D.Float(0, 0, capW, capH + ARC, ARC, ARC));
-        paintCover(g2, state.imgRef()[0], state.hue(),
-            state.l().obtenirDisplayNom(state.lang()), state.l().obtenirAutor(), capW, capH);
+        paintCover(g2, state, capW, capH);
         g2.setClip(oldClip);
 
-        int dotD = 9, dotX = capW - dotD - 7, dotY = 7;
-        g2.setColor(state.llegit() ? DOT_READ : DOT_UNREAD);
-        g2.fillOval(dotX, dotY, dotD, dotD);
-        g2.setStroke(new BasicStroke(2f));
-        g2.setColor(DOT_RIM);
-        g2.drawOval(dotX, dotY, dotD, dotD);
+        paintPeu(g2, state, capW);
+
+        paintEstat(g2, state, capW, capH);
 
         boolean sel = host.selectedISBNs().contains(state.isbn());
         if (sel) {
             g2.setColor(SEL_FILL);
             g2.fillRoundRect(1, 1, capW - 2, capCardH - 2, ARC, ARC);
+            g2.setStroke(new BasicStroke(2f));
+            g2.setColor(UITheme.palette().accent());
+            g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
         }
-
-        g2.setStroke(new BasicStroke(sel || h ? 2f : 1f));
-        Color bdr;
-        if (sel) bdr = UITheme.palette().accent();
-        else if (h) bdr = withAlpha(UITheme.palette().accent(), 140);
-        else bdr = withAlpha(UITheme.palette().borderClr(), 180);
-        g2.setColor(bdr);
-        g2.drawRoundRect(0, 0, capW - 1, capCardH - 1, ARC, ARC);
 
         g2.dispose();
     }
+
+    /**
+     * Etiqueta d'estat sobre la portada.
+     *
+     * <p>El text és el que comunica l'estat; el color només l'acompanya. Un
+     * punt de color sol no diu què vol dir, i per a una biblioteca amb
+     * molts llibres l'estat ha de llegir-se d'un cop d'ull.
+     */
+    private static void paintEstat(Graphics2D g2, EstatTargeta state, int capW, int capH) {
+        DadesPeu peu = state.peu();
+        String text = null;
+        Color bg = null;
+        Color fg = null;
+        if (state.llegit()) {
+            text = I18n.t("card_status_read");
+            bg = UITheme.palette().greenSoft();
+            fg = UITheme.palette().green();
+        } else if (peu.mostraProg() && peu.pct() > 0) {
+            text = I18n.t("card_status_reading");
+            bg = UITheme.palette().accentSoft();
+            fg = UITheme.palette().accent();
+        }
+        if (text == null) return;
+
+        Font font = fontEtiquetaEstat();
+        FontMetrics fm = g2.getFontMetrics(font);
+        int w = fm.stringWidth(text) + 12;
+        int h = fm.getHeight() + 2;
+        int x = 6, y = 6;
+        g2.setColor(bg);
+        g2.fillRoundRect(x, y, w, h, h, h);
+        g2.setFont(font);
+        g2.setColor(fg);
+        g2.drawString(text, x + 6, y + fm.getAscent() + 1);
+    }
+
+    /**
+     * Font de l'etiqueta d'estat.
+     *
+     * <p>En caché: es crea una targeta per llibre i es repinta en cada
+     * hover, i derivar la font a cada pintat crea un objecte innecessari.
+     */
+    private static Font fontEtiquetaEstat() {
+        Font f = fontEtiquetaEstatCache;
+        if (f == null) {
+            f = UITheme.fontSmall().deriveFont(Font.BOLD, (float) (Tokens.FONT_SIZE_SMALL - 2));
+            fontEtiquetaEstatCache = f;
+        }
+        return f;
+    }
+
+    private static volatile Font fontEtiquetaEstatCache;
 
     /**
      * Adaptador de ratolí estàtic — extret del MouseAdapter en línia
@@ -323,119 +559,128 @@ public final class FabricantTargetesCoberta {
 
     // ── Cover painting ────────────────────────────────────────────────────────
 
-    private static void paintCover(Graphics2D g2, BufferedImage img,
-                                   int hue, String nom, String autor, int w, int h) {
+    private static void paintCover(Graphics2D g2, EstatTargeta state, int w, int h) {
+        BufferedImage img = state.imgRef()[0];
         if (img != null) {
             g2.drawImage(img, 0, 0, null);
-        } else {
-            Color c1 = hsvApprox(hue,             0.55f, 0.38f);
-            Color c2 = hsvApprox((hue + 45) % 360, 0.45f, 0.26f);
-            g2.setPaint(new GradientPaint(0, 0, c1, w * 0.75f, h, c2));
+            return;
+        }
+        // Sense coberta: el gradient i el text es renderitzen una sola vegada
+        // i es reutilitzen com a imatge, en lloc de refe-los a cada repint.
+        // El marcador depèn del tema, així que es torna a fer quan el tema
+        // canvia: si no, en mode clar quedarien les cobertes negres del
+        // mode fosc.
+        BufferedImage ph = state.placeholder()[0];
+        UITheme.Tema tema = UITheme.obtenirTheme();
+        if (ph == null || state.placeholderTema()[0] != tema) {
+            ph = buildPlaceholder(state, w, h);
+            state.placeholder()[0] = ph;
+            state.placeholderTema()[0] = tema;
+        }
+        g2.drawImage(ph, 0, 0, null);
+    }
+
+    /**
+     * Marcador de portada absent.
+     *
+     * <p>Una superfície neutra amb la icona de llibre al centre. No hi ha
+     * degradat (és decoració, no informació) ni el títol repetit dins de la
+     * portada: el títol ja és a sota i repetir-lo carrega la targeta i
+     * duplica la informació.
+     */
+    private static BufferedImage buildPlaceholder(EstatTargeta state, int w, int h) {
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = out.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        try {
+            g2.setColor(UITheme.palette().bgSunken());
             g2.fillRect(0, 0, w, h);
-            g2.setPaint(null);
+            int midaIcona = Math.max(24, Math.min(56, w / 3));
+            javax.swing.Icon icona = presentacio.util.Icones.icon("llibres", midaIcona,
+                UITheme.palette().textMid());
+            if (icona != null) {
+                icona.paintIcon(null, g2, (w - midaIcona) / 2, (h - midaIcona) / 2);
+            }
+        } finally {
+            g2.dispose();
+        }
+        return out;
+    }
 
-            g2.setColor(new Color(255, 255, 255, 30));
-            g2.fillRoundRect(9, 0, 3, h, 2, 2);
+    /**
+     * Peu de la targeta.
+     *
+     * <p>Jerarquia: títol (fins a dues línies), autor, valoració i any, i
+     * progrés. Cap element surt de la targeta: el títol s'ajusta al nombre
+     * de línies permès i l'autor es retalla amb punts suspensius.
+     */
+    private static void paintPeu(Graphics2D g2, EstatTargeta state, int cardW) {
+        DadesPeu peu = state.peu();
+        int x = FOOT_PAD_X;
+        int limit = cardW - FOOT_PAD_X;
+        int y = state.capH() + FOOT_PAD_TOP;
 
-            String title = nom != null ? nom : "";
-            if (!title.isEmpty()) {
-                g2.setFont(new Font("Serif", Font.ITALIC, 13));
-                FontMetrics fm = g2.getFontMetrics();
-                List<String> lines = wrapText(title, fm, w - 28, 4);
-                int lineH = (int)(fm.getHeight() * 1.35);
-                int autorH = (autor != null && !autor.isEmpty()) ? 16 : 0;
-                int iniciarY = Math.max(fm.getAscent() + 10,
-                                      (h - lines.size() * lineH - autorH) / 2 + fm.getAscent());
-                g2.setColor(new Color(255, 255, 255, 235));
-                for (int i = 0; i < lines.size(); i++)
-                    g2.drawString(lines.get(i), 16, iniciarY + i * lineH);
-                if (autor != null && !autor.isEmpty()) {
-                    g2.setColor(new Color(255, 255, 255, 120));
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
-                    g2.drawString(truncate(autor, 20), 16, iniciarY + lines.size() * lineH + 5);
+        if (peu.liniesTitol.length > 0) {
+            g2.setFont(peu.fontTitol);
+            g2.setColor(peu.colorTitol());
+            for (String line : peu.liniesTitol) {
+                y += peu.fmTitol.getAscent();
+                g2.drawString(line, x, y);
+                y += peu.fmTitol.getDescent() + peu.fmTitol.getLeading();
+            }
+        }
+
+        y += 2;
+        g2.setFont(peu.fontAutor);
+        g2.setColor(peu.colorAutor());
+        y += peu.fmAutor.getAscent();
+        g2.drawString(peu.autor, x, y);
+        y += peu.fmAutor.getDescent() + peu.fmAutor.getLeading();
+
+        // Valoració i any a la mateixa línia: la valoració és discreta i
+        // només apareix quan el llibre en té.
+        y += 4;
+        int baseline = y + peu.fmEstrelles.getAscent();
+        if (peu.textValoracio() != null) {
+            g2.setFont(peu.fontEstrelles);
+            g2.setColor(peu.colorEstrellaOn());
+            g2.drawString("★", x, baseline);
+            int cursorX = x + peu.fmEstrelles.charWidth('★') + 3;
+            g2.setFont(peu.fontAutor);
+            g2.setColor(peu.colorAutor());
+            g2.drawString(peu.textValoracio(), cursorX, baseline);
+        }
+        if (peu.any() != null && peu.any() > 0) {
+            String any = String.valueOf(peu.any());
+            g2.setFont(peu.fontAutor);
+            g2.setColor(peu.colorAutor());
+            g2.drawString(any, limit - peu.fmAutor.stringWidth(any), baseline);
+        }
+
+        // Progrés: text de pàgines a la dreta i barra fina al costat, a la
+        // mateixa línia. L'avanç vertical és explícit: si no, el text del
+        // progrés cau damunt de l'any.
+        if (peu.mostraProg()) {
+            y = baseline + peu.fmAutor.getDescent() + Tokens.SPACE_1;
+            g2.setFont(peu.fontAutor);
+            g2.setColor(peu.colorAutor());
+            String text = peu.paginesLlegides() + " / " + peu.pagines();
+            int textW = g2.getFontMetrics().stringWidth(text);
+            int textBaseline = y + peu.fmAutor.getAscent();
+            g2.drawString(text, limit - textW, textBaseline);
+
+            int barW = limit - x - textW - Tokens.SPACE_3;
+            if (barW > Tokens.SPACE_4) {
+                int barY = textBaseline - ALCADA_BARRA_PROGRESS - 1;
+                g2.setColor(UITheme.esDark() ? BAR_DARK : BAR_LIGHT);
+                g2.fillRoundRect(x, barY, barW, ALCADA_BARRA_PROGRESS, 2, 2);
+                g2.setColor(UITheme.palette().accent());
+                int omplert = (int) Math.round(barW * peu.pct());
+                if (omplert > 0) {
+                    g2.fillRoundRect(x, barY, Math.max(2, omplert), ALCADA_BARRA_PROGRESS, 2, 2);
                 }
             }
         }
-    }
-
-    // ── Footer ────────────────────────────────────────────────────────────────
-
-    private static JPanel buildFooter(Llibre l, double val, boolean mostrarProg, double pct, int cardW, String lang) {
-        JPanel f = new JPanel();
-        f.setLayout(new BoxLayout(f, BoxLayout.Y_AXIS));
-        f.setOpaque(false);
-        f.setBorder(BorderFactory.createEmptyBorder(8, 10, 6, 10));
-
-        JLabel lblT = new JLabel("<html><body style='width:" + (cardW - 22) + "px; margin:0; padding:0;'><b>"
-            + htmlEsc(l.obtenirDisplayNom(lang)) + "</b></body></html>");
-        lblT.setFont(UITheme.fontSmall().deriveFont(Font.BOLD));
-        lblT.setForeground(UITheme.palette().textDark());
-        lblT.setAlignmentX(0f);
-        f.add(lblT);
-        f.add(Box.createVerticalStrut(2));
-
-        JLabel lblA = new JLabel(truncate(l.obtenirAutor(), 24));
-        lblA.setFont(UITheme.fontSmall());
-        lblA.setForeground(UITheme.palette().textMid());
-        lblA.setAlignmentX(0f);
-        f.add(lblA);
-        f.add(Box.createVerticalStrut(4));
-
-        JPanel starsRow = new JPanel(new BorderLayout(4, 0));
-        starsRow.setOpaque(false);
-        starsRow.setAlignmentX(0f);
-        starsRow.setMaximumSize(new Dimension(cardW - 20, 16));
-        starsRow.add(starsLabel(val), BorderLayout.WEST);
-        if (l.obtenirAny() != null && l.obtenirAny() > 0) {
-            JLabel yr = new JLabel(String.valueOf(l.obtenirAny()));
-            yr.setFont(UITheme.fontSmall());
-            yr.setForeground(UITheme.palette().textMid());
-            starsRow.add(yr, BorderLayout.EAST);
-        }
-        f.add(starsRow);
-
-        if (mostrarProg) {
-            f.add(Box.createVerticalStrut(4));
-            f.add(progressBar(pct, cardW));
-        }
-
-        return f;
-    }
-
-    private static JLabel starsLabel(double valoracio) {
-        double stars = valoracio / 2.0;
-        StringBuilder sb = new StringBuilder("<html>");
-        for (int i = 0; i < 5; i++) {
-            boolean on = stars >= i + 0.5;
-            sb.append("<font color='")
-              .append(on ? "#c8920a" : (UITheme.esDark() ? "#555555" : "#dddddd"))
-              .append("'>&#9733;</font>");
-        }
-        sb.append("</html>");
-        JLabel lbl = new JLabel(sb.toString());
-        lbl.setFont(new Font("Dialog", Font.PLAIN, 11));
-        return lbl;
-    }
-
-    private static JPanel progressBar(double pct, int cardW) {
-        final float p = (float) Math.min(1.0, Math.max(0.0, pct));
-        JPanel bar = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(UITheme.esDark() ? new Color(0x555555) : new Color(0xEEEEEE));
-                g2.fillRoundRect(0, 0, getWidth(), 3, 2, 2);
-                if (p > 0) {
-                    g2.setColor(UITheme.palette().accent());
-                    g2.fillRoundRect(0, 0, Math.max(2, (int)(getWidth() * p)), 3, 2, 2);
-                }
-                g2.dispose();
-            }
-            @Override public boolean isOpaque() { return false; }
-        };
-        bar.setPreferredSize(new Dimension(cardW - 20, 3));
-        bar.setMaximumSize(new Dimension(cardW - 20, 3));
-        return bar;
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
@@ -445,10 +690,6 @@ public final class FabricantTargetesCoberta {
         int h = 0;
         for (char c : nom.toCharArray()) h = h * 31 + c;
         return Math.floorMod(h, 360);
-    }
-
-    private static Color hsvApprox(int hueDeg, float sat, float bri) {
-        return new Color(Color.HSBtoRGB(hueDeg / 360f, sat, bri));
     }
 
     private static List<String> wrapText(String text, FontMetrics fm, int maxW, int maxLines) {
@@ -489,9 +730,5 @@ public final class FabricantTargetesCoberta {
     private static String truncate(String s, int max) {
         if (s == null || s.isEmpty()) return "";
         return s.length() <= max ? s : s.substring(0, max - 1) + "…";
-    }
-
-    private static String htmlEsc(String s) {
-        return herramienta.i18n.Escapers.html(s);
     }
 }

@@ -88,11 +88,27 @@ public final class SeccioDbConfiguracio {
             }.execute();
         });
 
+        // Nota per a l'usuari: amb H2 integrat no hi ha servidor, i les
+        // opcions de MariaDB no apliquen. En lloc de deixar-les simplement
+        // deshabilitades (que sembla un error), s'amaguen i s'explica per què.
+        JLabel lblH2 = new JLabel(t("lbl_db_h2_embedded"));
+        lblH2.setFont(UITheme.fontSmall());
+        lblH2.setForeground(UITheme.palette().textMid());
+
         Runnable actualitzarFields = () -> {
             boolean external = cmbType.getSelectedIndex() == 1;
+            lblHost.setVisible(external);
+            txtHost.setVisible(external);
+            lblUser.setVisible(external);
+            txtUser.setVisible(external);
+            lblPass.setVisible(external);
+            txtPass.setVisible(external);
+            lblH2.setVisible(!external);
             txtHost.setEnabled(external);
             txtUser.setEnabled(external);
             txtPass.setEnabled(external);
+            panel.revalidate();
+            panel.repaint();
         };
         actualitzarFields.run();
         cmbType.addActionListener(e -> actualitzarFields.run());
@@ -110,6 +126,7 @@ public final class SeccioDbConfiguracio {
                     .addComponent(txtHost, GroupLayout.PREFERRED_SIZE, 280, GroupLayout.PREFERRED_SIZE)
                     .addComponent(txtUser, GroupLayout.PREFERRED_SIZE, 280, GroupLayout.PREFERRED_SIZE)
                     .addComponent(txtPass, GroupLayout.PREFERRED_SIZE, 280, GroupLayout.PREFERRED_SIZE)))
+            .addComponent(lblH2)
             .addComponent(lblDbNote)
             .addComponent(btnTestConn, GroupLayout.Alignment.TRAILING)
         );
@@ -124,6 +141,7 @@ public final class SeccioDbConfiguracio {
                 .addComponent(lblUser).addComponent(txtUser))
             .addGroup(gl.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addComponent(lblPass).addComponent(txtPass))
+            .addComponent(lblH2)
             .addComponent(lblDbNote)
             .addComponent(btnTestConn)
         );
