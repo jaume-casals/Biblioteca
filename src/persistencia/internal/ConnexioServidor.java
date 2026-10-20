@@ -116,6 +116,8 @@ public class ConnexioServidor {
 	 * {@link #crearDatabase()} i mai reassignada; {@link #tancarConnection()}
 	 * posa el camp a null després de tancar. No assignis una nova Connection en un altre lloc. */
 	private Connection con;
+	/** Cert si el sql_mode de la sessió s'ha pogut alinear amb el d'H2. */
+	private boolean sqlModeAlineat = true;
 	private static final java.util.List<java.net.URLClassLoader> driverLoaders =
 		java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 	static { main.ShutdownHooks.register(() -> { synchronized (driverLoaders) { for (java.net.URLClassLoader cl : driverLoaders) try { cl.close(); } catch (Exception ignored) {} } }); }
@@ -271,17 +273,32 @@ public class ConnexioServidor {
 	 *
 	 * <p>S'afegeix al {@code sql_mode} existent (no se substitueix) per no
 	 * perdre {@code STRICT_TRANS_TABLES} ni la resta de modes del servidor.
+	 *
+	 * <p>Si el servidor rebutja el mode, la connexió continua funcionant
+	 * pero el format de la cópia de seguretat deixa de ser portable: en
+	 * restaurar, una literal amb {@code \r} es convertiria en un retorn de
+	 * carro. Ho es registra com a avís (queda al registre d'errors) i es
+	 * marca la connexió amb {@link #isSqlModeAlineat()} perquè el camí de
+	 * restauració ho pugui rebutjar en lloc de corrompre dades en silenci.
 	 */
 	private void alinearSqlModeMariaDB() {
 		try (Statement s = con.createStatement()) {
 			s.executeUpdate("SET SESSION sql_mode = IF(FIND_IN_SET('NO_BACKSLASH_ESCAPES', @@sql_mode) > 0,"
 				+ " @@sql_mode, CONCAT(@@sql_mode, ',NO_BACKSLASH_ESCAPES'))");
 		} catch (SQLException e) {
-			// Si el servidor rebutja el mode, es continua amb el mode per defecte:
-			// la connexió ha de funcionar encara que el servidor sigui sobredimensionat.
+			sqlModeAlineat = false;
+			LOG.log(java.util.logging.Level.WARNING,
+				"El servidor MariaDB no ha acceptat NO_BACKSLASH_ESCAPES: el format de la cópia de "
+					+ "seguretat no es portable i una restauració podria corrompre els textos amb "
+					+ "barres invertides.", e);
 			System.err.println("[biblioteca] no s'ha pogut aplicar NO_BACKSLASH_ESCAPES: " + e.getMessage());
 		}
 	}
+
+	/** Cert si el {@code sql_mode} de la sessió s'ha pogut alinear amb el
+	 *  d'H2 ({@code NO_BACKSLASH_ESCAPES}). Si és fals, el format de la
+	 *  cópia de seguretat no és portable entre els dos motors. */
+	public boolean isSqlModeAlineat() { return sqlModeAlineat; }
 
 	/**
 	 * Aplica les migracions d'esquema pendents i registra cada versió completada a

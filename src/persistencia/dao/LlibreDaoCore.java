@@ -473,9 +473,10 @@ public class LlibreDaoCore {
      * aquest mètode és la xarxa de seguretat.
      *
      * <p>Abans d'esborrar res es comprova que el fitxer sembli una còpia de
-     * seguretat: un fitxer buit, truncat o d'un altre format s'executaria
-     * sense error i deixaria la base de dades buida. En aquest cas es
-     * rebutja el fitxer i no es toca la base de dades.
+     * seguretat: ha de dur la marca {@code -- Biblioteca backup} <b>i</b> almenys
+     * una sentència {@code INSERT INTO llibre (...)}. Un fitxer buit, truncat
+     * o d'un altre format s'executaria sense error i deixaria la base de dades
+     * buida. En aquest cas es rebutja el fitxer i no es toca la base de dades.
      */
     public void restaurarFromSQL(java.io.File file) throws java.io.IOException, java.sql.SQLException {
         validarCopiaSeguretat(file);
@@ -488,31 +489,68 @@ public class LlibreDaoCore {
 
     /**
      * Comprova que el fitxer contingui una còpia de seguretat de Biblioteca:
-     * o bé la marca que hi posa {@code ServeiCopiaSeguretat}, o bé almenys
-     * una sentència {@code INSERT INTO llibre}. Un fitxer que no conté cap
-     * d'aquestes dues coses no es pot restaurar: si s'executés, esborraria
-     * les dades i no hi afegiria res.
+     * la marca que hi posa {@code ServeiCopiaSeguretat} <b>i</b> almenys
+     * una sentència {@code INSERT INTO llibre (...)} amb el nom de taula
+     * exacte.
+     *
+     * <p>Abans la comprovació acceptava qualsevol dels dos indicis i la
+     * taula es comparava amb {@code startsWith("INSERT INTO LLIBRE")}, que
+     * també encaixava amb {@code llibre_autor}, {@code llibre_llista} i
+     * {@code llibre_tag}. Amb la marca solta (un fitxer truncat després de
+     * la primera línia) o amb únicament files d'enllaç, la validació
+     * passava, la base de dades s'esborrava i no se hi tornava a afegir cap
+     * llibre. Ara els dos indicis són obligatoris i el nom de taula es
+     * compara sencerament.
+     *
+     * <p>Pública perquè el consumidor de la restauració
+     * ({@code domini.facade.DelegatCopiaSeguretat}) pugui validar el
+     * fitxer <b>abans</b> de generar la còpia de pre-restauració i
+     * abans d'encara el camí de recuperació: un fitxer rebutjat no ha
+     * d'arribar mai a la lògica de rollback.
      */
-    private static void validarCopiaSeguretat(java.io.File file) throws java.io.IOException {
+    public static void validarCopiaSeguretat(java.io.File file) throws java.io.IOException {
         boolean teMarca = false;
         boolean teLlibres = false;
         try (BufferedReader br = new BufferedReader(
                 new FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
+            // Es llegeix tot el fitxer (no es trenca al primer indici):
+            // cal saber si hi ha TOTS DOS indicis, no el primer que aparegui.
             while ((line = br.readLine()) != null) {
                 String t = line.trim().toUpperCase(java.util.Locale.ROOT);
-                if (t.startsWith("-- BIBLIOTECA BACKUP")) { teMarca = true; break; }
-                if (t.startsWith("INSERT INTO LLIBRE") || t.startsWith("INSERT INTO `LLIBRE`")) {
-                    teLlibres = true;
-                    break;
-                }
+                if (t.startsWith("-- BIBLIOTECA BACKUP")) { teMarca = true; continue; }
+                if (esInsertDeLlibre(t)) teLlibres = true;
             }
         }
-        if (!teMarca && !teLlibres) {
+        if (!teMarca) {
             throw new java.io.IOException(
-                "El fitxer no conté cap INSERT INTO llibre ni la marca de còpia de seguretat: "
-                + "no s'ha restaurat res i la base de dades no s'ha modificat.");
+                "El fitxer no és una còpia de seguretat de Biblioteca (falta la marca "
+                + "'-- Biblioteca backup'): no s'ha restaurat res i la base de dades no s'ha modificat.");
         }
+        if (!teLlibres) {
+            throw new java.io.IOException(
+                "El fitxer no conté cap INSERT INTO llibre: probablement està truncat o no és una "
+                + "còpia de seguretat de Biblioteca. No s'ha restaurat res i la base de dades no s'ha "
+                + "modificat. Si la còpia era d'una biblioteca buida, fes servir «Buidar la biblioteca» "
+                + "en lloc de restaurar.");
+        }
+    }
+
+    /**
+     * Cert que la línia és un INSERT a la taula {@code llibre} exactament,
+     * no a {@code llibre_autor}, {@code llibre_llista} ni {@code llibre_tag}.
+     * La comparació compacta (sense espais ni cometes invertides) tolera
+     * el format real {@code INSERT INTO llibre (`col`, ...)} i les variants
+     * amb la taula entre cometes invertides.
+     */
+    private static boolean esInsertDeLlibre(String t) {
+        StringBuilder sb = new StringBuilder(t.length());
+        for (int i = 0; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (c == ' ' || c == '\t' || c == '`') continue;
+            sb.append(c);
+        }
+        return sb.toString().startsWith("INSERTINTOLLIBRE(");
     }
 
     /** Llista blanca de tipus de sentència SQL acceptables en un fitxer

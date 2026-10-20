@@ -105,6 +105,29 @@ public final class DelegatCopiaSeguretat {
     }
 
     public void restaurarFromSQL(File file) {
+        // Valida el fitxer ABANS de qualsevol altra cosa. Un fitxer
+        // truncat, buit o d'un altre format es rebutja aquí: la base de
+        // dades no s'esborra, no es genera la còpia de pre-restauració i
+        // no s'activa el camí de recuperació (que reexecutaria els INSERT
+        // de la còpia sobre dades que ja hi són i acabaria en violació de
+        // clau primària). La validació es repeteix dins de la transacció
+        // JDBC (LlibreDaoCore.restaurarFromSQL) com a xarxa de seguretat.
+        try {
+            state.persistence().validarCopiaSeguretat(file);
+        } catch (Exception e) {
+            throw new BibliotecaException(e.getMessage(), e);
+        }
+        // Si el servidor MariaDB no ha pogut aplicar NO_BACKSLASH_ESCAPES,
+        // el format del volcats no és portable: en restaurar, una literal
+        // amb barres invertides seria reinterpretada ('\r' esdevindria un
+        // retorn de carro) i el text quedaria corromput sense avis. Si el
+        // fitxer conté barres invertides, es rebutja en lloc de corrompre.
+        if (!state.persistence().isSqlModeAlineat() && conteBarresInvertides(file)) {
+            throw new BibliotecaException(
+                "El servidor de base de dades no ha permès el mode NO_BACKSLASH_ESCAPES i la còpia "
+                + "conté textos amb barres invertides: restaurar-la podria corrompre'ls. "
+                + "S'ha rebutjat el fitxer i no s'ha tocat la base de dades.");
+        }
         try {
             File tmpDir = new File(System.getProperty("java.io.tmpdir"));
             File backup = new File(tmpDir, "biblioteca_restore_backup_" + System.currentTimeMillis() + ".sql");
@@ -147,6 +170,25 @@ public final class DelegatCopiaSeguretat {
         ArrayList<Llista> newLlistes = new ArrayList<>(state.persistence().obtenirAllLlistes());
         ArrayList<Tag> newTags = new ArrayList<>(state.persistence().obtenirAllTags());
         state.replaceAll(newBib, newLlistes, newTags);
+    }
+
+    /** Cert si el fitxer conté alguna barra invertida. Les barres
+     *  invertides només apareixen dins de literals de text del volcats i
+     *  són el que el mode {@code NO_BACKSLASH_ESCAPES} governa. */
+    private static boolean conteBarresInvertides(File file) {
+        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                new java.io.InputStreamReader(new java.io.FileInputStream(file),
+                    java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.indexOf('\\') >= 0) return true;
+            }
+            return false;
+        } catch (java.io.IOException e) {
+            // Si no es pot llegir, no hi ha res a bloquejar: la validació
+            // del fitxer ja ha fallat abans d'arribar aquí.
+            return false;
+        }
     }
 
     public void netejarAll() {

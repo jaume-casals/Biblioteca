@@ -166,6 +166,27 @@ public class ControladorPersistencia {
 	}
 	public synchronized void executarSQLFile(java.io.File file) throws java.io.IOException, java.sql.SQLException { libreDaoCore.executarSQLFile(file); }
 	/**
+	 * Comprova que un fitxer SQL sigui una còpia de seguretat de Biblioteca
+	 * abans d'encar el camí de restauració. Llança {@link java.io.IOException}
+	 * si el fitxer no té la marca {@code -- Biblioteca backup} o no conté cap
+	 * {@code INSERT INTO llibre (...)} amb el nom de taula exacte.
+	 *
+	 * <p>El consumidor l'ha de cridar <b>abans</b> de tocar res: un fitxer
+	 * truncat o d'un altre format es rebutja sense esborrar la base de dades
+	 * i sense generar la còpia de pre-restauració (que, en cas de fallada
+	 * posterior, es reexecuta com a mecanisme de rollback).
+	 */
+	public void validarCopiaSeguretat(java.io.File file) throws java.io.IOException {
+		persistencia.dao.LlibreDaoCore.validarCopiaSeguretat(file);
+	}
+	/**
+	 * Cert si el {@code sql_mode} de la connexió s'ha pogut alinear amb el
+	 * d'H2 ({@code NO_BACKSLASH_ESCAPES}). Si és fals, el format de la cópia
+	 * de seguretat no és portable: una literal amb barres invertides es
+	 * reinterpretaria en restaurar.
+	 */
+	public boolean isSqlModeAlineat() { return sc.isSqlModeAlineat(); }
+	/**
 	 * Restaura atòmicament la base de dades des d'un fitxer SQL de còpia de seguretat:
 	 * buida totes les dades i executa les sentències del fitxer dins d'una sola transacció
 	 * JDBC. Si alguna sentència del fitxer falla, tota la transacció es reverteix i la

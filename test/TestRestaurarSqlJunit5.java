@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Regression tests for the defensive SQL restore path (LlibreDao.executeSQLFile).
@@ -123,5 +124,78 @@ class TestRestaurarSqlJunit5 {
 
         assertThat(cd.getSize()).as("DELETE blocked; original book must survive").isEqualTo(1);
         assertThat(cd.obtenirLlibre(isbn).obtenirNom()).isEqualTo("Survivor");
+    }
+
+    // ── Validació de la còpia de seguretat (HIGH: restauració que esborrava
+    //    la base de dades i no hi tornava cap llibre) ─────────────────────────
+
+    @Test
+    @DisplayName("Backup truncat després de la marca: es rebutja i la BD no s'esborra")
+    void truncatedBackupIsRejectedAndLibrarySurvives() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        long isbn = 9780306406157L;
+        cd.afegirLlibre(ValidadorLlibre.comprovarLlibre(isbn, "No es perdrà", null, 2020, null, null, null, null, null));
+
+        // Un fitxer de còpia truncat després de la primera línia: només la
+        // marca. Abans passava la validació i la base de dades quedava buida.
+        File truncated = File.createTempFile("sql_truncated_", ".sql");
+        truncated.deleteOnExit();
+        Files.write(truncated.toPath(),
+            "-- Biblioteca backup 2026-01-01\n".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> cd.restaurarFromSQL(truncated))
+            .as("Un fitxer truncat s'ha de rebutjar")
+            .isInstanceOf(domini.BibliotecaException.class);
+
+        assertThat(cd.getSize()).as("La biblioteca ha de continuar intacta").isEqualTo(1);
+        assertThat(cd.obtenirLlibre(isbn).obtenirNom()).isEqualTo("No es perdrà");
+    }
+
+    @Test
+    @DisplayName("Backup amb només files d'enllaç (llibre_autor): es rebutja i la BD no s'esborra")
+    void backupWithOnlyJoinRowsIsRejected() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        long isbn = 9780306406157L;
+        cd.afegirLlibre(ValidadorLlibre.comprovarLlibre(isbn, "Tampoc es perdrà", null, 2020, null, null, null, null, null));
+
+        // Té la marca i files de taules d'enllaç, però cap INSERT INTO
+        // llibre: el beginsWith("INSERT INTO LLIBRE") antic acceptava
+        // llibre_autor / llibre_llista / llibre_tag com si fossin llibres.
+        File onlyJoins = File.createTempFile("sql_only_joins_", ".sql");
+        onlyJoins.deleteOnExit();
+        Files.write(onlyJoins.toPath(),
+            ("-- Biblioteca backup 2026-01-01\n"
+                + "DELETE FROM llibre;\n"
+                + "INSERT INTO llibre_autor (`isbn`, `autor_id`) VALUES (9780306406157, 1);\n"
+                + "INSERT INTO llibre_llista (`isbn`, `llista_id`) VALUES (9780306406157, 1);\n")
+                .getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> cd.restaurarFromSQL(onlyJoins))
+            .as("Un fitxer sense INSERT INTO llibre s'ha de rebutjar")
+            .isInstanceOf(domini.BibliotecaException.class);
+
+        assertThat(cd.getSize()).as("La biblioteca ha de continuar intacta").isEqualTo(1);
+        assertThat(cd.obtenirLlibre(isbn).obtenirNom()).isEqualTo("Tampoc es perdrà");
+    }
+
+    @Test
+    @DisplayName("Còpia de seguretat vàlida: es restaura sense problemes")
+    void validBackupStillRestores() throws Exception {
+        ControladorDomini cd = ControladorDomini.getInstance();
+        long isbn = 9780306406157L;
+        cd.afegirLlibre(ValidadorLlibre.comprovarLlibre(isbn, "Original", null, 2020, null, null, null, null, null));
+
+        File backup = File.createTempFile("sql_valid_", ".sql");
+        backup.deleteOnExit();
+        cd.copiaSegToSQL(backup);
+
+        // Canvia el llibre i restaura: el valor original ha de tornar.
+        cd.eliminarLlibre(isbn);
+        assertThat(cd.getSize()).isEqualTo(0);
+
+        cd.restaurarFromSQL(backup);
+
+        assertThat(cd.getSize()).isEqualTo(1);
+        assertThat(cd.obtenirLlibre(isbn).obtenirNom()).isEqualTo("Original");
     }
 }
